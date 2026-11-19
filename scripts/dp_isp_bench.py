@@ -79,7 +79,7 @@ def main() -> int:
         crc0 = isp.flash_crc(sec, SECTOR)
         log(f"flash_crc 4 KiB: {ms(timeit(lambda: isp.flash_crc(sec, SECTOR), 3))}; status read: {ms(timeit(isp.status, 5))}")
         isp.write_mode = "burst"
-        for ch in (255, 128):
+        for ch in (256, 128):
             isp.burst_chunk = ch
             isp.burst_fails = 0
             isp._byte_sector = None
@@ -92,7 +92,12 @@ def main() -> int:
                 polls["n"] += 1
                 return orig(reg)
             isp.read = counting
-            t = timeit(lambda: isp.program_page(addr, b"\xff" * PAGE), 5)
+            try:
+                t = timeit(lambda: isp.program_page(addr, b"\xff" * PAGE), 5)
+            except (OSError, RuntimeError) as e:
+                isp.read = orig
+                log(f"dry page burst_chunk {ch}: FAILED {e!r}")
+                continue
             isp.read = orig
             log(f"dry page burst_chunk {ch}: {ms(t)} per page, {polls['n'] / 5:.1f} register reads/page, fails {isp.burst_fails}")
         isp.dry = False

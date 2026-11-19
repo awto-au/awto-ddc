@@ -734,12 +734,13 @@ def _settings_restore(u: dict, bus: int, snap, m: Path, tbl: Path) -> None:
 
 @command("flash an image to a unit over ISP (default: last build); incremental by the on-device manifest (docs/flash-registry.md); GMBUS fallback auto-reset",
          args="[--unit N] [--full] [--any-image] [--force-ungated] "
-              "[--verify crc|readback] [--write-mode byte|burst] [--max-min M] [image.bin]", kind="action")
+              "[--verify crc|readback] [--write-mode byte|burst] [--aux-fast auto|off] [--max-min M] [image.bin]", kind="action")
 def cmd_flash(extra: list[str]) -> int:
     _layout_watch()
     n, u = _unit(extra)
     full = _flag(extra, "--full")
     verify = _opt(extra, "--verify", "crc")
+    aux_fast = _opt(extra, "--aux-fast", "auto")     # DP-AUX fast page path (#254); off = the old 0x4A burst path
     wmode = _opt(extra, "--write-mode")     # default: devices.json write_mode (burst if unset); failed pages redone in byte
     max_min = _opt(extra, "--max-min", str(FLASH_BUDGET_MIN))
     try:
@@ -782,7 +783,7 @@ def cmd_flash(extra: list[str]) -> int:
             *([] if u.get("relay") else ["--per-sector"]),   # no relay: per sector, boot/common last (#71)
             "--max-min", max_min, *(["--bus-kind", kind] if kind != "unknown" else []),
             *(["--read-chunk", "256"] if not i2cbus.adapter_name(bus).startswith("i915") else []),
-            "--tag", tag, "--verify", verify, "--write-mode", wmode, *(["--full"] if full else []),
+            "--tag", tag, "--verify", verify, "--write-mode", wmode, "--aux-fast", aux_fast, *(["--full"] if full else []),
             *(["--identity", identity] if identity else [])]
     # rc 5 = read gate refused before any erase: 1 MHz ISP reads corrupt in the low-power state (unit 3, D1
     # NOSIGNAL -> POWER_OFF, #71). rtd_flash_image's exit reset reboots the unit at full clock: retry 1 MHz once, then 100 kHz

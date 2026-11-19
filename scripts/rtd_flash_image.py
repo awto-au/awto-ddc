@@ -53,6 +53,7 @@ import flash_screen as FSCR  # noqa: E402
 from rtd_flash_sector import Rtd, SECTOR, PAGE, JEDEC_OK, SR_PROT, T_READ, T_ERASE_LIMIT, ENGINE_OPS  # noqa: E402
 
 FLASH = 1 << 20
+SCREEN_DUTY_AUX = 0.10      # flash-screen time share on DP AUX (redraws are AUX-bound; docs/flash-dp-aux.md)
 DUMPS = Path.home() / "vendors/realtek/analysis/dumps"
 
 
@@ -593,9 +594,11 @@ def program(isp, img, diff, reprot, state, hashes, crc_ok, nudge, bk="the unit's
                 write_sector(isp, s, img[s:s + SECTOR], crc_ok, nudge)
             state.sectors[i] = hashes[i]
             RUN.written = k + 1
-            FSCR.tick(isp, k, {"phase": _phase(i), "bank": s // BANK, "nbank": FLASH // BANK - 1, "addr": s, "sec": k + 1, "nsec": len(diff),
-                               "pct": (k + 1) * 100 // len(diff), "bad": getattr(isp, "burst_fails", 0), "recov": sum(RECOVERIES.values()),
-                               "t": time.monotonic() - t0, "skip": RUN.skipped, "nimg": RUN.image})      # #232: progress + mouth on the warning screen, best effort
+            with phase("screen"):                       # #232: progress + mouth on the warning screen, best effort
+                FSCR.tick(isp, k, {"phase": _phase(i), "bank": s // BANK, "nbank": FLASH // BANK - 1, "addr": s, "sec": k + 1,
+                                   "nsec": len(diff), "pct": (k + 1) * 100 // len(diff), "bad": getattr(isp, "burst_fails", 0),
+                                   "recov": sum(RECOVERIES.values()), "t": time.monotonic() - t0, "skip": RUN.skipped,
+                                   "nimg": RUN.image})
             dt = time.monotonic() - ts
             if dt > SLOW_SECTOR_S:
                 log(f"0x{s:06x}: {dt:.1f} s > {SLOW_SECTOR_S} s: host I2C on bit-bang? nudging GMBUS")
@@ -804,7 +807,7 @@ def summary(diff: list[int], nimg: int, t_write: float, t_total: float, img: byt
                                         or "none") + f"; {nb - len(by_bank)} banks untouched")
     log(f"SUMMARY: wrote {wb // 1024} KiB in {t_write:.1f} s = {rate:.1f} KiB/s ({rate / 1024:.3f} MB/s); "
         f"{t_total:.1f} s total incl. checks")
-    named = ("gate", "erase", "blank", "program", "verify", "final crc", "manifest")
+    named = ("gate", "erase", "blank", "program", "verify", "final crc", "manifest", "screen")
     split = ", ".join(f"{k} {PH.get(k, 0.0):.1f}" for k in named)
     other = t_total - sum(PH.get(k, 0.0) for k in named)
     log(f"SUMMARY: time split (s): {split}, other (ISP enter/JEDEC/protect/reset) {other:.1f}; "
@@ -873,6 +876,8 @@ def flash_main(a) -> int:
         f"no_backup={a.no_backup} full={a.full} verify={a.verify} write_mode={a.write_mode} burst_chunk={a.burst_chunk}")
     kind = i2cbus.bus_kind(a.bus) if a.bus_kind == "auto" else a.bus_kind
     log(f"bus kind: {kind} ({i2cbus.adapter_name(a.bus) or 'no adapter name'}{', given' if a.bus_kind != 'auto' else ''})")
+    if kind == "dp-aux":
+        FSCR.DUTY_MAX = SCREEN_DUTY_AUX
     if kind == "dp-aux" and a.write_mode == "byte":
         log("WARN: --write-mode byte on DP AUX (~90 s per sector, #177): using burst")
         a.write_mode = "burst"

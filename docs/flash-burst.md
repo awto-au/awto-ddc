@@ -12,6 +12,8 @@
   - wbcbz7/RTDTool-Comm-CH341A (Comm shim only), balika011/realtek_display (docs/firmware repo, no programmer code): no extra protocol info
 - No RTD27xx-specific burst limit found. The ISP slave takes 256 B in one transaction on RTD2795; unverified on this unit through GMBUS
 
+- DP-AUX buses use the two-transfer page path of `docs/flash-dp-aux.md` (`--aux-fast`); the 0x4A burst above remains its fallback and the DDC path.
+
 ## Host bus limits (i915, kernel 7.1 `intel_gmbus.c`)
 - GMBUS byte count: 9 bit, 511 max on display ver >= 9 (`GEN9_GMBUS_BYTE_COUNT_MAX`), 256 before. Bigger messages are split into separate GMBUS cycles (new START + address) = broken stream, so gen<9 needs `--burst-chunk <=255`. Here: Tiger Lake class (`gmbus tc3`) = ok
 - `gmbus_xfer_write_chunk` feeds 4 B per GMBUS3 write and waits HW_RDY per dword

@@ -34,6 +34,8 @@ VCP_PAGED_ID, VCP_PAGED_VAL = 0xE0, 0xE1
 ROW_DISP_ROTATE = 32            # registry row id of disp_rotate
 DRAW_WAIT_S = 0.6               # firmware draws in one main-loop pass: ~330 cells + 90 glyphs of data port writes (~0.1 s) after the DDC write; 6 x
 MOUTH_EVERY = 2                 # sectors per mouth toggle (24 cell writes each)
+DUTY_MAX = 0.0                  # >0: cap on the share of flash time spent drawing (DP AUX, #254); 0 = redraw every sector
+_hold_until = 0.0
 ENV_IFACE = "AWTO_FLASH_IFACE"
 ENV_OFF = "AWTO_FLASH_SCREEN_OFF"   # =1: never show (a flash from an image whose screen layout differs from this script)
 # Values mirrored from fw/test/flash_screen.c (tests/test_flash_screen.py checks them)
@@ -136,8 +138,11 @@ def _put(o, cell: int, gid: int) -> None:
 
 def tick(isp, n: int, info: dict) -> None:
     """Update the screen for sector n: changed text cells always, the mouth every MOUTH_EVERY sectors."""
-    global _rot
+    global _rot, _hold_until
     if not MARKER.exists():
+        return
+    t0 = time.monotonic()
+    if DUTY_MAX and t0 < _hold_until:
         return
     try:
         import rtd_osd as O
@@ -150,6 +155,9 @@ def tick(isp, n: int, info: dict) -> None:
             if _prev.get(cell) != gid:
                 _put(o, cell, gid)
                 _prev[cell] = gid
+        if DUTY_MAX:
+            t1 = time.monotonic()
+            _hold_until = t1 + (t1 - t0) * (1 / DUTY_MAX - 1)
     except Exception as e:                                  # noqa: BLE001 - best effort: never fail a flash for the picture
         import traceback
         say(f"tick {n}: {e!r}: " + " <- ".join(f"{f.name}:{f.lineno}" for f in reversed(traceback.extract_tb(e.__traceback__)[-5:])))
