@@ -245,14 +245,57 @@ def do_block(d, waddr: int) -> None:
     finish(d, proc, t_on)
 
 
+def do_bar(d, w_px: int, h_px: int) -> None:
+    """Big visible run: a white bar w_px x h_px centred on the 3840x2160 frame, written burst by burst on a frozen black frame.
+    Address = (y * 3840 + x) * 3 / 8 units (line step 1440 units); only changed address bytes are rewritten (~3 register writes per burst)."""
+    frame_mode(d.io)
+    t_on = time.monotonic()
+    proc = pattern_start("solid 0 0 0")
+    wait_marker(d, 0, bytes([0] * 16))
+    freeze(d.io, True)
+    r = T.MCU_DC["a"]
+    d.wr(r["len"], 2)
+    for i in range(16):
+        d.wr(r["wbuf"] + i, 0xFF)
+    d.wr(r["wmask"], 0)
+    d.wr(r["wmask"] + 1, 0)
+    x0, y0 = (3840 - w_px) // 2, (2160 - h_px) // 2
+    per_row = (w_px * 3 + 15) // 16
+    cur = [None] * 4
+    n = 0
+    first = last = None
+    for row in range(h_px):
+        base = ((y0 + row) * 3840 + x0) * 3 // 8 // 2 * 2         # even unit address
+        for k in range(per_row):
+            a = base + 2 * k
+            for i, sh in enumerate((24, 16, 8, 0)):
+                b = (a >> sh) & 0xFF
+                if cur[i] != b:
+                    d.wr(r["addr"] + i, b)
+                    cur[i] = b
+            d.wr(r["cmd"], T.DC_CMD_WRITE)
+            n += 1
+            first = a if first is None else first
+            last = a
+        if time.monotonic() - t_on > SCREEN_CAP_S - 0.7:
+            T.log(f"stopped at row {row} (screen cap)")
+            break
+    T.log(f"{n} bursts, units {first}..{last} (x {x0}..{x0 + w_px - 1}, y {y0}..{y0 + h_px - 1} by the linear map), CMD now {d.rd(r['cmd']):02x}")
+    while time.monotonic() - t_on < SCREEN_CAP_S - 0.3:               # hold: register reads are the wait
+        d.rd(r["flag"])
+    finish(d, proc, t_on)
+
+
 def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--unit", type=int, required=True)
     ap.add_argument("--bus", type=int, required=True)
-    ap.add_argument("op", choices=["map", "map2", "write", "block"])
+    ap.add_argument("op", choices=["map", "map2", "write", "block", "bar"])
     ap.add_argument("--reads", type=int, default=6)
     ap.add_argument("--waddr", type=lambda x: int(x, 0), default=0x100000)
     ap.add_argument("--n", type=int, default=1)
+    ap.add_argument("--w", type=int, default=96)
+    ap.add_argument("--h", type=int, default=16)
     ap.add_argument("--mask", type=lambda x: int(x, 0), default=0xFFFF)
     a = ap.parse_args()
     MASK[0] = a.mask
@@ -262,6 +305,8 @@ def main() -> int:
             do_map(d, a.reads)
         elif a.op == "map2":
             do_map2(d, a.reads)
+        elif a.op == "bar":
+            do_bar(d, a.w, a.h)
         elif a.op == "block":
             do_block(d, a.waddr)
         else:
