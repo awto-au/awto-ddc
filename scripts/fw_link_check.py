@@ -540,7 +540,7 @@ def check(im, xdata=(), regnames=None, proven=None):
             if t.startswith("ADD A,#") and not resid and not im.literal(c, i.addr) and im.names_const(c, i.addr) is not False:
                 hi = table_hi(ins[k + 1:k + 10])
                 v = (hi << 8 | int(t[7:9], 16)) if hi is not None else None
-                if v is not None and v >= im.common and not in_xdata(v):
+                if v is not None and v >= im.common and not in_xdata(v) and not (regnames and v in regnames):   # a regdb register address is not a table base (layout-dependent false hit, 0xFFEE)
                     cs = im.consts_at(v)
                     own = [x for r, x in cs if r == reg]
                     refs[c["addr"]] += own

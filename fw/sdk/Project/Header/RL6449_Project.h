@@ -308,6 +308,33 @@ extern volatile __xdata __at(0xF69C) unsigned char g_stAwtoSnap[20];
 #define AWTO_WDT_P_WDTI                                         0x20    // DW8051 EICON[3] WDTI set: Realtek's WDT also drives the core wdti
 #define AWTO_WDT_P_EARLY                                        0x40    // a threshold IRQ before the warning since the last main pass (pokes
                                                                         // stopped > 439 ms); kept over the reset: hardware-WDT evidence
+// Main-loop pacing (docs/main-loop-pacing.md): 0 = free-running loop (default). N > 0: after a pass, idle (PCON.IDL) until the first of:
+// N ms since the previous pass, a wake bit (EXINT0 / EXINT1 / Timer0 ISR, software), the earliest timer-event deadline, the next key
+// sample, the next settings-loop service. AwtoLoopBusy() != 0 (saver, OSD / console up, key down, DDC/CI deferred, mode / power steps): no sleep.
+// Idle wakes on every IRQ (Timer2 1 ms at most): a wake bit set between the check and the IDL write waits for that tick (<= 1 ms).
+#ifndef AWTO_LOOP_PACING
+#define AWTO_LOOP_PACING                                        0
+#endif
+#if(AWTO_LOOP_PACING > 0)
+extern volatile bit d_isr_g_bWkEx0;
+extern volatile bit d_isr_g_bWkEx1;
+extern volatile bit d_isr_g_bWkT0;
+extern volatile bit d_g_bWkSw;
+// last 1 s window: passes, sleep per mille, worst busy pass in 1/16 ms, passes without sleep (busy hook) per mille, IDL exits, passes ended by a wake bit
+typedef struct { unsigned int usPasses; unsigned int usSleepPm; unsigned int usWorstQ4; unsigned int usHoldPm; unsigned int usIdles; unsigned int usWkIsr; } StAwtoHead;
+extern __xdata StAwtoHead g_stAwtoHead;
+extern void AwtoLoopPace(void);
+extern unsigned char AwtoLoopBusy(void);
+extern unsigned int SysTimerNextEventMs(void);
+extern unsigned int AwtoKeyDueMs(void);
+#define AWTO_LOOP_PACE()                                        AwtoLoopPace()
+#define AWTO_ISR_WAKE(src)                                      (d_isr_g_bWk##src = 1)
+#define AWTO_WAKE_SW()                                          (d_g_bWkSw = 1)
+#else
+#define AWTO_LOOP_PACE()
+#define AWTO_ISR_WAKE(src)
+#define AWTO_WAKE_SW()
+#endif
 // One hardware watchdog (#138). Counters: CNT2 / 2048 XTAL -> CNT3 (143.0 us, wraps 585.9 ms) -> CNT1 (wraps).
 // Poke = FFEA[6] clr_wdt: every main-loop pass and inside bounded loops only (rule: no unbounded loop around a poking wait).
 // Warning = threshold IRQ at CNT1 = N - 1, CNT3 = THR (earlier matches return): capture, then sof_rst. Reset = CNT1 = N.
@@ -505,6 +532,13 @@ typedef struct
 extern __xdata StAwtoKey g_stAwtoKey;
 // #129 keys (fw/keys/keys.c): input monitor values -> AwtoKeyPoll (debounce, combos, repeat) -> AwtoKeyRoute (one dispatcher)
 #define AWTO_KEY_SAMPLE_MS                                      10      // debounce: a change counts after two equal samples this far apart (SDK key scan: SEC(0.01))
+// Paced loop: pass count N = floor(AWTO_KEY_SAMPLE_MS / AWTO_LOOP_PACING) (4 ms -> 2, 8 ms -> 1): the pass count only skips cheap, the tick compare decides.
+// Floor, not round: the sleep also wakes at the key sample due time, so at least N passes always fit in a sample period; free-run (0): tick compare only.
+#if(AWTO_LOOP_PACING > 0)
+#define AWTO_KEY_PASS_N                                         (AWTO_KEY_SAMPLE_MS / AWTO_LOOP_PACING)
+#else
+#define AWTO_KEY_PASS_N                                         1
+#endif
 #define AWTO_KEY_COMBO_MS                                       80      // UP / DOWN wait this long for a combo partner (UP+DOWN) before PRESS (two-finger press skew; longer feels slow)
 #define AWTO_KEY_REPEAT_MS                                      500     // first REPEAT of a held key (SDK: SEC(0.5))
 #define AWTO_KEY_RESET_MS                                       10000   // any front key held: reset all settings to defaults (Dan 2026-11-18, #132 item 7)
@@ -1138,6 +1172,7 @@ extern __xdata unsigned char g_ucAwtoMemForce;  // 1 = ScalerMDomainMemoryConfig
 #define AWTO_MON_EV_ADC                                         1       // value = A0 << 24 | A1 << 16 | A2 << 8 | A3 (raw LSADC results, 5-bit in [7:3])
 #define AWTO_MON_EV_TRIM                                        2       // value = IOSC trim counter (12 bit, temperature proxy)
 #define AWTO_MON_EV_LOOP                                        3       // value = passes/s << 16 | longest watchdog poke gap, ms
+#define AWTO_MON_EV_HEAD                                        5       // paced loop only (AWTO_LOOP_PACING > 0), on the beat: value = busy % << 24 | worst busy pass (1/16 ms) << 12 | passes/s (12 bit each, clamped)
 #define AWTO_MON_EV_UP                                          4       // value = uptime s << 8 | stack high-water (SP)
 #define AWTO_MON_MS                                             10000   // sample period: the values drift over minutes (IOSC trim constant 30 min at 350.8 MHz); a key ladder is held, not pulsed, to show
 #define AWTO_MON_BEAT_K                                         30      // heartbeat = every K samples (5 min): all rows again; between them only a changed row
