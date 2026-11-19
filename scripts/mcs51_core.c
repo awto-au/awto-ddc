@@ -28,6 +28,8 @@ typedef struct {                /* public part, mirrored by fastmachine.Pub */
     uint64_t fm_miss, fm_stall;
     uint32_t dw, max_instr_clk; /* dw8051 mode on; longest single step in clk (instruction + IRQ entry) */
     uint32_t sp_max, sp_wrap;   /* stack high-water (highest SP after a push); pushes that wrapped SP 0xFF -> 0x00 */
+    uint64_t idle_clk;          /* dw8051: clk spent in PCON.IDL (CPU halted, timers run; exact fast-forward to the next IRQ) */
+    uint64_t nidle;             /* IDL entries */
 } pub_t;
 
 typedef struct {
@@ -39,6 +41,7 @@ typedef struct {
     uint16_t pch[65536];        /* PC hooks: bank mask */
     uint8_t *code, *cur;
     int8_t lvl[8];
+    uint8_t idle_req;
     uint8_t was_reti, exf2_active, t2mode, t2ex_bit;
     uint32_t t0_edge, t1_edge, t2_edge, t2ex_edge;
     uint64_t opcount[256];      /* instructions executed per opcode (test coverage) */
@@ -199,6 +202,7 @@ static inline void dwrite(core_t *c, uint8_t a, uint8_t v)
         return;
     }
     sfr_store(c, a, v);
+    if (a == 0x87 && (v & 1)) c->idle_req = 1;
     ev(c, EV_SW, a);
 }
 
@@ -1095,6 +1099,25 @@ static int core_run_(core_t *c, uint64_t n)
         }
         uint64_t n0 = c->p.nirq;
         irq(c);
+        if (c->idle_req) {                      /* PCON.IDL: CPU halted until an IRQ is accepted; timers keep counting (databook 3-55) */
+            c->idle_req = 0;
+            if (c->dw) {
+                uint64_t t0 = c->p.clk, lim = t0 + (1ull << 26);   /* no timer running + no IRQ: stop the loop after 2^26 clk */
+                c->p.nidle++;
+                for (;;) {
+                    uint64_t d, m = c->p.nirq;
+                    c->was_reti = 0;
+                    irq(c);
+                    if (c->p.nirq != m || c->p.clk >= lim)
+                        break;
+                    d = (!c->tslow && c->tnext > c->tnow) ? c->tnext - c->tnow : c->clk_per_cycle;
+                    if (d > 65536) d = 65536;
+                    c->p.clk += d;
+                    timers_advance(c, (uint32_t)d);
+                }
+                c->p.idle_clk += c->p.clk - t0;
+            }
+        }
         c->p.irq_tail = c->p.nirq != n0;
         if (c->p.reason != R_DONE)
             return (int)c->p.reason;

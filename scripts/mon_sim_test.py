@@ -82,7 +82,7 @@ class Rig:
 
 
 def kinds(ln):
-    return sorted(re.search(r"monitor: (ADC|IOSC|main loop|uptime)", x).group(1) for x in ln)
+    return sorted(re.search(r"monitor: (ADC|IOSC|main loop|headroom|uptime)", x).group(1) for x in ln)
 
 
 def main():
@@ -102,6 +102,7 @@ def main():
         a.bin.parent.mkdir(parents=True, exist_ok=True)
         a.bin.write_bytes(img)
         pad = 0.3
+    beat_rows = sorted(["ADC", "IOSC", "main loop", "uptime"] + (["headroom"] if "_g_stAwtoHead" in a.map.read_text(errors="replace") else []))   # a paced image adds the headroom row
     say(f"mon_sim_test {a.bin.name}: period {ms} ms, heartbeat every {k} samples")
     r = Rig(a)
     try:
@@ -114,7 +115,7 @@ def main():
         say("  first sample rows:\n" + "\n".join("    " + x for x in first))
         r.check("first sample: g_stAwtoMon 'MN', on, A0..A3 = the cells", magic == b"MN" and r.m.rd(r.mon + 3)[0] == 1
                 and bytes(r.m.rd(r.mon + 5, 4)) == bytes([0xF8, 0xF8, 0x58, 0x20]), f"{magic!r} {bytes(r.m.rd(r.mon + 5, 4)).hex()}")
-        r.check("first sample: the four rows (heartbeat), ADC row decoded", kinds(first) == ["ADC", "IOSC", "main loop", "uptime"]
+        r.check("first sample: the four rows (+ headroom on a paced image) on the heartbeat, ADC row decoded", kinds(first) == beat_rows
                 and any("ADC A0 F8 A1 F8 A2 58 A3 20" in x for x in first), str(kinds(first)))
         r.check("first sample: loop rate > 0 and a watchdog gap are in the row",
                 any(re.search(r"main loop [1-9]\d* passes/s, longest watchdog gap \d+ms", x) for x in first))
@@ -138,11 +139,11 @@ def main():
         r.on[SET_ID_MONITOR] = 1
         r.wait(ms / 1000.0 + pad)
         n = r.new()
-        r.check("monitor on again: the first sample is a heartbeat (four rows)", kinds(n) == ["ADC", "IOSC", "main loop", "uptime"], str(n))
+        r.check("monitor on again: the first sample is a heartbeat (four rows)", kinds(n) == beat_rows, str(n))
         if not a.no_beat:
             r.wait(k * ms / 1000.0 - ms / 2000.0)          # the K-th sample after the heartbeat lands inside this window
             n = r.new()
-            r.check(f"heartbeat {k} samples after the last one: the four rows again", kinds(n) == ["ADC", "IOSC", "main loop", "uptime"], str(n))
+            r.check(f"heartbeat {k} samples after the last one: the four rows again", kinds(n) == beat_rows, str(n))
     finally:
         r.s.bus.close()
     say(f"{'PASS' if r.fails == 0 else 'FAIL'} mon_sim_test {a.bin.name}: {r.fails} failed")

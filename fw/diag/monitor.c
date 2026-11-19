@@ -95,6 +95,16 @@ void AwtoMonSample(void)
         AwtoSyncPush(AWTO_SYNC_EV_MON, AWTO_MON_EV_LOOP, ((DWORD)usLoop << 16) | (((WORD)g_stAwtoMon.ucMaxPoke * 293) >> 6));
         ucLog++;
     }
+#if(AWTO_LOOP_PACING > 0)
+    if(ucBeat != 0)
+    {
+        WORD usW = (g_stAwtoHead.usWorstQ4 > 0xFFF) ? 0xFFF : g_stAwtoHead.usWorstQ4;
+        WORD usP = (g_stAwtoHead.usPasses > 0xFFF) ? 0xFFF : g_stAwtoHead.usPasses;
+
+        AwtoSyncPush(AWTO_SYNC_EV_MON, AWTO_MON_EV_HEAD, ((DWORD)((1005 - g_stAwtoHead.usSleepPm) / 10) << 24) | ((DWORD)usW << 12) | usP);
+        ucLog++;
+    }
+#endif
     if((ucBeat != 0) || (g_stAwtoMon.ucStack != s_ucMonStack))
     {
         s_ucMonStack = g_stAwtoMon.ucStack;
