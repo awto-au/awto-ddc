@@ -202,3 +202,9 @@ def test_refused(exe, tmp_path):
 def test_stall_aborts(exe, tmp_path):
     mem, st = run(exe, tmp_path, [cmd("fill", 0, 0, 3840, 2160, (5, 5, 5))], busy=-1)
     assert st[0]["state"] == 4 and st[0]["bursts"] < 100
+
+
+def test_script_resolves_map_symbol(tmp_path):
+    m = tmp_path / "x.map"
+    m.write_text("D:   0000F51A  _g_stAwtoDraw                      ddr_draw\n")
+    assert D.SW.sym(m, "g_stAwtoDraw") == 0xF51A
