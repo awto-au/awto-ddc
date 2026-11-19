@@ -148,3 +148,35 @@ def test_new_item_beats_slack_rule():
         f.fixed = True
     placed, _ = L.assign(fill + [it], lay, 0, 0, 2, cap, log=lambda *_: None)
     assert placed[("fn", "Big")][0] in (0, 1)
+
+
+def _mod_layout(a_slot, b_slot):
+    lay = L.Layout()
+    lay.rows[("fn", "A")] = (1, 0, a_slot)         # module m: more code in bank 1 than in bank 0
+    lay.rows[("fn", "B")] = (0, 0, b_slot)
+    return lay, [L.Item("fn", "A", a_slot - 8, 1, "m", slot=a_slot), L.Item("fn", "B", b_slot - 8, 0, "m", slot=b_slot)]
+
+
+def test_new_fn_goes_to_module_bank_with_most_code():
+    lay, its = _mod_layout(400, 100)
+    new = L.Item("fn", "New", 40, 0, "m")          # sdcc_bank's guess (bank 0) is ignored: bank 1 holds more of m
+    placed, _ = L.assign([*its, new], lay, 0, 0, 3, 1000, log=lambda *_: None)
+    assert placed[("fn", "New")][0] == 1
+
+
+def test_new_fn_takes_next_module_bank_when_first_is_full():
+    lay, its = _mod_layout(400, 100)
+    pad = L.Item("const", "Pad", 1, 1, "x", slot=1000 - 400 - 8)
+    pad.fixed = True
+    placed, _ = L.assign([*its, pad, L.Item("fn", "New", 40, 1, "m")], lay, 0, 0, 3, 1000, log=lambda *_: None)
+    assert placed[("fn", "New")][0] == 0
+
+
+def test_fixed_const_falls_back_to_common_when_bank_full():
+    lay = L.Layout()
+    pad = L.Item("const", "Pad", 1, 0, "a", slot=990)
+    pad.fixed = True
+    c = L.Item("const", "T", 10, 0, "m")
+    c.fixed = True
+    placed, _ = L.assign([pad, c], lay, 0, 100, 1, 1000, log=lambda *_: None)
+    assert placed[("const", "T")][0] == "C"

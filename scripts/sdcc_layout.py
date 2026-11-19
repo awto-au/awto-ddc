@@ -161,10 +161,19 @@ def assign(items, layout, common_lo, common_hi, nbanks, bank_cap, log=print, fil
     if pending:
         pending.sort(key=lambda it: (not it.fixed,) + order(it))
     for it in pending:
-        cands = [it.region] if (it.region == "C" or it.fixed) else [it.region] + sorted(
-            (b for b in regs if b not in ("C", it.region)), key=lambda b: -regs[b].free())
+        if it.region == "C" or it.fixed:     # a fixed const whose bank is full falls back to common (reachable from every bank)
+            cands = [it.region] + (["C"] if it.is_const and it.region != "C" else [])
+        elif it.key not in layout.rows:      # new chunk: first bank holding its module's code with room, most module code first
+            mb = {}
+            for rid, r in regs.items():
+                if rid != "C":
+                    mb[rid] = sum(by_key[k].size for k in r.placed if k in by_key and by_key[k].module == it.module)
+            home = sorted((b for b in mb if mb[b]), key=lambda b: (-mb[b], b))
+            cands = home + sorted((b for b in regs if b != "C" and b not in home), key=lambda b: -regs[b].free())
+        else:
+            cands = [it.region] + sorted((b for b in regs if b not in ("C", it.region)), key=lambda b: -regs[b].free())
         done = None
-        for slack in (True, False):         # second pass drops the foreign-bank slack rule: a fit beats headroom (#268)
+        for slack in ((False,) if it.key not in layout.rows else (True, False)):   # new chunks: fit only, no slack; others: slack first, then fit (#268)
             for rid in cands:
                 r = regs[rid]
                 if slack and rid != it.region and rid != "C" and r.free() - it.slot < (1 - fill_target) * bank_cap * 0.25:
