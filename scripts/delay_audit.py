@@ -62,6 +62,7 @@ HAND = {
 }
 # HWTEST-only loops (fw/test/testcmd.c, -D _AWTO_OSD_HWTEST / clock sweep): the inventory attributes them to one function, so keyed by (file, statement)
 HAND_STMT = {
+    ("audio.c", "while((ScalerGetBit(AWTO_R_DVC_GAIN_DONE, AWTO_F_DVC_GAIN_DONE_DVC_DONE) == 0) && (ucPolls"): ("A", "DVC_GAIN_DONE poll, <= AWTO_DVC_RAMP_POLLS x ScalerTimerDelayXms(AWTO_DVC_RAMP_POLL_MS)", "no", "OK", "Timer2 ms; 2 ms = 1.25 x the 1.4 ms ramp worst case (docs/audio.md)"),
     ("testcmd.c", "while(ucH != TH2);"): ("C", "re-read of Timer2 high byte, at most 2 passes (rollover between the two reads)", "no", "NOCLOCK", "test op; bounded by the counter, not a wait"),
     ("testcmd.c", "while((TF2 == 0) && (usSpin > 0))"): ("C", "wait for Timer2 overflow, bound AWTO_CLK_TICK_SPIN passes", "yes", "SCALES-BENIGN",
                                                        "clock-sweep test op: the bound only ends a dead timer; the caller reports the tick missing; production unaffected"),
