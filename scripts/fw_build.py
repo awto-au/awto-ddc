@@ -77,6 +77,16 @@ def holes():
     return h
 
 
+def xclear_asm():
+    """Startup RAM clear: one loop per XDATA hole at the fixed bounds (DDC RAM skipped); no l_XSEG, so no size reaches common."""
+    out = []
+    for i, (a, b) in enumerate(holes()):
+        n = b - a
+        out += [f"\tmov\tr1,#0x{n & 255:02x}", f"\tmov\tr2,#0x{(n + 255) >> 8:02x}", f"\tmov\tdptr,#0x{a:04x}", "\tclr\ta",
+                f"0000{i + 1}$:", "\tmovx\t@dptr,a", "\tinc\tdptr", f"\tdjnz\tr1,0000{i + 1}$", f"\tdjnz\tr2,0000{i + 1}$"]
+    return "\n".join(out)
+
+
 def area_sizes(rel: Path) -> dict:
     s = {}
     for m in re.finditer(r"^A (\w+) size (\w+)", rel.read_text(errors="replace"), re.M):
@@ -94,6 +104,9 @@ def check_xdata(mp: str, hs):
         a, n = int(m.group(2), 16), int(m.group(3), 16)
         if n and not any(lo <= a and a + n <= hi for lo, hi in hs):
             bad.append(f"{m.group(1)} 0x{a:04x}+{n}")
+    spans = sorted((int(m.group(2), 16), int(m.group(3), 16), m.group(1)) for m in re.finditer(
+        r"^(X\w*SEG\d*)\s+([0-9A-F]{8})\s+([0-9A-F]{8})", mp, re.M) if int(m.group(3), 16))
+    bad += [f"{p[2]} overlaps {q[2]}" for p, q in zip(spans, spans[1:]) if p[0] + p[1] > q[0] and p[0] != q[0]]
     if bad:
         sys.exit(f"XDATA outside holes {[(hex(a), hex(b)) for a, b in hs]}: {sorted(set(bad))}")
 
@@ -301,12 +314,10 @@ def main() -> int:
                   *([ROOT / "fw/sdcc/a5_probe.asm"] if "_AWTO_PROBES" in os.environ.get("K2S_SDCC_EXTRA", "") else []),   # needs the C buffer: -D _AWTO_PROBES (#233)
                   ROOT / "tmp/sdcc-port/asm_ovl/__ovl.asm",
                   *sorted((ROOT / "tmp/sdcc-port/isr_libs").glob("*_isr*.asm"))):
-        (bank_dir / extra.name).write_text(extra.read_text())
+        (bank_dir / extra.name).write_text(extra.read_text().replace(";@XCLEAR@", xclear_asm()))
         run("bank", [T.tool("sdas8051"), "-plosgffw", bank_dir / extra.with_suffix(".rel").name, bank_dir / extra.name])
     write_vectors(bank_dir)
     hs, moved = split_xseg(bank_dir)
-    if len(hs) - 1 > 4:                                      # crt_xinit.asm declares/clears XSEG1..4 only
-        sys.exit(f"{len(hs)} XDATA holes: extend XSEG1..4 in fw/sdcc/crt_xinit.asm")
     for asm in moved:                                        # re-assemble modules whose XSEG was renamed
         run("bank", [T.tool("sdas8051"), "-plosgffw", asm.with_suffix(".rel"), asm])
     out = ROOT / "tmp/fw" / a.serial
@@ -322,6 +333,8 @@ def main() -> int:
     wl = [] if pins else [f"-Wl-aBANK{n}=0x{n * BANK + a.common:x}" for n in used]
     wl += [f"-Wl-a{n}=0x{v:x}" for n, v in sorted(pins.items())]
     wl += [f"-Wl-aXSEG{k}=0x{hs[k][0]:x}" for k in range(1, len(hs)) if k in xsegs]
+    xis = sum(area_sizes(r).get("XISEG", 0) for r in rels)   # XISEG at the tail of hole 0: s_XISEG (in common) moves only with its own size
+    wl += [f"-Wl-aXISEG=0x{hs[0][1] - xis:x}"] if xis else []
     wl += [f"-Wl-aHOME=0x{VEC_END:x}"]
     if pins and a.resid_end:    # XINIT floats to the first module that declares it, which can be after the stubs: pin it
         xi = sum(int(m, 16) for r in rels for m in re.findall(r"^A XINIT size (\w+)", r.read_text(errors="replace"), re.M))
