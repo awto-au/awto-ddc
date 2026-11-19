@@ -9,6 +9,8 @@ usage: dbg_link.py on|off|state|expiry BUS [--minutes N]
 - expiry: test of the firmware timeout: 0x37 back within 1.25 x --minutes (checked once per second).
 - Firmware: fw/diag/dbgport.c + fw/ddcci/ddcci.c (wb-p14swap); sim check: scripts/swap_sim.py.
 - dev.py wraps every debug-slave command in on/off (`linked`), so it does not matter which side owns the DDC.
+- `linked` closes a console / pop-up the block opened (ucHold bit1: clear before, set after; test cmd 0x27, verified) unless
+  keep_console (osd, gpio, menu, pacman). `dev.py health --no-osd` skips the info card + debug pop-up round-trip.
 Log: ./tmp/logs/dbg_link.log
 """
 from __future__ import annotations
@@ -28,6 +30,11 @@ DBG, DDCCI = 0x35, 0x37
 VCP_LINK, MAGIC = 0xE3, 0xA5            # RL6449_Project.h AWTO_DBG_LINK_VCP / _MAGIC
 TESTCMD = 0xF6F8                        # isr_g_stAwtoDiag (0xF6D0) + 0x28
 CMD_BACK = 0x3B
+CMD_CLEAR = 0x27                        # fw/test/testcmd.c: closes the console, clears ucHold
+HOLD = 0xF6D0 + 0x2F                    # isr_g_stAwtoDiag.ucHold (docs/diag-block.md)
+HOLD_POPUP = 0x02                       # AWTO_HOLD_POPUP: debug pop-up / console held
+# Close wait: a console draw stalls the debug slave ~0.4 s (unit_health.CONSUME_WAIT_S 0.5 = 1.25 x worst seen).
+CLOSE_POLL_S, CLOSE_LIMIT_S = 0.05, 0.5
 DIAG_MAGIC = 0xF6D0                     # isr_g_stAwtoDiag.ucMagic[2] = 'AD' (docs/diag-block.md)
 MCCS_WAIT_S = 0.050                     # MCCS 2.2: host waits 50 ms after a set before the next transaction
 # swap = one main-loop pass (~1 ms); worst case the loop is blocked by the input-info pop-up draw, 375 ms (#60 phase
@@ -116,13 +123,62 @@ def off(bus: int) -> bool:
     return False
 
 
+def _rd(b, addr: int) -> int:
+    b.write(DBG, 0x01, bytes([addr >> 8]))
+    b.write(DBG, 0x3A, bytes([addr & 0xFF]))
+    return b.read(DBG, 0x08, 1)[0]
+
+
+def _wr(b, addr: int, v: int) -> None:
+    b.write(DBG, 0x01, bytes([addr >> 8]))
+    b.write(DBG, 0x03, bytes([v]))
+    b.write(DBG, 0x3B, bytes([addr & 0xFF]))
+
+
+def hold(bus: int) -> int | None:
+    try:
+        with i2cbus.Bus(bus) as b:
+            return _rd(b, HOLD)
+    except OSError:
+        return None
+
+
+def close_console(bus: int) -> bool:
+    """Test cmd 0x27, then verify ucHold bit1 reads 0. The firmware takes the command in its main loop: wait for the
+    previous test byte to be consumed first (it would be overwritten)."""
+    t0 = time.monotonic()
+    try:
+        with i2cbus.Bus(bus) as b:
+            while _rd(b, TESTCMD) != 0 and time.monotonic() - t0 < CLOSE_LIMIT_S:
+                time.sleep(CLOSE_POLL_S)        # previous test byte still being consumed (pop-up draw)
+            _wr(b, TESTCMD, CMD_CLEAR)
+            while time.monotonic() - t0 < 2 * CLOSE_LIMIT_S:
+                time.sleep(CLOSE_POLL_S)        # clear + OsdDispDisableOsd run in the main loop
+                if _rd(b, TESTCMD) == 0 and (_rd(b, HOLD) & HOLD_POPUP) == 0:
+                    log(f"bus {bus}: console closed (0x27) after {(time.monotonic() - t0) * 1000:.0f} ms, ucHold bit1 = 0")
+                    return True
+    except OSError as e:
+        log(f"bus {bus}: console close failed: {e}")
+        return False
+    log(f"bus {bus}: console close: ucHold bit1 still set after {(time.monotonic() - t0) * 1000:.0f} ms "
+        f"(limit {2 * CLOSE_LIMIT_S * 1000:.0f} ms)")
+    return False
+
+
 @contextlib.contextmanager
-def linked(bus: int, minutes: int = DEFAULT_MIN):
-    """0x35 on `bus` for the block; swapped back afterwards only if this call swapped it."""
+def linked(bus: int, minutes: int = DEFAULT_MIN, keep_console: bool = False):
+    """0x35 on `bus` for the block; swapped back afterwards only if this call swapped it.
+    A console / pop-up this block opened (ucHold bit1 clear before, set after) is closed again unless keep_console:
+    a debug session must leave the picture as it found it (visual tests run under it)."""
     how = on(bus, minutes)
+    before = hold(bus)
     try:
         yield how
     finally:
+        if not keep_console and before is not None and (before & HOLD_POPUP) == 0:
+            now = hold(bus)
+            if now is not None and (now & HOLD_POPUP) != 0:
+                close_console(bus)
         if how == "swapped":
             off(bus)
 

@@ -945,11 +945,12 @@ def cmd_reset(extra: list[str]) -> int:
     return _py("rtd_reset.py", _bus(u), "--serial", u["serial"])
 
 
-def _dbg_py(bus: int, script: str, *args, **kw) -> int:
+def _dbg_py(bus: int, script: str, *args, keep_console: bool = False, **kw) -> int:
     """_py with debug slave 0x35 on the unit's DDC for the run (#79 runtime swap: DDC/CI owns it by default); swapped
-    back afterwards only if this call swapped it (scripts/dbg_link.py)."""
+    back afterwards only if this call swapped it (scripts/dbg_link.py). A console / pop-up the run opened is closed
+    again unless keep_console (osd, gpio, menu, pacman: the pop-up is the point)."""
     import dbg_link
-    with dbg_link.linked(int(bus)):
+    with dbg_link.linked(int(bus), keep_console=keep_console):
         return _py(script, *args, **kw)
 
 
@@ -1042,7 +1043,8 @@ def cmd_osd(extra: list[str]) -> int:
     cmdmode = cmdmode or any(x in osd_test.CMD_ONLY for x in extra)       # popup-only actions imply --cmd
     mp = _fwmap(u, given)
     b = _live_bus(u)
-    return _dbg_py(b, "osd_test.py", b, "--serial", u["serial"], "--map", mp, *(["--cmd"] if cmdmode else []), *extra)
+    return _dbg_py(b, "osd_test.py", b, "--serial", u["serial"], "--map", mp, *(["--cmd"] if cmdmode else []), *extra,
+                   keep_console=True)
 
 
 @command("clear the OSD diagnostics console (= osd clear, test cmd 0x27)", args="[--unit N] [--map F]", kind="action")
@@ -1127,7 +1129,8 @@ def cmd_menu(extra: list[str]) -> int:
         return _py("menu_cli.py", "--sim", sim, "--map", given or str(Path(sim).with_suffix(".map")), *pa, *extra)
     n, u = _unit(extra)
     b = _live_bus(u)
-    return _dbg_py(b, "menu_cli.py", "--bus", str(b), "--serial", u["serial"], "--map", _fwmap(u, given), *pa, *extra)
+    return _dbg_py(b, "menu_cli.py", "--bus", str(b), "--serial", u["serial"], "--map", _fwmap(u, given), *pa, *extra,
+                   keep_console=True)
 
 
 @command("full-screen landscape Pac-Man demo: computer arrow keys steer; Escape/Q closes",
@@ -1137,7 +1140,8 @@ def cmd_pacman(extra: list[str]) -> int:
     given = _opt(extra, "--map")
     _done(extra, "pacman")
     b = _live_bus(u)
-    return _dbg_py(b, "pacman_cli.py", b, "--serial", u["serial"], "--map", _fwmap(u, given))
+    return _dbg_py(b, "pacman_cli.py", b, "--serial", u["serial"], "--map", _fwmap(u, given),
+                   keep_console=True)
 
 
 @command("Pygame RTD OSD emulator using the linked firmware's actual glyph/map/palette bytes",
@@ -1179,7 +1183,7 @@ def cmd_pacman_sim(extra: list[str]) -> int:
 
 @command("eyes-free health of a running unit (debug slave 0x35, 100 kHz): diag stage, loop rate, mode/power state, "
          "input timing vs host, backlight/panel pins, OSD round-trips; PASS/FAIL + exit code",
-         args="[--unit N] [--map F] [--host-mode WxH@HZ] | --sim BIN", kind="action")
+         args="[--unit N] [--map F] [--host-mode WxH@HZ] [--no-osd] | --sim BIN", kind="action")
 def cmd_health(extra: list[str]) -> int:
     sim = _opt(extra, "--sim")
     if sim:                                                  # firmware simulator, no hardware (#38); map = BIN with .map
@@ -1191,10 +1195,11 @@ def cmd_health(extra: list[str]) -> int:
     given, hm = _opt(extra, "--map"), _opt(extra, "--host-mode")
     if given is True or hm is True:
         raise SystemExit("health: --map/--host-mode need a value; nothing done")
+    no_osd = _flag(extra, "--no-osd")
     _done(extra, "health")
     b = _live_bus(u)
     return _dbg_py(b, "unit_health.py", b, "--serial", u["serial"], "--map", _fwmap(u, given),
-               *(["--host-mode", hm] if hm else ["--gdctl", u["gdctl"]]))
+               *(["--host-mode", hm] if hm else ["--gdctl", u["gdctl"]]), *(["--no-osd"] if no_osd else []))
 
 
 @command("write scaler registers over ISP (MCU halted), read back; --reset reboots", args="[--unit N] [--reset] ADDR=VAL...",
@@ -1396,7 +1401,7 @@ def cmd_gpio(extra: list[str]) -> int:
         raise SystemExit("gpio: --secs needs a number; nothing done")
     b = _live_bus(u)
     return _dbg_py(b, "gpio_diag.py", b, extra[0], "--serial", u["serial"], "--map", _fwmap(u, given),
-                   *(["--secs", secs] if secs else []))
+                   *(["--secs", secs] if secs else []), keep_console=True)
 
 
 @command("read the sink's HDMI SCDC registers (0x54), read-only", args="[--unit N]", kind="action")
