@@ -96,7 +96,7 @@ EXTENSIVE = {
 }
 SIM_CPU = os.environ.get("AWTO_SIM_CPU", "dw8051")   # fast-core CPU model of the sims (#162 step 1); results are comparable only at the same model
 CPU_OF = {}      # per-gate CPU model override; wdt runs on dw8051 since the Timer0 cases use wall ms (the 8052 model has no clock: the 350.8 MHz boot never reaches stage 8 in wdt_test)
-NO_SIM = {"link", "xlayout", "pokes", "speed", "magic", "regs", "regmap", "rules", "edid"}   # every other gate runs a sim on the in-process DW8051 core (fw_sim default; ucsim is a cross-check only)
+NO_SIM = {"link", "xlayout", "pokes", "speed", "magic", "regs", "regmap", "rules", "edid", "conhost"}   # every other gate runs a sim on the in-process DW8051 core (fw_sim default; ucsim is a cross-check only)
 SKIP_IF_MISSING = {      # gate -> map symbols the image must define, else SKIP (the script would FAIL on an older image)
     "keys": ("_AwtoSourceOpen",),
     "crash": ("_AwtoWdtHang",),
@@ -247,6 +247,8 @@ def gates(b: Path, m: Path, ref, tree):
         g["canary"] = [*PY, f"{s}/stack_canary_sim.py", b, m]
     g["dramlog"] = [*PY, f"{s}/dram_log_sim.py", b, m]         # DRAM log: DDR ring format, wrap, warm reset keeps the history
     g["conkeep"] = [*PY, f"{s}/con_keep_sim.py", b, "--map", m]       # log keeping: the console is a view of the ring, a warm reset keeps it
+    if tree:
+        g["conhost"] = [*PY, f"{s}/con_wrap_host.py"]                                 # NORMAL: the real wrap decision (fw/osd/conwrap.c) compiled on the host, ~0.1 s
     g["conwrap_full"] = [*PY, f"{s}/con_wrap_sim.py", b, "--map", m, "--out", out / "conwrap_full", *(["--tree", tree] if tree else [])]   # no line clipped, real events
     g["conwrap"] = [*PY, f"{s}/con_wrap_sim.py", b, "--map", m, "--out", out / "conwrap", "--scope", "inject", *(["--tree", tree] if tree else [])]    # NORMAL: injected widest lines
     if header(tree):

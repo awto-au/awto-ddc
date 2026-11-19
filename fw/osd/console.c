@@ -24,6 +24,7 @@ extern void osd_tc_viewport(BYTE ucRows);
 extern BYTE osd_tc_scroll(BYTE ucFirst);
 extern BYTE osd_font_glyph(char c);
 extern void osd_tc_cells(BYTE ucRow, BYTE ucCell, BYTE __xdata *pucTiles, BYTE ucN, BYTE ucStyle);
+extern BYTE AwtoConWrapBreak(const __xdata char *pcRow, BYTE ucLen, BYTE ucTxt0, BYTE *pucDrop);    // fw/osd/conwrap.c (pure, host-tested)
 
 #ifndef AWTO_HOLD_POPUP
 #define AWTO_HOLD_POPUP     0x02                // same value as awto_testcmd.inc (another translation unit)
@@ -3109,19 +3110,8 @@ static void AwtoConWrapLine(void)
         }
         s_ucConFirst++;                         // title bar redrawn by AwtoConLogEnd (the row buffer is in use here)
     }
-    s_ucLogI = d_s_ucAwtoLen;                     // s_ucLogI = characters to drop on the second pass (free: tail lines never wrap)
-    while((--s_ucLogI > AWTO_LOG_TXT0) && (s_pcAwtoRow[s_ucLogI] != ' '))
-    {
-    }
-    if(s_ucLogI <= AWTO_LOG_TXT0)
-    {
-        AwtoTextAt(s_ucPanelRow, s_ucPanelCol, s_pcAwtoRow, d_s_ucAwtoLen, s_ucLnStyle);    // no space: break at the edge
-        s_ucLogI = d_s_ucAwtoLen - 1;
-    }
-    else
-    {
-        AwtoTextAt(s_ucPanelRow, s_ucPanelCol, s_pcAwtoRow, s_ucLogI, s_ucLnStyle);       // the space is dropped too
-    }
+    // s_ucLogI = characters to drop on the second pass (free: tail lines never wrap); the break itself: fw/osd/conwrap.c
+    AwtoTextAt(s_ucPanelRow, s_ucPanelCol, s_pcAwtoRow, AwtoConWrapBreak(s_pcAwtoRow, d_s_ucAwtoLen, AWTO_LOG_TXT0, &s_ucLogI), s_ucLnStyle);
     for(d_s_ucAwtoLen = 0; d_s_ucAwtoLen < AWTO_LOG_TXT0; d_s_ucAwtoLen++)
     {
         s_pcAwtoRow[d_s_ucAwtoLen] = ' ';
