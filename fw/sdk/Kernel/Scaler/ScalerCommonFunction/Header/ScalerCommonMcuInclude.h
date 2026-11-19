@@ -218,7 +218,30 @@
 #define AWTO_TP1_WAIT()
 #endif
 
-#ifdef AWTO_PULSE_WAIT_TEST
+#ifndef AWTO_DPCD_SETTLE_RD
+#define AWTO_DPCD_SETTLE_RD 0
+#endif
+#if(AWTO_DPCD_SETTLE_RD != 0)
+#define AWTO_DPCD_SETTLE_E() ScalerGetByte_EXINT(PBA_C4_DPCD_DATA_PORT);
+#define AWTO_DPCD_SETTLE() ScalerGetByte(PBA_C4_DPCD_DATA_PORT);
+#else
+#define AWTO_DPCD_SETTLE_E()
+#define AWTO_DPCD_SETTLE()
+#endif
+
+#ifndef AWTO_LTWR_WAIT_US
+#define AWTO_LTWR_WAIT_US 0
+#endif
+#if(AWTO_LTWR_WAIT_US > 0)
+#define AWTO_LTWR_WAIT() DELAY_XUS_EXINT(AWTO_LTWR_WAIT_US)
+#else
+#define AWTO_LTWR_WAIT()
+#endif
+
+#ifndef AWTO_PULSE_WAIT_TEST
+#define AWTO_PULSE_WAIT_TEST 0
+#endif
+#if(AWTO_PULSE_WAIT_TEST != 0)
 #define AWTO_PULSE_WAIT() DELAY_5US_EXINT()
 #else
 #define AWTO_PULSE_WAIT()

@@ -163,3 +163,22 @@ extern bit ScalerSyncVGAUseEmbeddedEDID(void);
 extern void ScalerSyncVGADdcCheckBusyAndForceNack(void);
 #endif
 
+#ifndef AWTO_LT_RING
+#define AWTO_LT_RING 0
+#endif
+#if(AWTO_LT_RING != 0)
+// test ring (default off): 32 x {id, LT status, a, b}; idx = next slot; read with dbg-read
+extern __xdata BYTE isr_g_pucAwtoLtRing[128];
+extern __xdata BYTE isr_g_ucAwtoLtIdx;
+#define AWTO_LT_PUT(id, a, b)       {isr_g_pucAwtoLtRing[isr_g_ucAwtoLtIdx] = (id); isr_g_pucAwtoLtRing[isr_g_ucAwtoLtIdx + 1] = isr_g_ucDpRx1LTStatus; isr_g_pucAwtoLtRing[isr_g_ucAwtoLtIdx + 2] = (a); isr_g_pucAwtoLtRing[isr_g_ucAwtoLtIdx + 3] = (b); isr_g_ucAwtoLtIdx = (isr_g_ucAwtoLtIdx + 4) & 0x7F;}
+#define AWTO_LT_LOG_I(id)           AWTO_LT_PUT((id), ScalerDpRx1GetDpcdInfo_EXINT0(0x00, 0x01, 0x00), ScalerDpRx1GetDpcdInfo_EXINT0(0x00, 0x02, 0x02))
+#define AWTO_LT_LOG_M(id)           AWTO_LT_PUT((id), ScalerDpRx1GetDpcdInfo(0x00, 0x01, 0x00), ScalerDpRx1GetDpcdInfo(0x00, 0x02, 0x02))
+#define AWTO_LT_LOG_V(id, v)        AWTO_LT_PUT((id), (v), ScalerDpRx1GetDpcdInfo(0x00, 0x02, 0x02))
+#define AWTO_LT_RING_DEF __xdata BYTE isr_g_pucAwtoLtRing[128]; __xdata BYTE isr_g_ucAwtoLtIdx;
+#else
+#define AWTO_LT_RING_DEF
+#define AWTO_LT_PUT(id, a, b)
+#define AWTO_LT_LOG_I(id)
+#define AWTO_LT_LOG_M(id)
+#define AWTO_LT_LOG_V(id, v)
+#endif

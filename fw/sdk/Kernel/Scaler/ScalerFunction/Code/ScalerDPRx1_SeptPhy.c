@@ -924,7 +924,7 @@ BYTE ScalerDpRx1GetDpcdBitInfo(BYTE ucDpcdAccessPortH, BYTE ucDpcdAccessPortM, B
     ScalerSetByte(PBA_C2_DPCD_ADDR_PORT_M, ucDpcdAccessPortM);
     ScalerSetByte(PBA_C3_DPCD_ADDR_PORT_L, ucDpcdAccessPortL);
 
-    return ScalerGetBit(PBA_C4_DPCD_DATA_PORT, ucDpcdBit);
+    AWTO_DPCD_SETTLE() return ScalerGetBit(PBA_C4_DPCD_DATA_PORT, ucDpcdBit);
 }
 //--------------------------------------------------
 // Description  : Get DPCD Table Information
@@ -942,7 +942,7 @@ BYTE ScalerDpRx1GetDpcdInfo(BYTE ucDpcdAccessPortH, BYTE ucDpcdAccessPortM, BYTE
     ScalerSetByte(PBA_C2_DPCD_ADDR_PORT_M, ucDpcdAccessPortM);
     ScalerSetByte(PBA_C3_DPCD_ADDR_PORT_L, ucDpcdAccessPortL);
 
-    return ScalerGetByte(PBA_C4_DPCD_DATA_PORT);
+    AWTO_DPCD_SETTLE() return ScalerGetByte(PBA_C4_DPCD_DATA_PORT);
 }
 //--------------------------------------------------
 // Description  : Check Dp Video Straam VBID
@@ -1163,13 +1163,13 @@ EnumDpHotPlugTime ScalerDpRx1BeforeHpdToggleProc(EnumDpHotPlugAssertType enumHpd
 void ScalerDpRx1AfterHpdToggleProc(void)
 {
     // Release Aux Phy
-    ScalerSetBit(PBA_65_AUX_5, ~_BIT7, _BIT7);
+    ScalerSetBit(PBA_65_AUX_5, ~_BIT7, _BIT7); AWTO_LT_LOG_M(0x20)
 
     SET_DP_RX1_AUX_MANUAL_MODE();
 
     if((GET_DP_RX1_LINK_TRAINING_STATUS() != _DP_NORMAL_LINK_TRAINING_PASS) && (GET_DP_RX1_LINK_TRAINING_STATUS() != _DP_FAKE_LINK_TRAINING_PASS))
     {
-        ScalerDpRx1SetDpcdValue(0x00, 0x01, 0x00, 0x00);
+        ScalerDpRx1SetDpcdValue(0x00, 0x01, 0x00, 0x00); AWTO_LT_LOG_V(0x21, 0)
         ScalerDpRx1SetDpcdValue(0x00, 0x01, 0x01, (ScalerDpRx1GetDpcdInfo(0x00, 0x01, 0x01) & 0xE0));
     }
 
@@ -1873,7 +1873,7 @@ void ScalerDpRx1SetDpcdBitValue(BYTE ucDpcdAccessPortH, BYTE ucDpcdAccessPortM, 
     ScalerSetByte(PBA_C1_DPCD_ADDR_PORT_H, ucDpcdAccessPortH);
     ScalerSetByte(PBA_C2_DPCD_ADDR_PORT_M, ucDpcdAccessPortM);
     ScalerSetByte(PBA_C3_DPCD_ADDR_PORT_L, ucDpcdAccessPortL);
-    ScalerSetBit(PBA_C4_DPCD_DATA_PORT, ~(~ucNotDpcdBit), ucDpcdBit);
+    AWTO_DPCD_SETTLE() ScalerSetBit(PBA_C4_DPCD_DATA_PORT, ~(~ucNotDpcdBit), ucDpcdBit);
 }
 //--------------------------------------------------
 // Description  : Set DPCD Table Information
