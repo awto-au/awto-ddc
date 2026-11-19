@@ -1367,7 +1367,7 @@ extern void AwtoSyncDetect(unsigned char ucPort, unsigned char ucKind, unsigned 
 extern void AwtoSyncTiming(void);
 extern void AwtoSyncFreq(void);
 extern void AwtoSyncPoll(void);
-extern unsigned char AwtoSyncRow(unsigned char ucId, unsigned char ucArg);
+extern unsigned int AwtoSyncRow(unsigned char ucId, unsigned char ucArg);
 extern unsigned char AwtoSyncStage(unsigned char ucPort);
 extern unsigned char AwtoDdcLive(unsigned char ucI);
 extern unsigned long AwtoTmdsIdleKhz(unsigned char ucPage);

@@ -1297,7 +1297,7 @@ static void AwtoPutWall(void)                   // s_ulLnAbs -> "HH:MM:SS.mmm" (
 static void AwtoSyncLine(BYTE ucSeq)
 {
     BYTE __xdata *puc = (BYTE __xdata *)&g_stAwtoSync.stEv[AWTO_SYNC_IDX(ucSeq)];
-    BYTE ucRow = AwtoSyncRow(puc[0], puc[1]);
+    WORD usRow = AwtoSyncRow(puc[0], puc[1]);
     BYTE ucFmt;
 
     ulV = ((DWORD)puc[4] << 24) | ((DWORD)puc[5] << 16) | ((WORD)puc[6] << 8) | puc[7];
@@ -1326,7 +1326,7 @@ static void AwtoSyncLine(BYTE ucSeq)
         AwtoPutNum(usMs, 1);
         AwtoPutChar(':');                       // time column "nnnnn:" (no '+', no unit)
     }
-    if(ucRow == 0)
+    if(usRow == 0)
     {
         AwtoPutStr("event ");
         AwtoPutHex2(puc[0]);
@@ -1334,13 +1334,13 @@ static void AwtoSyncLine(BYTE ucSeq)
         AwtoPutHex2(puc[1]);
         return;
     }
-    ucFmt = AwtoSyncTxt(ucRow - 1, 0xFF);        // 0xFF = nothing printed, the fmt only
+    ucFmt = AwtoSyncTxt(usRow - 1, 0xFF);        // 0xFF = nothing printed, the fmt only
     if((ucFmt & 0x80) != 0)
     {
         AwtoPortName(puc[1]);
         AwtoPutChar(' ');
     }
-    AwtoSyncTxt(ucRow - 1, 0);
+    AwtoSyncTxt(usRow - 1, 0);
     switch(ucFmt & 0x7F)
     {
         case 1:                                 // vport
@@ -1395,8 +1395,8 @@ static void AwtoSyncLine(BYTE ucSeq)
             AwtoSyncName(AWTO_SYNC_EV_SYS_OUTCOME, puc[7]); AwtoPutChar(')');
             break;
         case 19:                                                                                   // ms2: low word ms % ... high word ms % (#162 s3b)
-            AwtoPutNum(ulV & 0xFFFF, 1); AwtoPutStr("ms"); AwtoSyncTxt(ucRow - 1, 1);
-            AwtoPutNum(ulV >> 16, 1); AwtoPutStr("ms"); AwtoSyncTxt(ucRow - 1, 2);
+            AwtoPutNum(ulV & 0xFFFF, 1); AwtoPutStr("ms"); AwtoSyncTxt(usRow - 1, 1);
+            AwtoPutNum(ulV >> 16, 1); AwtoPutStr("ms"); AwtoSyncTxt(usRow - 1, 2);
             return;                                 // its own tail: no fmt kept over the calls (DATA overlay path, #162 s3b)
         case 20: AwtoSyncName(AWTO_SYNC_EV_PNL_BY, puc[7]); break;                                 // pby: panel requester (#162 s3b)
         case 21: AwtoSyncName(AWTO_SYNC_EV_SYS_STATE, puc[7]); break;                              // sname: system state (#95 LED)
@@ -1405,7 +1405,7 @@ static void AwtoSyncLine(BYTE ucSeq)
         case 23: AwtoPutMon(puc[1]); break;                                                        // mon: health monitor row (fw/diag/monitor.c)
         default: break;
     }
-    AwtoSyncTxt(ucRow - 1, 1);
+    AwtoSyncTxt(usRow - 1, 1);
 }
 #undef ulV
 #undef usMs

@@ -8,7 +8,7 @@ Register facts: `re/regmap` (keys below). Request: Dan 2026-11-19, issue #245.
 
 - Every `AWTO_MON_MS` = 10 s: read, store in `g_stAwtoMon` (21 B, XDATA, readable over debug slave 0x35 by map symbol), push sync rows.
   - Why 10 s: the values drift over minutes (IOSC trim constant 30 min at 350.8 MHz, `docs/temperature.md`); a key ladder is a held level, not a pulse (key presses have their own log); a faster period adds rows, not information.
-- Sync row = id `EA`, arg = value (fmt `mon`, texts hard-coded in `console.c AwtoPutMon` and `sync_log.py mon_text`; one logged row of the 254-row index):
+- Sync row = id `EA`, arg = value (fmt `mon`, texts hard-coded in `console.c AwtoPutMon` and `sync_log.py mon_text`; one logged row of the sync index (WORD, cap 1022)):
 
 | arg | row text | row written when |
 |---|---|---|

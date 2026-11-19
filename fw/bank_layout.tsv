@@ -2517,9 +2517,6 @@ const	_tAwtoSyncNameRow	8	0x130c	468
 const	_tAwtoTxtOffS	8	0x14e0	104
 const	_tAwtoTxtS	8	0x1548	884
 const	_tAwtoDdcReg	8	0x18bc	12
-const	_tAwtoSyncIdRow	8	0x18c8	268
-const	_tAwtoSyncRowArg	8	0x19d4	264
-const	_tAwtoSyncRowId	8	0x1adc	264
 fn	_ScalerPinshareAdjustConfig	8	0x1be4	1052
 fn	_ScalerPinshareAdjustFlashDrive	8	0x2000	212
 fn	_ScalerPinshareAdjustFlashSlewRate	8	0x20d4	24
@@ -2651,7 +2648,6 @@ fn	_SaverNoPopups	8	0xa6ac	24
 fn	_SplashEnd	8	0xa6c4	32
 fn	_AwtoDdcLive	8	0xa6e4	140
 fn	_AwtoPsWakeReset	8	0xa770	28
-fn	_AwtoSyncRow	8	0xa78c	64
 fn	_AwtoSyncSame	8	0xa7cc	172
 fn	_AwtoSyncStage	8	0xa878	188
 fn	_AwtoSyncSw	8	0xa934	112
@@ -3407,10 +3403,14 @@ const	_g_aucFsTitle	11	0x0cd4	68
 fn	_FsTitle	11	0x0d24	12
 const	_s_tS2Font	11	0x0d30	84
 fn	_FsByte	11	0x0d84	20
+const	_tAwtoSyncIdRow	11	0x0d98	532
 fn	_AwtoScTile	11	0x0fc0	224
 fn	_S2Uint	11	0x117c	132
 fn	_FsCellId	11	0x1200	140
+fn	_AwtoSyncRow	11	0x128c	120
 fn	_AwtoSaverStop	11	0x1348	80
+const	_tAwtoSyncRowArg	11	0x1398	264
+const	_tAwtoSyncRowId	11	0x14a0	264
 const	_tAwtoSyncTxtOff	11	0x18b4	776
 fn	_PsByte	11	0x1c04	20
 fn	_S2Text	11	0x1c18	92
