@@ -1101,7 +1101,7 @@ static int core_run_(core_t *c, uint64_t n)
         irq(c);
         if (c->idle_req) {                      /* PCON.IDL: CPU halted until an IRQ is accepted; timers keep counting (databook 3-55) */
             c->idle_req = 0;
-            if (c->dw) {
+            if (c->dw && c->p.nirq == n0) {     /* an IRQ accepted right after the PCON write already woke the CPU: no idle wait */
                 uint64_t t0 = c->p.clk, lim = t0 + (1ull << 26);   /* no timer running + no IRQ: stop the loop after 2^26 clk */
                 c->p.nidle++;
                 for (;;) {
