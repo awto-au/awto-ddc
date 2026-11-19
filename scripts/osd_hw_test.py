@@ -17,6 +17,9 @@ usage: osd_hw_test.py --bus B --serial S --map MAP [--bin BIN] TEST [TEST ...]
     cycle  T10 for a human: the ladder with a blue digit 1..6, variants 8 s each, looping until `cyclestop` (docs/osd-hw-tests.md)
     cyclestop  stop the cycle; check the ladder glyphs in SRAM are still as written
     ladder 2-bit ids 0..255 as a 16 x 16 grid, plane A solid (left on screen) + sim renders (as built, if the fetch wraps at 4096)
+    ot8    OT-8, 24 x 36 cell mode on (3A43[6]): 8 test glyphs + 4 high ids, coded map; SRAM read back vs the host twin and the sim; left on screen
+    ot8off OT-8 control: the same SRAM + map with the mode off (cells draw as 12 x 18 from the same words)
+    ot8full OT-8 capacity: pattern over words 0..12221 (330 glyphs of 36 words + map, 99.5 % of the SRAM) written and read back M1 / M2; run BEFORE ot8 (overwrites the screen)
     t6     plane / colour screen for a human (left on screen)
     stop   saver off, OSD closed
 Log: ./tmp/logs/osd_hw_test.log ; SRAM dumps: ./tmp/osd_hw/
@@ -44,7 +47,7 @@ O_RUN = O_BUF + BUF
 SIZE = O_RUN + 1
 RUN_SCOPE2 = 3                            # g_ucAwtoSaverRun of Scope 2 (saver.c AWTO_SAVER_SCOPE2)
 REG_NAMES = ["3A02", "3A0B", "3A17", "3A33", "3A34", "3A41", "0093", "0094", "006C"]
-OP_WRITE, OP_VERIFY, OP_READ, OP_CRC, OP_WRBUF, OP_PLANES, OP_S2FRAMES, OP_REGS, OP_SAVER, OP_LADDER, OP_CYCLE = range(1, 12)
+OP_WRITE, OP_VERIFY, OP_READ, OP_CRC, OP_WRBUF, OP_PLANES, OP_S2FRAMES, OP_REGS, OP_SAVER, OP_LADDER, OP_CYCLE, OP_BIG = range(1, 13)
 M_SDK, M_DIRECT, M_GAP, M_TRIPLE = 0, 1, 2, 3
 MODE_NAMES = {M_SDK: "ScalerOsdDataPort", M_DIRECT: "direct loop", M_GAP: "direct+gap", M_TRIPLE: "direct triples"}
 F_EA_OFF, F_M2, F_HIDE, F_HOLD, F_REPEAT, F_RD_OVL, F_RD_SU = 1, 2, 4, 8, 16, 32, 64
@@ -405,6 +408,55 @@ def t8_midframe(dev, a, free_s: float, rotate: bool) -> bool:
     return not bad
 
 
+# ---- OT-8: 24 x 36 cell mode (fw/test/testcmd.c AwtoOhwBig; docs/osd-hw-tests.md OT-8) ----
+BG_ROWS, BG_COLS, BG_FONT, BG_WORDS = 4, 8, 37, 36           # map words 5..36, glyphs from 37, 36 words per glyph
+BG_BUDGET_WORDS = 330 * BG_WORDS + 342                      # docs/asteroids-resolution.md: 12222 of 12288
+BG_HI = {226: 3, 227: 5, 328: 2, 329: 0}                    # glyph id -> pattern above the 8 base patterns (226 straddles word 8192)
+BG_ROW2 = [226, 227, 328, 329, 3, 5, 2, 0]                  # row 2: cells 0..3 (high ids) must look like cells 4..7 (low ids)
+BG_MASK = 0xFFFFFF
+
+
+def big_word(p: int, k: int) -> int:
+    """Pattern p word k (bit 23 = px 0 if row-major); twin of AwtoOhwBigWord."""
+    return {0: 0xC00003 if k in (0, 35) else 0, 1: BG_MASK if k < 9 else 0, 2: 0x800000, 3: 1 << (23 - k % 24), 4: BG_MASK if k % 2 == 0 else 0,
+            5: BG_MASK if k >= 23 else (BG_MASK << (23 - k)) & BG_MASK, 6: BG_MASK}.get(p, ((k & 0x3F) << 18) | 1)
+
+
+def big_expected() -> dict:
+    """Expected SRAM (word -> 3 bytes in port order) of the OT-8 screen: row commands, map, glyph words."""
+    w = {r: bytes([0x80, 35, BG_COLS]) for r in range(BG_ROWS)}
+    w[BG_ROWS] = bytes(3)
+    for r in range(BG_ROWS):
+        for c in range(BG_COLS):
+            gid = BG_ROW2[c] if r == 2 else (4 if r == 3 else c)
+            wd = 12 if r == 1 else 24
+            fg = c + 1 if r == 3 else 2
+            w[BG_ROWS + 1 + r * BG_COLS + c] = bytes([0x40 | wd | (gid >> 8) << 5, gid & 255, fg << 4 | 9])
+    for gid, pat in {**{i: i for i in range(8)}, **BG_HI}.items():
+        for k in range(BG_WORDS):
+            v = big_word(pat, k)
+            w[BG_FONT + BG_WORDS * gid + k] = bytes([v & 255, v >> 8 & 255, v >> 16])
+    return w
+
+
+def big_ranges() -> list:
+    return [(0, BG_FONT + 8 * BG_WORDS)] + [(BG_FONT + BG_WORDS * g, 2 * BG_WORDS) for g in (226, 328)]
+
+
+def big_compare(read, tag: str) -> list:
+    """read(start, words) -> bytes. Differing words vs big_expected()."""
+    exp, bad = big_expected(), []
+    for start, n in big_ranges():
+        img = read(start, n)
+        for i in range(n):
+            a = start + i
+            if a in exp and img[i * 3:i * 3 + 3] != exp[a]:
+                bad.append((a, img[i * 3:i * 3 + 3].hex(), exp[a].hex()))
+    say(f"  {'PASS' if not bad else 'FAIL'} {tag}: {sum(n for _, n in big_ranges())} words read, {len(bad)} differ from the host twin"
+        + "".join(f"\n    word {a}: got {g} want {e}" for a, g, e in bad[:6]))
+    return bad
+
+
 def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--bus", type=int, required=True)
@@ -563,6 +615,32 @@ def main() -> int:
                     finally:
                         sim.close()
                     say(f"  sim renders: {png} and {png.stem}_if_wrap4096.png")
+                elif t in ("ot8", "ot8off"):                    # OT-8: 24 x 36 mode (3A43[6]) on / off; screen left on for a human
+                    on = t == "ot8"
+                    set_flags(dev, 0)
+                    op(dev, OP_SAVER, lim_saver(), flags=0, n=SAVER_OFF, label="saver off")
+                    op(dev, OP_BIG, lim_write(M_SDK, 12 * BG_WORDS * WORD_B + 100), n=int(on), label="ot8")
+                    bad = big_compare(lambda s_, n_: dump(dev, s_, n_, 0), "unit SRAM")
+                    fails += bool(bad)
+                    sim = Sim(a.bin, a.map, not a.no_rotate)
+                    try:
+                        op(sim, OP_BIG, 60.0, n=int(on), label="sim ot8")
+                        sbad = big_compare(lambda s_, n_: sim_image(sim.font(), s_, n_), "sim SRAM")
+                        fails += bool(sbad)
+                        import osd_render as R
+                        OUT.mkdir(parents=True, exist_ok=True)
+                        im = R.render_snap(sim.sess.snap(), "black", 4)
+                        im.save(OUT / f"{t}_sim.png")
+                        im.rotate(180).save(OUT / f"{t}_sim_as_seen_unit3.png")
+                    finally:
+                        sim.close()
+                    say(f"  sim pictures (row-major guess for the 24 x 36 layout): {OUT / (t + '_sim.png')} (as the OSD circuit draws), {OUT / (t + '_sim_as_seen_unit3.png')} (Rotate 180 stored: what unit 3 shows)")
+                    say(f"  on screen: mode {'24 x 36' if on else 'OFF (12 x 18 reading of the same words)'}; read the picture per docs/osd-hw-tests.md OT-8")
+                elif t == "ot8full":                            # OT-8 capacity: 12222 words (330 glyphs x 36 + map budget), M1 + M2
+                    set_flags(dev, 0)
+                    op(dev, OP_SAVER, lim_saver(), flags=0, n=SAVER_OFF, label="saver off")
+                    r = write_verify(dev, "ot8full 0..12221 direct", 0, BG_BUDGET_WORDS, M_DIRECT, F_HIDE, a.seed)
+                    fails += not r["pass"]
                 elif t == "t6":
                     set_flags(dev, 0)
                     op(dev, OP_SAVER, lim_saver(), flags=0, n=SAVER_OFF, label="saver off")
