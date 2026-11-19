@@ -23,6 +23,7 @@ AFCR_TST_I2S_SW, AFCR_AUDIO_TEST_ENABLE = 0x80, 0x10            # AFCR bits 7, 4
 CMCR_DBDCB = 0x10                                               # CMCR bit 4: latch S / D codes into the audio PLL (self-clearing)
 SCAPR_SC_MASK = 0x7F                                            # SCAPR bits 6:0 (bit 7 = slc, S1 div 2)
 RESET = {IDX_AFCR: 0x58, IDX_CMCR: 0x40, IDX_SCAPR: 0x05}       # regdb reset values (read back by the firmware's read-modify-write)
+DVC_GAIN_MSB, DVC_GAIN_LSB = 0x08A5, 0x08A6                    # DVC_GAIN_MSB / LSB (regdb): the volume ramp target, written by the SDK mute / unmute
 PIN_AMP_EN, PIN_AMP_MUTE = 0xFE1C, 0xFE1B                       # PORT74_PIN_REG (bAMP_EN, P7.4) / PORT73_PIN_REG (bAMP_MUTE, P7.3), bit 0
 
 # --- model assumptions: [guess], the single place (docs/pacman-sound.md "Unverified")
@@ -39,7 +40,7 @@ WAV_RATE = 44100
 
 class AudioTap(S.Dev):
     """fw_sim device: records the register / pin writes with clock() time stamps (firmware seconds)."""
-    writes = (AP_D2 + 1, AP_D3 + 1, AP_D2, AP_D3, PIN_AMP_EN, PIN_AMP_MUTE)
+    writes = (AP_D2 + 1, AP_D3 + 1, AP_D2, AP_D3, PIN_AMP_EN, PIN_AMP_MUTE, DVC_GAIN_LSB)
 
     def __init__(self, clock):
         self.clock = clock                               # () -> firmware time, s
@@ -55,6 +56,8 @@ class AudioTap(S.Dev):
             if idx in RESET:
                 self.shadow[base][idx] = val & ~CMCR_DBDCB if idx == IDX_CMCR else val
                 self.events.append((self.clock(), "reg", idx, val))
+        elif a == DVC_GAIN_LSB:                          # MSB is written first (ScalerAudioDVCAdjustVolume), the LSB write completes the gain
+            self.events.append((self.clock(), "dvc", "gain", (m.rd(DVC_GAIN_MSB)[0] << 8) | m.rd(a)[0]))
         elif a == PIN_AMP_EN:
             self.events.append((self.clock(), "pin", "amp_en", m.rd(a)[0] & 1))
         elif a == PIN_AMP_MUTE:
@@ -117,3 +120,51 @@ def write_wav(path: Path, events, t0: float, t1: float, rate: int = WAV_RATE, mo
         w.writeframes(pcm.tobytes())
     return {"path": str(path), "samples": len(pcm), "rate": rate, "tone_s": float(np.count_nonzero(pcm)) / rate,
             "events": len(events)}
+
+
+# --- pop-free ordering (#249 / #250): the order and spacing of amp enable, amp mute, generator and DVC gain events
+# Delays = firmware constants in fw/audio/audio.c (tests/test_audio_order.py checks they match). By ear: the PAM8006A datasheet (/vendors/diodes/PAM8006A.pdf) gives no MUTE / SD timing.
+ORDER = {
+    "amp_mute_s": 0.002,    # AWTO_AMP_MUTE_MS: P7.3 high must have held this long before P7.4 low / a generator change
+    "amp_wake_s": 0.020,    # AWTO_AMP_WAKE_MS: P7.4 high must have held this long before P7.3 low
+}
+
+
+def order_violations(events, order: dict | None = None) -> list[str]:
+    """Invariants over a time-sorted event list (AudioTap.events); returns one text per violation, [] = pop-free.
+      1. P7.4 (amp enable) rises only while the signal is zero: generator off, DVC gain 0, or P7.3 muted.
+      2. P7.3 (unmute) falls only with the amp enabled for at least amp_wake_s.
+      3. P7.4 falls only while muted (P7.3 high for at least amp_mute_s) or the signal is zero (generator off / gain 0).
+      4. The generator is switched or its pitch changed only with the amp disabled, or muted for at least amp_mute_s."""
+    o = {**ORDER, **(order or {})}
+    afcr, gain, en, mute = RESET[IDX_AFCR] & ~AFCR_AUDIO_TEST_ENABLE, 0, 0, 1
+    t_en = t_mute = None
+    out = []
+    eps = 1e-9
+
+    def silent():
+        return not (afcr & AFCR_AUDIO_TEST_ENABLE) or gain == 0
+
+    def muted_for(t):
+        return mute == 1 and t_mute is not None and t - t_mute >= o["amp_mute_s"] - eps
+
+    for t, kind, a, v in sorted(events, key=lambda e: e[0]):
+        if kind == "dvc":
+            gain = v
+        elif kind == "pin" and a == "amp_en" and v != en:
+            if v == 1 and not (silent() or mute == 1):
+                out.append(f"{t:.4f} s amp enabled while unmuted signal is non-zero (generator on, gain {gain}, P7.3 low)")
+            if v == 0 and not (silent() or muted_for(t)):
+                out.append(f"{t:.4f} s amp disabled before the mute settled ({o['amp_mute_s'] * 1e3:g} ms) with signal non-zero")
+            en, t_en = v, t
+        elif kind == "pin" and a == "amp_mute" and v != mute:
+            if v == 0 and not (en == 1 and t_en is not None and t - t_en >= o["amp_wake_s"] - eps):
+                out.append(f"{t:.4f} s unmuted {'with the amp disabled' if en == 0 else 'less than ' + format(o['amp_wake_s'] * 1e3, 'g') + ' ms after the amp enable'}")
+            mute = v
+            t_mute = t if v == 1 else None
+        elif kind == "reg" and ((a == IDX_AFCR and (v ^ afcr) & AFCR_AUDIO_TEST_ENABLE) or (a == IDX_CMCR and v & CMCR_DBDCB)):
+            if en == 1 and not muted_for(t):
+                out.append(f"{t:.4f} s generator {'on / off' if a == IDX_AFCR else 'pitch change'} with the amp enabled and not muted for {o['amp_mute_s'] * 1e3:g} ms")
+        if kind == "reg" and a == IDX_AFCR:
+            afcr = v
+    return out
