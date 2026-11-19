@@ -1092,6 +1092,8 @@ stub	_AwtoPutMilli	C	0x47f8	8
 stub	_AwtoLoopPace	C	0x4800	8
 stub	_AwtoKeyDueMs	C	0x4808	8
 stub	_AwtoLoopBusy	C	0x4810	8
+fn	_AwtoDelayLoops	C	0x4818	12
+fn	_AwtoDelayXus	C	0x4824	16
 fn	_ScalerOsdFontLibraryRotation	0	0x0000	28
 fn	_ScalerOsdFontWindowVericalAlignemnt	0	0x001c	28
 fn	_ScalerOsdGetDoubleFunctionH	0	0x0038	24
