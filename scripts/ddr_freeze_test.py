@@ -245,14 +245,40 @@ def do_block(d, waddr: int) -> None:
     finish(d, proc, t_on)
 
 
-def do_bar(d, w_px: int, h_px: int) -> None:
+OVERLAY = 0x006C                 # P0_6C bit0 = OSD overlay enable (ScalerOsdEnableOsd): any OSD card / pop-up on screen
+POPUP_S = 6.0 * 1.15             # _AWTO_INFO_POPUP_SEC 6 s x 1.15: the input-info pop-up the frame-mode re-set-up opens (ACTIVE event)
+
+
+SETUP_S = 3.0                    # display set-up after the memory re-set (~0.2 s measured, panel / OSD ~0.4 s) x ~5: the pop-up opens in this window
+
+
+def wait_osd_off(d) -> bool:
+    """The re-set-up opens the info pop-up AFTER the switch: wait for it to appear (SETUP_S), then to expire (POPUP_S + 0.5)."""
+    t = time.monotonic()
+    while time.monotonic() - t < SETUP_S and prd(d.io, OVERLAY) & 1 == 0:
+        pass
+    T.log(f"OSD overlay {'on' if prd(d.io, OVERLAY) & 1 else 'never came on'} after {time.monotonic() - t:.2f} s")
+    t = time.monotonic()
+    while time.monotonic() - t < POPUP_S + 0.5:
+        if prd(d.io, OVERLAY) & 1 == 0:
+            T.log(f"OSD overlay off after {time.monotonic() - t:.2f} s (the pop-up expired)")
+            return True
+    T.log("OSD overlay still on: giving up")
+    return False
+
+
+def do_bar(d, w_px: int, h_px: int, dry: bool = False) -> None:
     """Big visible run: a white bar w_px x h_px centred on the 3840x2160 frame, written burst by burst on a frozen black frame.
     Address = (y * 3840 + x) * 3 / 8 units (line step 1440 units); only changed address bytes are rewritten (~3 register writes per burst)."""
     frame_mode(d.io)
+    if not wait_osd_off(d):                                           # the pop-up must be gone before the test pattern is up
+        return
+    ovl = Counter()
     t_on = time.monotonic()
     proc = pattern_start("solid 0 0 0")
     wait_marker(d, 0, bytes([0] * 16))
     freeze(d.io, True)
+    ovl[prd(d.io, OVERLAY) & 1] += 1
     r = T.MCU_DC["a"]
     d.wr(r["len"], 2)
     for i in range(16):
@@ -264,7 +290,8 @@ def do_bar(d, w_px: int, h_px: int) -> None:
     cur = [None] * 4
     n = 0
     first = last = None
-    for row in range(h_px):
+    for row in range(0 if dry else h_px):
+        ovl[prd(d.io, OVERLAY) & 1] += 1
         base = ((y0 + row) * 3840 + x0) * 3 // 8 // 2 * 2         # even unit address
         for k in range(per_row):
             a = base + 2 * k
@@ -282,7 +309,9 @@ def do_bar(d, w_px: int, h_px: int) -> None:
             break
     T.log(f"{n} bursts, units {first}..{last} (x {x0}..{x0 + w_px - 1}, y {y0}..{y0 + h_px - 1} by the linear map), CMD now {d.rd(r['cmd']):02x}")
     while time.monotonic() - t_on < SCREEN_CAP_S - 0.3:               # hold: register reads are the wait
-        d.rd(r["flag"])
+        ovl[prd(d.io, OVERLAY) & 1] += 1
+    T.log(f"OSD overlay enable samples during freeze + write (value: count): {dict(ovl)}; usOsdState / events: none opened" if not ovl[1] else
+          f"OSD overlay enable samples during freeze + write (value: count): {dict(ovl)}: A POP-UP OPENED")
     finish(d, proc, t_on)
 
 
@@ -294,6 +323,7 @@ def main() -> int:
     ap.add_argument("--reads", type=int, default=6)
     ap.add_argument("--waddr", type=lambda x: int(x, 0), default=0x100000)
     ap.add_argument("--n", type=int, default=1)
+    ap.add_argument("--dry", action="store_true")
     ap.add_argument("--w", type=int, default=96)
     ap.add_argument("--h", type=int, default=16)
     ap.add_argument("--mask", type=lambda x: int(x, 0), default=0xFFFF)
@@ -306,7 +336,7 @@ def main() -> int:
         elif a.op == "map2":
             do_map2(d, a.reads)
         elif a.op == "bar":
-            do_bar(d, a.w, a.h)
+            do_bar(d, a.w, a.h, a.dry)
         elif a.op == "block":
             do_block(d, a.waddr)
         else:
