@@ -215,7 +215,18 @@ def item_arg(name: str) -> int:
     return C.row_of(name)["id"]
 
 
-def walk(m: Menu, png: Path | None, render) -> int:
+def sample(ent: list) -> list:
+    """(index, entry) of one entry per equivalence class + the first and last (quick walk): page link, then row type x read-only."""
+    pick, cls = {0, len(ent) - 1}, set()
+    for k, e in enumerate(ent):
+        c = "page" if e & 0x80 else (T.ROWS[e]["type"], "ro" in T.ROWS[e]["flags"])
+        if c not in cls:
+            cls.add(c)
+            pick.add(k)
+    return [(k, ent[k]) for k in sorted(pick)]
+
+
+def walk(m: Menu, png: Path | None, render, quick: bool = False) -> int:
     fails = 0
 
     def check(what, ok, s):
@@ -232,7 +243,7 @@ def walk(m: Menu, png: Path | None, render) -> int:
         check(f"open page {p}", s["open"] == 1 and s["page"] == p and s["n"] == len(ent) and s["parent"] == parent, s)
         if render and png:
             render(png / f"walk_{'main' if p == MAIN else T.PAGES[p]['group']}.png")
-        for k, e in enumerate(ent):
+        for k, e in (sample(ent) if quick else enumerate(ent)):
             r0 = s["redraws"]
             m.cmd("select", e if e & 0x80 else T.ROWS[e]["id"])
             s = m.state()
@@ -262,7 +273,7 @@ def walk(m: Menu, png: Path | None, render) -> int:
     s = m.state()
     check("close", s["open"] == 0, s)
     say(f"key latency (ack to seq change), max {getattr(m, 'lat', 0.0) * 1000:.1f} ms")
-    say(f"walk: {'PASS' if not fails else f'{fails} FAIL'} ({len(pages)} pages, {sum(len(entries(p)) for p in pages)} entries)")
+    say(f"walk: {'PASS' if not fails else f'{fails} FAIL'} ({len(pages)} pages, {sum(len(sample(entries(p))) if quick else len(entries(p)) for p in pages)} of {sum(len(entries(p)) for p in pages)} entries selected)")
     return 1 if fails else 0
 
 
@@ -273,18 +284,21 @@ def main() -> int:
     ap.add_argument("--sim", type=Path)
     ap.add_argument("--map", required=True)
     ap.add_argument("--png", type=Path, help="sim: render each page to this directory during walk")
+    ap.add_argument("--video", action="store_true", help="sim: boot the 1080p60 video session (needed by walk) without rendering PNGs")
+    ap.add_argument("--quick", action="store_true", help="walk: every page, but per page only the first / last entry and one per class (page link, row type x read-only)")
     ap.add_argument("--hl", type=int, choices=(0, 1), help="sim: selected-row look (ui_hl_style: 0 red bar, 1 red marker + underline, #87)")
     ap.add_argument("cmd", choices=["state", "key", "hold", "open", "select", "set", "get", "back", "close", "enter", "walk", "keyboard"])
     ap.add_argument("args", nargs="*")
     a = ap.parse_args()
     render, session = None, None
-    if a.sim and a.png:
+    if a.sim and (a.png or a.video):
         import osd_render as R
         session = R.Session(a.sim, Path(a.map), "1080p60")
         session.boot()
         bus = session.bus
-        render = lambda out: R.save(session.snap(), out, "grey", 2)       # noqa: E731
-        a.png.mkdir(parents=True, exist_ok=True)
+        render = (lambda out: R.save(session.snap(), out, "grey", 2)) if a.png else None       # noqa: E731
+        if a.png:
+            a.png.mkdir(parents=True, exist_ok=True)
     elif a.sim:
         import fw_sim
         bus = fw_sim.SimBus(a.sim, Path(a.map))
@@ -300,7 +314,7 @@ def main() -> int:
         if a.cmd == "keyboard":
             return keyboard(m)
         if a.cmd == "walk":
-            return walk(m, a.png, render)
+            return walk(m, a.png, render, a.quick)
         if a.cmd == "key":
             m.cmd("key", KEYS[a.args[0]])
         elif a.cmd == "hold":

@@ -62,7 +62,7 @@ PY = [sys.executable, "-u"]
 # scenario sweeps (on request, before a merge to main, nightly). A gate not listed here is normal. Move a gate by editing this set.
 WDT_NORMAL_CASES = "stall,pass,reason,t0_timing"
 EXTENSIVE = {
-    "menu": "16 pages / 133 entries walk",
+    "menu_full": "16 pages, all 133 entries, a PNG per page (normal: every page, one entry per class)",
     "keys_full": "80 checks, ~250 simulated s of OSD timeouts and holds (normal: the selector section)",
     "deadport": "4 cases, up to 40 simulated s each",
     "inputrate": "40 start phases x 3 rows",
@@ -158,7 +158,8 @@ def gates(b: Path, m: Path, ref, tree):
         # with video (osd_render session, 1080p60 ACTIVE): without it the main loop sits in the SDK's DP RX PHY CTS routine (sim: the
         # PHY registers read 0) and the mailbox goes silent after a few seconds (#88); earlier images only passed because the
         # sim image was powered off by a phantom POWER key (ADC 0 under the old decode)
-        g["menu"] = [*PY, f"{s}/menu_cli.py", "--sim", b, "--map", m, "walk", "--png", ROOT / "tmp/osd67/gate" / b.stem]
+        g["menu_full"] = [*PY, f"{s}/menu_cli.py", "--sim", b, "--map", m, "walk", "--png", ROOT / "tmp/osd67/gate" / b.stem]    # extensive: every entry + a PNG per page
+        g["menu"] = [*PY, f"{s}/menu_cli.py", "--sim", b, "--map", m, "--video", "walk", "--quick"]         # NORMAL: every page, one entry per class + first / last
     if " _vcp_box" in mt and " _AwtoDdcciPoll" in mt:
         g["ddc"] = [*PY, f"{s}/ddc_sim.py", b, "--map", m]
         if " _AwtoWaitPump" in mt:                 # #216: Get-VCP answered inside a blocking wait, Set left to the main loop
