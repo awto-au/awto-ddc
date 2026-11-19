@@ -3,7 +3,7 @@
 - Test-only commands that draw into the frame buffer through `MCU_DC` port A from the firmware. Source `fw/test/ddr_draw.c`; compiled to nothing unless `-D _AWTO_FREEZE=_ON` (`./dev.py build --freeze`).
 - Host: `./dev.py ddr-draw [--unit N] OP:key=val,...` (`scripts/ddr_draw.py`); one command from the host, the monitor draws; each op is timed by the firmware (`AwtoMs`, 1 ms tick) and by the host.
 - Interface: params into `g_stAwtoDraw` (map symbol; big-endian), `ucGo = op` last; the main pass runs the op to the end (WDT fed per line) and clears `ucGo`. No test cmd number.
-- Frame prep (host side, as #255): `0x0C` frame mode, black host window, freeze (register poke or `0xFE`), ops, release (`0xFF` / unfreeze), `0x0D`. Ops do not freeze by themselves; `ucFrozen` records the state at op start.
+- Frame prep (host side): host window, `0x0C` frame mode (after the window: a mode change resets it), freeze with `0xFE` (`--sdk-freeze`; the P5_27 / P45_27 poke did NOT hold the frame on the freeze image, unit 1 2026-11-19), ops, `0xFF`, `0x0D`. The host screen must be awake (a locked / power-saved host shows no picture and the unit goes to power saving). Ops do not freeze by themselves; `ucFrozen` records the state at op start.
 
 ## Layout (one place: the `AWTO_DRW_*` constants in `ddr_draw.c`; measured 2026-11-19, #255, `docs/data-channels.md`)
 - 8 B per address unit, 3 B per pixel in memory order B, G, R, burst = 16 B at an even unit = 5.33 px; line pitch exactly 1440 units = 720 bursts; frame base 0.
@@ -35,3 +35,11 @@ States: 2 ok, 3 refused (unknown op, empty / off-screen rectangle, bad grid), 4 
 - Estimates: fill 2000 x 1000 px = 500 lines x 375 bursts = 187 500 bursts = 3.0 MB: ~95 ms; `frame` (1080 lines, 12.4 MB): ~0.40 s; the host-driven path was ~6 ms per burst (#255). The issue's 1.7 us / 25 MOVX estimate assumed re-writing the buffer every burst.
 - Image delta: default image 0 B (byte-identical but the commit string); freeze image +5027 B banked code, +58 B XDATA (free XDATA 551 B default, 495 B freeze).
 - Host check: `tests/test_ddr_draw_host.py` builds the firmware file on the host against a port-A model (CMD busy and write-while-busy hazards, swap, mask) and compares every op with a per-pixel spec. The sim has no MCU DDR port model.
+
+## Measured (unit 1, freeze image 9578a24, 4K60, MCU 87.7 MHz, 2026-11-19, #267)
+- Mask lane order: `masktest` counts R/G/B = 5/5/6 (DCR sel 1..3 = R, G, B, checked with a red fill); model for the assumed order (bit n = buffer byte n) is B6 G5 R5, the shifted order would give R6: the assumption holds.
+- DCR counts memory-line pixels (before the vertical doubling): fill 2000 x 1000 screen px = 1 000 000, `frame` = 4 147 200 (3840 x 1080), both exact.
+- `fill` 2000 x 1000 white: 188 000 bursts, 279 / 285 / 288 ms = 1.5 us per burst = 10.4-10.8 MB/s (estimate 95 ms, 0.50 us); green: 353 ms (3 buffer loads per line instead of 1). `CMD` slow polls 0: the write completes within the fast spin.
+- `frame` white: 777 600 bursts, 926 ms = 13.4 MB/s; `gradv`: 983 ms = 12.7 MB/s.
+- `figure`: 1068 bursts, 71 ms (every edge burst reloads the 16 B buffer); `gradh`: 21.3 s (259 200 spans, 82 us each).
+- A `DATABUF_W` load of 16 B costs about 68 us (green vs white fill, `figure`, `gradh` all agree): ~4 us per register write, vs ~0.3 us per register access in the burst loop. Data that changes every burst runs at ~0.25 MB/s; solid colours at 10-13 MB/s.

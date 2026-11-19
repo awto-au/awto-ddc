@@ -30,6 +30,8 @@ MCU_MHZ = 87.7                           # 351 MHz PLL / 4 (docs/diag-block.md)
 EST_BURST_S = 1.7e-6                     # the issue's pessimistic per-burst figure (docs/data-channels.md row 3): limits only, not a result
 EST_SPAN_S = 20e-6                       # per DrwSpan call (address maths, mask), generous
 LIMIT_MULT, LIMIT_MARGIN_S = 3.0, 0.5    # stall guard: 3 x the estimate (no measurement yet) + one main pass / I2C polls
+PATTERN_SETTLE_S = 1.0                   # host window up + SDK mode settled (window draw ~0.3 s, mode change ~2 frames; limit 3x)
+LIMIT_S = [0.0]                          # --limit-s: fixed stall limit for every op (estimates were off by 2-3x on hardware)
 POLL_RETRY = 40                          # a debug-link read NAKs while the main pass is busy drawing
 
 
@@ -77,7 +79,7 @@ class Draw:
             d.wr(b + off, v)
         t0 = time.monotonic()
         d.wr(b + O_GO, OPS[op])
-        limit = LIMIT_MULT * est_s(op, p) + LIMIT_MARGIN_S
+        limit = LIMIT_S[0] or (LIMIT_MULT * est_s(op, p) + LIMIT_MARGIN_S)
         while self.rd(O_GO) != 0:
             if time.monotonic() - t0 > limit:
                 T.log(f"{op}: ucGo still set after {time.monotonic() - t0:.2f} s (limit {limit:.2f} s = {LIMIT_MULT:g} x est {est_s(op, p):.2f} s + {LIMIT_MARGIN_S} s)")
@@ -108,10 +110,14 @@ def main() -> int:
     ap.add_argument("--serial", default=None)
     ap.add_argument("--map", type=Path, required=True)
     ap.add_argument("--no-prep", action="store_true")
+    ap.add_argument("--no-pattern", action="store_true", help="prep without the host window (frame mode + freeze of whatever the host shows)")
+    ap.add_argument("--sdk-freeze", action="store_true", help="freeze with test cmd 0xFE (SDK path, freeze image) instead of the P5_27 / P45_27 poke")
+    ap.add_argument("--limit-s", type=float, default=0.0, help="stall limit per op in s (default 3 x estimate + 0.5 s)")
     ap.add_argument("--hold", type=float, default=F.SCREEN_CAP_S)
     ap.add_argument("--count", action="store_true", help="DCR above-threshold count (sel 0, TH1 32) after the ops: lit pixels = hit-count check")
     ap.add_argument("ops", nargs="+")
     a = ap.parse_args()
+    LIMIT_S[0] = a.limit_s
     ops = [parse_op(t) for t in a.ops]
     if a.hold > F.HOLD_MAX_S:
         raise SystemExit(f"--hold {a.hold}: above the backstop {F.HOLD_MAX_S:.0f} s")
@@ -120,23 +126,37 @@ def main() -> int:
     try:
         dr = Draw(d, SW.sym(a.map, "g_stAwtoDraw"))
         if not a.no_prep:
-            F.frame_mode(d.io)
-            proc = F.pattern_start("solid 0 0 0")
+            if not a.no_pattern:                          # first: the host mode change resets the memory choice, 0x0C after it
+                proc = F.pattern_start("solid 0 0 0")
+                time.sleep(PATTERN_SETTLE_S)
             t_on = time.monotonic()
-            F.wait_marker(d, 0, bytes([0] * 16))
-            F.freeze(d.io, True)
+            F.frame_mode(d.io)
+            if not a.no_pattern:
+                F.wait_marker(d, 0, bytes([0] * 16))
+            if a.sdk_freeze:
+                F.cmd(d.io, F.TC_FREEZE_ON)
+            else:
+                F.freeze(d.io, True)
         for op, p in ops:
             dr.run(op, p)
         if a.count:
-            r = T.dcr_measure(d, 32, 768, 0)
-            T.log(f"DCR above TH1 32: {r.get('th1_num') if r else 'no result'}")
+            for sel in range(4):                       # sel 0 = R+G+B sum (#255); 1..3 per channel to be told by this log
+                r = T.dcr_measure(d, 32, 768, sel)
+                T.log(f"DCR sel {sel} TH1 32: above {r.get('th1_num') if r else None}; high R/G/B " + (f"{r['hi_r']}/{r['hi_g']}/{r['hi_b']}" if r else "-")
+                      + "; low R/G/B " + (f"{r['lo_r']}/{r['lo_g']}/{r['lo_b']}" if r else "-"))
         if not a.no_prep:
             t_h = time.monotonic()
             while time.monotonic() - t_h < a.hold:
                 F.prd(d.io, F.OVERLAY)
     finally:
+        if a.sdk_freeze and not a.no_prep:
+            F.cmd(d.io, F.TC_FREEZE_OFF)
         if proc is not None:
             F.finish(d, proc, t_on)
+        elif not a.no_prep:
+            F.freeze(d.io, False)
+            F.cmd(d.io, F.TC_SDK)
+            F.cmd(d.io, F.TC_CLEAR)
         d.io.close()
     return 0
 
