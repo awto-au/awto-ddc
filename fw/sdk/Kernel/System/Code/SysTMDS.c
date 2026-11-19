@@ -57,6 +57,7 @@ void SysTMDSRxSetPsWakeupHpdToggle(void);
 //--------------------------------------------------
 void SysTMDSRxHandler(void)
 {
+    ScalerTMDSPhySetDeferred();
     ScalerSyncTMDSHPDToggleProc();
 }
 

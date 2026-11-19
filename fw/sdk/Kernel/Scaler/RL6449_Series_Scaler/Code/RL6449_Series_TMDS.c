@@ -47,6 +47,7 @@
 void ScalerTMDSInitial(BYTE ucInputPort);
 void ScalerTMDSInterruptInitial(BYTE ucInputPort);
 void ScalerTMDSIntHandler_EXINT0(void);
+void ScalerTMDSPhySetDeferred(void);
 void ScalerTMDSPSIntHandler_EXINT0(void);
 void ScalerTMDSVideoDetectEvent(EnumScalerTimerEventID enumEventID);
 void ScalerTMDSResetProc(void);
@@ -161,6 +162,22 @@ void ScalerTMDSIntHandler_EXINT0(void)
 
 #if(_D3_TMDS_SUPPORT == _ON)
     ScalerTMDSRx3IntHandler_EXINT0();
+#endif
+}
+
+//--------------------------------------------------
+// Description  : Run the freq. stable PHY set-up the EXINT0 handlers left pending (main loop)
+// Input Value  : None
+// Output Value : None
+//--------------------------------------------------
+void ScalerTMDSPhySetDeferred(void)
+{
+#if(_D2_TMDS_SUPPORT == _ON)
+    ScalerTMDSRx2PhySetDeferred();
+#endif
+
+#if(_D3_TMDS_SUPPORT == _ON)
+    ScalerTMDSRx3PhySetDeferred();
 #endif
 }
 

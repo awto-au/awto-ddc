@@ -661,6 +661,7 @@ const	___str_121	C	0x298c	44
 stub	_PsResume	C	0x29b8	8
 stub	_PsStart	C	0x29c0	8
 stub	_PsStop	C	0x29c8	8
+stub	_ScalerTMDSRx2PhySetDeferred	C	0x29d0	8
 stub	_PsTrk	C	0x29d8	8
 fn	_ScalerDpRx1GetDpcdInfo	C	0x29e0	40
 stub	_SysModeClrModeStateChange	C	0x2a5c	8
@@ -982,6 +983,7 @@ stub	_AwtoScTile	C	0x4284	8
 stub	_AstNear	C	0x428c	8
 stub	_AstNewGame	C	0x4294	8
 stub	_AstNewWave	C	0x429c	8
+stub	_ScalerTMDSRx3PhySetDeferred	C	0x42a4	8
 stub	_SysCecHandler	C	0x42ac	8
 stub	_ScalerOsdAddrMsb	C	0x42b4	8
 stub	_osd_canvas_init	C	0x42bc	8
@@ -1025,6 +1027,7 @@ stub	_AwtoOsdRevByte	C	0x43e4	8
 stub	_ScalerAudioGetInternalAudioGenEnable	C	0x43ec	8
 stub	_AwtoOsdRotSrc	C	0x43f4	8
 stub	_AwtoOsdTurn	C	0x43fc	8
+stub	_ScalerTMDSPhySetDeferred	C	0x4404	8
 stub	_ScalerAudioD2GetInternalAudioGenEnable	C	0x440c	8
 stub	_AwtoSaverGuard	C	0x4414	8
 stub	_AwtoSaverKey	C	0x441c	8
@@ -1907,6 +1910,7 @@ fn	_PsStop	4	0x9f68	36
 fn	_PsRequest	4	0x9fb8	52
 fn	_PsResume	4	0x9fec	40
 fn	_PsStart	4	0xa014	124
+fn	_ScalerTMDSPhySetDeferred	4	0xa090	12
 fn	_PsTrk	4	0xa0a4	44
 fn	_PsNote	4	0xa0d0	176
 const	_g_stOSDDefaultData	5	0x0000	28
@@ -2124,7 +2128,7 @@ const	_tLUTGAMMA_18_TABLE	6	0x0164	6352
 const	_tLUTGAMMA_20_TABLE	6	0x1a34	6352
 const	_tLUTGAMMA_22_TABLE	6	0x3304	6352
 const	_tLUTGAMMA_24_TABLE	6	0x4bd4	6352
-const	_UserInterfaceGetOverScanStatus_tusOverscanEnTable_10000_1322	6	0x64a4	92
+const	_UserInterfaceGetOverScanStatus_tusOverscanEnTable_10000_1323	6	0x64a4	92
 const	_OperationFactoryTable	6	0x6500	756
 const	_tCOLOR_CONV_RGB2YUV_ITU709	6	0x67f4	32
 const	_tCOLOR_CONV_YUV2RGB_ITU601	6	0x6814	32
@@ -2308,6 +2312,8 @@ fn	_AwtoDiagT3Mark	7	0x9b0c	144
 fn	_ScalerTimerWDActivateTimerEvent_EXINT0	7	0x9b9c	228
 fn	_ScalerTimerWDCancelTimerEvent_EXINT0	7	0x9c80	32
 fn	_ScalerDpRx1SetDpcdBitValue_EXINT0	7	0x9ca0	52
+fn	_ScalerTMDSRx2PhySetDeferred	7	0x9cd4	948
+fn	_ScalerTMDSRx3PhySetDeferred	7	0xa088	948
 const	_g_tAstData	8	0x0000	692
 const	_g_tAstOff	8	0x02b4	112
 const	_s_tAstBit	8	0x0324	12
@@ -2667,7 +2673,7 @@ const	_tDISPLAY_DPTX_DRV_HBR2_TABLE	9	0x0000	56
 const	_tEDID_TABLE_D1	9	0x0038	268
 const	_tEDID_TABLE_D2	9	0x0144	268
 const	_tEDID_TABLE_D3	9	0x0250	268
-const	_set_ap_rotate_tFlipToSdk_10000_1345	9	0x035c	8
+const	_set_ap_rotate_tFlipToSdk_10000_1346	9	0x035c	8
 fn	_ScalerColor420To422D2D3Enable	9	0x0364	60
 fn	_ScalerDpPowerSwitch	9	0x03a0	120
 fn	_ScalerDpRx1AuxIntInitial	9	0x0418	116

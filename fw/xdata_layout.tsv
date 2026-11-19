@@ -17,8 +17,6 @@ ScalerPLL	0xd700	1375	65
 awto_nvram_nvram	0xd700	1440	64
 RTDFactoryFunction	0xd700	1504	63
 RL6449_Series_FRC	0xd700	1567	62
-RL6449_Series_TMDSRx2	0xd700	1629	52
-RL6449_Series_TMDSRx3	0xd700	1681	52
 awto_arith_arith	0xd700	1733	50
 ScalerSync	0xd700	1783	48
 qc_osd	0xd700	1831	39
@@ -134,5 +132,7 @@ swlog	0xe780	2692	308
 scope_saver2	0xe780	3000	188
 inputs	0xe780	3204	232
 text_layer	0xe780	3436	46
+RL6449_Series_TMDSRx2	0xe780	3482	57
+RL6449_Series_TMDSRx3	0xe780	3539	57
 awto_settings_menu	0xe780	3622	135
 UserCommonInterface	0xe780	3757	17

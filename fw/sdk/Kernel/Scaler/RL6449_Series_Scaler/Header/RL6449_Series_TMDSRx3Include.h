@@ -122,6 +122,9 @@
 //****************************************************************************
 extern StructTMDSCtrlInfo isr_g_stTMDSRx3CtrlInfo;
 extern WORD isr_g_usTMDSRx3ClkCount;
+extern WORD isr_g_usTMDSRx3PhyCount;
+extern WORD isr_g_usTMDSRx3PhyClk;
+extern BYTE isr_g_ucTMDSRx3PhyPend;
 
 #if(_D3_INPUT_PORT_TYPE == _D3_MHL_PORT)
 extern BYTE g_ucTMDSRx3ClkMode;
@@ -137,6 +140,7 @@ extern BYTE g_pucTmdsRx3Caps[3];
 extern void ScalerTMDSRx3Initial(void);
 extern void ScalerTMDSRx3InterruptInitial(void);
 extern void ScalerTMDSRx3IntHandler_EXINT0(void);
+extern void ScalerTMDSRx3PhySetDeferred(void);
 extern bit ScalerTMDSRx3CheckCDRStable(WORD usClkCount);
 extern void ScalerTMDSRx3SetPorchColor(EnumColorSpace enumColorFormat);
 

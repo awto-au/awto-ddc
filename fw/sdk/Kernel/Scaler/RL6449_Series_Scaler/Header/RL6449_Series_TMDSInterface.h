@@ -32,6 +32,7 @@
 
 #if((_DVI_SUPPORT == _ON) || (_HDMI_SUPPORT == _ON))
 extern void ScalerTMDSIntHandler_EXINT0(void);
+extern void ScalerTMDSPhySetDeferred(void);
 extern void ScalerTMDSPSIntHandler_EXINT0(void);
 
 #if(_HDMI_SUPPORT == _ON)
