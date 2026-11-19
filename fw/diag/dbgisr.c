@@ -129,7 +129,7 @@ bit AwtoDbgIsrCmd_EXINT1(void)
         {
             ucAwtoLen = (isr_g_pucDdcciData[3] > _AWTO_DBGISR_BLK_MAX) ? _AWTO_DBGISR_BLK_MAX : isr_g_pucDdcciData[3];
         }
-        g_ucAwtoRbDirty = 1; // our reads move the PHY page cache: the main path re-primes
+        isr_g_ucAwtoRbDirty = 1; // our reads move the PHY page cache: the main path re-primes
         MCU_FF2A_IIC_IRQ_CONTROL2 |= (_BIT6 | _BIT5);
         MCU_FF2A_IIC_IRQ_CONTROL2 &= (~_BIT6);
         while((ucAwtoLen != 0) && ((MCU_FF29_IIC_STATUS2 & _BIT2) == 0))
