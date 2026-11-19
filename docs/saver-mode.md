@@ -109,7 +109,7 @@ Slot = from the call's entry to the next hooked call (macro polls like `AWTO_PS_
 
 - Where the scope time goes (PC samples, Scope 2): `cursor_init` 13 %, `cursor_plot` 12 %, `S2Char` 10 %, banked-call trampoline (`__bs_call`, shown as `__mcs51_genXRAMCLEAR`) 8 %, `osd_line` 6 %, `__mulint` 5 %, `S2Trace` 5 %, `__gptrget` 5 %.
 - Idle pass (PC samples): `AwtoInScan` + `AwtoInRead` 30 %, banked-call trampoline 16 %.
-- DDC/CI under a scope: the engine is polled once per pass; Get-VCP reply latency up to a pass (mean 34 ms, worst 71 ms vs 3 / 20 ms idle). Watchdog: 71 ms worst gap of the 820 ms budget.
+- DDC/CI under a scope: the engine is polled once per pass; Get-VCP reply latency up to a pass (mean 34 ms, worst 71 ms vs 3 / 20 ms idle). Watchdog: 71 ms worst gap of the 200.1 ms warning (reset 585.9 ms).
 
 ## Design: one saver-mode predicate
 
