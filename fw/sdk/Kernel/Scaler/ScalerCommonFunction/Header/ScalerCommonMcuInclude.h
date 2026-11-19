@@ -221,9 +221,13 @@
 #ifndef AWTO_DPCD_SETTLE_RD
 #define AWTO_DPCD_SETTLE_RD 0
 #endif
+// DPCD index / data port: the first C4 access after an address change reads stale data at 350.8 MHz; gap = loop counts (16 clk each), 0 = off
+#define AWTO_GAP_025US 6
+#define AWTO_GAP_1US 23
+#define AWTO_GAP_5US 109
 #if(AWTO_DPCD_SETTLE_RD != 0)
-#define AWTO_DPCD_SETTLE_E() ScalerGetByte_EXINT(PBA_C4_DPCD_DATA_PORT);
-#define AWTO_DPCD_SETTLE() ScalerGetByte(PBA_C4_DPCD_DATA_PORT);
+#define AWTO_DPCD_SETTLE_E() {d_isr_g_ucDelay5usI_EXINT = (AWTO_DPCD_SETTLE_RD); while(--d_isr_g_ucDelay5usI_EXINT) {};}
+#define AWTO_DPCD_SETTLE() {d_isr_g_ucDelay5usI = (AWTO_DPCD_SETTLE_RD); while(--d_isr_g_ucDelay5usI) {};}
 #else
 #define AWTO_DPCD_SETTLE_E()
 #define AWTO_DPCD_SETTLE()
