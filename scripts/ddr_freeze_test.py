@@ -328,15 +328,137 @@ def do_bar(d, w_px: int, h_px: int, dry: bool = False) -> None:
     finish(d, proc, t_on)
 
 
+def do_rows(d, w_px: int, rows: int, pitch: int) -> None:
+    """DCR-only layout test: after each row of bursts (row pitch `pitch` units) the lit-pixel count; contiguous separate rows add ~w_px each,
+    rows that alias onto the same pixels add less. Black frozen frame, <= SCREEN_CAP_S on screen."""
+    frame_mode(d.io)
+    t_on = time.monotonic()
+    proc = pattern_start("solid 0 0 0")
+    wait_marker(d, 0, bytes([0] * 16))
+    freeze(d.io, True)
+    r = T.MCU_DC["a"]
+    d.wr(r["len"], 2)
+    for i in range(16):
+        d.wr(r["wbuf"] + i, 0xFF)
+    d.wr(r["wmask"], 0)
+    d.wr(r["wmask"] + 1, 0)
+    prev = T.dcr_measure(d, 32, 768, 0).get("th1_num")
+    T.log(f"DCR start {prev}")
+    per_row = (w_px * 3 + 15) // 16
+    cur = [None] * 4
+    base0 = (1074 * 3840 + 1720) * 3 // 8 // 2 * 2
+    for row in range(rows):
+        if time.monotonic() - t_on > SCREEN_CAP_S - 0.6:
+            T.log("screen cap: stopped")
+            break
+        for k in range(per_row):
+            a = base0 + row * pitch + 2 * k
+            for i, sh in enumerate((24, 16, 8, 0)):
+                b = (a >> sh) & 0xFF
+                if cur[i] != b:
+                    d.wr(r["addr"] + i, b)
+                    cur[i] = b
+            d.wr(r["cmd"], T.DC_CMD_WRITE)
+        c = T.dcr_measure(d, 32, 768, 0).get("th1_num")
+        T.log(f"row {row}: {per_row} bursts at unit {base0 + row * pitch}.. -> lit {c} (delta {None if c is None or prev is None else c - prev}; 16 B = 5.33 px, row = {per_row * 16 / 3:.0f} px if contiguous and separate)")
+        prev = c
+    finish(d, proc, t_on)
+
+
+# Figure for a photo (#255): (name, colour channels (B, G, R bits), x, y, width px, rows, slant px per row, one burst per row)
+FIG = [
+    ("R100", (0, 0, 1), 300, 250, 100, 4, 0), ("G200", (0, 1, 0), 900, 250, 200, 4, 0),
+    ("B300", (1, 0, 0), 1600, 250, 300, 4, 0), ("W400", (1, 1, 1), 2500, 250, 400, 4, 0),
+    ("Y150 slant +6", (0, 1, 1), 300, 650, 150, 4, 6), ("C150 slant -6", (1, 1, 0), 900, 650, 150, 4, -6),
+    ("M vertical 1 burst x 12 rows", (1, 0, 1), 1600, 650, 0, 12, 0), ("W thin 500", (1, 1, 1), 2300, 650, 500, 1, 0),
+    ("R lower", (0, 0, 1), 300, 1300, 100, 4, 0), ("W lower", (1, 1, 1), 1000, 1300, 100, 4, 0),
+]
+SW, SH = 3840, 2160
+
+
+def fig_bursts() -> list[tuple[str, int, tuple]]:
+    out = []
+    for name, ch, x, y, w, rows, slant in FIG:
+        n = 1 if w == 0 else (w * 3 + 15) // 16
+        for r in range(rows):
+            xs = x + slant * r
+            base = ((y + r) * SW + xs) * 3 // 8 // 2 * 2
+            for k in range(n):
+                out.append((name, base + 2 * k, ch))
+    return out
+
+
+def do_figure(d) -> None:
+    """Held run: the FIG cells as bursts (data = colour bytes in memory order B, G, R for that address phase) on a frozen black frame."""
+    frame_mode(d.io)
+    t_on = time.monotonic()
+    proc = pattern_start("solid 0 0 0")
+    wait_marker(d, 0, bytes([0] * 16))
+    freeze(d.io, True)
+    r = T.MCU_DC["a"]
+    d.wr(r["len"], 2)
+    d.wr(r["wmask"], 0)
+    d.wr(r["wmask"] + 1, 0)
+    cur_a, cur_d = [None] * 4, [None] * 16
+    bs = fig_bursts()
+    t_w = time.monotonic()
+    for name, a, ch in bs:
+        for i, sh in enumerate((24, 16, 8, 0)):
+            b = (a >> sh) & 0xFF
+            if cur_a[i] != b:
+                d.wr(r["addr"] + i, b)
+                cur_a[i] = b
+        for i in range(16):
+            v = 255 * ch[(8 * a + i) % 3]
+            if cur_d[i] != v:
+                d.wr(r["wbuf"] + i, v)
+                cur_d[i] = v
+        d.wr(r["cmd"], T.DC_CMD_WRITE)
+    T.log(f"{len(bs)} bursts written in {time.monotonic() - t_w:.1f} s; cells {[f[0] for f in FIG]}")
+    rel = ROOT / "tmp/scratch/ddr_release"
+    if rel.exists():
+        rel.unlink()
+    T.log(f"FIGURE UP at {time.strftime('%H:%M:%S')}; holding until {rel} exists (backstop {HOLD_MAX_S:.0f} s)")
+    t_h = time.monotonic()
+    while not rel.exists() and time.monotonic() - t_h < HOLD_MAX_S:
+        prd(d.io, OVERLAY)
+    T.log(f"hold ended after {time.monotonic() - t_h:.0f} s: {'release file' if rel.exists() else 'BACKSTOP'}")
+    finish(d, proc, t_on)
+
+
+def do_sketch(out: Path, hyp: str) -> None:
+    """Predicted picture on the 3840x2160 screen (1/6 scale): h1 = linear map (1440 units per row, all cells), h2 = lines below y 1080 missing, h3 = lines below y 1080 mirrored about the centre (y -> 2159 - y)."""
+    from PIL import Image, ImageDraw
+    sc = 6
+    im = Image.new("RGB", (SW // sc, SH // sc), (0, 0, 0))
+    dr = ImageDraw.Draw(im)
+    dr.line([(0, 1080 // sc), (SW // sc, 1080 // sc)], fill=(60, 60, 60))
+    for name, ch, x, y, w, rows, slant in FIG:
+        col = tuple(255 * c for c in (ch[2], ch[1], ch[0]))                 # B, G, R bits -> RGB
+        wide = max(w, 5)
+        for r in range(rows):
+            yy = y + r
+            if hyp == "h2" and yy >= 1080:
+                continue
+            if hyp == "h3" and yy >= 1080:
+                yy = 2159 - yy                                      # lower block stored bottom-up: row y -> 2159 - y
+            xs = x + slant * r
+            dr.rectangle([xs // sc, yy // sc, (xs + wide) // sc + 1, yy // sc + 1], fill=col)
+        dr.text((x // sc, y // sc - 10), name, fill=(200, 200, 200))
+    im.save(out)
+    T.log(f"sketch {hyp} -> {out}")
+
+
 def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--unit", type=int, required=True)
     ap.add_argument("--bus", type=int, required=True)
-    ap.add_argument("op", choices=["map", "map2", "write", "block", "bar"])
+    ap.add_argument("op", choices=["map", "map2", "write", "block", "bar", "rows", "figure", "sketch"])
     ap.add_argument("--reads", type=int, default=6)
     ap.add_argument("--waddr", type=lambda x: int(x, 0), default=0x100000)
     ap.add_argument("--n", type=int, default=1)
     ap.add_argument("--dry", action="store_true")
+    ap.add_argument("--pitch", type=int, default=1440)
     ap.add_argument("--nostage", action="store_true")
     ap.add_argument("--hold", action="store_true", help="keep the frozen bar up until tmp/scratch/ddr_release exists (10 min backstop)")
     ap.add_argument("--w", type=int, default=96)
@@ -346,12 +468,20 @@ def main() -> int:
     MASK[0] = a.mask
     NOSTAGE[0] = a.nostage
     HOLD[0] = a.hold
+    if a.op == "sketch":
+        for h in ("h1", "h2", "h3"):
+            do_sketch(ROOT / f"tmp/scratch/figure_{h}.png", h)
+        return 0
     d = T.Dbg(a.unit, a.bus)
     try:
-        if a.op == "map":
+        if a.op == "figure":
+            do_figure(d)
+        elif a.op == "map":
             do_map(d, a.reads)
         elif a.op == "map2":
             do_map2(d, a.reads)
+        elif a.op == "rows":
+            do_rows(d, a.w, a.h, a.pitch)
         elif a.op == "bar":
             do_bar(d, a.w, a.h, a.dry)
         elif a.op == "block":
