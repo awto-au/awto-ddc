@@ -1,15 +1,15 @@
 # Savers: the one source for the firmware defines (scripts/gen_awto_savers.py -> fw/test/saver.c) and the host names (scripts/saver_names.py, ./dev.py saver).
-# name = host name; macro = C suffix (AWTO_SAVER_<macro> = run id, AWTO_SAVER_NOW_<macro> = DDC/CI VCP 0xEB value); run / vcp "-" = none.
-# VCP 0xEB: 0 stop, 1 = the selected saver (Alternate when the setting is Off), 2..4 = run id + 1 (saver.c), 5 flash, 6 alert tone, 7 splash, 8 Asteroids.
-name	macro	run	vcp	note
-off	OFF	0	-	no saver running
-stop	STOP	-	0	end a 'now' saver
-selected	SELECTED	-	1	the saver of setting 119 (Alternate when Off)
-pacman	PACMAN	1	2	Pac-Man
-scope1	SCOPE	2	3	Scope 1 (to be retired)
-scope2	SCOPE2	3	4	Scope 2
-alternate	ALTERNATE	4	-	one saver for 2 min, then the other; reached via selected
-flash	FLASH	5	5	flash warning screen
-splash	SPLASH	6	7	boot splash preview
-alert	ALERT	-	6	1 s alert tone, no screen
-asteroids	ASTEROIDS	7	8	Asteroids
+# name = host name; macro = C suffix (AWTO_SAVER_<macro> = run id, AWTO_SAVER_NOW_<macro> = DDC/CI VCP 0xEB value); run / vcp "-" = none.; option = build option (RL6449_Project.h): `-D <option>=_OFF` drops the saver, default _ON; `./dev.py build --savers`.
+# VCP 0xEB: 0 stop, 1 = the selected saver (Alternate when the setting is Off), 2 / 4 = run id + 1 (saver.c), 5 flash, 6 alert tone, 7 splash, 8 Asteroids.
+name	macro	run	vcp	option	note
+off	OFF	0	-	-	no saver running
+stop	STOP	-	0	-	end a 'now' saver
+selected	SELECTED	-	1	-	the saver of setting 119 (Alternate when Off)
+pacman	PACMAN	1	2	_AWTO_SAVER_PACMAN	Pac-Man
+# retired 2026-11-19 (was run 2 / VCP 3): Scope 1; run id 2 and VCP 3 are not reused (VCP 3 is ignored, a stored setting 119 = 2 runs Scope 2)
+scope2	SCOPE2	3	4	_AWTO_SAVER_SCOPE2	Scope 2
+alternate	ALTERNATE	4	-	-	one saver for 2 min, then the other; reached via selected
+flash	FLASH	5	5	-	flash warning screen
+splash	SPLASH	6	7	-	boot splash preview
+alert	ALERT	-	6	-	1 s alert tone, no screen
+asteroids	ASTEROIDS	7	8	_AWTO_SAVER_ASTEROIDS	Asteroids

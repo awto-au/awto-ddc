@@ -37,7 +37,7 @@ TSV = ROOT / "tmp/logs/clk_sweep.tsv"
 C_DRIVE, C_SLEW, C_CHIP, C_DRNOW, C_SLNOW = 62, 63, 64, 65, 66
 C_AST = 67
 C_TUNE, C_PASSES = 69, 70
-C_SC = 71
+C_SC = 71                                 # reserved word (was the Scope 1 frame counter)
 C_SIZE = 73
 (C_PLLM, C_PLLN, C_PLLO, C_MAXMHZ, C_KEEP, C_OVIDX, C_OVVAL, C_WDOS, C_WDON, C_MOVED, C_PTMO, C_E0, C_E1, C_E7, C_DIVOLD, C_DIVNEW, C_PWMOLD, C_PWMNEW) = \
     (73, 74, 75, 76, 78, 80, 81, 82, 83, 84, 85, 86, 87, 88, 89, 100, 111, 123)
@@ -189,9 +189,6 @@ FPS_WINDOW_S = 6.0
 APPLY_LIMIT_S = 3.0                       # apply op at stock ~1.2 s (calibrated by the first stock run, --cal); x (stock MCU / step MCU)
 HOLD_S = 25.0                             # fw-side revert: apply + host checks (~10 s) x 2.5; the WDT reset is the backstop
 SAVER_SCOPE2, SAVER_AST, SAVER_OFF = H.SAVER_SCOPE2, H.SAVER_AST, H.SAVER_OFF
-SAVER_SCOPE1 = 3
-SCOPE1_FRAME_ARGS = (0x76, 0x77)
-SCOPE1_WINDOW_S = 6.0
 SYNC_EV_ODEMO = 0xE9
 
 
@@ -350,19 +347,6 @@ def fps_ast(ctx) -> tuple[float, int]:
     a0, t0 = be(ck.rd(C_AST, 2), 0, 2), ck.now()
     wait(dev, FPS_WINDOW_S)
     a1, t1 = be(ck.rd(C_AST, 2), 0, 2), ck.now()
-    H.op(dev, H.OP_SAVER, H.lim_saver(), flags=0, n=SAVER_OFF, label="saver off")
-    n = (a1 - a0) & 0xFFFF
-    return n / (t1 - t0), n
-
-
-def fps_scope1(ctx) -> tuple[float, int]:
-    """Scope 1 frames drawn: the fw counts them (g_usAwtoScFrames, HWTEST build)."""
-    dev, ck = ctx.dev, ctx.ck
-    H.op(dev, H.OP_SAVER, H.lim_saver(), flags=0, n=SAVER_SCOPE1, label="scope1 on")
-    wait(dev, FPS_SETTLE_S)
-    a0, t0 = be(ck.rd(C_SC, 2), 0, 2), ck.now()
-    wait(dev, FPS_WINDOW_S)
-    a1, t1 = be(ck.rd(C_SC, 2), 0, 2), ck.now()
     H.op(dev, H.OP_SAVER, H.lim_saver(), flags=0, n=SAVER_OFF, label="saver off")
     n = (a1 - a0) & 0xFFFF
     return n / (t1 - t0), n
@@ -531,9 +515,6 @@ def run_step(ctx, name: str, ck_checks: bool = True) -> dict | None:
         fpsa, na = fps_ast(ctx)
         say(f"  info Asteroids: {na} frames in {FPS_WINDOW_S:.0f} s = {fpsa:.2f} frames/s ({1000 / max(fpsa, 1e-9):.0f} ms/frame)")
         res["ast_fps"] = fpsa
-        fps1, n1 = fps_scope1(ctx)
-        say(f"  info Scope 1: {n1} frames in {FPS_WINDOW_S:.0f} s = {fps1:.2f} frames/s ({1000 / max(fps1, 1e-9):.0f} ms/frame)")
-        res["scope1_fps"] = fps1
     except StopIteration:
         pass
     except (TimeoutError, RuntimeError) as e:
@@ -555,7 +536,7 @@ def run_step(ctx, name: str, ck_checks: bool = True) -> dict | None:
 
 
 def tsv(row: dict) -> None:
-    keys = ["step", "pll_mhz", "mcu", "spi", "dual", "pass", "fl_done", "fl_fail", "fl_bad", "fl_erase_ms", "fl_prog_ms", "img_bad", "img_ms", "crc_ms", "alu_ms", "miss_ms", "ref", "misses", "scope2_fps", "s2_miss_frame", "ast_fps", "scope1_fps", "fail"]
+    keys = ["step", "pll_mhz", "mcu", "spi", "dual", "pass", "fl_done", "fl_fail", "fl_bad", "fl_erase_ms", "fl_prog_ms", "img_bad", "img_ms", "crc_ms", "alu_ms", "miss_ms", "ref", "misses", "scope2_fps", "s2_miss_frame", "ast_fps", "fail"]
     TSV.parent.mkdir(parents=True, exist_ok=True)
     new = not TSV.exists()
     with TSV.open("a") as f:
@@ -594,7 +575,7 @@ def main() -> int:
     ap.add_argument("--stop-after", type=int, default=1, help="stop after N consecutive reproducible failed steps (default 1)")
     ap.add_argument("--allow-overclock-flash", action="store_true", help="allow the oc* steps: SPI above the MX25L8006E fast-read rating (86 MHz); never write / erase there (the fw refuses)")
     ap.add_argument("--tune-first", action="store_true", help="write the FF6C latch / delay tune at the stock clock, before the dividers change")
-    ap.add_argument("--no-fps", action="store_true", help="skip the Scope 2 / Asteroids / Scope 1 frame-rate part")
+    ap.add_argument("--no-fps", action="store_true", help="skip the Scope 2 / Asteroids frame-rate part")
     ap.add_argument("steps", nargs="+")
     a = ap.parse_args()
     OPTS.update(allow_oc=a.allow_overclock_flash, tune_first=a.tune_first, fps=not a.no_fps)

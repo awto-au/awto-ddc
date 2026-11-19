@@ -1,5 +1,6 @@
 #include <stdint.h>
 #include "UserCommonInclude.h"
+#if(_AWTO_SAVER_SCOPE2 == _ON)                                        // saver not in the image when _OFF (RL6449_Project.h)
 #include "../../tools/osd_lines/osd_lines.h"                                // tile geometry only
 
 // Scope screensaver 2 (docs/screensaver.md): red graticule with minor ticks, green pulse trace, two dotted cursors on its 10 % / 90 % points,
@@ -7,7 +8,7 @@
 // Static tiles (graticule, labels) are generated (scripts/gen_scope2.py) and uploaded once; per frame only the tiles the trace, the cursors
 // and the delta t number touch are drawn, one column per call, into slots of a ring above the static ids.
 //   AwtoScopeSaver2(1) draw   (2) next column (returns 1 at the end of a frame)   (0) off
-extern __xdata uint8_t g_aucScPix[];                                                // tile buffer shared with scope_saver.c (one saver at a time): green plane, red plane
+extern __xdata uint8_t g_aucScPix[];                                                // tile buffer shared with Asteroids, saver_canvas.c (one saver at a time): green plane, red plane
 
 #include "scope2_data.inc"
 
@@ -56,6 +57,8 @@ typedef char s_tS2PanelCheck[((AWTO_S2_SU_FACTOR * (long)_PANEL_DH_WIDTH == AWTO
 #define AWTO_S2_WORD_BITS                       24
 #define AWTO_S2_WORD_BYTES                      3
 #define AWTO_S2_PASS_MS                         8                                   // time budget of one call (+ at most one tile, ~3 ms): the main loop (DDC/CI, keys) runs between calls
+#define AWTO_S2_FRAME_MS                        40                                  // frame schedule: 25 fps cap (Dan 2026-11-19); a frame that needs longer runs back to back
+#define AWTO_S2_HALF_MS                         0x8000                              // WORD ms difference below this = the time has passed
 #define AWTO_S2_NUM_CHARS                       8
 #define AWTO_S2_ARG_ON                          0x7B
 #define AWTO_S2_ARG_FRAME                       0x7C
@@ -64,6 +67,7 @@ typedef char s_tS2PanelCheck[((AWTO_S2_SU_FACTOR * (long)_PANEL_DH_WIDTH == AWTO
 __xdata WORD g_usAwtoS2Frame;                                                       // frame counter (scripts/scope2_sim.py)
 static __xdata BYTE s_ucCol;
 static __xdata BYTE s_ucShown;
+static __xdata WORD s_usFrameAt;                                                    // scheduled start of the next frame (AwtoMs low word); advances by the period
 static __xdata BYTE s_ucNext;                                                       // next dynamic slot id (ring STATIC_N .. 255)
 static __xdata BYTE s_ucSpread;                                                     // px per pulse table step
 static __xdata WORD s_usDrift;                                                      // pulse start offset
@@ -546,6 +550,18 @@ BYTE AwtoScopeSaver2(BYTE ucCmd)
         {
             if(s_ucFrameOn == 0)
             {
+                if(s_ucShown != 0)                                              // fixed-rate frames (the hidden first one starts at once)
+                {
+                    if((WORD)((WORD)ulStart - s_usFrameAt) >= AWTO_S2_HALF_MS)
+                    {
+                        return 1;                                               // not due yet
+                    }
+                    s_usFrameAt += AWTO_S2_FRAME_MS;
+                    if((WORD)((WORD)ulStart - s_usFrameAt) < AWTO_S2_HALF_MS)
+                    {
+                        s_usFrameAt = (WORD)ulStart + AWTO_S2_FRAME_MS;         // a frame or more behind: resync, no burst
+                    }
+                }
                 s_ucFrameOn = 1;
                 g_usAwtoS2Frame++;
                 S2Params();
@@ -576,6 +592,7 @@ BYTE AwtoScopeSaver2(BYTE ucCmd)
         if(s_ucShown == 0)                                              // the first frame was drawn hidden
         {
             s_ucShown = 1;
+            s_usFrameAt = (WORD)ulStart + AWTO_S2_FRAME_MS;
             osd_tc_show(1);
             AwtoSyncPush(AWTO_SYNC_EV_ODEMO, AWTO_S2_ARG_ON, 0);
         }
@@ -628,3 +645,4 @@ BYTE AwtoScopeSaver2(BYTE ucCmd)
     s_usDrift = 0;
     return 0;
 }
+#endif                                                         // _AWTO_SAVER_SCOPE2

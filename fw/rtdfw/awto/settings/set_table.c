@@ -117,13 +117,13 @@ static const struct setting __code tab[SET_COUNT] = {
     {115, 2, 0, 13, 0x81, 0, 32767, 1, 0, 0x00, 33, 1771u, 0xFFFFu},  /* panel_hours */
     {116, 2, 0, 13, 0x81, 0, 59, 1, 0, 0x00, 33, 1783u, 0xFFFFu},  /* panel_min */
     {119, 1, 0,  8, 0x03, 0, 5, 1, 0, 0x00, 29, 1797u, 0x0711u},  /* screensaver */
-    {120, 2, 3,  8, 0x03, 0, 3600, 10, 0, 0x00, 31, 1855u, 0xFFFFu},  /* screensaver_s */
-    {121, 1, 0,  8, 0x02, 0, 8, 1, 0, 0xEB, 30, 1872u, 0x0760u},  /* screensaver_now */
-    {122, 0, 0,  8, 0x03, 0, 1, 1, 1, 0x00, 0, 1971u, 0xFFFFu},  /* boot_splash */
-    {123, 0, 0, 11, 0x03, 0, 1, 1, 0, 0x00, 0, 1983u, 0xFFFFu},  /* key_click */
-    {124, 0, 0, 10, 0x03, 0, 1, 1, 1, 0x00, 0, 1993u, 0xFFFFu},  /* monitor */
-    {125, 0, 0,  6, 0x03, 0, 1, 1, 1, 0x00, 0, 2008u, 0xFFFFu},  /* cec_en */
-    {126, 0, 0,  6, 0x03, 0, 1, 1, 0, 0x00, 0, 2012u, 0xFFFFu},  /* cec_ctl */
+    {120, 2, 3,  8, 0x03, 0, 3600, 10, 0, 0x00, 31, 1863u, 0xFFFFu},  /* screensaver_s */
+    {121, 1, 0,  8, 0x02, 0, 8, 1, 0, 0xEB, 30, 1880u, 0x0768u},  /* screensaver_now */
+    {122, 0, 0,  8, 0x03, 0, 1, 1, 1, 0x00, 0, 1983u, 0xFFFFu},  /* boot_splash */
+    {123, 0, 0, 11, 0x03, 0, 1, 1, 0, 0x00, 0, 1995u, 0xFFFFu},  /* key_click */
+    {124, 0, 0, 10, 0x03, 0, 1, 1, 1, 0x00, 0, 2005u, 0xFFFFu},  /* monitor */
+    {125, 0, 0,  6, 0x03, 0, 1, 1, 1, 0x00, 0, 2020u, 0xFFFFu},  /* cec_en */
+    {126, 0, 0,  6, 0x03, 0, 1, 1, 0, 0x00, 0, 2024u, 0xFFFFu},  /* cec_ctl */
 };
 
 static const uint8_t __code id2idx[127] = {
@@ -161,11 +161,11 @@ static const char __code txt[] =
     "Suspend\0""Off\0""Off hard\0""Factory menu\0""Input\0""D1 DP\0""D2 HDMI\0""D3 HDMI\0""H active\0""V active\0"
     "V freq\0""Mode state\0""Loop rate /s\0""Settings schema\0""H freq\0""Pixel clock\0""HDCP\0""Off\0""On\0"
     "Diagnostic console\0""Off\0""Until signal\0""Always\0""Power on\0""DP lanes\0""DP IRQ HPD x10 us\0"
-    "Spread spectrum\0""Panel hours\0""Panel minutes\0""Screensaver\0""Off\0""Pac-Man\0""Scope\0""Scope 2\0"
-    "Alternate\0""Asteroids\0""Screensaver idle\0""Screensaver now\0""Stop\0""Selected\0""Pac-Man\0""Scope\0"
-    "Scope 2\0""Flash warning\0""Alert tone\0""Boot splash\0""Asteroids\0""Boot splash\0""Key click\0"
-    "Health monitor\0""CEC\0""CEC control\0""Picture\0""Colour\0""Six-axis colour\0""Display\0""Input\0"
-    "KVM switching\0""Signal\0""Power\0""OSD\0""Panel timing\0""Debug\0""Audio\0""System\0""Service\0"
+    "Spread spectrum\0""Panel hours\0""Panel minutes\0""Screensaver\0""Off\0""Pac-Man\0""(old) Scope 2\0"
+    "Scope 2\0""Alternate\0""Asteroids\0""Screensaver idle\0""Screensaver now\0""Stop\0""Selected\0""Pac-Man\0"
+    "(retired)\0""Scope 2\0""Flash warning\0""Alert tone\0""Boot splash\0""Asteroids\0""Boot splash\0"
+    "Key click\0""Health monitor\0""CEC\0""CEC control\0""Picture\0""Colour\0""Six-axis colour\0""Display\0"
+    "Input\0""KVM switching\0""Signal\0""Power\0""OSD\0""Panel timing\0""Debug\0""Audio\0""System\0""Service\0"
     "Information\0";
 
 /* enum rows whose VCP values are not the option index: (row, option, vcp value) */
@@ -261,7 +261,7 @@ static const uint8_t __code pinfo[SET_PAGES][3] = {    /* first entry, entries, 
     {104, 6, 0x0C},  /* Service */
     {110, 10, 0xFF},  /* Information */
 };
-static const uint16_t __code ptitle[SET_PAGES] = {2024u, 2032u, 2039u, 2055u, 2063u, 2069u, 2083u, 2090u, 2096u, 2100u, 2113u, 2119u, 2125u, 2132u, 2140u};
+static const uint16_t __code ptitle[SET_PAGES] = {2036u, 2044u, 2051u, 2067u, 2075u, 2081u, 2095u, 2102u, 2108u, 2112u, 2125u, 2131u, 2137u, 2144u, 2152u};
 
 uint8_t set_idx(uint8_t id)
 {
