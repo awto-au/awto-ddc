@@ -28,7 +28,7 @@ Tracking issue: https://github.com/awto-au/awto-ddc/issues/1
 - `i2cdetect -y -r 10` found 0x30, 0x37, 0x4a, 0x4b, 0x50; negative controls 0x44 and 0x6e NACK, so the ACKs are real
 - Roles (established 2026-11-19):
   - 0x30 E-DDC segment pointer, 0x37 DDC/CI, 0x3A HDCP, 0x50 EDID
-  - 0x54 HDMI 2.0 SCDC (Linux `drm_scdc_helper.c`, `SCDC_I2C_SLAVE_ADDRESS` 0x54); our read `00 01 00..` = SINK_VERSION 1. SCDC regs: 0x01 sink version, 0x02 source version, 0x10 update flags, 0x20 TMDS_CONFIG, 0x21 scrambler status, 0x30 / 0x31 config, 0x40 status flags, 0x50..0x5A error counters, 0xD0.. OUI. Never write SCDC
+  - 0x54 HDMI 2.0 SCDC (Linux `drm_scdc_helper.c`, `SCDC_I2C_SLAVE_ADDRESS` 0x54); our read `00 01 00..` = SINK_VERSION 1. SCDC regs: 0x01 sink version, 0x02 source version, 0x10 update flags, 0x20 TMDS_CONFIG, 0x21 scrambler status, 0x30 / 0x31 config, 0x40 status flags, 0x50..0x5A error counters, 0xD0.. OUI. SCDC writes: deliberate only, with Dan's word
   - 0x4A = Realtek ISP slave, no register auto-increment (RTD2660 manual p350; ISP enter = write 0x80 to reg 0x6F; ghent360 / Adafruit RTD266X / KerJoe RTDMultiProg all use 0x4A)
   - 0x4B = ISP slave WITH auto-increment (`Adafruit_RTD266x_Firmware` `RTD266xISP.h` `ISP_INCREMENT_ADDRESS` 0x4B); reads the `FFxx` window (`FFEC` / `FFED` snapshot); "external registers require ISP mode" (RTD2660 p316)
   - RTD2660 (older family) `FF23` = slave address (bits 7:1) + CH_SEL bit 0 (0 ADC DDC, 1 DDC2) [third-party source; may not apply to the 2795T]
@@ -109,7 +109,7 @@ Tracking issue: https://github.com/awto-au/awto-ddc/issues/1
 - Debug port: not determinable from the PC side. DP I2C-over-AUX acknowledged every address (2026-11-05), so address probes say nothing [measured]. Candidates [web/guess]:
   - MStar scaler ISP/debug is I2C address 0x49 on the DDC channel, entered with the "MSTAR" magic string; flashrom `mstarddc_spi` reads the SPI flash over it [web, memues dumper: tested on HDMI]. Whether it is reachable through the DP AUX path of this monitor [unknown].
   - A UART/ISP header on the board is the usual MStar bring-up route [guess]; no teardown or board photos of the 288E2 found.
-- Hidden VCP codes [web]: none documented for 288E2. TPV/MMD support states they do not document VCP codes (ddcutil discussion #642, Philips Evnia, 2026-09). Method there: sniff DDC/CI from the vendor app (rockowitz "Reverse Engineering Proprietary DDC Extensions"). Service menu on AOC (TPV brand): unplug, hold MENU, plug in [web, reddit r/ultrawidemasterrace, unverified for this model].
+- Hidden VCP codes [web]: none documented for 288E2. TPV/MMD support states they do not document VCP codes (ddcutil discussion #642, Philips Evnia, 2026-09). Method (the plan, in progress: `docs/monitors/smartcontrol-wine.md`): run Philips SmartControl under Wine against an emulated monitor and log DDC/CI / VCP calls; rockowitz "Reverse Engineering Proprietary DDC Extensions" (rockowitz "Reverse Engineering Proprietary DDC Extensions"). Service menu on AOC (TPV brand): unplug, hold MENU, plug in [web, reddit r/ultrawidemasterrace, unverified for this model].
 - Firmware [web]: no 288E2 firmware updater found in the search; Philips offers SmartControl-based updates for some models (tv-sound-monitors.philips.com article "firmware update via SmartControl") [unverified for 288E2].
 - Still unknown: exact scaler part, DPCD identity, board photos, flash chip, UART pins, whether the ISP address answers over DP.
 - It is Dan's own display. Excluded from all flash/DDC test scripts by EDID serial. Issue #136.

@@ -33,7 +33,7 @@ Tags: `[measured]` probe on the 288E2 (2026-11-19), `[web]` public page (URL giv
 - Capabilities advertise a full window set (95-98, A5), gamma presets 1.8/2.0/2.2/2.4/2.6 (0x72), display scaling modes (0x86: no scaling, max image, linear), colour presets sRGB / 5000 / 6500 / 7500 / 8200 / 9300 / 11500 K / user 1 (0x14).
 - Input values in caps include VGA-1 (0x01), HDMI-1/2 (0x11/0x12), DP-1 (0x0F) plus 0x21/0x22/0x2F/0x31; current = 0x0F `[measured]`. VGA/0x2x/0x3x entries are probably a generic scaler table, not physical ports `[guess]`.
 - 0xAC = 2228 Hz, 0xAE = 59.99 Hz, 0xC0 = 13769 h (usage time; 0x006F in C6 `[measured]`).
-- Write-only (not readable): 01 04 05 06 08 0A 76 8B A2 B0 CF. 04/05/08 are factory/colour resets: never send (section 5).
+- Write-only (not readable): 01 04 05 06 08 0A 76 8B A2 B0 CF. 04/05/08 are factory/colour resets: deliberate only, with Dan's word (section 5).
 - 0xDC display mode values: 00 standard, 01 productivity, 02 mixed, 03 movie, 05 games, 08 intermediate-power, 1F `[measured]` (caps).
 - 0xCA OSD/button control: 01 OSD disabled + button events, 02 OSD enabled `[measured]` (caps); lets a host take the keys.
 
@@ -126,7 +126,7 @@ Not found in any public source read: DSC, FreeSync / VRR support per part, local
   - Whether 0x49 is reachable through DP AUX at all: unknown. HDMI DDC is the tested path (`[web]`); the 288E2 has HDMI ports (caps).
   - UART / ISP header on the board: unknown, no teardown found.
   - Flash chip, DPCD identity (host is NVIDIA proprietary for DP-2, no DPCD node): unknown.
-- A second route: sniff SmartControl DDC traffic for undocumented codes `[web]` method, not done.
+- A second route: sniff SmartControl DDC traffic for undocumented codes `[web]` method; the plan, in progress: `docs/monitors/smartcontrol-wine.md`.
 
 ## 5. Risks of touching it
 
@@ -149,7 +149,7 @@ Need Dan
 6. Opening the case: photograph scaler marking, SPI flash, UART header.
 7. 0x49 ISP probe over HDMI DDC (a flashrom read; check the driver for a no-reset option first).
 8. Flash dump twice and compare (vendor original, same rule as our units).
-9. Writing anything (VCP resets, hidden codes, flash): not recommended on a daily-use display.
+9. Writing anything (VCP resets, hidden codes, flash): deliberate only, with Dan's word; codes to try come from the SmartControl-under-Wine capture (`docs/monitors/smartcontrol-wine.md`).
 
 ## 7. What we could not find
 
