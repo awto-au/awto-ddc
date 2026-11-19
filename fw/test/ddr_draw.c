@@ -41,6 +41,22 @@
 #define AWTO_DRW_FIG_SIDE                       100                         // grid100 figure (scripts/ddr_grid100.py): 100 px square, 10 x 10 cells, white circle
 #define AWTO_DRW_FIG_N                          10
 #define AWTO_DRW_MASKTEST_BURSTS                16
+#define AWTO_DRW_BLOCK1_UNITS                   ((unsigned long)AWTO_DRW_LINE_UNITS * AWTO_DRW_LINES)      // 1 555 200 units = 12 441 600 B
+#define AWTO_DRW_ADDR_BURSTS                    (AWTO_DRW_BLOCK1_UNITS / AWTO_DRW_BURST_UNITS)             // 777 600
+#define AWTO_DRW_ADDR_BLOCK_BURSTS              128                         // 128 bursts = 256 units: the low address byte wraps, mid / high index bytes change
+#define AWTO_DRW_ADDR_BLOCKS                    ((unsigned long)AWTO_DRW_ADDR_BURSTS / AWTO_DRW_ADDR_BLOCK_BURSTS)        // 6075
+#define AWTO_DRW_IDX_BYTES                      4                           // unit index ^ seed, memory bytes 0..3 of each 8 B unit, low first
+#define AWTO_DRW_LANE_BYTES                     (AWTO_DRW_UNIT_BYTES - AWTO_DRW_IDX_BYTES)
+#define AWTO_DRW_IDX_BITS                       28                          // MCU_DC address: ADDR_H 4 bits + 3 bytes = 2 GB of 8 B units
+#define AWTO_DRW_ODD_BUF                        0                           // buffer byte of memory byte 0 of the ODD unit (halves swapped)
+#define AWTO_DRW_EVEN_BUF                       AWTO_DRW_HALF               // ... of the EVEN unit
+#define AWTO_DRW_OPC_READ                       5                           // MCU_DC_CMD [7:5] 101 = read
+#define AWTO_DRW_CMD_READ                       (AWTO_DRW_OPC_READ << AWTO_DRW_CMD_SHIFT)
+#define AWTO_DRW_READ_FLAG_BIT                  0x01                        // MCU_DC_READ_FLAG [0]
+#define AWTO_DRW_WATCH_N                        8
+#define AWTO_DRW_ADDR_TMO_MAX                   4096                        // read-flag timeouts (50 ms each) before the op aborts: 4096 x 50 ms = 205 s backstop
+#define AWTO_DRW_REC_N                          4                           // first mismatches kept
+#define AWTO_DRW_INV                            0xFF
 
 #define AWTO_DRW_OP_FILL_RECT                   1       // x y w h rgb
 #define AWTO_DRW_OP_HLINE                       2       // x y w(length) rgb: 1 screen row = 1 memory line (2 rows shown)
@@ -53,6 +69,9 @@
 #define AWTO_DRW_OP_GRAD_H                      9       // grey ramp across the frame (240 bands of 16 px)
 #define AWTO_DRW_OP_GRAD_V                      10      // grey ramp down the frame (one level per memory line)
 #define AWTO_DRW_OP_MASKTEST                    11      // x y: 16 bursts at (x px, y row), burst j writes ONLY memory byte j (0xFF)
+#define AWTO_DRW_OP_ADDR_FILL                   12      // params in g_stAwtoAddr (blk0, blocks, seed, inv): address-in-data fill, default = the shown block
+#define AWTO_DRW_OP_ADDR_VERIFY                 13      // read back blocks (stride, swap, retry), results in g_stAwtoAddr
+#define AWTO_DRW_OP_ADDR_WATCH                  14      // fill, then verify ucSamples times usStepMs apart (0 = back to back): bad bursts per sample (does the live capture overwrite it)
 
 #define AWTO_DRW_ST_IDLE                        0
 #define AWTO_DRW_ST_OK                          2
@@ -494,6 +513,311 @@ static BYTE DrwMaskTest(WORD usX, WORD usY)     // burst j writes only memory by
     return 1;
 }
 
+typedef struct
+{
+    unsigned long ulBlk0;                       // params (host writes, then g_stAwtoDraw.ucGo): first block of 128 bursts
+    unsigned long ulBlocks;                     // blocks to fill / read, 0 = the shown block (AWTO_DRW_ADDR_BLOCKS)
+    unsigned long ulSeed;                       // XORed into every unit index
+    WORD usStride;                              // verify: blocks between reads (0 = 1)
+    WORD usStepMs;                              // watch: ms between samples
+    BYTE ucInv;                                 // 1 = every byte inverted
+    BYTE ucSwap;                                // verify: read lane swap (0 / 1)
+    BYTE ucRetry;                               // verify: extra reads of a bad burst, 0 = single read
+    BYTE ucSamples;                             // watch: samples
+    unsigned long ulChecked;                    // results: bursts read back
+    unsigned long ulBad;                        // still wrong after the extra reads
+    unsigned long ulStale;                      // first read wrong, a retry right (only with ucRetry)
+    unsigned long ulShift;                      // bad bursts whose index is the neighbour unit (+-1)
+    unsigned long ulData;                       // bad bursts with the right index (data lane fault)
+    unsigned long ulTmo;                        // read flag never set
+    unsigned long ulSpin;                       // flag polls summed over all reads (first-poll hits count 0)
+    unsigned long ulSlow;                       // reads that needed more than AWTO_DRW_SPIN_FAST polls
+    unsigned long aulBit[AWTO_DRW_IDX_BITS];    // bad bursts per unit-index bit that differs (expected ^ got)
+    WORD ausWatch[AWTO_DRW_WATCH_N];            // watch: bad bursts per sample
+    BYTE ucRecN;
+    unsigned long aulRecIdx[AWTO_DRW_REC_N];    // burst index of the first bad bursts
+    BYTE aucRec[AWTO_DRW_REC_N][AWTO_DRW_BURST_BYTES];      // what was read (memory order after the lane swap)
+} StAwtoAddr;
+
+#ifndef AWTO_DRW_HOST
+__xdata StAwtoAddr g_stAwtoAddr;
+#else
+extern StAwtoAddr g_stAwtoAddr;
+#endif
+
+static const __code BYTE tcDrwLane[AWTO_DRW_LANE_BYTES] = {0x5A, 0xA5, 0x3C, 0xC3};
+static BYTE s_aucAdExp[AWTO_DRW_BURST_BYTES];   // expected burst, memory order
+static BYTE s_aucAdGot[AWTO_DRW_BURST_BYTES];
+static BYTE s_aucAdSeed[AWTO_DRW_IDX_BYTES];    // seed bytes, low first
+static BYTE s_ucAdInv;
+static BYTE s_ucAdSwap;
+
+static void AdSet(BYTE ucPos, BYTE ucVal)       // one expected byte in both units
+{
+    s_aucAdExp[ucPos] = ucVal;
+    s_aucAdExp[AWTO_DRW_UNIT_BYTES + ucPos] = ucVal;
+}
+
+static void AdBlockSet(unsigned long ulBlk)     // address upper bytes of the block + its index bytes 1..3 into the expected burst
+{
+    unsigned long ulU = ulBlk * (AWTO_DRW_ADDR_BLOCK_BURSTS * AWTO_DRW_BURST_UNITS);
+    BYTE ucK;
+
+    for(ucK = 1; ucK < AWTO_DRW_IDX_BYTES; ucK++)
+    {
+        AdSet(ucK, (BYTE)(ulU >> (8 * ucK)) ^ s_aucAdSeed[ucK] ^ s_ucAdInv);
+    }
+    DRW_IDLE();
+    DRW_WR(AWTO_R_MCU_DC_ADDR_H_A, (BYTE)(ulU >> 24));
+    DRW_WR(AWTO_R_MCU_DC_ADDR_M_A, (BYTE)(ulU >> 16));
+    DRW_WR(AWTO_R_MCU_DC_ADDR_L_A, (BYTE)(ulU >> 8));
+}
+
+static unsigned long AdParams(void)             // returns the block count
+{
+    BYTE ucK;
+
+    for(ucK = 0; ucK < AWTO_DRW_IDX_BYTES; ucK++)
+    {
+        s_aucAdSeed[ucK] = (BYTE)(g_stAwtoAddr.ulSeed >> (8 * ucK));
+    }
+    s_ucAdInv = (g_stAwtoAddr.ucInv != 0) ? AWTO_DRW_INV : 0;
+    for(ucK = 0; ucK < AWTO_DRW_LANE_BYTES; ucK++)
+    {
+        AdSet(AWTO_DRW_IDX_BYTES + ucK, tcDrwLane[ucK] ^ s_ucAdInv);
+    }
+    return (g_stAwtoAddr.ulBlocks == 0) ? AWTO_DRW_ADDR_BLOCKS : g_stAwtoAddr.ulBlocks;
+}
+
+static BYTE DrwAddrFill(void)
+{
+    unsigned long ulBlk;
+    unsigned long ulN = AdParams();
+    BYTE ucJ;
+    BYTE ucK;
+    BYTE ucLo;
+
+    for(ucK = AWTO_DRW_IDX_BYTES; ucK < AWTO_DRW_UNIT_BYTES; ucK++)     // the lane bytes never change: loaded once
+    {
+        DRW_IDLE();
+        DRW_WR(AWTO_R_MCU_DC_DATABUF_W_00_A + AWTO_DRW_EVEN_BUF + ucK, s_aucAdExp[ucK]);
+        DRW_WR(AWTO_R_MCU_DC_DATABUF_W_00_A + AWTO_DRW_ODD_BUF + ucK, s_aucAdExp[ucK]);
+    }
+    for(ulBlk = g_stAwtoAddr.ulBlk0; (ulBlk < (g_stAwtoAddr.ulBlk0 + ulN)) && (s_ucDrwErr == 0); ulBlk++)
+    {
+        DRW_FEED();
+        AdBlockSet(ulBlk);
+        for(ucK = 1; ucK < AWTO_DRW_IDX_BYTES; ucK++)
+        {
+            DRW_WR(AWTO_R_MCU_DC_DATABUF_W_00_A + AWTO_DRW_EVEN_BUF + ucK, s_aucAdExp[ucK]);
+            DRW_WR(AWTO_R_MCU_DC_DATABUF_W_00_A + AWTO_DRW_ODD_BUF + ucK, s_aucAdExp[ucK]);
+        }
+        for(ucJ = 0; ucJ < AWTO_DRW_ADDR_BLOCK_BURSTS; ucJ++)
+        {
+            ucLo = (BYTE)(ucJ * AWTO_DRW_BURST_UNITS);
+            DRW_IDLE();
+            DRW_WR(AWTO_R_MCU_DC_ADDR_A, ucLo);
+            ucLo ^= s_aucAdSeed[0] ^ s_ucAdInv;
+            DRW_WR(AWTO_R_MCU_DC_DATABUF_W_00_A + AWTO_DRW_EVEN_BUF, ucLo);
+            DRW_WR(AWTO_R_MCU_DC_DATABUF_W_00_A + AWTO_DRW_ODD_BUF, ucLo ^ 1);
+            DRW_WR(AWTO_R_MCU_DC_CMD_A, AWTO_DRW_CMD_WRITE);
+        }
+        s_ulDrwBursts += AWTO_DRW_ADDR_BLOCK_BURSTS;
+    }
+    return 1;
+}
+
+static BYTE AdRead(BYTE ucLo)                   // 0 = flag timeout
+{
+    BYTE ucN;
+    BYTE ucJ;
+    unsigned long ulT;
+
+    DRW_IDLE();
+    DRW_WR(AWTO_R_MCU_DC_ADDR_A, ucLo);
+    DRW_WR(AWTO_R_MCU_DC_CMD_A, AWTO_DRW_CMD_READ);
+    for(ucN = AWTO_DRW_SPIN_FAST; (ucN != 0) && ((DRW_RD(AWTO_R_MCU_DC_READ_FLAG_A) & AWTO_DRW_READ_FLAG_BIT) == 0); ucN--)
+    {
+    }
+    g_stAwtoAddr.ulSpin += (BYTE)(AWTO_DRW_SPIN_FAST - ucN);
+    if(ucN == 0)
+    {
+        g_stAwtoAddr.ulSlow++;
+        ulT = AwtoMs();
+        while((DRW_RD(AWTO_R_MCU_DC_READ_FLAG_A) & AWTO_DRW_READ_FLAG_BIT) == 0)
+        {
+            if((AwtoMs() - ulT) >= AWTO_DRW_STALL_MS)
+            {
+                return 0;
+            }
+        }
+    }
+    for(ucJ = 0; ucJ < AWTO_DRW_BURST_BYTES; ucJ++)
+    {
+        s_aucAdGot[ucJ] = DRW_RD(AWTO_R_MCU_DC_DATABUF_R_00_A + ((ucJ + s_ucAdSwap * AWTO_DRW_HALF) % AWTO_DRW_BURST_BYTES));
+    }
+    return 1;
+}
+
+static BYTE AdMatch(void)
+{
+    BYTE ucJ;
+
+    for(ucJ = 0; ucJ < AWTO_DRW_BURST_BYTES; ucJ++)
+    {
+        if(s_aucAdGot[ucJ] != s_aucAdExp[ucJ])
+        {
+            return 0;
+        }
+    }
+    return 1;
+}
+
+static void AdBad(unsigned long ulBurst)
+{
+    BYTE ucK;
+    unsigned long ulGot = 0;
+    unsigned long ulDiff;
+    unsigned long ulExp = ulBurst * AWTO_DRW_BURST_UNITS;
+
+    for(ucK = 0; ucK < AWTO_DRW_IDX_BYTES; ucK++)
+    {
+        ulGot |= (unsigned long)(BYTE)(s_aucAdGot[ucK] ^ s_ucAdInv ^ s_aucAdSeed[ucK]) << (8 * ucK);
+    }
+    ulDiff = ulGot ^ ulExp;
+    g_stAwtoAddr.ulBad++;
+    if(ulDiff == 0)
+    {
+        g_stAwtoAddr.ulData++;
+    }
+    else if(((ulGot + 1) == ulExp) || (ulGot == (ulExp + 1)))
+    {
+        g_stAwtoAddr.ulShift++;
+    }
+    for(ucK = 0; ucK < AWTO_DRW_IDX_BITS; ucK++)
+    {
+        if(((ulDiff >> ucK) & 1) != 0)
+        {
+            g_stAwtoAddr.aulBit[ucK]++;
+        }
+    }
+    if(g_stAwtoAddr.ucRecN < AWTO_DRW_REC_N)
+    {
+        g_stAwtoAddr.aulRecIdx[g_stAwtoAddr.ucRecN] = ulBurst;
+        for(ucK = 0; ucK < AWTO_DRW_BURST_BYTES; ucK++)
+        {
+            g_stAwtoAddr.aucRec[g_stAwtoAddr.ucRecN][ucK] = s_aucAdGot[ucK];
+        }
+        g_stAwtoAddr.ucRecN++;
+    }
+}
+
+static void AdVerifyBlocks(unsigned long ulBlk0, unsigned long ulN, WORD usStride)
+{
+    unsigned long ulI;
+    unsigned long ulBlk;
+    BYTE ucJ;
+    BYTE ucTry;
+    BYTE ucLo;
+    BYTE ucOk;
+    BYTE ucGot;
+
+    for(ulI = 0; (ulI < ulN) && (s_ucDrwErr == 0); ulI++)
+    {
+        ulBlk = ulBlk0 + ulI * usStride;
+        DRW_FEED();
+        AdBlockSet(ulBlk);
+        for(ucJ = 0; ucJ < AWTO_DRW_ADDR_BLOCK_BURSTS; ucJ++)
+        {
+            ucLo = (BYTE)(ucJ * AWTO_DRW_BURST_UNITS);
+            s_aucAdExp[0] = ucLo ^ s_aucAdSeed[0] ^ s_ucAdInv;
+            s_aucAdExp[AWTO_DRW_UNIT_BYTES] = s_aucAdExp[0] ^ 1;
+            g_stAwtoAddr.ulChecked++;
+            ucOk = 0;
+            ucGot = 0;
+            for(ucTry = 0; ucTry <= g_stAwtoAddr.ucRetry; ucTry++)
+            {
+                if(AdRead(ucLo) == 0)
+                {
+                    g_stAwtoAddr.ulTmo++;
+                    if(g_stAwtoAddr.ulTmo >= AWTO_DRW_ADDR_TMO_MAX)
+                    {
+                        s_ucDrwErr = AWTO_DRW_ST_STALL;
+                        return;
+                    }
+                    continue;
+                }
+                ucGot = 1;
+                if(AdMatch() != 0)
+                {
+                    ucOk = 1;
+                    if(ucTry != 0)
+                    {
+                        g_stAwtoAddr.ulStale++;
+                    }
+                    break;
+                }
+            }
+            if((ucOk == 0) && (ucGot != 0))             // a burst whose reads all timed out is counted in ulTmo only
+            {
+                AdBad((ulBlk * AWTO_DRW_ADDR_BLOCK_BURSTS) + ucJ);
+            }
+        }
+        s_ulDrwBursts += AWTO_DRW_ADDR_BLOCK_BURSTS;
+    }
+}
+
+static void AdClearResults(void)
+{
+    BYTE *pucC = (BYTE *)&g_stAwtoAddr.ulChecked;
+    WORD usI;
+
+    for(usI = 0; usI < (WORD)(sizeof(g_stAwtoAddr) - (WORD)((BYTE *)&g_stAwtoAddr.ulChecked - (BYTE *)&g_stAwtoAddr)); usI++)
+    {
+        pucC[usI] = 0;
+    }
+}
+
+static BYTE DrwAddrVerify(void)
+{
+    unsigned long ulN;
+
+    AdClearResults();
+    ulN = AdParams();
+    s_ucAdSwap = (g_stAwtoAddr.ucSwap != 0) ? 1 : 0;
+    AdVerifyBlocks(g_stAwtoAddr.ulBlk0, ulN, (g_stAwtoAddr.usStride == 0) ? 1 : g_stAwtoAddr.usStride);
+    return 1;
+}
+
+static BYTE DrwAddrWatch(void)
+{
+    BYTE ucS;
+    unsigned long ulT0;
+    unsigned long ulBad0;
+    unsigned long ulN;
+
+    if((g_stAwtoAddr.ucSamples == 0) || (g_stAwtoAddr.ucSamples > AWTO_DRW_WATCH_N))
+    {
+        return 0;
+    }
+    AdClearResults();
+    ulN = AdParams();
+    s_ucAdSwap = g_stAwtoAddr.ucSwap;
+    DrwAddrFill();
+    ulT0 = AwtoMs();
+    for(ucS = 0; (ucS < g_stAwtoAddr.ucSamples) && (s_ucDrwErr == 0); ucS++)
+    {
+        while((AwtoMs() - ulT0) < ((unsigned long)(ucS + 1) * g_stAwtoAddr.usStepMs))
+        {
+            DRW_FEED();
+        }
+        ulBad0 = g_stAwtoAddr.ulBad;
+        AdVerifyBlocks(g_stAwtoAddr.ulBlk0, ulN, 1);
+        g_stAwtoAddr.ausWatch[ucS] = (WORD)(g_stAwtoAddr.ulBad - ulBad0);
+    }
+    return 1;
+}
+
 static BYTE DrwRun(BYTE ucOp)                   // 0 = refused
 {
     WORD usX = g_stAwtoDraw.usX;
@@ -533,6 +857,12 @@ static BYTE DrwRun(BYTE ucOp)                   // 0 = refused
             return 1;
         case AWTO_DRW_OP_MASKTEST:
             return DrwMaskTest(usX, usY);
+        case AWTO_DRW_OP_ADDR_FILL:
+            return DrwAddrFill();
+        case AWTO_DRW_OP_ADDR_VERIFY:
+            return DrwAddrVerify();
+        case AWTO_DRW_OP_ADDR_WATCH:
+            return DrwAddrWatch();
         default:
             return 0;
     }

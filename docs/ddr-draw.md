@@ -10,7 +10,7 @@
 - The two 8 B halves of the write buffer are swapped: the driver stages `mem[8..15] + mem[0..7]`.
 - Block 1 (A < 1 555 200 units = 1080 lines) is shown line-doubled: screen row = 2 x memory line. Ops take SCREEN x, y, w, h; an odd start / height rounds outward to whole memory lines (2 screen rows). Only block 1 is drawn (screen y < 2160).
 - `WMASK` bit = 1: byte NOT written. Bit order vs the swapped halves is ASSUMED (`AWTO_DRW_MASK_LANE_BUFFER`: bit n = buffer byte n); op `masktest` checks it on hardware.
-- Reads by address are unreliable (#255): there is no firmware read-back or checksum. Check a drawing with the DCR count (`--count`, lit pixels) or a photo.
+- Read-back by address: ops 12-14 below (`ddr_addr_test.py`); a plain `ddr-draw` drawing is still checked with the DCR count (`--count`, lit pixels) or a photo.
 
 ## Ops (`ucGo`)
 | op | `ddr_draw.py` name | params |
@@ -43,3 +43,18 @@ States: 2 ok, 3 refused (unknown op, empty / off-screen rectangle, bad grid), 4 
 - `frame` white: 777 600 bursts, 926 ms = 13.4 MB/s; `gradv`: 983 ms = 12.7 MB/s.
 - `figure`: 1068 bursts, 71 ms (every edge burst reloads the 16 B buffer); `gradh`: 21.3 s (259 200 spans, 82 us each).
 - A `DATABUF_W` load of 16 B costs about 68 us (green vs white fill, `figure`, `gradh` all agree): ~4 us per register write, vs ~0.3 us per register access in the burst loop. Data that changes every burst runs at ~0.25 MB/s; solid colours at 10-13 MB/s.
+
+## Address-in-data fill + read-back (ops 12-14, `./dev.py ddr-addr`, `scripts/ddr_addr_test.py`, `tests/test_ddr_addr.py`)
+- Region = block 1: 1 555 200 units = 777 600 bursts = 12 441 600 B (3840 x 1080 x 3 B, pitch 1440 units; shown line-doubled as 3840 x 2160). Linear burst index, pitch ignored.
+- Pattern per 8 B unit u (memory order): bytes 0..3 = (u ^ seed) little endian, bytes 4..7 = lane constants 5A A5 3C C3; second pass every byte inverted. Seed = per-run constant (stale frame cannot match).
+- Params and results live in `g_stAwtoAddr` (map symbol; field table `FIELDS` in the script, checked against the C struct by the test): blk0, blocks (0 = block 1), seed, stride, inv, swap, retry; results: checked, bad, by address bit (28), neighbour-unit / data-only counts, flag timeouts, first 4 bad bursts (index + bytes read).
+- Fill touches only the index bytes that change (2 buffer bytes per burst, mid / high bytes every 128 bursts); read-back is in the firmware (CMD read 101, poll `MCU_DC_READ_FLAG`, 16 `DATABUF_R` bytes, compare). Single reads by default; `--double` = extra reads of a bad burst, reported as a separate result.
+- Read lane order: `DATABUF_R` is in memory order with the two 8 B halves swapped (`swap=1`); found by the script on 8 blocks (swap 0: 1022 bad of 1024, swap 1: 0).
+- A burst whose read flag never sets within 50 ms is counted as a timeout, not compared; the retry pass recovers it.
+- `--extend`: fill + sampled read-back (256 blocks over the filled region) in doubling steps past block 1; capacity = first aliasing. `--watch`: live (not frozen) marker block read back repeatedly. `--regs`: buffer-mode registers.
+
+## Measured (unit 2, freeze image 333c92f + this change, MCU 350 MHz default, frozen 4K60, 2026-11-20, #267)
+- Fill: 777 600 bursts, 1008 ms = 12.3 MB/s (1.3 us per burst). Read-back: 50.1 / 50.5 s single-read (0.25 MB/s, 64 us per burst; includes 401 / 409 reads x 50 ms timeouts = 20 s).
+- Single-read result, both passes (normal, inverted), seed 0xF5B4A162: 777 600 bursts each, 0 mismatches (0 by every address bit); 401 / 409 reads timed out (0.05 %) and were not compared. Double-read (2 extra reads): 777 600 bursts, 0 bad, 371 recovered by retry.
+- Capacity: fill + sampled read-back past block 1: 3 110 400 units clean; 6 220 800 units: burst 0 (unit 0) reads back unit 4 194 304, burst 1 unit 4 194 306 (address bit 22 only), 10 880 of 33 024 sampled bursts bad (= the share of samples below 2 026 496 units that were overwritten): the address wraps at 2^22 units = 4 194 304 x 8 B = 32 MiB = 256 Mbit.
+- Live (not frozen): marker written into block 1 is overwritten within one frame (0 bad in the first back-to-back sample for some positions, all bad by the 2nd-3rd); the 3 positions after block 1 stay intact over 8 samples (about 64 ms). Registers: `CAP_M1_DDR_CTRL1` 0x82 (`cap_cap_en` 1, `cap_db_en` 0, `cap_sb_sel` 0), `CAP_M1_DDR_CTRL3` 0x00 (`cap_3buf_en` 0), `DISP_M1_DISP_CTRL1` 0x01 (`disp_db_en` 0, `disp_src_sel` 00), `DISP_M1_DISP_CTRL3` 0x00 (`disp_3buf_en` 0); M2 the same.

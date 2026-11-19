@@ -1437,6 +1437,15 @@ def cmd_ddr_draw(extra: list[str]) -> int:
     return _py("ddr_draw.py", "--unit", n, "--bus", _live_bus(u), "--map", m, *extra)
 
 
+@command("DDR address-in-data fill + read-back of the shown block (freeze image; docs/ddr-draw.md): single reads, normal + inverted pass, mismatches by address bit; --double --extend --watch",
+         args="[--unit N] [--map F] [--seed S] [--double] [--extend] [--watch] [--hold S]", kind="action")
+def cmd_ddr_addr(extra: list[str]) -> int:
+    n, u = _unit(extra)
+    given = _opt(extra, "--map")
+    m = Path(_fwmap(u, given))
+    return _py("ddr_addr_test.py", "--unit", n, "--bus", _live_bus(u), "--map", m, *extra)
+
+
 @command("read-only I2C address probe of the unit's host bus (i2cdetect -r, then i2cget regs 0..F of every extra ACKing address; no writes)",
          args="[--unit N] [--reps N] [--halt] [--extras]", kind="action")
 def cmd_i2c_probe(extra: list[str]) -> int:

@@ -29,7 +29,7 @@ from rtd_i2c_bridge import Real
 ROOT = Path(__file__).resolve().parent.parent
 LOG = ROOT / "tmp/logs/ddr_frame_test.log"
 RAW = ROOT / "tmp/logs/ddr_frame_test.raw.log"
-SERIALS = {1: "AWT26110001", 3: "AWT26110003"}   # test units (units-test-policy); unit 2 hands off
+SERIALS = {1: "AWT26110001", 2: "AWT26110002", 3: "AWT26110003"}   # units released for tests (2026-11-20)
 
 # regdb RTD2795T-CG names -> addresses (re/regdb/RTD2795T-CG.tsv.gz)
 HLW_ADDR, HLW_DATA = 0x0060, 0x0061

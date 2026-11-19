@@ -12,6 +12,7 @@ Log: ./tmp/logs/ddr_frame_test.log
 from __future__ import annotations
 
 import argparse
+import contextlib
 import sys
 import time
 from pathlib import Path
@@ -21,13 +22,15 @@ import ddr_frame_test as T
 import ddr_freeze_test as F
 import sw_timeline as SW
 
-OPS = {"fill": 1, "hline": 2, "vline": 3, "grid": 4, "circle": 5, "figure": 6, "bars": 7, "frame": 8, "gradh": 9, "gradv": 10, "masktest": 11}
+OPS = {"fill": 1, "hline": 2, "vline": 3, "grid": 4, "circle": 5, "figure": 6, "bars": 7, "frame": 8, "gradh": 9, "gradv": 10, "masktest": 11,
+       "addrfill": 12, "addrverify": 13, "addrwatch": 14}   # 12-14: params in g_stAwtoAddr (scripts/ddr_addr_test.py)
 # StAwtoDraw (fw/test/ddr_draw.c), big endian
 O_GO, O_SEQ, O_STATE, O_FROZEN, O_X, O_Y, O_W, O_H, O_R, O_G, O_B, O_N, O_MS, O_BURSTS, O_SLOW = 0, 1, 2, 3, 4, 6, 8, 10, 12, 13, 14, 15, 16, 18, 22
 STATES = {0: "idle", 2: "ok", 3: "REFUSED (op unknown / empty / off screen)", 4: "STALL (CMD busy > 50 ms, aborted)"}
 SCREEN_W, SCREEN_H, LINE_DOUBLE, BPP, BURST = 3840, 2160, 2, 3, 16
 MCU_MHZ = 87.7                           # 351 MHz PLL / 4 (docs/diag-block.md)
 EST_BURST_S = 1.7e-6                     # the issue's pessimistic per-burst figure (docs/data-channels.md row 3): limits only, not a result
+EST_ADDR_BURST_S = 40e-6                 # address-in-data fill / read-back per burst: limit only (read burst ~25 MOVX + flag poll)
 EST_SPAN_S = 20e-6                       # per DrwSpan call (address maths, mask), generous
 LIMIT_MULT, LIMIT_MARGIN_S = 3.0, 0.5    # stall guard: 3 x the estimate (no measurement yet) + one main pass / I2C polls
 PATTERN_SETTLE_S = 1.0                   # host window up + SDK mode settled (window draw ~0.3 s, mode change ~2 frames; limit 3x)
@@ -36,6 +39,8 @@ POLL_RETRY = 40                          # a debug-link read NAKs while the main
 
 
 def est_s(op: str, p: dict) -> float:
+    if op.startswith("addr"):
+        return p.get("est_bursts", 0) * EST_ADDR_BURST_S
     w, h = p.get("w", 0), p.get("h", 0)
     lines = (min(h, SCREEN_H) + 1) // LINE_DOUBLE + 1
     if op == "fill":
@@ -103,6 +108,41 @@ def parse_op(tok: str) -> tuple[str, dict]:
     return name, p
 
 
+@contextlib.contextmanager
+def session(a, d: T.Dbg, hold_s: float | None = None):
+    """Host window, frame mode, freeze (the prep of ddr-draw); the body runs the ops; then hold, freeze off, window off, 0x0D, 0x27."""
+    proc, t_on = None, time.monotonic()
+    try:
+        if not a.no_prep:
+            if not a.no_pattern:                          # first: the host mode change resets the memory choice, 0x0C after it
+                proc = F.pattern_start("solid 0 0 0")
+                time.sleep(PATTERN_SETTLE_S)
+            t_on = time.monotonic()
+            F.frame_mode(d.io)
+            if not a.no_pattern:
+                F.wait_marker(d, 0, bytes([0] * 16))
+            if getattr(a, "live", False):                 # ddr-addr --watch: the capture keeps running
+                pass
+            elif a.sdk_freeze:
+                F.cmd(d.io, F.TC_FREEZE_ON)
+            else:
+                F.freeze(d.io, True)
+        yield
+        if not a.no_prep:
+            t_h = time.monotonic()
+            while time.monotonic() - t_h < (a.hold if hold_s is None else hold_s):
+                F.prd(d.io, F.OVERLAY)
+    finally:
+        if a.sdk_freeze and not a.no_prep and not getattr(a, "live", False):
+            F.cmd(d.io, F.TC_FREEZE_OFF)
+        if proc is not None:
+            F.finish(d, proc, t_on)
+        elif not a.no_prep:
+            F.freeze(d.io, False)
+            F.cmd(d.io, F.TC_SDK)
+            F.cmd(d.io, F.TC_CLEAR)
+
+
 def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--unit", type=int, default=1)
@@ -122,41 +162,17 @@ def main() -> int:
     if a.hold > F.HOLD_MAX_S:
         raise SystemExit(f"--hold {a.hold}: above the backstop {F.HOLD_MAX_S:.0f} s")
     d = T.Dbg(a.unit, a.bus)
-    proc, t_on = None, time.monotonic()
     try:
         dr = Draw(d, SW.sym(a.map, "g_stAwtoDraw"))
-        if not a.no_prep:
-            if not a.no_pattern:                          # first: the host mode change resets the memory choice, 0x0C after it
-                proc = F.pattern_start("solid 0 0 0")
-                time.sleep(PATTERN_SETTLE_S)
-            t_on = time.monotonic()
-            F.frame_mode(d.io)
-            if not a.no_pattern:
-                F.wait_marker(d, 0, bytes([0] * 16))
-            if a.sdk_freeze:
-                F.cmd(d.io, F.TC_FREEZE_ON)
-            else:
-                F.freeze(d.io, True)
-        for op, p in ops:
-            dr.run(op, p)
-        if a.count:
-            for sel in range(4):                       # sel 0 = R+G+B sum (#255); 1..3 per channel to be told by this log
-                r = T.dcr_measure(d, 32, 768, sel)
-                T.log(f"DCR sel {sel} TH1 32: above {r.get('th1_num') if r else None}; high R/G/B " + (f"{r['hi_r']}/{r['hi_g']}/{r['hi_b']}" if r else "-")
-                      + "; low R/G/B " + (f"{r['lo_r']}/{r['lo_g']}/{r['lo_b']}" if r else "-"))
-        if not a.no_prep:
-            t_h = time.monotonic()
-            while time.monotonic() - t_h < a.hold:
-                F.prd(d.io, F.OVERLAY)
+        with session(a, d):
+            for op, p in ops:
+                dr.run(op, p)
+            if a.count:
+                for sel in range(4):                       # sel 0 = R+G+B sum (#255); 1..3 per channel to be told by this log
+                    r = T.dcr_measure(d, 32, 768, sel)
+                    T.log(f"DCR sel {sel} TH1 32: above {r.get('th1_num') if r else None}; high R/G/B " + (f"{r['hi_r']}/{r['hi_g']}/{r['hi_b']}" if r else "-")
+                          + "; low R/G/B " + (f"{r['lo_r']}/{r['lo_g']}/{r['lo_b']}" if r else "-"))
     finally:
-        if a.sdk_freeze and not a.no_prep:
-            F.cmd(d.io, F.TC_FREEZE_OFF)
-        if proc is not None:
-            F.finish(d, proc, t_on)
-        elif not a.no_prep:
-            F.freeze(d.io, False)
-            F.cmd(d.io, F.TC_SDK)
-            F.cmd(d.io, F.TC_CLEAR)
         d.io.close()
     return 0
 

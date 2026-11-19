@@ -89,7 +89,7 @@ def check(exe, tmp_path, cmds, ref, busy=2, ok=1):
     return st
 
 
-C_NAME = {"fill": "FILL_RECT", "frame": "FILL_FRAME", "gradh": "GRAD_H", "gradv": "GRAD_V"}
+C_NAME = {"fill": "FILL_RECT", "frame": "FILL_FRAME", "gradh": "GRAD_H", "gradv": "GRAD_V", "addrfill": "ADDR_FILL", "addrverify": "ADDR_VERIFY", "addrwatch": "ADDR_WATCH"}
 
 
 def test_op_codes_match_c():
