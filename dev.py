@@ -228,14 +228,50 @@ def cmd_clean(_extra: list[str]) -> int:
     return 0
 
 
-@command("fail-fast pre-commit gate: " + " + ".join(GATE), kind="aggregate")
-def cmd_gate(_extra: list[str]) -> int:
+@command("fail-fast pre-commit gate: " + " + ".join(GATE) + "; --extensive also runs the EXTENSIVE firmware gate tier on the newest image (fw_gates --tier extensive)",
+         args="[--extensive]", kind="aggregate")
+def cmd_gate(extra: list[str]) -> int:
     for name in GATE:
         rc = run_step(name)
         if rc not in (0, SKIPPED):
             log(f"GATE FAILED at {name} (rc={rc})", "FATAL")
             return rc
+    if _flag(extra, "--extensive"):
+        imgs = sorted(FW.glob("*-be.bin"), key=lambda p: p.stat().st_mtime)
+        if not imgs:
+            log("GATE: --extensive needs a built image in tmp/fw", "FATAL")
+            return 1
+        rc = subprocess.run([sys.executable, str(REPO / "scripts/fw_gates.py"), str(imgs[-1].with_suffix("")), "--tier", "extensive"]).returncode
+        if rc:
+            log(f"GATE FAILED at fw_gates --tier extensive ({imgs[-1].name})", "FATAL")
+            return rc
     log("GATE PASSED", "ALERT")
+    return 0
+
+
+@command("merge-to-main check: the image's record is for this .bin, complete, tier extensive, no FAIL (a normal record is enough for flash only)",
+         args="IMAGE.bin")
+def cmd_merge_check(extra: list[str]) -> int:
+    img = Path(extra[0]) if extra else None
+    if img is None or not img.is_file():
+        raise SystemExit("merge-check: IMAGE.bin required")
+    rec = next((r for r in (FW / f"{img.stem}.gates.json", img.with_suffix(".gates.json")) if r.is_file()), None)
+    if rec is None:
+        raise SystemExit(f"merge-check: no record for {img.name}; run scripts/fw_gates.py {img.with_suffix('')} --tier extensive")
+    d = json.loads(rec.read_text())
+    failed = sorted(k for k, v in d["gates"].items() if v.get("result") == "FAIL")
+    why = None
+    if d.get("sha256") != hashlib.sha256(img.read_bytes()).hexdigest():
+        why = "record is for another build"
+    elif d.get("tier") != "extensive":
+        why = f"tier is {d.get('tier', 'normal')}, extensive required"
+    elif not d.get("complete"):
+        why = "partial record"
+    elif failed:
+        why = "FAIL: " + ", ".join(failed)
+    if why:
+        raise SystemExit(f"merge-check: {img.name}: {why}")
+    log(f"merge-check: {img.name} extensive record ok ({d.get('date')})")
     return 0
 
 

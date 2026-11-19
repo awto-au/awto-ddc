@@ -2,7 +2,7 @@
 """Offline gates for one firmware image (sims in parallel): boot-check, isr-check, link check, health --sim 1080p60 + 2160p60,
 menu, ddc, keys, crash, wdt, sync, bootsim, wake, panel, delays, sysm, pokes, htime, magic, regs, regmap, nvlog, monitor.
 
-usage: fw_gates.py IMAGE_STEM [--tree WORKTREE] [--speed LABEL] [--only boot,isr,link,h1080,h2160,menu,ddc,keys,crash,wdt,sync,bootsim,wake,pokes,htime,magic,regs]
+usage: fw_gates.py IMAGE_STEM [--tier normal|extensive] [--tree WORKTREE] [--speed LABEL] [--only boot,isr,link,h1080,h2160,menu,ddc,keys,crash,wdt,sync,bootsim,wake,pokes,htime,magic,regs]
   menu, ddc: only for images with the settings registry (#67): menu_cli walk + ddc_sim (MCCS) in fw_sim.
   keys: key_sim_test (#129). crash: crash_sim_test --header TREE/... (#131, #138). wdt: wdt_test --sim, all cases.
   htime: host_time_sim (#157: DDC/CI host time, console title row, ring lines).
@@ -25,7 +25,9 @@ usage: fw_gates.py IMAGE_STEM [--tree WORKTREE] [--speed LABEL] [--only boot,isr
   Each gate's output -> tmp/logs/fw_gates/<stem>.<gate>.log; one PASS/FAIL/SKIP line per gate; exit 1 if any fails.
 SKIP (counted, printed): the image lacks the feature (SKIP_IF_MISSING: map symbols), or the gate needs a tree (--tree, default this repo) without the file.
   wdt cases the image does not implement report SKIP inside wdt_test; they are counted in the gate's note.
-Record: tmp/fw/<stem>.gates.json = image SHA-256, date, per-gate result + seconds, fw_gates git commit, complete (no --only).
+Tiers: normal (default) skips the EXTENSIVE gates (table in this file); --tier extensive runs all. Record: tier + complete.
+  A complete normal record is what `dev.py flash` needs; `dev.py merge-check` (merge to main) needs tier extensive.
+Record: tmp/fw/<stem>.gates.json = image SHA-256, date, tier, per-gate result + seconds, fw_gates git commit, complete (no --only).
   `dev.py flash` refuses an image without a record whose SHA-256 matches, complete, and with no FAIL (--force-ungated overrides).
 Stall guard (awto-dan#53): waits for a gate's next output line or CPU progress of its process tree; expected: output at least
   every few s, 3x margin at 60 s (STALL_S). A gate with neither for STALL_S is hung: killed. Backstop LIMIT_S per gate (3x the cold
@@ -56,6 +58,20 @@ LIMIT_OF = {"keys": 150, "deadport": 80, "wdt": 60, "rules": 30, "delays": 150, 
 LIMIT_S = 30          # 3x the cold run of the rest (all <= 9 s), 30 s = interpreter start + a loaded box; `speed` is the exception
 SPEED_LIMIT_S = 900   # speed_bench: not measured
 PY = [sys.executable, "-u"]
+# Tiers (Dan 2026-11-19): normal = every build / flash (a complete normal record is the flash gate); extensive = normal + these long
+# scenario sweeps (on request, before a merge to main, nightly). A gate not listed here is normal. Move a gate by editing this set.
+EXTENSIVE = {
+    "menu": "16 pages / 133 entries walk",
+    "keys": "80 checks, ~250 simulated s of OSD timeouts and holds",
+    "deadport": "4 cases, up to 40 simulated s each",
+    "inputrate": "40 start phases x 3 rows",
+    "monitor": "30-sample heartbeat = 300 simulated s",
+    "wdt": "21 watchdog cases",
+    "wake": "wake paths, several power cycles",
+    "crash": "crash / bite handling, long boots",
+    "canary": "stack canary, long boot + fatal path",
+    "bootsim_always": "second boot_sim variant (console at power-on)",
+}
 SIM_CPU = os.environ.get("AWTO_SIM_CPU", "dw8051")   # fast-core CPU model of the sims (#162 step 1); results are comparable only at the same model
 CPU_OF = {}      # per-gate CPU model override; wdt runs on dw8051 since the Timer0 cases use wall ms (the 8052 model has no clock: the 350.8 MHz boot never reaches stage 8 in wdt_test)
 NO_SIM = {"link", "pokes", "speed", "magic", "regs", "regmap", "rules"}   # every other gate runs a sim on the in-process DW8051 core (fw_sim default; ucsim is a cross-check only)
@@ -257,6 +273,8 @@ def main() -> int:
     ap.add_argument("--against", default="", help="ignored (#66: link findings must be 0, no baseline)")
     ap.add_argument("--speed", default="")
     ap.add_argument("--only", default="")
+    ap.add_argument("--tier", choices=("normal", "extensive"), default="normal",
+                    help="normal (default, the flash gate): all gates but EXTENSIVE; extensive: every gate (normal + the long sweeps)")
     # default = this repo: without a tree, wdt / conwrap use stale built-in constants and the static gates drop out
     ap.add_argument("--tree", default=str(ROOT), help="worktree the image was built in (its bank_layout.tsv + asm_bank); default this repo")
     a = ap.parse_args()
@@ -278,6 +296,8 @@ def main() -> int:
     sk = skips(b, m, a.tree)
     if a.only:
         g = {k: v for k, v in g.items() if k in a.only.split(",")}
+    elif a.tier == "normal":
+        g = {k: v for k, v in g.items() if k not in EXTENSIVE}
     sk = {k: v for k, v in sk.items() if k in g}
     g = {k: v for k, v in g.items() if k not in sk}
     if a.speed:
@@ -311,17 +331,17 @@ def main() -> int:
     for k, why in sk.items():
         rec[k] = {"result": "SKIP", "rc": None, "seconds": 0, "note": why}
         log(f"SKIP {k:6s} {why}")
-    write_record(b, rec, a.tree, complete=not a.only)
+    write_record(b, rec, a.tree, complete=not a.only, tier=a.tier)
     log(f"=== {b.name}: {'ALL PASS' if not bad else f'{bad} FAIL'}, {len(sk)} SKIP ===")
     return 1 if bad else 0
 
 
-def write_record(b: Path, rec: dict, tree, complete: bool) -> None:
+def write_record(b: Path, rec: dict, tree, complete: bool, tier: str = "normal") -> None:
     """tmp/fw/<stem>.gates.json: what `dev.py flash` checks (SHA-256 of the .bin, complete, no FAIL)."""
     def git(*x):
         return subprocess.run(["git", "-C", str(ROOT), *x], capture_output=True, text=True).stdout.strip()
     doc = {"image": b.name, "sha256": hashlib.sha256(b.read_bytes()).hexdigest(),
-           "date": isostamp.now(), "complete": complete, "tree": str(tree or ""),
+           "date": isostamp.now(), "complete": complete, "tier": tier, "tree": str(tree or ""),
            "fw_gates_commit": git("rev-parse", "HEAD") + ("+dirty" if git("status", "--porcelain", "--", "scripts/fw_gates.py") else ""),
            "xdata": (json.loads(xj.read_text()) if (xj := b.with_suffix(".xdata.json")).is_file() else None),
            "gates": rec}
