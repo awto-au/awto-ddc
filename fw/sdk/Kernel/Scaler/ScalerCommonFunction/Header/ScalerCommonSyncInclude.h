@@ -277,9 +277,9 @@
 //--------------------------------------------------
 // Macro of Input Pixel Clk (Unit in 0.1MHz)
 //--------------------------------------------------
-#define GET_TMDS_OFFLINE_MEASURE_CLK()                      (g_usTmdsOffLineMeasureClk)
-#define SET_TMDS_OFFLINE_MEASURE_CLK(x)                     (g_usTmdsOffLineMeasureClk = (x))
-#define CLR_TMDS_OFFLINE_MEASURE_CLK()                      (g_usTmdsOffLineMeasureClk = 0)
+#define GET_TMDS_OFFLINE_MEASURE_CLK()                      (isr_g_usTmdsOffLineMeasureClk)
+#define SET_TMDS_OFFLINE_MEASURE_CLK(x)                     (isr_g_usTmdsOffLineMeasureClk = (x))
+#define CLR_TMDS_OFFLINE_MEASURE_CLK()                      (isr_g_usTmdsOffLineMeasureClk = 0)
 
 #if(_DIGITAL_PORT_SUPPORT == _ON)
 //--------------------------------------------------
@@ -1884,7 +1884,7 @@ typedef struct
 //****************************************************************************
 extern BYTE xdata pData_EXINT[6];
 extern WORD isr_g_usInputPixelClk;
-extern WORD g_usTmdsOffLineMeasureClk;
+extern WORD isr_g_usTmdsOffLineMeasureClk;
 
 #if(_DIGITAL_PORT_SUPPORT == _ON)
 extern BYTE isr_g_ucDigitalSwitch;
