@@ -212,6 +212,12 @@
                                                 while(--d_isr_g_ucDelayXus_Counter_EXINT);\
                                             }
 
+#ifdef AWTO_TP1_WAIT_US
+#define AWTO_TP1_WAIT() DELAY_XUS_EXINT(AWTO_TP1_WAIT_US)
+#else
+#define AWTO_TP1_WAIT()
+#endif
+
 //--------------------------------------------------
 // Macros of MCU Watch Dog
 //--------------------------------------------------
