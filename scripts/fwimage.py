@@ -3,7 +3,7 @@
 Builds an image with the rolled compiler setup and files it as tmp/fw/<serial>-<tag>-be.{bin,map,sync.tsv,settings_table.py}.
 
 usage: ./dev.py build [--unit N | --serial S] [--tree DIR] --tag T [-D NAME=VAL ...] [--audio-test] [--force]   (options below are dev.py build options)
-- Compiler = /usr/local (awto-sdcc main 9a0e583022, keil-compat), BE, --sdcccall 3, far locals per fw/far_locals_select.txt (awto-sdcc#36, ddc#205).
+- Compiler = /usr/local (awto-sdcc main 977817123a, keil-compat), BE, --sdcccall 3, far locals per fw/far_locals_select.txt (awto-sdcc#36, ddc#205).
   The install's stamp (awto-sdcc-commit.txt) must start with SDCC_COMMIT and the tree must use --keil-compat
   (fw_compile refuses a compiler without it). A default-env fw_build gives an LE image (byte-swapped diag, #75).
 - -D: extra defines (K2S_SDCC_EXTRA), e.g. -D _AWTO_LOOP_PROF=_ON.
@@ -17,7 +17,7 @@ import isostamp  # noqa: E402
 from pathlib import Path
 
 SDCC_INSTALL = Path("/usr/local")
-SDCC_COMMIT = "9a0e583022"
+SDCC_COMMIT = "977817123a"
 SDCC_SRC = str(SDCC_INSTALL / "share/sdcc/awto-src")   # ISR lib clones (sdcc_isr_libs) compile from this tree's device/lib
 SDCCCALL = "3"
 
