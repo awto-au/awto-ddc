@@ -98,14 +98,7 @@ static unsigned long AwtoQ8Now(void)
 
 static unsigned int AwtoTick(void)
 {
-    unsigned int usNow;
-
-    do
-    {
-        usNow = d_isr_g_usTimerCounter;
-    }
-    while(usNow != d_isr_g_usTimerCounter);
-    return usNow;
+    return ScalerTimerGetTimerCounter();
 }
 
 static unsigned int AwtoMinMs(unsigned int usA, unsigned int usB)
