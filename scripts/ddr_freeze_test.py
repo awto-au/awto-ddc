@@ -373,12 +373,21 @@ FIG = [
     ("M vertical 1 burst x 12 rows", (1, 0, 1), 1600, 650, 0, 12, 0), ("W thin 500", (1, 1, 1), 2300, 650, 500, 1, 0),
     ("R lower", (0, 0, 1), 300, 1300, 100, 4, 0), ("W lower", (1, 1, 1), 1000, 1300, 100, 4, 0),
 ]
+# Figure 2 (after Dan's photos of figure 1): colours with the write buffer halves swapped, and a y ladder for y_screen(y_written)
+FIG2 = [
+    ("R150", (0, 0, 1), 600, 400, 150, 3, 0), ("G150", (0, 1, 0), 1200, 400, 150, 3, 0),
+    ("B150", (1, 0, 0), 1800, 400, 150, 3, 0), ("W150", (1, 1, 1), 2400, 400, 150, 3, 0),
+    ("V40: 1 burst x 40 rows (row-to-row drift = pitch error)", (1, 1, 1), 1900, 300, 0, 40, 0),
+    ("W y700", (1, 1, 1), 3000, 700, 60, 2, 0), ("W y1000", (1, 1, 1), 3000, 1000, 60, 2, 0),
+    ("W y1079", (1, 1, 1), 3000, 1079, 60, 1, 0), ("W y1080 (beyond block 1)", (1, 1, 1), 3000, 1080, 60, 2, 0),
+]
+FIGS = {"1": FIG, "2": FIG2}
 SW, SH = 3840, 2160
 
 
-def fig_bursts() -> list[tuple[str, int, tuple]]:
+def fig_bursts(fig=None) -> list[tuple[str, int, tuple]]:
     out = []
-    for name, ch, x, y, w, rows, slant in FIG:
+    for name, ch, x, y, w, rows, slant in (fig or FIG):
         n = 1 if w == 0 else (w * 3 + 15) // 16
         for r in range(rows):
             xs = x + slant * r
@@ -388,7 +397,7 @@ def fig_bursts() -> list[tuple[str, int, tuple]]:
     return out
 
 
-def do_figure(d) -> None:
+def do_figure(d, fig=None, swap: bool = False) -> None:
     """Held run: the FIG cells as bursts (data = colour bytes in memory order B, G, R for that address phase) on a frozen black frame."""
     frame_mode(d.io)
     t_on = time.monotonic()
@@ -400,7 +409,7 @@ def do_figure(d) -> None:
     d.wr(r["wmask"], 0)
     d.wr(r["wmask"] + 1, 0)
     cur_a, cur_d = [None] * 4, [None] * 16
-    bs = fig_bursts()
+    bs = fig_bursts(fig)
     t_w = time.monotonic()
     for name, a, ch in bs:
         for i, sh in enumerate((24, 16, 8, 0)):
@@ -408,13 +417,15 @@ def do_figure(d) -> None:
             if cur_a[i] != b:
                 d.wr(r["addr"] + i, b)
                 cur_a[i] = b
+        mem = [255 * ch[(8 * a + i) % 3] for i in range(16)]           # wanted bytes of units a, a + 1 in memory order
+        buf = mem[8:] + mem[:8] if swap else mem                       # the write buffer has its 8 B halves swapped (#255 photos)
         for i in range(16):
-            v = 255 * ch[(8 * a + i) % 3]
+            v = buf[i]
             if cur_d[i] != v:
                 d.wr(r["wbuf"] + i, v)
                 cur_d[i] = v
         d.wr(r["cmd"], T.DC_CMD_WRITE)
-    T.log(f"{len(bs)} bursts written in {time.monotonic() - t_w:.1f} s; cells {[f[0] for f in FIG]}")
+    T.log(f"{len(bs)} bursts written in {time.monotonic() - t_w:.1f} s; cells {[f[0] for f in (fig or FIG)]}, halves swapped {swap}")
     rel = ROOT / "tmp/scratch/ddr_release"
     if rel.exists():
         rel.unlink()
@@ -458,6 +469,8 @@ def main() -> int:
     ap.add_argument("--waddr", type=lambda x: int(x, 0), default=0x100000)
     ap.add_argument("--n", type=int, default=1)
     ap.add_argument("--dry", action="store_true")
+    ap.add_argument("--fig", default="1", choices=["1", "2"])
+    ap.add_argument("--swap", action="store_true", help="stage the write buffer with its 8 B halves swapped (figure 2)")
     ap.add_argument("--pitch", type=int, default=1440)
     ap.add_argument("--nostage", action="store_true")
     ap.add_argument("--hold", action="store_true", help="keep the frozen bar up until tmp/scratch/ddr_release exists (10 min backstop)")
@@ -475,7 +488,7 @@ def main() -> int:
     d = T.Dbg(a.unit, a.bus)
     try:
         if a.op == "figure":
-            do_figure(d)
+            do_figure(d, FIGS[a.fig], a.swap)
         elif a.op == "map":
             do_map(d, a.reads)
         elif a.op == "map2":
