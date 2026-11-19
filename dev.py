@@ -1338,6 +1338,20 @@ def cmd_osd_sweep(extra: list[str]) -> int:
     return _py("osd_sweep.py", *opts, "--map", m, "--bin", m.with_suffix(".bin"), *extra)
 
 
+@command("OSD data port byte-loss experiments (image built with -D _AWTO_OSD_HWTEST; docs/osd-port-loss.md): groups base gap gapcont pos hidden fff1 fffb ea sync, --sim runs them in the firmware sim",
+         args="[--unit N] [--map F] [--sim] GROUP...", kind="action")
+def cmd_osd_port_loss(extra: list[str]) -> int:
+    n, u = _unit(extra)
+    given = _opt(extra, "--map")
+    sim = _flag(extra, "--sim")
+    bad = [x for x in extra if x.startswith("-")]
+    if bad or not extra:
+        raise SystemExit(f"osd-port-loss: need GROUPs; bad {bad or 'none'}; nothing done")
+    m = Path(_fwmap(u, given))
+    opts = ["--sim"] if sim else ["--bus", _live_bus(u), "--serial", u["serial"]]
+    return _py("osd_port_loss.py", *opts, "--map", m, "--bin", m.with_suffix(".bin"), *extra)
+
+
 @command("clock step soak with the savers cycling (image built with -D _AWTO_OSD_HWTEST; docs/clock-sweep.md): STEP MINUTES; checks, IOSC trim, resets every 30 s",
          args="[--unit N] [--map F] [--nvram 0|7] STEP MINUTES", kind="action")
 def cmd_clk_soak(extra: list[str]) -> int:
