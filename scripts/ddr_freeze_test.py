@@ -35,6 +35,8 @@ MARK_WAIT_S = 2.0                # pattern arrives within ~2 frames of the draw;
 PERIOD_U = 24                    # xbits 3: 64 px * 3 B / 8 B
 WRITES_MAX = 3
 NOSTAGE = [False]
+HOLD = [False]
+HOLD_MAX_S = 600.0              # hard backstop: Dan's hold approval, 10 min
 MASK = [0xFFFF]             # WMASK value written (set by --mask)
 
 
@@ -305,11 +307,21 @@ def do_bar(d, w_px: int, h_px: int, dry: bool = False) -> None:
             n += 1
             first = a if first is None else first
             last = a
-        if time.monotonic() - t_on > SCREEN_CAP_S - 0.7:
+        if not HOLD[0] and time.monotonic() - t_on > SCREEN_CAP_S - 0.7:
             T.log(f"stopped at row {row} (screen cap)")
             break
     T.log(f"{n} bursts, units {first}..{last} (x {x0}..{x0 + w_px - 1}, y {y0}..{y0 + h_px - 1} by the linear map), CMD now {d.rd(r['cmd']):02x}")
-    while time.monotonic() - t_on < SCREEN_CAP_S - 0.3:               # hold: register reads are the wait
+    if HOLD[0]:                                                       # Dan-approved hold (#255): no screen cap, until the release file
+        rel = ROOT / "tmp/scratch/ddr_release"
+        if rel.exists():
+            rel.unlink()
+        T.log(f"BAR UP at {time.strftime('%H:%M:%S')}: frozen black frame, white bar x {x0}..{x0 + w_px - 1} y {y0}..{y0 + h_px - 1}; "
+              f"holding until {rel} exists (backstop {HOLD_MAX_S:.0f} s)")
+        t_h = time.monotonic()
+        while not rel.exists() and time.monotonic() - t_h < HOLD_MAX_S:   # register read = ~10 ms pacing, keeps the link alive
+            ovl[prd(d.io, OVERLAY) & 1] += 1
+        T.log(f"hold ended after {time.monotonic() - t_h:.0f} s: {'release file' if rel.exists() else 'BACKSTOP'}")
+    while not HOLD[0] and time.monotonic() - t_on < SCREEN_CAP_S - 0.3:   # hold: register reads are the wait
         ovl[prd(d.io, OVERLAY) & 1] += 1
     T.log(f"OSD overlay enable samples during freeze + write (value: count): {dict(ovl)}; usOsdState / events: none opened" if not ovl[1] else
           f"OSD overlay enable samples during freeze + write (value: count): {dict(ovl)}: A POP-UP OPENED")
@@ -326,12 +338,14 @@ def main() -> int:
     ap.add_argument("--n", type=int, default=1)
     ap.add_argument("--dry", action="store_true")
     ap.add_argument("--nostage", action="store_true")
+    ap.add_argument("--hold", action="store_true", help="keep the frozen bar up until tmp/scratch/ddr_release exists (10 min backstop)")
     ap.add_argument("--w", type=int, default=96)
     ap.add_argument("--h", type=int, default=16)
     ap.add_argument("--mask", type=lambda x: int(x, 0), default=0xFFFF)
     a = ap.parse_args()
     MASK[0] = a.mask
     NOSTAGE[0] = a.nostage
+    HOLD[0] = a.hold
     d = T.Dbg(a.unit, a.bus)
     try:
         if a.op == "map":
