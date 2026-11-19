@@ -386,3 +386,10 @@ Host-process stall backstops (not interface timeouts; ratios shown for the recor
 Host items not checked line-by-line (medium breadth): the remaining keys_sim.py, wake_sim.py, host_time_sim.py, ddr_sweep.py and kvm.py / host_time.py paths were checked only by grep; their comments state x1.25 or a measured worst, consistent with the host rule.
 
 No file was modified.
+
+## Delay routines (one place for the micro-delays)
+- Main-context `DELAY_5US()` / `DELAY_XUS(N)` call `AwtoDelayLoops` / `AwtoDelayXus` (`fw/timer/delay.c`, naked asm, pinned to common, inline `lcall` so the compiler spills nothing). EXINT variants stay inline: an ISR that calls a function pays SDCC's register-save prologue.
+- Loop = `djnz` on the same direct IRAM byte, 16 clk per count, unchanged. The call costs lcall + ret = 32 clk = 2 counts, so `DELAY_5US` loops `d_g_ucDelay5usN_Call = Base - AWTO_DELAY_CALL_CNT (2)`: same wait as the inline loop (5.01 us at 350.8 MHz). Base >= 3 at every clock state (the delays gate's `--counts` check).
+- Code size: -616 B (190 inline loops became calls).
+- Gate: `delay_sim.py` probes the two routines (F rows: hot min per clock state and argument, call included, [99 %, nominal + call + 64 clk per pass]) and replays every remaining inline loop site alone and hot (B replay). Faults: `tests/test_delay_choke.py`.
+- Sim hook: `FastMachine.install_delay_ffwd()` adds whole loop iterations in one step (exact at the core: `tests/test_delay_ffwd.py`, counts 0..255 of both routines, Timer2 IRQs inside the windows). Not installed by default: measured slower (boot + 3 s: 2.74 s CPU plain, 3.35 s hooked, 41.9 s hook installed but off) because the Python stop per iteration costs more than the skipped instructions. A skip inside the C core would win; the pacing work (idle halt) is the larger lever.
