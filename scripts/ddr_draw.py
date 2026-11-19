@@ -20,6 +20,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import ddr_frame_test as T
 import ddr_freeze_test as F
+import host_note as HN
 import sw_timeline as SW
 
 OPS = {"fill": 1, "hline": 2, "vline": 3, "grid": 4, "circle": 5, "figure": 6, "bars": 7, "frame": 8, "gradh": 9, "gradv": 10, "masktest": 11,
@@ -166,6 +167,7 @@ def main() -> int:
         dr = Draw(d, SW.sym(a.map, "g_stAwtoDraw"))
         with session(a, d):
             for op, p in ops:
+                HN.note_step(d.io, a.map, f"ddr-draw {op} {p}")      # #273: the step on the unit's diag log
                 dr.run(op, p)
             if a.count:
                 for sel in range(4):                       # sel 0 = R+G+B sum (#255); 1..3 per channel to be told by this log

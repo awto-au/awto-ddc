@@ -1282,6 +1282,16 @@ extern void osd_tc_bar(unsigned char ucWin, unsigned int usX0, unsigned int usY0
 #define AWTO_SYNC_EV_HOST                                       0xD7    // #157 host time: arg = UTC offset (15 min, signed), value = unix s
 #define AWTO_SYNC_EV_HOSTFW                                     0xD8    // #157 arg 1 first sync / 2 drift, value = fw ms (AwtoMs) at the sync
 #define AWTO_SYNC_EV_DRIFT                                      0xD9    // #157 value = host - local tick, ms (signed)
+#define AWTO_SYNC_EV_NOTE                                       0xEE    // #273 host note: arg = length, value = note sequence (text in g_aucAwtoNote while the sequence matches its tag)
+#define AWTO_NOTE_CHARS                                         119     // one text slot = the console log row text (AWTO_LOG_W_MAIN 133 - leading space and time column 14)
+#define AWTO_NOTE_TAG                                           0       // slot bytes 0..1 (BE): sequence of the note the text belongs to
+#define AWTO_NOTE_LEN                                           2       // slot byte 2: length
+#define AWTO_NOTE_TXT                                           3       // slot byte 3..: text
+#define AWTO_NOTE_SIZE                                          (AWTO_NOTE_TXT + AWTO_NOTE_CHARS)
+#define AWTO_TC_HOST_NOTE                                       0x35    // test cmd: the host wrote the slot (tag = g_usAwtoNoteN + 1) over 0x35: log it (#273)
+extern __xdata unsigned int g_usAwtoNoteN;
+extern __xdata unsigned char g_aucAwtoNote[AWTO_NOTE_SIZE];
+extern void AwtoHostNote(void);
 // #157 host time: DDC/CI table write (0xE7) to this VCP, offset 0: unix s BE x4, ms BE x2, UTC offset (15 min, signed)
 #define AWTO_HT_VCP                                             0xE9    // host time VCP (#157); get: max = syncs, cur = drift ms
 #define AWTO_HT_STALE_MS                                        180000  // Dan: HOST marked stale after 3 min without a sync (host sends every 60 s)

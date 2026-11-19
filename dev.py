@@ -1151,6 +1151,20 @@ def cmd_synclog(extra: list[str]) -> int:
     return _dbg_py(b, "sync_log.py", b, "--serial", u["serial"], "--map", _fwmap(u, given), *flags)
 
 
+@command("add a free-text line to the unit's diag log (host note, #273): tests show what they do on the unit's console; "
+         "--open-console opens the console first and leaves it open",
+         args="[--unit N] [--map F] [--open-console] TEXT", kind="action")
+def cmd_note(extra: list[str]) -> int:
+    given, openc = _opt(extra, "--map"), _flag(extra, "--open-console")
+    _n, u = _unit(extra)
+    text = list(extra)
+    if given is True or len(text) != 1 or text[0].startswith("--"):
+        raise SystemExit("note: one TEXT argument (quote it); nothing done")
+    b = _live_bus(u)
+    return _dbg_py(b, "host_note.py", b, "--serial", u["serial"], "--map", _fwmap(u, given), *(["--open-console"] if openc else []),
+                   text[0], keep_console=openc)
+
+
 @command("start / stop a saver by name (VCP 0xEB from fw/awto/savers.tsv: off stop selected pacman scope2 flash splash alert "
          "asteroids) or `tour` = every saver 10 s each with the alert tone, volume 50 % then restored",
          args="[--unit N] NAME | tour [--hold S] [--volume PCT]", kind="action")

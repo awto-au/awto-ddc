@@ -332,7 +332,7 @@ def _main() -> int:
         if raw is None:
             print("sync: read over 0x35 failed"); return 1
         S.set_map(Path(mp))                       # #29: boot reason PC as symbol + offset
-        h, lines = S.decode(bytes(raw), S.load_rows(S.tsv_for(Path(mp))))
+        h, lines = S.decode(bytes(raw), S.load_rows(S.tsv_for(Path(mp))), note=S.read_note(w, Path(mp)))   # #273 note text slot
         ht, t2 = S.read_ht(w, Path(mp))          # #157: host time per line from the latest DDC/CI time sync
         lines = S.stamp(h, lines, ht, t2)
         pin = None

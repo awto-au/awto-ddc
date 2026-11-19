@@ -3311,6 +3311,10 @@ void AwtoDiagTestCmd(void)
     {
         AwtoHtSync(isr_g_stAwtoHt.aucPend);
     }
+    else if(ucCmd == AWTO_TC_HOST_NOTE)                 // #273 host note: text slot written over 0x35
+    {
+        AwtoHostNote();
+    }
     else if(ucCmd == AWTO_TC_STACK_DEEP)                // stack canary test: deep recursion; the next main pass shows the fatal box
     {
         extern void AwtoStackDeepTest(void);

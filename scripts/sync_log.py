@@ -27,6 +27,7 @@ import isostamp
 
 ROOT = Path(os.environ.get("AWTO_DDC_REPO") or Path(__file__).resolve().parents[1])
 LOG = ROOT / "tmp/logs/sync_log.log"
+NOTE_EV = 0xEE                            # RL6449_Project.h AWTO_SYNC_EV_NOTE: arg = length, value = note sequence (#273)
 HDR, EV = 14, 8                           # header bytes, bytes per entry; N = header[12], seq wrap = header[13]
 D0 = 3                                                   # _D0_INPUT_PORT
 SRC = {2: "DVI", 3: "HDMI", 4: "DP"}
@@ -266,6 +267,30 @@ def sys_value(rows: list[dict], fmt: str, a: int, v: int) -> str:
     return f"{name(rows, SYS_REQ, a)} by {name(rows, SYS_WHY, (v >> 8) & 0xFF)} ({name(rows, SYS_OUT, v & 0xFF)})"
 
 
+def note_defs(header: Path | None = None) -> dict:
+    """host note slot layout from RL6449_Project.h (one source with the firmware): chars, tag / length / text offsets"""
+    h = header or ROOT / "fw/sdk/Project/Header/RL6449_Project.h"
+    txt = h.read_text()
+    out = {}
+    for k in ("CHARS", "TAG", "LEN", "TXT"):
+        m = re.search(rf"^#define\s+AWTO_NOTE_{k}\s+(\d+)", txt, re.MULTILINE)
+        if not m:
+            raise SystemExit(f"AWTO_NOTE_{k} not in {h.name}")
+        out[k] = int(m.group(1))
+    out["SIZE"] = out["TXT"] + out["CHARS"]
+    return out
+
+
+def note_text(slot: bytes | None, length: int, seq: int, d: dict | None = None) -> str:
+    """text of note `seq` from the slot bytes: explicit when a newer note took the slot (tag != seq) or the slot was not read"""
+    d = d or note_defs()
+    if slot is None:
+        return f"text not read ({length} chars)"
+    if int.from_bytes(slot[d["TAG"]:d["TAG"] + 2], "big") != seq & 0xFFFF:
+        return "text overwritten"
+    return "".join(chr(c) if 0x20 <= c <= 0x7E else "?" for c in slot[d["TXT"]:d["TXT"] + min(length, d["CHARS"])])
+
+
 def line(rows: list[dict], ev: tuple, t0: int) -> str:
     i, a, ms, v = ev
     dt = (ms - t0) & 0xFFFF
@@ -278,7 +303,7 @@ def line(rows: list[dict], ev: tuple, t0: int) -> str:
         p0, p1, p2 = row["text"].split("%")
         return head + pre + f"{p0}{v & 0xFFFF}ms{p1}{v >> 16}ms{p2}"
     before, _, after = row["text"].partition("%")
-    val = (sys_value(rows, row["fmt"], a, v) if row["fmt"] in ("sys", "sysreq") else
+    val = (v if row["fmt"] == "note" else sys_value(rows, row["fmt"], a, v) if row["fmt"] in ("sys", "sysreq") else
            name(rows, PNL_BY, v & 0xFF) if row["fmt"] == "pby" else
            name(rows, SYS_STATE, v & 0xFF) if row["fmt"] == "sname" else value(row["fmt"], a, v))     # sname: #95 LED line
     return head + pre + before + val + after
@@ -293,7 +318,7 @@ def read_ring(rd, addr: int):
     return h if h[:2] != b"SY" else rd(addr, HDR + h[12] * EV)
 
 
-def decode(raw: bytes, rows: list[dict], whole: bool = False):
+def decode(raw: bytes, rows: list[dict], whole: bool = False, note: bytes | None = None):
     """whole=True: every entry still in the ring (all episodes), times relative to the current episode's t0"""
     h = dict(magic=raw[0:2], version=raw[2], seq=raw[3], ep_seq=raw[4], kind=raw[5], port=raw[6],
              t0=raw[7] << 8 | raw[8], done=raw[9], open_req=raw[10])
@@ -308,7 +333,8 @@ def decode(raw: bytes, rows: list[dict], whole: bool = False):
         e = raw[HDR + EV * (s % n_):HDR + EV * (s % n_) + EV]
         if whole and e[0] == 0:
             continue                                     # never written (a young ring)
-        evs.append((e[0], e[1], e[2] << 8 | e[3], int.from_bytes(e[4:8], "big")))
+        v = int.from_bytes(e[4:8], "big")
+        evs.append((e[0], e[1], e[2] << 8 | e[3], note_text(note, e[1], v) if e[0] == NOTE_EV else v))   # #273: text via the slot
     h["lost"] = lost
     h["n"], h["wrap"] = n_, wrap
     h["events"] = evs
@@ -321,6 +347,15 @@ def stamp(h: dict, lines: list[str], ht: dict | None, t2: int | None) -> list[st
         return lines
     ts = unwrap(h.get("events", []), fw_now(ht, t2))
     return [(host_time(ht, t) + ("~ " if not sure else "  ") if t is not None else " " * 31) + ln for (t, sure), ln in zip(ts, lines)]
+
+
+def read_note(io, map_path: Path) -> bytes | None:
+    """the host note text slot over 0x35; None on an image without #273 or a failed read"""
+    import dbg_xdata as X
+    if " _g_aucAwtoNote " not in map_path.read_text(errors="replace"):
+        return None
+    b = X.read_blocks(io, sym(map_path, "g_aucAwtoNote"), note_defs()["SIZE"])
+    return None if b is None else bytes(b)
 
 
 def read_ht(io, map_path: Path):
@@ -379,11 +414,12 @@ def main() -> int:
     io = B.Real(a.bus, allow_write=True, regread=True)
     raw = read_ring(lambda ad, n: X.read_blocks(io, ad, n), sym(a.map, "g_stAwtoSync"))
     ht, t2 = read_ht(io, a.map) if raw is not None else (None, None)
+    note = read_note(io, a.map) if raw is not None else None
     io.close()
     if raw is None:
         log("sync: read over 0x35 failed")
         return 1
-    h, lines = decode(bytes(raw), rows, a.whole)
+    h, lines = decode(bytes(raw), rows, a.whole, note)
     if h["magic"] != b"SY":                              # #158: wrong map (not the running image) reads another address
         st = ROOT / f"tmp/fw/{a.serial}-flash-state.json" if a.serial else None
         img = json.loads(st.read_text()).get("image") if st and st.exists() else "? (pass --serial)"
