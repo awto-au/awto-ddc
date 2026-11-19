@@ -9,7 +9,7 @@ usage: fw_build.py --serial AWT26110003 [--skip-compile] [--common 0x5000]
   --src-patch F   JSON [{file, old, new}] applied to tmp/sdcc-port/src after `port` (measurement edits, no SDK change)
 Memory (SDK + board, awto-ddc#8):
 - XDATA window 0xD700-0xF6FF; fixed DDC RAM for D1-D3 at E280/E480/E680 (+256 B each) splits it
-  into holes; module XSEG areas are distributed over the holes (sdld cannot split one area).
+  into holes; each module's XSEG area is pinned to a slot in fw/xdata_layout.tsv (scripts/xdata_layout.py).
 - Code: common [0, COMMON) copied into every bank; BANK<n> linked at n*0x10000 + COMMON.
 Log: ./tmp/logs/fw_build.log
 """
@@ -22,6 +22,7 @@ from sdcc_overlay import repo_root  # noqa: E402
 import sdcc_link  # noqa: E402
 import sdcc_tools as T  # noqa: E402
 import msg_table as MT  # noqa: E402
+import xdata_layout as XL  # noqa: E402
 
 ROOT = repo_root()
 LOG = None
@@ -77,6 +78,16 @@ def holes():
     return h
 
 
+def xclear_asm():
+    """Startup RAM clear: one loop per XDATA hole at the fixed bounds (DDC RAM skipped); no l_XSEG, so no size reaches common."""
+    out = []
+    for i, (a, b) in enumerate(holes()):
+        n = b - a
+        out += [f"\tmov\tr1,#0x{n & 255:02x}", f"\tmov\tr2,#0x{(n + 255) >> 8:02x}", f"\tmov\tdptr,#0x{a:04x}", "\tclr\ta",
+                f"0000{i + 1}$:", "\tmovx\t@dptr,a", "\tinc\tdptr", f"\tdjnz\tr1,0000{i + 1}$", f"\tdjnz\tr2,0000{i + 1}$"]
+    return "\n".join(out)
+
+
 def area_sizes(rel: Path) -> dict:
     s = {}
     for m in re.finditer(r"^A (\w+) size (\w+)", rel.read_text(errors="replace"), re.M):
@@ -84,16 +95,20 @@ def area_sizes(rel: Path) -> dict:
     return s
 
 
+XLAYOUT = "fw/xdata_layout.tsv"
 LIB_XSEG_MARGIN = 37      # SDCC lib XSEG (_mullong/_divulong params) x1.25, measured in awto-ddc#157; check_xdata catches an overrun
 
 
 def check_xdata(mp: str, hs):
     """Every XDATA area must lie inside one hole (EDID DDC RAM between holes is hardware-owned)."""
     bad = []
-    for m in re.finditer(r"^(X\w*SEG\d*)\s+([0-9A-F]{8})\s+([0-9A-F]{8})", mp, re.M):
+    for m in re.finditer(r"^(X\w*SEG\d*|XS_\w+)\s+([0-9A-F]{8})\s+([0-9A-F]{8})", mp, re.M):
         a, n = int(m.group(2), 16), int(m.group(3), 16)
         if n and not any(lo <= a and a + n <= hi for lo, hi in hs):
             bad.append(f"{m.group(1)} 0x{a:04x}+{n}")
+    spans = sorted((int(m.group(2), 16), int(m.group(3), 16), m.group(1)) for m in re.finditer(
+        r"^(X\w*SEG\d*|XS_\w+)\s+([0-9A-F]{8})\s+([0-9A-F]{8})", mp, re.M) if int(m.group(3), 16))
+    bad += [f"{p[2]} overlaps {q[2]}" for p, q in zip(spans, spans[1:]) if p[0] + p[1] > q[0] and p[0] != q[0]]
     if bad:
         sys.exit(f"XDATA outside holes {[(hex(a), hex(b)) for a, b in hs]}: {sorted(set(bad))}")
 
@@ -130,33 +145,31 @@ def promote_layout(new: Path, tracked: Path):
 XDATA_STAT = {}
 
 
-def split_xseg(asm_dir: Path):
-    """Rename each module's XSEG to XSEG<k> so each hole gets a set of modules (first fit, largest first)."""
-    hs = sorted(holes(), key=lambda h: h[0] - h[1])           # largest hole first = default XSEG/XISEG
-    free = [b - a for a, b in hs]
+def split_xseg(asm_dir: Path, compact: bool = False):
+    """Rename each module's XSEG to XS_<module> and give it its slot from fw/xdata_layout.tsv (scripts/xdata_layout.py)."""
+    hs = sorted(holes(), key=lambda h: h[0] - h[1])           # largest hole first: library XSEG at its start, XISEG at its tail
     rels = sorted(asm_dir.glob("*.rel"))
-    sizes = {r: area_sizes(r).get("XSEG", 0) for r in rels}
-    # hole 0 also takes XISEG and SDCC library XSEG (helper params, not in these rels): reserve both
-    free[0] -= sum(area_sizes(r).get("XISEG", 0) for r in rels) + LIB_XSEG_MARGIN
-    assign = {}
-    for r in sorted(rels, key=lambda r: -sizes[r]):
-        if not sizes[r]:
-            continue
-        k = next((i for i, f in enumerate(free) if f >= sizes[r]), None)
-        if k is None:
-            sys.exit(f"XDATA does not fit holes {[hex(a) for a, _ in hs]}: free={free}, need {sizes[r]} for {r.stem}")
-        free[k] -= sizes[r]; assign[r] = k
-    moved = []
-    for r, k in assign.items():
-        if k:
-            asm = r.with_suffix(".asm")
-            asm.write_text(asm.read_text().replace("\t.area XSEG    (XDATA)", f"\t.area XSEG{k}   (XDATA)"))
-            moved.append(asm)
-    log(f"XDATA holes {[(hex(a), hex(b)) for a, b in hs]}; free after placement {free}")
+    sizes = {r.stem: area_sizes(r).get("XSEG", 0) for r in rels}
+    sizes = {m: s for m, s in sizes.items() if s}
+    xis = sum(area_sizes(r).get("XISEG", 0) for r in rels)
+    reserved = [(hs[0][0], hs[0][0] + LIB_XSEG_MARGIN)] + ([(hs[0][1] - xis, hs[0][1])] if xis else [])
+    old = XL.load(ROOT / XLAYOUT)
+    rows, info = XL.place(old, sizes, hs, reserved, compact=compact)
+    if len({(XL.PREFIX + m)[:XL.MAPW] for m in rows}) != len(rows):
+        sys.exit("xdata layout: two module names share their first 29 characters (the map cuts area names to 32)")
+    for r in rels:
+        if r.stem in rows:
+            r.write_text(re.sub(r"^A XSEG size", f"A {XL.PREFIX}{r.stem} size", r.read_text(errors="replace"), count=1, flags=re.M))
+    new = ROOT / "tmp/sdcc-port/xdata_layout.new.tsv"
+    new.write_text(XL.dump(rows))
+    log(f"XDATA holes {[(hex(a), hex(b)) for a, b in hs]}; {len(rows)} modules, kept {info['kept']}, re-homed {len(info['moved'])} {info['moved'] if len(info['moved']) <= 12 else ''}"
+        f"{', COMPACTED (full churn)' if info['compacted'] else ''}")
+    for a, n, fr, big in info["per_hole"]:
+        log(f"XDATA hole 0x{a:04x} size {n} B: free {fr} B, largest gap {big} B")
     pool = sum(b - a for a, b in hs)
-    log(f"XDATA free {sum(free)} B of {pool} B")
-    XDATA_STAT.update(free=sum(free), pool=pool)
-    return hs, moved
+    log(f"XDATA free {info['free']} B of {pool} B")
+    XDATA_STAT.update(free=info["free"], pool=pool, per_hole=info["per_hole"], moved=info["moved"])
+    return hs, rows, new
 
 
 def select_lib():
@@ -245,6 +258,7 @@ def parse_args(argv=None):
                     help="passed to sdcc_bank (comma list of fns forced into common; OSD string helper: callers pass bank-local literals; stack canary fns read SP: no trampoline bytes in between; the EXINT1 debug reply: no banked call in the ISR; ScalerTimerWaitForEvent reads its caller's return address (#216): no stub; AwtoWaitLog / AwtoWaitPump read SP)")
     ap.add_argument("--src-patch", default="")
     # 0xc38: the --keil-compat /0 wrappers (_divulong_keil etc.) end the library at 0xc12 (awto-sdcc#36)
+    ap.add_argument("--xdata-compact", action="store_true", help="re-place every module's XDATA from scratch (full-churn flash; fw/xdata_layout.tsv rewritten)")
     ap.add_argument("--xdata-floor", type=int, default=0, help="no-op, kept one release for old callers (the floor was removed)")
     ap.add_argument("--resid-end", default=hex(CM.RESID_END), help="passed to sdcc_bank: common bytes kept for vectors/library before "
                     "the chunk slots; a different value needs a new layout file")
@@ -301,14 +315,10 @@ def main() -> int:
                   *([ROOT / "fw/sdcc/a5_probe.asm"] if "_AWTO_PROBES" in os.environ.get("K2S_SDCC_EXTRA", "") else []),   # needs the C buffer: -D _AWTO_PROBES (#233)
                   ROOT / "tmp/sdcc-port/asm_ovl/__ovl.asm",
                   *sorted((ROOT / "tmp/sdcc-port/isr_libs").glob("*_isr*.asm"))):
-        (bank_dir / extra.name).write_text(extra.read_text())
+        (bank_dir / extra.name).write_text(extra.read_text().replace(";@XCLEAR@", xclear_asm()))
         run("bank", [T.tool("sdas8051"), "-plosgffw", bank_dir / extra.with_suffix(".rel").name, bank_dir / extra.name])
     write_vectors(bank_dir)
-    hs, moved = split_xseg(bank_dir)
-    if len(hs) - 1 > 4:                                      # crt_xinit.asm declares/clears XSEG1..4 only
-        sys.exit(f"{len(hs)} XDATA holes: extend XSEG1..4 in fw/sdcc/crt_xinit.asm")
-    for asm in moved:                                        # re-assemble modules whose XSEG was renamed
-        run("bank", [T.tool("sdas8051"), "-plosgffw", asm.with_suffix(".rel"), asm])
+    hs, xrows, xnew = split_xseg(bank_dir, a.xdata_compact)
     out = ROOT / "tmp/fw" / a.serial
     out.mkdir(parents=True, exist_ok=True)
     rels = sorted(bank_dir.glob("*.rel"))
@@ -317,11 +327,12 @@ def main() -> int:
     if a.layout:                                             # one area per chunk/stub, each pinned to its slot
         ab = json.loads((ROOT / "tmp/sdcc-port/area_bases.json").read_text())
         used, pins = ab["banks"], ab["areas"]
-    xsegs = {int(m) for r in rels for m in re.findall(r"^A XSEG(\d+) ", r.read_text(errors="replace"), re.M)}
     # trunk sdld: area base = -a (asxxxx 5.50; -b gone); a base for an undefined area is an error
     wl = [] if pins else [f"-Wl-aBANK{n}=0x{n * BANK + a.common:x}" for n in used]
     wl += [f"-Wl-a{n}=0x{v:x}" for n, v in sorted(pins.items())]
-    wl += [f"-Wl-aXSEG{k}=0x{hs[k][0]:x}" for k in range(1, len(hs)) if k in xsegs]
+    wl += [f"-Wl-a{XL.PREFIX}{m}=0x{XL.addr(v):x}" for m, v in sorted(xrows.items())]
+    xis = sum(area_sizes(r).get("XISEG", 0) for r in rels)   # XISEG at the tail of hole 0: s_XISEG (in common) moves only with its own size
+    wl += [f"-Wl-aXISEG=0x{hs[0][1] - xis:x}"] if xis else []
     wl += [f"-Wl-aHOME=0x{VEC_END:x}"]
     if pins and a.resid_end:    # XINIT floats to the first module that declares it, which can be after the stubs: pin it
         xi = sum(int(m, 16) for r in rels for m in re.findall(r"^A XINIT size (\w+)", r.read_text(errors="replace"), re.M))
@@ -339,6 +350,11 @@ def main() -> int:
         sys.exit(f"[link] failed{' (undefined: ' + ', '.join(undef) + ')' if undef else ''}")
     log(f"IRAM: {iram}")
     check_xdata((out / "fw.map").read_text(errors="replace"), hs)
+    if bad := XL.check(xnew, (out / "fw.map").read_text(errors="replace")):
+        sys.exit(f"xdata layout: areas not at their slot in the map: {bad[:5]}")
+    if not (ROOT / XLAYOUT).exists() or xnew.read_text() != (ROOT / XLAYOUT).read_text():
+        (ROOT / XLAYOUT).write_text(xnew.read_text())      # promoted only after link + checks passed
+        log(f"xdata layout promoted: {XLAYOUT}")
     if pins:
         check_layout((out / "fw.map").read_text(errors="replace"), pins, new_layout)
         if not re.search(r"-D_AWTO_SAVER_\w+=_OFF", os.environ.get("K2S_SDCC_EXTRA", "")):   # a build without a saver must not rewrite the tracked layout

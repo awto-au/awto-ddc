@@ -87,6 +87,33 @@ def sheet(cells: dict, out: Path):
     say(f"sheet {len(names)} shots x {len(cols)} pictures -> {out}")
 
 
+FRAME_W, FRAME_H = 960, 540                      # frame sheet tile (the panel at 1/4)
+PX_PER_MM = R.PANEL_W / 621                       # panel image width 621 mm (EDID, docs/edid-fix.md)
+
+
+def frame_sheet(frames, out: Path):
+    """frames: (name, half-size full frame PNG). Each card on the full panel frame (1/4 scale), outlined, with its margins to the top / right edge."""
+    cols = 2
+    rows = (len(frames) + cols - 1) // cols
+    img = Image.new("RGB", (cols * (FRAME_W + 8), rows * (FRAME_H + 24)), (40, 40, 40))
+    d = ImageDraw.Draw(img)
+    for i, (name, full) in enumerate(frames):
+        half = Image.open(full).convert("RGB")
+        im = np.array(half)
+        ys, xs = np.nonzero(np.any(im != im[-1, 0], axis=2))
+        x0, x1, y0, y1 = xs.min() * 2, (xs.max() + 1) * 2, ys.min() * 2, (ys.max() + 1) * 2
+        t = half.resize((FRAME_W, FRAME_H), Image.BOX)
+        k = FRAME_W / R.PANEL_W
+        ImageDraw.Draw(t).rectangle([x0 * k - 2, y0 * k - 2, x1 * k + 2, y1 * k + 2], outline=(255, 0, 0))
+        x, y = (i % cols) * (FRAME_W + 8), (i // cols) * (FRAME_H + 24)
+        img.paste(t, (x + 4, y + 20))
+        rm = R.PANEL_W - x1
+        d.text((x + 4, y + 4), f"{name}: {x1 - x0}x{y1 - y0} px at ({x0},{y0}); right margin {rm} px = {rm / PX_PER_MM:.1f} mm, "
+               f"top {y0} px = {y0 / PX_PER_MM:.1f} mm", fill=(255, 255, 255))
+    img.save(out)
+    say(f"frame sheet {len(frames)} cards -> {out}")
+
+
 def shot(st, out: Path, name: str, bg: str = "grey", opaque: bool = False):
     img = np.array(R.render_snap(st, bg, 1, opaque))
     info = M.summary(st)
