@@ -52,6 +52,14 @@ DP carries rows 3-5, 18, 19, 22, 25 and 26 as well (same scaler path after the r
 - The MCU has little free XDATA and cannot store this rate: the sink (flash write ~85 KB/s, or processing) is the real limit.
 - To replace with a measured value: time 1000 bursts on unit 3 (#251).
 
+## Measured on unit 1 (2026-11-19, #255; debug slave 0x35 over I2C, MCU running, 4K60, default 350.8 / 116.9 MHz FRC image)
+- DCR [measured]: above-threshold count exact for a host box (1000x500 white on black: 500000), solid red (8294400 = 3840x2160). `ready_to_read` sets within 1 frame (4-44 ms after clear); the first ready after a settings change can hold the old frame (use the second). `HLW` window (0x0060/61, `win_dcr_sel`) did not change the count (window 100,200,500x250 and outside-window: still 500000).
+- Host-side rates [measured]: single register read 2.4 ms, write 1.8 ms; 16 B block read of `DATABUF_R` 3.5 ms (4.6 KB/s); a complete 16 B DDR read burst through `MCU_DC_*` (LEN, 4 ADDR bytes, flush read, CMD, flag poll, buffer read) 20.0 ms = 0.80 KB/s. This is the host I2C rate, not the MCU rate: rows 3-4 stay estimates until the firmware loop is timed.
+- DDR [measured]: frame buffer is only live in frame-buffer mode (P5_AC bit2:1 = 0; test cmd 0x0C); at 4K60 the SDK uses the line buffer and the DDR holds stale data. In frame mode `CAP_M1_MEM_ADDR` = 0, frame at address 0..0x2F7A00 (3 110 400 units of 8 B = 3840x2160x3 B), `CAP_M1_LINE_STEP` 0x5A0 units (1440 = 3840 px x 3 B / 8), `BLOCK_STEP` 0x17BB00 (1080 lines). Solid colours read back as 24 bit per pixel, bytes B, G, R in memory order.
+- Freeze [measured 2026-11-19, unit 1, FRC image, frame mode forced]: writing `P5_27` and `P45_27` bit2 (`CAP_Mn_DDR_CTRL1`, what `ScalerFRCDisplayFreeze` sets) stops the capture: DDR kept the red frame while the host showed black; clearing the bits resumes it. No freeze build is needed to hold a frame.
+- MCU_DC read data [measured, frozen frame]: a burst at a fixed address returns the right neighbourhood but at a varying 8 B beat offset, read to read (solid red: units (a, a+2) then (a+1, a+3); `xbits` pattern: first half unit phase 0, 1 or 2 mod 3 across three reads, second half = first - 1). Reads of one address do not repeat, so byte-exact readback by address needs self-describing data (position code in the pixels) or a consensus of several reads; port A also timed out on ~25 % of bursts, port B less. The host pattern's non-extreme colours carry +-1 temporal dither (NVIDIA): use 0 / 255 channel values for byte-exact checks.
+- `MCU_DC_LEN` != 2 on port A (1, 4): flag never set, `CMD` stays 0xA0, later reads on A time out; port B kept working; the display was disturbed (M1 overflow, wrong DCR counts) until the SDK memory choice was restored (test cmd 0x0D).
+
 ## Not examined
 - Board UART / ISP pins (physical access), any monitor USB port, I2S / S/PDIF output pins on the board, DDR clock frequency.
 
