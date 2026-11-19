@@ -13,11 +13,12 @@ import threading
 from pathlib import Path
 
 import isostamp
+import saver_names
 
 ROOT = Path(__file__).resolve().parent.parent
 LOG = ROOT / "tmp/logs/saver_tour.log"
 DEV = ROOT / "dev.py"
-SAVERS = [(1, "Pac-Man"), (2, "Scope 1"), (4, "Scope 2"), (8, "Asteroids")]  # VCP 0xEB values, docs/saver-mode.md, docs/asteroids.md
+TOUR = ("pacman", "scope2", "asteroids")   # VCP 0xEB values come from fw/awto/savers.tsv
 HOLD_S = 10.0  # Dan's viewing time per saver (2026-11-19)
 VOLUME_PCT = 50  # Dan's request
 REST_VOLUME_PCT = 10  # alert-dan memory: monitor's usual 10 %
@@ -51,7 +52,8 @@ def main():
     u = ["--unit", a.unit]
     dev("ddc", *u, "set", "0x62", str(a.volume))
     try:
-        for n, name in SAVERS:
+        for name in TOUR:
+            n = saver_names.vcp(name)
             say(f"saver {name} (0xEB = {n})")
             dev("ddc", *u, "set", "0xEB", str(n))
             dev("alert", *u, "--wait")
