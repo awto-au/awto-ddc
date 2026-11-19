@@ -753,7 +753,12 @@ extern void AwtoSourceAuto(unsigned char ucWho);                // auto source s
 extern void AwtoSourceIdle(void);                               // OSD_DISABLE timer with the selector open: idle commit
 extern void AwtoSourceReset(void);                              // SDK OSD reset (UserInterfaceAdjustOsdResetProc): the open selector's choice
 #define AWTO_BL_KEY_STEP                                        1       // UP / DOWN backlight change per press / repeat, % (= registry brightness step)
-#define AWTO_BL_VPOS_PCT                                        85      // backlight bar card: vertical position, % (lower screen, off the picture centre)
+#define AWTO_POPUP_MARGIN_MM                                    10      // small cards: top right corner, this far from the top and right panel edges (Dan 2026-11-19)
+#define AWTO_PANEL_IMAGE_W_MM                                   621     // EDID image size of the panel (docs/edid-fix.md, scripts/make_edid.py)
+#define AWTO_PANEL_IMAGE_H_MM                                   341
+#define AWTO_POPUP_MARGIN_X_PX                                  ((unsigned int)((AWTO_POPUP_MARGIN_MM * (unsigned long)_PANEL_DH_WIDTH) / AWTO_PANEL_IMAGE_W_MM))
+#define AWTO_POPUP_MARGIN_Y_PX                                  ((unsigned int)((AWTO_POPUP_MARGIN_MM * (unsigned long)_PANEL_DV_HEIGHT) / AWTO_PANEL_IMAGE_H_MM))
+extern void osd_tc_place_top_right(unsigned int usRight, unsigned int usTop, unsigned char ucBig);
 extern void AwtoResetCard(unsigned char ucSec);                   // key-hold reset warning card (#132 item 7)
 extern void AwtoBlKey(unsigned char ucKey);                     // backlight bar (#132): open on UP / DOWN, step
 extern void AwtoBlClose(void);                                  // close it; the value is stored at the NVRAM gate

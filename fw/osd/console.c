@@ -858,7 +858,7 @@ static void AwtoCardTxt(BYTE ucI)               // appends text ucI to the compo
     }
 }
 
-// Card frame in the awto menu look (blue frame + title bar on white, the menu font), centred, title drawn; the OSD stays off.
+// Card frame in the awto menu look (blue frame + title bar on white, the menu font), top right, title drawn; the OSD stays off.
 static void AwtoCardOpenW(BYTE ucCols, BYTE ucLines, BYTE ucTitle)
 {
     WORD usW, usH;
@@ -869,7 +869,7 @@ static void AwtoCardOpenW(BYTE ucCols, BYTE ucLines, BYTE ucTitle)
     osd_tc_bar(AWTO_WIN_FRAME, 0, 0, usW - 1, usH - 1, 1);
     osd_tc_bar(AWTO_WIN_INSET, 2, 2, usW - 3, usH - 3, 0);
     osd_tc_bar(AWTO_WIN_TITLE, 2, 2, usW - 3, osd_rh - 1, 1);
-    osd_tc_place(50, 50, GET_OSD_NVRAM_DOUBLE_SIZE());
+    osd_tc_place_top_right(AWTO_POPUP_MARGIN_X_PX, AWTO_POPUP_MARGIN_Y_PX, GET_OSD_NVRAM_DOUBLE_SIZE());
     s_ucPanelRow = 0;
     s_ucPanelCol = 0;
     s_ucAwtoCols = ucCols;
@@ -1876,7 +1876,6 @@ void AwtoBlKey(BYTE ucKey)                      // UP = brighter, DOWN = darker;
     if(GET_OSD_STATE() != _MENU_HOTKEY_BACKLIGHT)
     {
         AwtoCardOpen(AWTO_CARD_ROW0 + 2, AWTO_CT_BACKLIGHT);
-        osd_tc_place(50, AWTO_BL_VPOS_PCT, GET_OSD_NVRAM_DOUBLE_SIZE());
         osd_tc_bar(AWTO_WIN_BL_EDGE, AWTO_BL_X0, AWTO_BL_Y0, AWTO_BL_X1, AWTO_BL_Y1, AWTO_BAR_ACCENT);
         osd_tc_bar(AWTO_WIN_BL_IN, AWTO_BL_X0 + 1, AWTO_BL_Y0 + 1, AWTO_BL_X1 - 1, AWTO_BL_Y1 - 1, AWTO_BAR_SURFACE);
         AwtoTextLine(AWTO_BL_ROW, AWTO_T_STYLE_TEXT);
