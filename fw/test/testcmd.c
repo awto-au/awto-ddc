@@ -3104,6 +3104,15 @@ void AwtoDiagTestCmd(void)
         return;
     }
     isr_g_stAwtoDiag.ucTestCmd = 0;
+#if(_FREEZE_SUPPORT == _ON)
+    if((ucCmd == AWTO_TC_FREEZE_ON) || (ucCmd == AWTO_TC_FREEZE_OFF))   // #255 picture freeze: the SDK path (OSD status + ScalerFRCDisplayFreeze)
+    {
+        SET_OSD_FREEZE_STATUS(ucCmd == AWTO_TC_FREEZE_ON);
+        UserCommonAdjustDisplayFreeze(ucCmd == AWTO_TC_FREEZE_ON);
+        AwtoSyncPush(AWTO_SYNC_EV_FRZ, (ucCmd == AWTO_TC_FREEZE_ON) ? AWTO_FRZ_EV_ON : AWTO_FRZ_EV_OFF, 0);
+    }
+    else
+#endif
     if((ucCmd == AWTO_TC_QC_OSD) || (ucCmd == AWTO_TC_QC_OSD + 1))     // #227 Realtek QC OSD pattern (0xB0.. is the probe-columns range below)
     {
         AwtoQcOsd(ucCmd == AWTO_TC_QC_OSD);

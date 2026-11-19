@@ -757,9 +757,6 @@ void AwtoProbeScroll(BYTE ucReset)
 #if(!defined(_AWTO_NEW_SETTINGS))
 #error "console.c draws on the awto text layer (_AWTO_NEW_SETTINGS)"
 #endif
-#if((_FREEZE_SUPPORT == _ON) || (_DP_MST_SUPPORT == _ON))
-#error "console.c: no card text for the freeze / DP MST messages"
-#endif
 
 // Board ports from the PCB config (type = port << 4 | kind). ui_port_state (fw/settings/settings_glue.c) knows D1..D3 only.
 #if((_D0_INPUT_PORT_TYPE != _D0_NO_PORT) || (_D4_INPUT_PORT_TYPE != _D4_NO_PORT) || (_D5_INPUT_PORT_TYPE != _D5_NO_PORT) || (_D6_INPUT_PORT_TYPE != _D6_NO_PORT))
@@ -833,13 +830,26 @@ static const __code BYTE tAwtoSrcType[] = {
 #define AWTO_CT_DISABLED    59                  // selector state of a port off by setting (#81; ui_port_state 4)
 #define AWTO_CT_RESET       60                  // key-hold reset card (#132 item 7): title, then "in " N " s"
 #define AWTO_CT_IN          61                  // + 1 = " s"
+#if(_FREEZE_SUPPORT == _ON)
+#define AWTO_CT_FREEZE_OFF  63                  // _OSD_DISP_DISABLE_FREEZE_MSG: the picture was released from freeze
+#define AWTO_CT_NO_MULTISTREAM    (63 + 1)
+#else
+#define AWTO_CT_NO_MULTISTREAM    63                  // _OSD_DISP_MST_WARNING_MSG
+#endif
 static const __code char tAwtoCardS[] =
     "Input\0Auto select\0DP-1\0HDMI-\0Input D\0no cable\0no signal\0ready\0ACTIVE\0"
     "AWTO\0No signal\0No cable\0Not supported\0Auto adjust\0Auto colour\0DDC/CI on \0Power saving\0Panel uniformity\0On\0Off\0"
     "Information\0Resolution\0Refresh\0H frequency\0Pixel clock\0HDCP\0DP link\0Swing/pre\0Status\0"
     " Hz\0 kHz\0 MHz\0off\0 sink\0 repeater\0 lanes \0RBR\0HBR\0HBR2\0"
     "idle\0search\0scan\0stable\0measure\0timing ok\0display set\0active\0no signal\0no support\0sleep\0off\0fast path\0init\0"
-    "HBR3\0Sync log\0no link\0TMDS \0Saving to memory\0Backlight\0disabled\0RESET TO DEFAULTS\0in \0 s\0";
+    "HBR3\0Sync log\0no link\0TMDS \0Saving to memory\0Backlight\0disabled\0RESET TO DEFAULTS\0in \0 s\0"
+#if(_FREEZE_SUPPORT == _ON)
+    "Freeze off\0"
+#endif
+#if(_DP_MST_SUPPORT == _ON)
+    "MST not supported\0"
+#endif
+    ;
 
 static void AwtoCardTxt(BYTE ucI)               // appends text ucI to the composed row (AwtoPut*)
 {
@@ -2211,6 +2221,12 @@ void OsdDispOsdMessage(EnumOSDDispMsg enumMessage)  // replaces the SDK body (ke
         case _OSD_DISP_SWITCH_DDCCI_PORT_MSG:   ucT = AWTO_CT_DDCCI; break;
         case _OSD_DISP_POWER_SAVING_MSG:        ucT = AWTO_CT_PSAVE; break;
         case _OSD_DISP_PANEL_UNIFORMITY_ONOFF_MSG: ucT = AWTO_CT_PANEL; break;
+#if(_FREEZE_SUPPORT == _ON)
+        case _OSD_DISP_DISABLE_FREEZE_MSG:      ucT = AWTO_CT_FREEZE_OFF; break;
+#endif
+#if(_DP_MST_SUPPORT == _ON)
+        case _OSD_DISP_MST_WARNING_MSG:         ucT = AWTO_CT_NO_MULTISTREAM; break;
+#endif
         default:                                ucT = AWTO_CT_NOSUPPORT; break;     // no support, fail-safe
     }
     AwtoCardOpen(AWTO_CARD_ROW0 + 3, AWTO_CT_AWTO);     // message, second line, pad row

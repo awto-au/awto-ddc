@@ -283,7 +283,7 @@ void RTDOsdEventMsgProc(void)
 #if(_VGA_SUPPORT == _ON)
         case _OSDEVENT_DO_AUTO_CONFIG_MSG:
 #if(_FREEZE_SUPPORT == _ON)
-            ScalerTimerWaitForActiveTimerEvent(_USER_TIMER_EVENT_OSD_DISABLE_FREEZE_MSG);
+            ScalerTimerCancelTimerEvent(_USER_TIMER_EVENT_OSD_DISABLE_FREEZE_MSG);
 #endif
             OsdDispAutoConfigProc();
             break;
@@ -292,7 +292,7 @@ void RTDOsdEventMsgProc(void)
         case _OSDEVENT_ACTIVE_DO_ONE_TIME_MSG:
 
 #if(_FREEZE_SUPPORT == _ON)
-            ScalerTimerWaitForActiveTimerEvent(_USER_TIMER_EVENT_OSD_DISABLE_FREEZE_MSG);
+            ScalerTimerCancelTimerEvent(_USER_TIMER_EVENT_OSD_DISABLE_FREEZE_MSG);
 #endif
 
 #if(_VGA_SUPPORT == _ON)
