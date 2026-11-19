@@ -339,7 +339,7 @@ def main() -> int:
     bad, rec = 0, {}
     for k in g:
         rc, dt, last = res[k]
-        ok = rc == 0 or (k.startswith("h") and last.endswith("FAIL: delay cal"))   # delay cal needs wb-delaycal (#54)
+        ok = rc == 0
         bad += not ok
         note = last[:150]
         if k in ("wdt", "wdt_full"):

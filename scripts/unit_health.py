@@ -12,6 +12,7 @@ from __future__ import annotations
 import argparse
 import re
 import subprocess
+import os
 import sys
 import time
 import isostamp  # noqa: E402
@@ -292,7 +293,8 @@ def check_delaycal(rep, d: Dbg, base: int, sim: bool = False) -> bool:
     blk = bytearray(48)
     blk[0x1A:0x28] = d.read(base + 0x1A, 14)          # ucDelay5usN .. usT3Wait64 only
     cal = rtd_diag.decode(bytes(blk), True)
-    rows = rtd_diag.cal_eval(cal, sim)
+    # the dw8051 sim core keeps real time (clock model, Timer2 exact): its numbers are judged like the unit's; only the ucsim-compatible 8052 mode counts machine cycles
+    rows = rtd_diag.cal_eval(cal, sim and os.environ.get("AWTO_SIM_CPU", "dw8051") == "8052")
     bad = [n for n, ok, _ in rows if ok is False]
     return rep.add("delay cal", not bad, "; ".join(f"{n} {det}" for n, ok, det in rows) + (f"  [FAIL: {', '.join(bad)}]" if bad else ""))
 
