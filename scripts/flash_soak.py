@@ -26,7 +26,7 @@ ROOT = Path(os.environ.get("AWTO_DDC_REPO") or Path(__file__).resolve().parent.p
 LOG = ROOT / "tmp/logs/flash_soak.log"
 TSV = ROOT / "tmp/logs/flash_soak.tsv"
 PERIOD_S = 60            # one health run is ~4 s; a saver runs ~1 min each: 30 periods cover the savers 7 x
-SAVERS = (3, 4, 8, 2, 0)  # Scope 1, Scope 2, Asteroids, Pac-Man, off (VCP 0xEB)
+SAVERS = (4, 8, 2, 0)  # Scope 2, Asteroids, Pac-Man, off (VCP 0xEB)
 WAKE_S = 15              # host DPMS on -> ACTIVE: wake_time.py measures ~2 s; 15 s = a failed wake, not a slow one
 FPS_S = 10               # counter delta window: +-1 frame of ~300
 S2, AST = "0xF038", "0xE95C"

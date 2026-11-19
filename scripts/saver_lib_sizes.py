@@ -4,7 +4,7 @@
 usage: saver_lib_sizes.py MAP [--mem tmp/sdcc-port/mem_report.json] [--tsv OUT]
   - Code and const: sdld areas CH_<name> (one chunk per function / const, sdcc_bank.py) + ST_<name> bank stubs (8 B), bank = address >> 16.
   - Names come from the saver sources (FILES) and the .inc files they include; a name missing from the map is not linked.
-  - XDATA: per module from sdcc_mem_report.py's mem_report.json (run it on the same build first); osd_lines.c is compiled inside scope_saver.
+  - XDATA: per module from sdcc_mem_report.py's mem_report.json (run it on the same build first); osd_lines.c is compiled inside saver_canvas.
 Log: ./tmp/logs/saver_lib_sizes.log
 """
 import argparse
@@ -19,10 +19,10 @@ from sdcc_overlay import repo_root  # noqa: E402
 
 ROOT = repo_root()
 LOG = ROOT / "tmp/logs/saver_lib_sizes.log"
-FILES = ["fw/test/scope_saver.c", "tools/osd_lines/osd_lines.c", "fw/test/scope_saver2.c", "fw/test/asteroids.c", "fw/test/pacman_classic.c",
+FILES = ["fw/test/saver_canvas.c", "tools/osd_lines/osd_lines.c", "fw/test/scope_saver2.c", "fw/test/asteroids.c", "fw/test/pacman_classic.c",
          "fw/audio/audio.c", "fw/test/flash_screen.c", "fw/test/qc_osd.c", "fw/test/osd_demo.c", "fw/test/saver.c",
          "fw/osd/osd_screen.c", "fw/osd/osd_rot.c", "fw/keys/key_click.c"]
-MODULE = {"tools/osd_lines/osd_lines.c": "scope_saver"}             # compiled into this module (#include)
+MODULE = {"tools/osd_lines/osd_lines.c": "saver_canvas"}             # compiled into this module (#include)
 AREA = re.compile(r"^(CH|ST)_(\w+)\s+([0-9A-F]{8})\s+([0-9A-F]{8}) =\s+(\d+)\. bytes", re.M)
 FUNC = re.compile(r"^(?:static\s+)?[A-Za-z_][\w \*]*?\b([A-Za-z_]\w*)\s*\([^;{]*\)\s*(?:__\w+\s*)*$", re.M)
 CONST = re.compile(r"__code[^=;\[]*?\b([A-Za-z_]\w*)\s*\[", re.M)

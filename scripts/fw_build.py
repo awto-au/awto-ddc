@@ -357,7 +357,8 @@ def main() -> int:
         log(f"xdata layout promoted: {XLAYOUT}")
     if pins:
         check_layout((out / "fw.map").read_text(errors="replace"), pins, new_layout)
-        promote_layout(new_layout, ROOT / a.layout)   # absolute a.layout wins in the join
+        if not re.search(r"-D_AWTO_SAVER_\w+=_OFF", os.environ.get("K2S_SDCC_EXTRA", "")):   # a build without a saver must not rewrite the tracked layout
+            promote_layout(new_layout, ROOT / a.layout)   # absolute a.layout wins in the join
     mem = parse_ihx(out / "fw.ihx")
     common_end = max((x for x in mem if x < a.common), default=0) + 1
     nb = max(max(used) + 1, MT.MSG_BANK + 1)                 # image must reach the message block (#56)

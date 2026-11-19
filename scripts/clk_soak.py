@@ -5,7 +5,7 @@ usage: clk_soak.py --bus B --serial S --map MAP [--bin BIN] STEP MINUTES
   Image built with -D _AWTO_OSD_HWTEST. STEP = a name from clk_sweep.STEPS (stock = the control run).
   The step is held by the firmware for HOLD_S and kept alive by a KEEP op every KEEP_S: the host's silence or a firmware stall = revert / WDT reset.
   Every PERIOD_S: firmware checks again (CRC passes, XDATA, delays), link reads, heartbeat vs the host clock, IOSC trim registers, next saver
-  (Scope 1, Scope 2, Asteroids, Pac-Man = VCP 0xEB 3 / 4 / 8 / 2). A reset is logged, the unit relinked, the step applied again.
+  (Scope 2, Asteroids, Pac-Man = VCP 0xEB 4 / 8 / 2). A reset is logged, the unit relinked, the step applied again.
   Log ./tmp/logs/clk_soak.log, one TSV line per period ./tmp/logs/clk_soak.tsv.
 """
 from __future__ import annotations
@@ -26,7 +26,7 @@ import osd_hw_test as H  # noqa: E402
 ROOT = Path(os.environ.get("AWTO_DDC_REPO") or Path(__file__).resolve().parent.parent)
 LOG = ROOT / "tmp/logs/clk_soak.log"
 TSV = ROOT / "tmp/logs/clk_soak.tsv"
-SAVERS = (3, 4, 8, 2)                      # Scope 1, Scope 2, Asteroids, Pac-Man (VCP 0xEB values)
+SAVERS = (4, 8, 2)                         # Scope 2, Asteroids, Pac-Man (VCP 0xEB values)
 PERIOD_S = 30.0                            # Dan's brief: checks every 30 s
 KEEP_S = 4.0                               # KEEP op period; HOLD_S / KEEP_S = 5 missed keeps before the firmware reverts
 HOLD_S = 20.0

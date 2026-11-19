@@ -33,7 +33,7 @@ def main():
     ap.add_argument("b", type=Path)
     ap.add_argument("--frames", type=int, default=12)
     ap.add_argument("--tag", default="ab")
-    ap.add_argument("--savers", nargs="*", default=["scope", "scope2", "asteroids", "pacman"])
+    ap.add_argument("--savers", nargs="*", default=["scope2", "asteroids", "pacman"])
     ap.add_argument("--upright-too", action="store_true")
     a = ap.parse_args()
     (ROOT / "tmp/scratch").mkdir(parents=True, exist_ok=True)
