@@ -20,7 +20,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 import fw_gates as G  # noqa: E402
 
 ROOT = G.ROOT
-TIMING = ["delays", "wdt", "wake", "inputrate", "monitor", "deadport", "panel", "sysm", "htime", "keys"]
+TIMING = ["delays", "wdt_full", "wake_full", "inputrate", "monitor_full", "deadport", "panel", "sysm", "htime", "keys_full"]
 LOG = ROOT / "tmp/logs/gate_matrix.log"
 BUILD_LIMIT_S = 300      # one build 40 s cold at load 15 (2026-11-19) x 7; stall guard of the build is its own
 
