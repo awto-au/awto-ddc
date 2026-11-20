@@ -7,7 +7,7 @@ from pathlib import Path
 
 os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-import numpy as np  # noqa: E402
+from PySide6.QtCore import QSettings  # noqa: E402
 from PySide6.QtWidgets import QApplication  # noqa: E402
 
 import app as A  # noqa: E402
@@ -77,9 +77,9 @@ def settle(app, pg):
 
 def quick_test(app, pg, fb):
     """Quick group, read-only rows, enum labels, refresh vs drag, limits, error banner"""
-    pg.unit.setCurrentIndex(2)
+    pg.select_unit("3", read=False)
     n = len(fb.calls)
-    pg.saver.setCurrentIndex(4)                                    # Scope 2
+    pg.saver.setCurrentText("Scope 2")
     pg.saver_start()
     pg.saver_stop()
     pg.saver.setCurrentText("Flash warning")
@@ -88,12 +88,16 @@ def quick_test(app, pg, fb):
     pg.set_row(pg.quick["volume"])
     pg.quick["mute"].w.setCurrentIndex(1)                          # On -> VCP 0x8D = 1
     pg.set_row(pg.quick["mute"])
-    pg.quick["disp_rotate"].w.setCurrentIndex(0)
-    pg.set_row(pg.quick["disp_rotate"])
+    pg.rows["disp_rotate"].w.setCurrentIndex(0)
+    pg.set_row(pg.rows["disp_rotate"])
     settle(app, pg)
     sent = [" ".join(c[2:]) for c in fb.calls[n:]]
     assert sent == ["ddc set 0xEB 4 --unit 3", "ddc set 0xEB 0 --unit 3", "ddc set 0xEB 5 --unit 3", "ddc set 0x62 33 --unit 3",
                     "ddc set 0x8D 1 --unit 3", "settings set disp_rotate 0 --unit 3"], sent
+    pg.quick["brightness"].w.setValue(70)                         # quick brightness: mailbox row like the tree
+    pg.set_row(pg.quick["brightness"])
+    settle(app, pg)
+    assert " ".join(fb.calls[-1][2:]) == "settings set brightness 70 --unit 3" and pg.rows["brightness"].w.value() == 70
     assert pg.rows["volume"].w.value() == 33 and pg.rows["mute"].w.currentIndex() == 1       # main rows follow
     pg.quick_get()
     settle(app, pg)
@@ -102,7 +106,7 @@ def quick_test(app, pg, fb):
     ro = [sr for sr in pg.rows.values() if sr.read_only]
     assert ro and all(not sr.w.isEnabled() and not sr.btn.isEnabled() for sr in ro), ro
     assert pg.rows["gamma"].label_of(3).strip("( )") == pg.rows["gamma"].r["options"][3]
-    assert [h for h, _ in pg.headers] and all(any(True for _ in m) for _, m in pg.headers)
+    assert len(pg.page_items) == 15 and len(pg.all_rows) == len(MON.T.ROWS)
     # a refresh keeps a touched row and a dragged slider
     sr = pg.rows["brightness"]
     sr.w.setValue(80)
@@ -171,9 +175,14 @@ def monitor_test(app, win):
     fb = FakeBackend()
     logf = ROOT / "tmp" / "osdedit" / "monitor_test.log"
     logf.unlink(missing_ok=True)
-    pg = MON.MonitorPage(fb, logf)
+    ini = ROOT / "tmp" / "osdedit" / "monitor_test.ini"
+    ini.unlink(missing_ok=True)
+    pg = MON.MonitorPage(fb, logf, QSettings(str(ini), QSettings.IniFormat), detect=lambda: set())
+    pg.select_unit("3", read=False)
     win.stack.addWidget(pg)
-    win.stack.setCurrentWidget(pg)
+    win.stack.setCurrentWidget(pg)                                 # shown: the stale view is read, status probes run
+    settle(app, pg)
+    fb.calls.clear()
     assert pg.writable() and pg.n() == "3", pg.n()
     pg.get_all()
     pg.wait_idle()
@@ -204,12 +213,14 @@ def monitor_test(app, win):
     assert sum(bool(iso.match(x)) for x in log) >= 8 and any("health: ok, PASS" in x for x in log), log
     quick_test(app, pg, fb)
     n = len(fb.calls)
-    pg.unit.setCurrentIndex(0)                                    # unit 1: working screen, read-only
+    pg.states["1"].info = {**pg.states["1"].info, "test": False}  # a working screen: read-only
+    pg.select_unit("1", read=False)
     assert not pg.writable() and not pg.rows["brightness"].btn.isEnabled()
     pg.run("probe", ["x"], None)
     assert len(fb.calls) == n
     SHOTS.mkdir(parents=True, exist_ok=True)
-    pg.unit.setCurrentIndex(2)
+    pg.states["1"].info = {**pg.states["1"].info, "test": True}
+    pg.select_unit("3", read=False)
     win.resize(1400, 900)
     app.processEvents()
     win.grab().save(str(SHOTS / "editor_monitor.png"))
