@@ -31,7 +31,7 @@ def say(s: str) -> None:
 
 
 def gui(unit: str, *args: str) -> dict:
-    r = subprocess.run([str(ROOT / "dev.py"), "gui", "--unit", unit, *args], capture_output=True, text=True, cwd=ROOT)
+    r = subprocess.run([str(ROOT / "dev.py"), "gui", "--unit", unit, *args], capture_output=True, text=True, cwd=ROOT, check=False)
     out = r.stdout + r.stderr
     i, j = out.find("{"), out.rfind("}")
     return json.loads(out[i:j + 1]) if i >= 0 and j > i else {}
