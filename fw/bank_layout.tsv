@@ -996,8 +996,10 @@ stub	_AwtoSyncPutRaw	C	0x40b0	8
 stub	_AwtoSyncScan	C	0x40b8	8
 stub	_AwtoSyncVisit	C	0x40c0	8
 stub	_AwtoDpFrameClear	C	0x40c8	8
+stub	_ScalerTMDSPhySetDeferred	C	0x40d0	8
 stub	_AwtoDpOneFrameMs	C	0x40d8	8
 stub	_AwtoDpTwoFramesMs	C	0x40e0	8
+stub	_ScalerTMDSRx2PhySetDeferred	C	0x40e8	8
 fn	_ScalerTimerWaitForEvent	C	0x40f4	392
 stub	_ScalerCecIntHandler_EXINT0	C	0x427c	8
 stub	_AwtoScTile	C	0x4284	8
@@ -1124,6 +1126,7 @@ stub	_AwtoRbGetByte	C	0x48f0	8
 stub	_AwtoRbPrime	C	0x48f8	8
 stub	_AwtoSyncClsOf	C	0x4900	8
 fn	_AwtoWaitLog	C	0x4908	376
+stub	_ScalerTMDSRx3PhySetDeferred	C	0x4a80	8
 fn	_ScalerOsdFontLibraryRotation	0	0x0000	28
 fn	_ScalerOsdFontWindowVericalAlignemnt	0	0x001c	28
 fn	_ScalerOsdGetDoubleFunctionH	0	0x0038	24
@@ -1498,6 +1501,7 @@ fn	_ScalerTMDSRx3Hdcp1p4AksvClear	2	0x5070	12
 fn	_ScalerTMDSRx3MeasureClk	2	0x507c	164
 fn	_ScalerTMDSRx3TMDSStableDetect	2	0x5120	612
 fn	_RTDOsdSystemFlowProc	2	0x5384	212
+fn	_ScalerTMDSPhySetDeferred	2	0x5458	12
 fn	_UserInterfaceGetAudioMuteStatus	2	0x5464	36
 fn	_UserInterfaceGetCableResetStatus	2	0x5488	60
 fn	_UserInterfaceGetForcePSStatus	2	0x54c4	12
@@ -2211,7 +2215,7 @@ const	_tLUTGAMMA_18_TABLE	6	0x0164	6352
 const	_tLUTGAMMA_20_TABLE	6	0x1a34	6352
 const	_tLUTGAMMA_22_TABLE	6	0x3304	6352
 const	_tLUTGAMMA_24_TABLE	6	0x4bd4	6352
-const	_UserInterfaceGetOverScanStatus_tusOverscanEnTable_10000_1351	6	0x64a4	92
+const	_UserInterfaceGetOverScanStatus_tusOverscanEnTable_10000_1353	6	0x64a4	92
 const	_OperationFactoryTable	6	0x6500	756
 const	_tCOLOR_CONV_RGB2YUV_ITU709	6	0x67f4	32
 const	_tCOLOR_CONV_YUV2RGB_ITU601	6	0x6814	32
@@ -2397,6 +2401,8 @@ fn	_ScalerTimerWDCancelTimerEvent_EXINT0	7	0x9c80	32
 fn	_ScalerDpRx1SetDpcdBitValue_EXINT0	7	0x9ca0	52
 fn	_AwtoTmdsRx2Hs	7	0x9cd4	20
 fn	_AwtoTmdsRx3Hs	7	0x9ce8	20
+fn	_ScalerTMDSRx2PhySetDeferred	7	0x9cfc	972
+fn	_ScalerTMDSRx3PhySetDeferred	7	0xa0c8	972
 const	_g_tAstData	8	0x0000	692
 const	_g_tAstOff	8	0x02b4	112
 const	_s_tAstBit	8	0x0324	12
@@ -2724,7 +2730,7 @@ const	_tDISPLAY_DPTX_DRV_HBR2_TABLE	9	0x0000	56
 const	_tEDID_TABLE_D1	9	0x0038	268
 const	_tEDID_TABLE_D2	9	0x0144	268
 const	_tEDID_TABLE_D3	9	0x0250	268
-const	_set_ap_rotate_tFlipToSdk_10000_1374	9	0x035c	8
+const	_set_ap_rotate_tFlipToSdk_10000_1376	9	0x035c	8
 fn	_ScalerColor420To422D2D3Enable	9	0x0364	60
 fn	_ScalerDpPowerSwitch	9	0x03a0	120
 fn	_ScalerDpRx1AuxIntInitial	9	0x0418	116

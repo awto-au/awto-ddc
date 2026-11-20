@@ -20,8 +20,7 @@ awto_nvram_nvram	0xd700	1753	64
 RTDFactoryFunction	0xd700	1817	63
 RL6449_Series_FRC	0xd700	1880	62
 diag	0xd700	1942	54
-RL6449_Series_TMDSRx2	0xd700	1996	52
-RL6449_Series_TMDSRx3	0xd700	2048	52
+RL6449_Series_TMDSRx2	0xd700	1996	57
 awto_arith_arith	0xd700	2100	50
 ScalerSync	0xd700	2150	48
 text_layer	0xd700	2198	46
@@ -127,6 +126,7 @@ SysAudio	0xe580	45	1
 SysCec	0xe580	46	1
 __ovl	0xe580	47	1
 flash_screen	0xe580	48	1
+RL6449_Series_TMDSRx3	0xe580	49	57
 sync	0xe780	37	1329
 asteroids	0xe780	1366	515
 ScalerCommonDebug	0xe780	1881	364
