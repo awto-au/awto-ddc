@@ -730,7 +730,7 @@ bit ScalerDpRx1VBIOSMSACheck(bit bDeskewEnhanced)
         ScalerSetBit(PB8_00_MAC_DIG_RESET_CTRL, ~_BIT4, 0x00);
 
         // Wait Two Frame Time to Get MSA
-        ScalerTimerDelayXms(_DP_TWO_FRAME_TIME_MAX);
+        ScalerTimerDelayXms(AWTO_DP_TWO_FRAMES());
 
         // Pop up Main Stream Attributes
         ScalerSetBit(PB9_00_MN_STRM_ATTR_CTRL, ~(_BIT7 | _BIT6 | _BIT5 | _BIT3 | _BIT2), (_BIT7 | _BIT6 | _BIT5 | _BIT3));
@@ -1117,7 +1117,7 @@ bit ScalerDpRx1InterlaceCheck(WORD *pusVTotal, BYTE *pucOddFlg)
     else if((ABSDWORD(PDATA_DWORD(1), PDATA_DWORD(2))) > (usHTotalCount / 2))
     {
         // Delay a Complete Frame
-        ScalerTimerDelayXms(_DP_TWO_FRAME_TIME_MAX);
+        ScalerTimerDelayXms(AWTO_DP_TWO_FRAMES());
 
         if(ScalerGetBit(PB8_57_INTERLACE_MODE_CONFIG, _BIT0) == _BIT0)
         {
@@ -1163,7 +1163,7 @@ bit ScalerDpRx1GetVideoInfo(void)
         ScalerRead(PB9_46_VSC15, 3, pData, _AUTOINC);
 #else
         // Delay 2 frames for SRAM ready (worst case)
-        ScalerTimerDelayXms(_DP_ONE_FRAME_TIME_MAX * 2);
+        ScalerTimerDelayXms(AWTO_DP_TWO_FRAMES());
 
         SET_DP_RX1_RSV1_DETECTING();
 
@@ -2844,7 +2844,7 @@ bit ScalerDpRx1MSACheck(void)
                             ScalerSetBit(PB0_01_PHY_DIG_RESET_CTRL, ~_BIT1, 0x00);
 
                             // Delay a Complete Frame
-                            ScalerTimerDelayXms(_DP_ONE_FRAME_TIME_MAX);
+                            ScalerTimerDelayXms(AWTO_DP_ONE_FRAME());
 
                             ScalerDpRx1DecodeErrorCountReset();
                         }
@@ -3402,7 +3402,7 @@ void ScalerDpRx1SwitchHDR10CmpAudioInfo(void)
         ScalerSetByte(PB9_2C_DP_INFO_FM_RSV0, _DP_AUDIO_TIMESTAMP);
 
         // Delay a Complete Frame
-        ScalerTimerDelayXms(_DP_TWO_FRAME_TIME_MAX);
+        ScalerTimerDelayXms(AWTO_DP_TWO_FRAMES());
 
         ScalerDpRx1GetInfoFrameRSV0(pucRSV0Data1);
 

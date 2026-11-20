@@ -1171,6 +1171,14 @@ def cmd_synclog(extra: list[str]) -> int:
     return _dbg_py(b, "sync_log.py", b, "--serial", u["serial"], "--map", _fwmap(u, given), *flags)
 
 
+@command("n warm resets of a unit, one timeline row each (picture time, EDID read, scan call, stages), median at the end (scripts/sync_bench.py)",
+         args="[--unit N] [--map F] [--runs 5] [--label NAME]", kind="action")
+def cmd_syncbench(extra: list[str]) -> int:
+    given, runs, label = _opt(extra, "--map"), _opt(extra, "--runs"), _opt(extra, "--label")
+    _n, u = _unit(extra)
+    return _py("sync_bench.py", "--unit", str(_n), "--map", _fwmap(u, given), "--runs", runs or "5", "--label", label or "run")
+
+
 @command("add a free-text line to the unit's diag log (host note, #273): tests show what they do on the unit's console; "
          "--open-console opens the console first and leaves it open",
          args="[--unit N] [--map F] [--open-console] TEXT", kind="action")

@@ -337,7 +337,7 @@ void ScalerDpRx1AdjustVsyncDelay(void)
     ScalerTimerPollingFlagProc(50, PB9_01_DP_VBID, _BIT0, _TRUE);
 
     // Delay for PG Stable
-    ScalerTimerDelayXms(_DP_ONE_FRAME_TIME_MAX);
+    ScalerTimerDelayXms(AWTO_DP_ONE_FRAME());
 }
 //--------------------------------------------------
 // Description  : Check Valid Lane Alignment
@@ -991,7 +991,7 @@ EnumDpHotPlugTime ScalerDpRx1BeforeHpdToggleProc(EnumDpHotPlugAssertType enumHpd
         }
     }
 
-    ScalerTimerWDCancelTimerEvent(_SCALER_WD_TIMER_EVENT_RX1_DP_LINK_TRAINING_REBUILD_PHY);
+    ScalerTimerWDCancelTimerEvent(_SCALER_WD_TIMER_EVENT_RX1_DP_LINK_TRAINING_REBUILD_PHY); AWTO_DP_FRAME_CLEAR();     // HPD toggle: the next source may run at another rate
     ScalerTimerCancelTimerEvent(_SCALER_TIMER_EVENT_DP_RX1_HOTPLUG_ASSERTED);
     ScalerTimerCancelTimerEvent(_SCALER_TIMER_EVENT_DP_RX1_HDCP_LONG_HOTPLUG_EVENT);
     ScalerTimerCancelTimerEvent(_SCALER_TIMER_EVENT_DP_RX1_LINK_STATUS_IRQ);
@@ -4870,7 +4870,7 @@ bit ScalerDpRx1NormalPreDetect(void)
 #endif
                     {
                         // Need to delay 3 Frames totally after Secondary Data Block Reset
-                        ScalerTimerDelayXms(_DP_TWO_FRAME_TIME_MAX);
+                        ScalerTimerDelayXms(AWTO_DP_TWO_FRAMES());
                     }
 #endif
 
@@ -4878,7 +4878,7 @@ bit ScalerDpRx1NormalPreDetect(void)
                     if(GET_AIO_MODERN_STANDBY_MODE() == _FALSE)
 #endif
                     {
-                        ScalerTimerDelayXms(_DP_ONE_FRAME_TIME_MAX);
+                        ScalerTimerDelayXms(AWTO_DP_ONE_FRAME());
                     }
 
                     CLR_DP_RX1_NORMAL_LINK_TRAINING_SETPHY_FINISH();
@@ -5048,7 +5048,7 @@ bit ScalerDpRx1NormalPreDetect(void)
 #endif
                 {
                     // Need to delay 3 Frames totally after Secondary Data Block Reset
-                    ScalerTimerDelayXms(_DP_TWO_FRAME_TIME_MAX);
+                    ScalerTimerDelayXms(AWTO_DP_TWO_FRAMES());
                 }
 #endif
 
@@ -5056,7 +5056,7 @@ bit ScalerDpRx1NormalPreDetect(void)
                 if(GET_AIO_MODERN_STANDBY_MODE() == _FALSE)
 #endif
                 {
-                    ScalerTimerDelayXms(_DP_ONE_FRAME_TIME_MAX);
+                    ScalerTimerDelayXms(AWTO_DP_ONE_FRAME());
                 }
 
                 if((ScalerDpRx1GetDpcdBitInfo(0x00, 0x06, 0x00, (_BIT2 | _BIT1 | _BIT0)) == _BIT1) ||

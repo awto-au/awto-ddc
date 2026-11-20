@@ -2508,7 +2508,7 @@ bit ScalerDpRx1StreamClkRegenerate(void)
 #endif
     {
         // Delay for PG Stable
-        ScalerTimerDelayXms(_DP_ONE_FRAME_TIME_MAX);
+        ScalerTimerDelayXms(AWTO_DP_ONE_FRAME());
     }
 
     return _TRUE;

@@ -191,7 +191,16 @@ BYTE ScalerDpScanInputPort(BYTE ucInputPort)
 #if(_D1_DP_EXIST == _ON)
         case _D1_INPUT_PORT:
 
-            return ScalerDpRx1ScanInputPort();
+            {
+                BYTE ucScan = ScalerDpRx1ScanInputPort();
+
+                if(ucScan == _SOURCE_NONE)
+                {
+                    AWTO_DP_FRAME_CLEAR();     // a failed scan: the next try waits the worst case until measured again
+                }
+
+                return ucScan;
+            }
 #endif
 
         default:

@@ -947,11 +947,17 @@ extern void AwtoLpMark(unsigned char ucK);
 #if(_AWTO_DP_FRAME_WAIT == _ON)
 extern void AwtoDpFrameSet(unsigned long ulVBs2BsCount);
 extern unsigned int AwtoDpTwoFramesMs(void);
+extern unsigned int AwtoDpOneFrameMs(void);
+extern void AwtoDpFrameClear(void);
 #define AWTO_DP_TWO_FRAMES()                                    AwtoDpTwoFramesMs()
+#define AWTO_DP_ONE_FRAME()                                     AwtoDpOneFrameMs()
 #define AWTO_DP_FRAME_SET(n)                                    AwtoDpFrameSet(n)
+#define AWTO_DP_FRAME_CLEAR()                                   AwtoDpFrameClear()
 #else
 #define AWTO_DP_TWO_FRAMES()                                    _DP_TWO_FRAME_TIME_MAX
+#define AWTO_DP_ONE_FRAME()                                     _DP_ONE_FRAME_TIME_MAX
 #define AWTO_DP_FRAME_SET(n)
+#define AWTO_DP_FRAME_CLEAR()
 #endif
 #ifndef _AWTO_LOOP_SPLIT
 #define _AWTO_LOOP_SPLIT                                        _ON     // #75: slow checks every AWTO_SLOW_MS, not every pass (fw/diag/loopsplit.c)
