@@ -180,15 +180,15 @@ extern BYTE g_pucDpRx1Backup[3];
 
 extern BYTE isr_g_ucDpRx1Info;
 extern BYTE g_ucDpRx1LinkRate;
-extern BYTE g_ucDpRx1LaneCount;
+extern volatile BYTE g_ucDpRx1LaneCount;
 extern BYTE g_ucDpRx1TrainingPatternSet;
 extern BYTE g_ucDpRx1AuxAddressBackup;
 
-extern BYTE isr_g_pucDpRx1LEBound[4];
+extern volatile BYTE isr_g_pucDpRx1LEBound[4];
 extern BYTE g_pucDpRx1Tap1MinTemp[4];
-extern BYTE isr_g_pucDpRx1Tap1Max[4];
+extern volatile BYTE isr_g_pucDpRx1Tap1Max[4];
 extern BYTE g_pucDpRx1LEMinTemp[4];
-extern BYTE isr_g_pucDpRx1LEMax[4];
+extern volatile BYTE isr_g_pucDpRx1LEMax[4];
 extern BYTE g_ucDpRx1EQCRC;
 extern BYTE g_ucRx1AuxTemp;
 extern BYTE g_ucRx1AuxTemp_EXINT;
@@ -209,8 +209,8 @@ extern StructDPRxHDCPAuthInfo g_stDpRx1HDCPAuthInfo;
 extern BYTE g_pucDPRx1Caps[3];
 #endif
 
-extern WORD isr_g_pusDpRx1ClockCount[4];
-extern WORD isr_g_pusDpRx1ClockCount1[4];
+extern volatile WORD isr_g_pusDpRx1ClockCount[4];
+extern volatile WORD isr_g_pusDpRx1ClockCount1[4];
 
 //****************************************************************************
 // FUNCTION EXTERN

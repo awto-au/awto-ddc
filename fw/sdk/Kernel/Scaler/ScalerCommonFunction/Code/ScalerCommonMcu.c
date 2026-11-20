@@ -102,7 +102,7 @@ bit g_bReceiveDdcciCmdNotFinish = _FAIL;
 EnumDdcciCmdSrc g_enumDdcciCommandSrc = _DDCCI_CMD_SRC_I2C;
 
 BYTE g_pucDdcciRxBuf[_DDCCI_RXBUF_LENGTH];
-BYTE g_pucDdcciTxBuf[_DDCCI_TXBUF_LENGTH];
+volatile BYTE g_pucDdcciTxBuf[_DDCCI_TXBUF_LENGTH];
 
 #if(_SW_IIC_SUPPORT == _ON)
 BYTE idata g_ucSwIICStatus;

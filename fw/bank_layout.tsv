@@ -829,7 +829,6 @@ stub	_AwtoTextOpen	C	0x3410	8
 stub	_AwtoTextShow	C	0x3418	8
 stub	_AwtoTxt	C	0x3420	8
 stub	_OsdDispOsdMessage	C	0x3428	8
-fn	_AwtoDbgIsrCmd_EXINT1	C	0x3430	472
 stub	_AwtoDbgLinkPoll	C	0x3608	8
 stub	_AwtoDbgLinkStart	C	0x3610	8
 stub	_AwtoDdcPortToVcp	C	0x3618	8
@@ -1127,6 +1126,7 @@ stub	_AwtoRbPrime	C	0x48f8	8
 stub	_AwtoSyncClsOf	C	0x4900	8
 fn	_AwtoWaitLog	C	0x4908	376
 stub	_ScalerTMDSRx3PhySetDeferred	C	0x4a80	8
+fn	_AwtoDbgIsrCmd_EXINT1	C	0x4a88	520
 fn	_ScalerOsdFontLibraryRotation	0	0x0000	28
 fn	_ScalerOsdFontWindowVericalAlignemnt	0	0x001c	28
 fn	_ScalerOsdGetDoubleFunctionH	0	0x0038	24
@@ -1512,7 +1512,6 @@ fn	_ScalerDpRx1LinkRateDetect	2	0x55d8	96
 fn	_ScalerDpRx1VBIOSMSACheck	2	0x5638	336
 fn	_ScalerDpRx1ValidSignalDetection	2	0x5788	492
 fn	_AwtoMsgV	2	0x5974	244
-fn	_ScalerDebug	2	0x5a68	760
 fn	_AwtoSyncSelect	2	0x5d60	164
 fn	_ScalerDebugSendData	2	0x5e34	188
 fn	_ScalerDebugSetRegisters	2	0x5ef0	300
@@ -1525,7 +1524,6 @@ fn	_ScalerSyncTMDSRx3HdmiColorInfoChanged	2	0x6664	588
 fn	_ScalerSyncTMDSRx3HdmiColorimetryExtSetting	2	0x68b0	252
 fn	_ScalerSyncTMDSRx3HdmiColorimetrySetting	2	0x69ac	220
 fn	_ScalerSyncTMDSRx3HdmiQuantizationSetting	2	0x6a88	232
-fn	_ScalerDpRx1AdjustLaneFLDBand	2	0x6b70	448
 fn	_ScalerDpRx1AlignCheck	2	0x6d30	80
 fn	_ScalerDpRx1CheckHdcpCpirqStatus	2	0x6d80	80
 fn	_ScalerDpRx1CrcCalculate	2	0x6dd0	240
@@ -1560,6 +1558,7 @@ fn	_SysModeGetModeStateChange	2	0x865c	16
 fn	_SysSourceCableDetection	2	0x866c	804
 fn	_SysSourceCheckTargetTimes	2	0x8990	44
 fn	_SysSourceConvertSearchPort	2	0x89bc	48
+fn	_ScalerDpRx1AdjustLaneFLDBand	2	0x89ec	520
 fn	_SysSourceGetCableStatusChange	2	0x8cac	32
 fn	_SysSourceGetInputPortType	2	0x8ccc	24
 fn	_ScalerTMDSScanInputPort	2	0x8ce4	108
@@ -1589,6 +1588,7 @@ fn	_UserOsdHandler	2	0x9a28	72
 fn	_ScalerTMDSRx2HdmiPacketDetect	2	0x9a70	424
 fn	_ScalerDebugGetRegisters	2	0x9c18	376
 fn	_ScalerTMDSRx2TMDSScanInputPort	2	0x9d90	1412
+fn	_ScalerDebug	2	0xa314	796
 const	_tSysLed	3	0x0000	20
 const	_tSysMode	3	0x0014	20
 const	_tSysPower	3	0x0028	20
@@ -2372,7 +2372,6 @@ fn	_ScalerTMDSRx3SetDFEInitial_EXINT0	7	0x44a8	804
 fn	_ScalerTMDSRx3SetPhy_EXINT0	7	0x47cc	3096
 fn	_ScalerAudioDpAudioEnable_EXINT0	7	0x53e4	40
 fn	_ScalerTimerCancelTimerEvent_EXINT0	7	0x540c	104
-fn	_ScalerDpRx1AdjustLaneFLDBand_EXINT0	7	0x5474	440
 fn	_ScalerDpRx1CheckSourceOUI_EXINT0	7	0x562c	8
 fn	_ScalerDpRx1DFECheck_EXINT0	7	0x5634	652
 fn	_ScalerDpRx1GetDpcdBitInfo_EXINT0	7	0x58c0	40
@@ -2407,6 +2406,7 @@ fn	_AwtoTmdsRx2Hs	7	0x9cd4	20
 fn	_AwtoTmdsRx3Hs	7	0x9ce8	20
 fn	_ScalerTMDSRx2PhySetDeferred	7	0x9cfc	972
 fn	_ScalerTMDSRx3PhySetDeferred	7	0xa0c8	972
+fn	_ScalerDpRx1AdjustLaneFLDBand_EXINT0	7	0xa494	516
 const	_g_tAstData	8	0x0000	692
 const	_g_tAstOff	8	0x02b4	112
 const	_s_tAstBit	8	0x0324	12

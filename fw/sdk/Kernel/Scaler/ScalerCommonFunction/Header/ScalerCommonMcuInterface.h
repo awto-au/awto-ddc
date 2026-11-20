@@ -192,7 +192,7 @@ extern BYTE xdata MCU_DDCRAM_MHL_D5[_D5_MHL_EMBEDDED_DDCRAM_SIZE];
 #endif
 
 extern BYTE g_pucDdcciRxBuf[_DDCCI_RXBUF_LENGTH];
-extern BYTE g_pucDdcciTxBuf[_DDCCI_TXBUF_LENGTH];
+extern volatile BYTE g_pucDdcciTxBuf[_DDCCI_TXBUF_LENGTH];
 
 #if(_FLASH_PARTITION_RELOCATABLE_SUPPORT == _ON)
 __at(0x30) extern BYTE __data g_ucBankOffset;

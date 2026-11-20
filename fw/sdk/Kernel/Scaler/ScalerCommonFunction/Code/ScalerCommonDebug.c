@@ -58,15 +58,15 @@
 //****************************************************************************
 // VARIABLE DECLARATIONS
 //****************************************************************************
-bit d_isr_g_bRunCommand = _FALSE;
-BYTE isr_g_pucDdcciData[_SCALER_DEBUG_BUF_LEN];
-BYTE isr_g_ucDdcciCommandNumber;
+volatile bit d_isr_g_bRunCommand = _FALSE;
+volatile BYTE isr_g_pucDdcciData[_SCALER_DEBUG_BUF_LEN];
+volatile BYTE isr_g_ucDdcciCommandNumber;
 EnumDDCCIDebugMode g_enumDDCCIDebugMode = _DEBUG_MODE;
 
 #if(_DEBUG_MESSAGE_SUPPORT == _ON)
-bit d_isr_g_bDebugMessageEven = _FALSE;
-WORD isr_g_usFilterPro;
-bit d_isr_g_bFwHalt = _FALSE;
+volatile bit d_isr_g_bDebugMessageEven = _FALSE;
+volatile WORD isr_g_usFilterPro;
+volatile bit d_isr_g_bFwHalt = _FALSE;
 __xdata _Bool g_bDebugMessageStart = _FALSE;
 BYTE idata g_pucDebugMessageBUF[4];
 #endif // End of #if(_DEBUG_MESSAGE_SUPPORT == _ON)

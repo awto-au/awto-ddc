@@ -528,7 +528,7 @@ extern StructModeInfoType isr_g_stModeInfo;
 
 
 // __SYSTEM_POWER__
-extern StructPowerInfoType isr_g_stPowerInfo;
+extern volatile StructPowerInfoType isr_g_stPowerInfo;
 
 
 // __SYSTEM_SOURCE__

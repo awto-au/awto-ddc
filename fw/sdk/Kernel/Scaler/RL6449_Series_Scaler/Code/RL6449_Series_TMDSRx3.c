@@ -48,13 +48,13 @@
 // VARIABLE DECLARATIONS
 //****************************************************************************
 StructTMDSCtrlInfo isr_g_stTMDSRx3CtrlInfo;
-WORD isr_g_usTMDSRx3ClkCount;
+volatile WORD isr_g_usTMDSRx3ClkCount;
 WORD isr_g_usTMDSRx3PhyCount;
 WORD isr_g_usTMDSRx3PhyClk;
 BYTE isr_g_ucTMDSRx3PhyPend;
 
-BYTE g_pucTMDSRx3LEMax[3];
-BYTE g_pucTMDSRx3LEMin[3];
+volatile BYTE g_pucTMDSRx3LEMax[3];
+volatile BYTE g_pucTMDSRx3LEMin[3];
 BYTE g_pucTMDSRx3Tap0Min[3];
 BYTE g_pucTMDSRx3Tap0Max[3];
 BYTE g_ucTMDSRx3Tap0Init;

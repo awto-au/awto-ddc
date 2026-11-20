@@ -428,7 +428,7 @@ extern BYTE xdata MCU_DDCRAM_D6[_D6_EMBEDDED_DDCRAM_MAX_SIZE];
 
 
 extern BYTE g_pucDdcciRxBuf[_DDCCI_RXBUF_LENGTH];
-extern BYTE g_pucDdcciTxBuf[_DDCCI_TXBUF_LENGTH];
+extern volatile BYTE g_pucDdcciTxBuf[_DDCCI_TXBUF_LENGTH];
 
 #if(_HW_IIC_SUPPORT == _ON)
 extern BYTE g_ucHwI2cSettingIndex;

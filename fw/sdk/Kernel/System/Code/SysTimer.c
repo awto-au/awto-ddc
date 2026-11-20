@@ -40,10 +40,10 @@
 // VARIABLE DECLARATIONS
 //****************************************************************************
 // Backup for Burst Write Bug
-BYTE g_ucBackup_TIMER0;
-BYTE g_ucBackup_TIMER1;
-BYTE g_ucBackup_TIMER2;
-BYTE g_ucBackup_WDTIMER;
+volatile BYTE g_ucBackup_TIMER0;
+volatile BYTE g_ucBackup_TIMER1;
+volatile BYTE g_ucBackup_TIMER2;
+volatile BYTE g_ucBackup_WDTIMER;
 
 //****************************************************************************
 // FUNCTION DECLARATIONS

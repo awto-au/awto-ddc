@@ -143,8 +143,8 @@ extern BYTE g_pucDpRx1MstTimeSlotBackup[13];
 extern StructDpLinkInfo g_stDpRx1LinkInfo;
 #endif
 
-extern WORD isr_g_pusDpRx1ClockCount[4];
-extern WORD isr_g_pusDpRx1ClockCount1[4];
+extern volatile WORD isr_g_pusDpRx1ClockCount[4];
+extern volatile WORD isr_g_pusDpRx1ClockCount1[4];
 extern BYTE g_ucDpRx1Tp1PermitSwingLevel0;
 
 

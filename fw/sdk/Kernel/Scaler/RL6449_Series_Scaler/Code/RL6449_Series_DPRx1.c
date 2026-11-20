@@ -53,15 +53,15 @@ BYTE g_ucDpRx1Temp;
 BYTE g_pucDpRx1Backup[3];
 BYTE isr_g_ucDpRx1Info;
 BYTE g_ucDpRx1LinkRate;
-BYTE g_ucDpRx1LaneCount;
+volatile BYTE g_ucDpRx1LaneCount;
 BYTE g_ucDpRx1TrainingPatternSet;
 BYTE g_ucDpRx1AuxAddressBackup;
 
-BYTE isr_g_pucDpRx1LEBound[4];
+volatile BYTE isr_g_pucDpRx1LEBound[4];
 BYTE g_pucDpRx1Tap1MinTemp[4];
-BYTE isr_g_pucDpRx1Tap1Max[4];
+volatile BYTE isr_g_pucDpRx1Tap1Max[4];
 BYTE g_pucDpRx1LEMinTemp[4];
-BYTE isr_g_pucDpRx1LEMax[4];
+volatile BYTE isr_g_pucDpRx1LEMax[4];
 BYTE g_ucDpRx1EQCRC;
 BYTE g_ucRx1AuxTemp;
 BYTE g_ucRx1AuxTemp_EXINT;
@@ -82,8 +82,8 @@ StructDPRxHDCPAuthInfo g_stDpRx1HDCPAuthInfo;
 BYTE g_pucDPRx1Caps[3];
 #endif
 
-WORD isr_g_pusDpRx1ClockCount[4];
-WORD isr_g_pusDpRx1ClockCount1[4];
+volatile WORD isr_g_pusDpRx1ClockCount[4];
+volatile WORD isr_g_pusDpRx1ClockCount1[4];
 
 //****************************************************************************
 // FUNCTION DECLARATIONS

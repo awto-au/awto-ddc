@@ -39,7 +39,7 @@
 //****************************************************************************
 // VARIABLE DECLARATIONS
 //****************************************************************************
-StructPowerInfoType isr_g_stPowerInfo;
+volatile StructPowerInfoType isr_g_stPowerInfo;
 
 //****************************************************************************
 // FUNCTION DECLARATIONS

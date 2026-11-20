@@ -36,9 +36,9 @@
 // VARIABLE DECLARATIONS
 //****************************************************************************
 // Backup for Burst Write Bug
-BYTE g_ucBackup_EXINT0;
-BYTE g_ucBackup_EXINT1;
-BYTE g_ucBackup_SERIAL;
+volatile BYTE g_ucBackup_EXINT0;
+volatile BYTE g_ucBackup_EXINT1;
+volatile BYTE g_ucBackup_SERIAL;
 
 //****************************************************************************
 // FUNCTION DECLARATIONS

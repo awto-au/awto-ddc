@@ -121,7 +121,7 @@
 // VARIABLE EXTERN
 //****************************************************************************
 extern StructTMDSCtrlInfo isr_g_stTMDSRx2CtrlInfo;
-extern WORD isr_g_usTMDSRx2ClkCount;
+extern volatile WORD isr_g_usTMDSRx2ClkCount;
 extern WORD isr_g_usTMDSRx2PhyCount;
 extern WORD isr_g_usTMDSRx2PhyClk;
 extern BYTE isr_g_ucTMDSRx2PhyPend;
