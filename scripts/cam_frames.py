@@ -32,7 +32,7 @@ TILE_W, TILE_H = 352, 264        # analysis size for both streams (ROIs are frac
 ROI_BG = (0.62, 0.56, 0.96, 0.78)    # flat desktop area right of the console, clear of the VLC window and the head
 ROI_TXT = (0.04, 0.24, 0.58, 0.73)   # diag console text area
 DARK_FRAC = 0.6          # Y below this fraction of the pre-reset level = screen dark
-GLOW_FRAC = 0.1          # first light = Y above dark floor + this fraction of (settled - floor)
+GLOW_FRAC = 0.1          # first light = Y step over 2 frames above this fraction of (pre-reset level - dark floor)
 FLASH_RATIO = 1.25       # Y above this x pre-reset level, with no picture colour = flash (white / garbage)
 GOOD_TOL = 0.12          # |Y - pre| / pre below this = the pre-reset picture level
 GLOW_MIN = 8.0           # Y steps below this above the dark floor are sensor noise (8-bit units)
@@ -194,19 +194,24 @@ def find_events(m: dict[str, np.ndarray], pts_ms: list[float]) -> Events:
     ev.last_good = int(good[-1]) if len(good) else None
     floor = float(np.min(y[ev.dark:ev.dark + 10]))
     ev.level_dark = floor
-    lit = np.nonzero(y[ev.dark:] > floor + max(GLOW_MIN, GLOW_FRAC * (pre - floor)))[0]
+    step = y[ev.dark + 2:] - y[ev.dark:-2]               # a step, not the slow auto-exposure ramp of a dark screen
+    lit = np.nonzero(step > max(GLOW_MIN, GLOW_FRAC * (pre - floor)))[0]
     if not len(lit):
         ev.note = "never lit again"
         return ev
-    ev.first_light = ev.dark + int(lit[0])
+    thr = max(GLOW_MIN, GLOW_FRAC * (pre - floor))
+    ev.first_light = ev.dark + 2 + int(lit[0])
+    if y[ev.first_light - 1] - y[ev.first_light - 2] > thr / 2:      # the step started one frame earlier (rolling shutter)
+        ev.first_light -= 1
     coloured = chroma >= 0.5 * pre_c if pre_c >= CHROMA_MIN else np.abs(y - pre) <= GOOD_TOL * pre
     coloured &= y > floor + GLOW_MIN
     ev.stable = _first_hold(coloured, ev.first_light, STABLE_HOLD)
     end = ev.stable if ev.stable is not None else n
     neutral = np.abs(chroma) < 0.5 * max(pre_c, CHROMA_MIN)
-    ev.flash = [i for i in range(ev.first_light, end) if y[i] > FLASH_RATIO * pre and neutral[i]]
     txt = np.convolve(m["txt"], np.ones(3) / 3, mode="same")
     txt_final = float(np.median(m["txt"][-15:]))
+    bare = m["txt"] < 0.25 * txt_final if txt_final > 0.002 else np.ones(n, bool)     # a washed-out picture still shows its text
+    ev.flash = [i for i in range(ev.first_light, end) if y[i] > FLASH_RATIO * pre and neutral[i] and bare[i]]
     if txt_final > 0.002:
         c = np.nonzero(txt[ev.first_light:] > 0.5 * txt_final)[0]
         ev.console = ev.first_light + int(c[0]) if len(c) else None

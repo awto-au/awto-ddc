@@ -44,3 +44,20 @@ def test_flash_counted(events):
 def test_console_after_flash(events):
     assert events.console is not None and abs(events.console - 78) <= 1
     assert events.span(events.dark, events.first_light)[0] == events.first_light - events.dark
+
+
+def test_sweep_clip_split_per_restart(tmp_path):
+    size = f"{cf.TILE_W}x{cf.TILE_H}"
+    pic = f"color=c=0x606080:s={size}:r=25:d="
+    parts = [pic + "3", f"color=c=0x080808:s={size}:r=25:d=1", f"color=c=white:s={size}:r=25:d=0.2", pic + "4"] * 2
+    cmd = ["ffmpeg", "-nostdin", "-y", "-loglevel", "error"]
+    for p in parts:
+        cmd += ["-f", "lavfi", "-i", p]
+    clip = tmp_path / "sweep.mkv"
+    cmd += ["-filter_complex", f"concat=n={len(parts)}:v=1:a=0,format=yuv420p", "-c:v", "libx264", "-crf", "12", str(clip)]
+    subprocess.run(cmd, check=True)
+    res = cf.analyse_sweep(clip, sheet_dir=tmp_path / "sheets", expect=2)
+    assert len(res) == 2
+    for _off, ev in res:
+        assert len(ev.flash) == 5 and ev.stable is not None
+    assert (tmp_path / "sheets" / "run-02.png").is_file()

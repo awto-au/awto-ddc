@@ -262,6 +262,7 @@ def main() -> int:
     ap.add_argument("--gap-s", type=float, default=8.0)
     ap.add_argument("--camera", action="store_true", help="record the bench camera for the whole sweep and count frames per run (scripts/cam_frames.py)")
     ap.add_argument("--ref", default="active", choices=sorted(REFS), help="what the delay counts from: ACTIVE (video ready), eDP stream on, panel power-up")
+    ap.add_argument("--app-live-ok", action="store_true", help="run although a (shared, idle) GUI app is live: direct access to this unit only")
     ap.add_argument("--kind", default="reset", choices=("reset", "wake"), help="restart path: ISP warm reset or DDC/CI sleep + wake")
     a = ap.parse_args()
     values = [int(x) for x in a.values.split(",")]
@@ -270,7 +271,10 @@ def main() -> int:
         raise SystemExit(f"values 0..{d['MAX_MS']} ms, runs >= 1; nothing done")
     import gui_client
     if gui_client.app_live():       # direct bus access: its own reset + sync-log timing loop; reset / dbg-write are not ported
-        raise SystemExit("bl-sweep: the GUI app is running and owns the unit buses; stop it first (./dev.py gui ...); nothing done")
+        if not a.app_live_ok:
+            raise SystemExit("bl-sweep: the GUI app is running and owns the unit buses; stop it (./dev.py gui quit) or pass --app-live-ok "
+                             "when it is another agent's idle app (its stale job blocks quit); nothing done")
+        say("GUI app is live: --app-live-ok, direct bus access on this unit only (unit lock held)")
     serial = json.loads((ROOT / "scripts/devices.json").read_text())["units"][a.unit]["serial"]
     seq = order(values, a.runs)
     est_s = len(seq) * (a.gap_s + RUN_S)                          # RUN_S measured in the dry run

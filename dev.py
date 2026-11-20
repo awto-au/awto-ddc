@@ -1808,12 +1808,12 @@ def cmd_sweep(extra: list[str]) -> int:
 
 @command("backlight on-delay sweep for a filmed video test (docs/bl-delay-sweep.md): per run the TEST knob, ISP reset, sync-log check, "
          "host note; unattended after the START banner; ./tmp/logs/bl_sweep.tsv",
-         args="[--unit N] [--values 0,50,100,150,200,300,400] [--runs 3] [--gap-s 8] [--camera]", kind="action")
+         args="[--unit N] [--values 0,50,100,150,200,300,400] [--runs 3] [--gap-s 8] [--ref active|stream|powerup] [--kind reset|wake] [--camera] [--app-live-ok]", kind="action")
 def cmd_bl_sweep(extra: list[str]) -> int:
     _layout_watch()
     n, _u = _unit(extra)
-    opts: list[str] = ["--camera"] if _flag(extra, "--camera") else []
-    for flag in ("--values", "--runs", "--gap-s"):
+    opts: list[str] = [f for f in ("--camera", "--app-live-ok") if _flag(extra, f)]
+    for flag in ("--values", "--runs", "--gap-s", "--ref", "--kind"):
         v = _opt(extra, flag)
         if v is True:
             raise SystemExit(f"bl-sweep: {flag} needs a value; nothing done")
