@@ -85,7 +85,9 @@ def _gcd(a: int, b: int) -> int:
 
 
 def dev(*args: str) -> tuple[int, str]:
-    r = subprocess.run([str(ROOT / "dev.py"), *args], capture_output=True, text=True, cwd=ROOT, check=False)
+    """./dev.py <cmd>. synclog / note are thin clients of the GUI port: --direct here (no app, no headless auto-start), see main()"""
+    direct = ["--direct"] if args[0] in ("synclog", "note") else []
+    r = subprocess.run([str(ROOT / "dev.py"), *args, *direct], capture_output=True, text=True, cwd=ROOT, check=False)
     return r.returncode, r.stdout + r.stderr
 
 
@@ -223,6 +225,9 @@ def main() -> int:
     d = knob_defs()
     if any(not 0 <= v <= d["MAX_MS"] for v in values) or a.runs < 1:
         raise SystemExit(f"values 0..{d['MAX_MS']} ms, runs >= 1; nothing done")
+    import gui_client
+    if gui_client.app_live():       # direct bus access: its own reset + sync-log timing loop; reset / dbg-write are not ported
+        raise SystemExit("bl-sweep: the GUI app is running and owns the unit buses; stop it first (./dev.py gui ...); nothing done")
     serial = json.loads((ROOT / "scripts/devices.json").read_text())["units"][a.unit]["serial"]
     seq = order(values, a.runs)
     camera_hook(a.camera)
@@ -231,7 +236,7 @@ def main() -> int:
     with unit_lock.held(serial, "bl_sweep"):
         banner(f"START bl-sweep unit {a.unit}: {len(seq)} runs, order {seq[:len(values)]} x {a.runs}\n"
                f"host clock now {isostamp.now_ms()}  (compare with the phone clock; RUN lines carry the reset time)\n"
-               f"about {est_s / 60:.0f} min, unattended: start filming now, the sweep ends with a DONE banner")
+               f"about {est_s / 60:.0f} min, unattended until the DONE banner; match a camera recording by the RUN reset times")
         bad = 0
         try:
             for k, p in enumerate(seq, 1):

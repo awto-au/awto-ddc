@@ -36,6 +36,7 @@ Measured 2026-11-20, unit 3, warm reset (ISP 0xEE), image 50fd217, sync log ms f
 
 `./dev.py bl-sweep --unit 3 [--values 0,50,100,150,200,300,400] [--runs 3] [--gap-s 8]`
 
+- Bus access: direct, not through the GUI app's control port (#276): the run is its own reset + sync-log timing loop, and `reset` / `dbg-write` / `dbg-read` are not ported. It takes the unit lock, refuses to start while the app is running, and calls `synclog` / `note` with `--direct` (no headless app starts during the sweep).
 - Order: values sorted, taken with a stride coprime to n (7 values: 0 200 50 300 100 400 150), the round repeated `--runs` times.
 - Per run: knob write + read back, ISP reset, no bus traffic for 2.1 s, sync log read until ACTIVE + E1/E2 rows are in (5 s from the reset), verdict, host note `run k/n delay D ms` on the unit's console, gap.
 - Verdict OK = E2 knob equals the planned value and E1 is present; KNOB-MISMATCH / NO-KNOB-ROW / NO-BL-ROW otherwise. 3 broken runs in a row abort the sweep.
