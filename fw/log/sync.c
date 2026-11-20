@@ -519,7 +519,7 @@ void AwtoSyncDetect(BYTE ucPort, BYTE ucKind, BYTE ucPre, BYTE ucType)
         if(ucKind == _PORT_DP)
         {
             AwtoSyncPush(AWTO_SYNC_EV_DP, ucPort, ((DWORD)ScalerDpGetLinkRate(ucPort) << 8) | ScalerDpGetLaneCount(ucPort));
-            AwtoSyncPush(AWTO_SYNC_EV_DPLT, 1, ((DWORD)ucPort << 16) | (s_usAwtoDpLtT0 == 0) ? 0 : (WORD)((WORD)AwtoMs() - s_usAwtoDpLtT0));   // 0: training finished before the loop saw it
+            AwtoSyncPush(AWTO_SYNC_EV_DPLT, 1, ((DWORD)ucPort << 16) | ((s_usAwtoDpLtT0 == 0) ? 0 : (WORD)((WORD)AwtoMs() - s_usAwtoDpLtT0)));   // 0: training finished before the loop saw it
             s_usAwtoDpLtT0 = 0;
         }
         else

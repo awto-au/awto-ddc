@@ -365,12 +365,12 @@ F8	08	res	scaling:H down, V down, display %	timing
 F9	00	lim	FRC width:% (not limited)	timing
 F9	01	lim	FRC width:% (limited by DDR bandwidth)	timing
 F9	02	lim	FRC width:% (limited by DDR space)	timing
-FB	00	rms	slow delay (ms asked) + took:%	warning
-FB	10	rms	EXPIRED delay (ms asked) + took:%	error
-FB	01	rms	slow poll (register) + took:%	warning
-FB	11	rms	EXPIRED poll (register) + took:%	error
-FB	02	rms	slow event wait (event) + took:%	warning
-FB	12	rms	EXPIRED event wait (event) + took:%	error
+FB	00	ms2	slow delay:took %, asked %	warning
+FB	10	ms2	EXPIRED delay:took %, asked %	error
+FB	01	rms	slow poll of register (hex) + took:%	warning
+FB	11	rms	EXPIRED poll of register (hex) + took:%	error
+FB	02	rms	slow wait for event (hex) + took:%	warning
+FB	12	rms	EXPIRED wait for event (hex) + took:%	error
 FC	01	pms	DP link trained:% after the loop first saw it training	timing
 # #162 step 3 name tables 15..1B (looked up by row index, never logged): at the end, so the per-event row scan stops before them
 15	00	-	AC ON
