@@ -498,7 +498,9 @@ void SysSourceDetectPort(BYTE ucSearchIndex)
                     SET_SOURCE_TYPE(ucSearchIndex, ucSourceType);
                     AwtoSyncScan(enumSearchPort, ucSourceType);
                 #else
+                    AWTO_SCAN_BEGIN(AWTO_SCAN_TMDS_PHY);
                     SET_SOURCE_TYPE(ucSearchIndex, ScalerTMDSScanInputPort(enumSearchPort, GET_INPUTPORT_TYPE(ucSearchIndex)));
+                    AwtoSyncScan(enumSearchPort, GET_SOURCE_TYPE(ucSearchIndex));
                 #endif
                 }
             }
