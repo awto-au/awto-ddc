@@ -13,13 +13,14 @@ from pathlib import Path
 from PySide6.QtCore import QSettings, QTimer, Qt, Signal
 from PySide6.QtGui import QBrush, QColor, QIcon, QKeySequence, QPainter, QPixmap, QShortcut
 from PySide6.QtWidgets import (QAbstractSpinBox, QApplication, QCheckBox, QComboBox, QFrame, QHBoxLayout, QLabel, QLineEdit,
-                               QMessageBox, QPlainTextEdit, QProgressBar, QPushButton, QScrollArea, QSlider, QSplitter, QStackedWidget,
-                               QTableWidget, QTableWidgetItem, QTreeWidget, QTreeWidgetItem, QVBoxLayout, QWidget)
+                               QFileDialog, QMessageBox, QPlainTextEdit, QProgressBar, QPushButton, QScrollArea, QSlider, QSplitter, QStackedWidget,
+                               QTabWidget, QTableWidget, QTableWidgetItem, QTreeWidget, QTreeWidgetItem, QVBoxLayout, QWidget)
 
 from unit_jobs import ROOT, SubprocessBackend, UnitQueues
 
 sys.path.insert(0, str(ROOT / "scripts"))
 import flash_job  # noqa: E402
+import unit_log  # noqa: E402
 import isostamp  # noqa: E402
 import unit_lock  # noqa: E402
 import settings_table as T  # noqa: E402
@@ -814,6 +815,11 @@ class MonitorPage(QWidget):
         self.actions = QPlainTextEdit(readOnly=True)
         self.actions.setMaximumBlockCount(2000)
         lay.addWidget(self.actions, 1)
+        self.log_tabs = QTabWidget()
+        lay.addWidget(self.log_tabs, 3)
+        syncw = QWidget()
+        sl = QVBoxLayout(syncw)
+        sl.setContentsMargins(0, 0, 0, 0)
         sb = QHBoxLayout()
         sb.addWidget(QLabel("<b>boot / sync log</b>"))
         sb.addStretch()
@@ -821,21 +827,95 @@ class MonitorPage(QWidget):
         self.whole.setChecked(True)
         sb.addWidget(self.whole)
         sb.addWidget(self._btn("Read sync log", self.sync_log))
-        lay.addLayout(sb)
+        sl.addLayout(sb)
         self.sync_info = QLabel("")
-        lay.addWidget(self.sync_info)
+        sl.addWidget(self.sync_info)
         self.sync = QTableWidget(0, 2)
         self.sync.setHorizontalHeaderLabels(["+ms", "line"])
         self.sync.horizontalHeader().setStretchLastSection(False)
         self.sync.horizontalHeader().setSectionResizeMode(1, self.sync.horizontalHeader().ResizeMode.Stretch)
         self.sync.setColumnWidth(0, 60)
         self.sync.verticalHeader().hide()
-        lay.addWidget(self.sync, 3)
+        sl.addWidget(self.sync, 3)
+        self.log_tabs.addTab(syncw, "Sync log")
+        self.log_tabs.addTab(self._unit_log_tab(), "Unit log")
         lay.addWidget(QLabel("<b>last output</b>"))
         self.out = QPlainTextEdit(readOnly=True)
         self.out.setMaximumBlockCount(500)
         lay.addWidget(self.out, 1)
         return f
+
+    # --- Unit log: the saved history of the unit's sync ring (scripts/unit_log.py), never wiped by a console open / close or a reset
+    def _unit_log_tab(self) -> QWidget:
+        w = QWidget()
+        lay = QVBoxLayout(w)
+        lay.setContentsMargins(0, 0, 0, 0)
+        r = QHBoxLayout()
+        self.ulog_search = QLineEdit()
+        self.ulog_search.setPlaceholderText("search the saved log")
+        self.ulog_search.textChanged.connect(lambda *_: self.unit_log_show())
+        r.addWidget(self.ulog_search, 1)
+        self.ulog_follow = QCheckBox(f"follow ({unit_log.INTERVAL_S} s)")
+        self.ulog_follow.setToolTip("append the unit's ring to the saved log every poll while the unit is idle (not during a flash)")
+        r.addWidget(self.ulog_follow)
+        r.addWidget(self._btn("Read now", self.unit_log_read))
+        r.addWidget(self._btn("Save as...", self.unit_log_save_as))
+        lay.addLayout(r)
+        self.ulog_info = QLabel("")
+        lay.addWidget(self.ulog_info)
+        self.ulog = QPlainTextEdit(readOnly=True)
+        self.ulog.setLineWrapMode(QPlainTextEdit.NoWrap)
+        lay.addWidget(self.ulog, 1)
+        self.ulog_timer = QTimer(self)
+        self.ulog_timer.setInterval(unit_log.INTERVAL_S * 1000)
+        self.ulog_timer.timeout.connect(self._unit_log_tick)
+        self.ulog_follow.toggled.connect(lambda on: self.ulog_timer.start() if on else self.ulog_timer.stop())
+        return w
+
+    def unit_log_path(self, unit: str | None = None) -> Path:
+        return unit_log.log_path(self.states[unit or self.cur].info["serial"])
+
+    def unit_log_text(self, unit: str | None = None) -> str:
+        try:
+            return self.unit_log_path(unit).read_text(errors="replace")
+        except OSError:
+            return ""
+
+    def unit_log_show(self, unit: str | None = None):
+        q = self.ulog_search.text().lower()
+        lines = self.unit_log_text(unit).splitlines()
+        shown = [x for x in lines if q in x.lower()] if q else lines
+        self.ulog.setPlainText("\n".join(shown))
+        self.ulog.verticalScrollBar().setValue(self.ulog.verticalScrollBar().maximum())
+        self.ulog_info.setText(f"{len(shown)} of {len(lines)} saved lines" + (f" matching '{q}'" if q else "") + f"  ({self.unit_log_path(unit)})")
+
+    def unit_log_read(self, unit: str | None = None, after=None):
+        n = unit or self.cur
+
+        def done(rc, out, secs):
+            snap = unit_log.parse_output(out) if rc == 0 else None
+            if snap is not None:
+                added = unit_log.Store(snap["serial"] or self.states[n].info["serial"]).ingest(snap)
+                self.say(f"unit {n} unit log: {len(added)} new lines saved")
+            else:
+                self.say(f"unit {n} unit log: read failed (rc {rc}), nothing saved")
+            if n == self.cur:
+                self.unit_log_show(n)
+            if after:
+                after(rc, out, secs)
+        return self.sync_log(n, whole=True, after=done, as_json=True)
+
+    def _unit_log_tick(self):
+        st = self.states.get(self.cur)
+        if st is not None and st.writable and not st.flash and not st.pending:
+            self.unit_log_read()
+
+    def unit_log_save_as(self, path: str | None = None):
+        dest = path or QFileDialog.getSaveFileName(self, "Save the unit log as", f"{self.states[self.cur].info['serial']}-sync.log")[0]
+        if dest:
+            Path(dest).write_text(self.unit_log_text())
+            self.say(f"unit {self.cur} unit log saved as {dest}")
+        return dest
 
     # --- hotkeys
     def _hotkeys(self):
@@ -1428,9 +1508,10 @@ class MonitorPage(QWidget):
             (ln.strip() for ln in reversed(out.splitlines()) if "PASS" in ln or "FAIL" in ln), "no verdict line"), "health",
             unit=unit, after=after)
 
-    def sync_log(self, unit: str | None = None, whole: bool | None = None, after=None):
+    def sync_log(self, unit: str | None = None, whole: bool | None = None, after=None, as_json: bool = False):
         w = self.whole.isChecked() if whole is None else whole
-        return self.run("sync log", self.dev("synclog", *(["--whole"] if w else []), unit=unit), self._synced, "synclog", unit=unit, after=after)
+        args = [*(["--whole"] if w else []), *(["--json"] if as_json else [])]
+        return self.run("sync log", self.dev("synclog", *args, unit=unit), None if as_json else self._synced, "synclog", unit=unit, after=after)
 
     def _synced(self, rc, out) -> str:
         rows = sync_rows(out)

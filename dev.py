@@ -1187,9 +1187,15 @@ def cmd_alert(extra: list[str]) -> int:
     return _py("alert.py", "--bus", str(_live_bus(u)), *(["--wait"] if _flag(extra, "--wait") else []))
 
 
-@command("boot / sync log ring of a running unit, decoded (scripts/sync_log.py, #139) through the GUI app's control port (#276); --whole = all episodes",
-         args="[--unit N] [--map F] [--whole] [--delta] [--direct]", kind="action")
+@command("boot / sync log ring of a running unit, decoded (scripts/sync_log.py, #139) through the GUI app's control port (#276); --whole = all episodes; --json = machine form; --follow [--save] [--interval S] = poll and append to tmp/logs/units/<serial>-sync.log (scripts/unit_log.py)",
+         args="[--unit N] [--map F] [--whole] [--delta] [--json] [--follow --save --interval S --once] [--direct]", kind="action")
 def cmd_synclog(extra: list[str]) -> int:
+    if _flag(extra, "--follow"):                  # log-keep: poll the ring, append to tmp/logs/units/<serial>-sync.log (scripts/unit_log.py)
+        _flag(extra, "--save")                    # saving is what follow does
+        itv = _opt(extra, "--interval", None)
+        n, _u = _unit(extra)
+        return _py("unit_log.py", "follow", "--unit", str(n), *(["--interval", str(itv)] if itv not in (None, True) else []),
+                    *(["--direct"] if _flag(extra, "--direct") else []), *(["--once"] if _flag(extra, "--once") else []))
     return _thin("synclog", extra, lambda e: unit_ops.synclog(sys.modules[__name__], e))
 
 

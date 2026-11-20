@@ -574,7 +574,7 @@ class ControlPort(QObject):
     def m_synclog(self, p, done):
         n = self.unit_of(p)
         self.focus(n)
-        self._plain(done, self.page.sync_log(n, whole=bool(p.get("whole", True)), after=self._out(done, "synclog")))
+        self._plain(done, self.page.sync_log(n, whole=bool(p.get("whole", True)), after=self._out(done, "synclog"), as_json=bool(p.get("json"))))
 
     def m_host_time(self, p, done):
         n = self.unit_of(p, write=True)

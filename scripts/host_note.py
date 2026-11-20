@@ -71,7 +71,7 @@ def _wr(io, ad: int, v: int) -> None:
         raise OSError(f"0x35 write 0x{ad:04X} not acknowledged")
 
 
-def note_io(io, map_path: Path, text: str, open_console: bool = False) -> int:
+def note_io(io, map_path: Path, text: str, open_console: bool = False, serial: str | None = None) -> int:
     """log `text` on the unit; returns the note sequence. SystemExit with a clear message on an image without the feature."""
     import dbg_xdata as X
     mp = Path(map_path)
@@ -102,6 +102,9 @@ def note_io(io, map_path: Path, text: str, open_console: bool = False) -> int:
                           f"(limit = worst main pass 255 ms x 1.25): firmware without test cmd 0x{TC_HOST_NOTE:02X}? not logged")
         time.sleep(NOTE_POLL_S)
     say(f"note {seq}: {body.decode()!r}{' (truncated)' if cut else ''}")
+    if serial:
+        import unit_log
+        unit_log.note_written(serial, seq, body.decode())      # the ring keeps one text slot: the saved unit log keeps every text
     return seq
 
 
@@ -137,7 +140,7 @@ def main() -> int:
     i2cbus.require_unit(a.bus, a.serial)
     io = B.Real(a.bus, allow_write=True, regread=True)
     try:
-        note_io(io, a.map, a.text, a.open_console)
+        note_io(io, a.map, a.text, a.open_console, a.serial)
     except OSError as e:
         say(str(e))
         return 1

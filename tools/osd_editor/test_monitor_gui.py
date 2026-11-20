@@ -561,6 +561,53 @@ def screenshot(app):
     print("screenshot", out)
 
 
+class RingBackend(FakeBackend):
+    """`synclog --json` answers a ring of `count` lines (the unit's serial from devices.json)"""
+    count = 5
+
+    def run(self, argv, limit_s):
+        a = [str(x) for x in argv]
+        if "synclog" in a and "--json" in a:
+            import json as _json
+            unit = MON.load_units()[a[a.index("--unit") + 1]]
+            ents = [{"seq": k, "raw": f"01{k:02x}000100000000", "text": f"    {k}:mark {k}", "id": 1, "val": 0, "wall": None, "sure": False}
+                    for k in range(self.count)]
+            snap = {"serial": unit["serial"], "read": "2026-11-21T10:00:00.000+10:00", "seq": self.count, "n": 80, "wrap": 240, "ep_seq": 0,
+                    "kind": "power on", "lost": 0, "entries": ents}
+            return 0, "2026-11-21T10:00:00+10:00 SYNCJSON " + _json.dumps(snap) + "\n"
+        return super().run(argv, limit_s)
+
+
+def unit_log_tab(app):
+    """Unit log tab: Read now appends the ring to the saved log, a second read adds only new lines, search filters, Save as writes the file"""
+    import unit_log
+    unit_log.LOGDIR = WORK / "units"
+    for f in unit_log.LOGDIR.glob("*") if unit_log.LOGDIR.exists() else []:
+        f.unlink()
+    fb = RingBackend()
+    pg, fb, _ = make("gui_ulog", fb)
+    pg.show()
+    settle(pg)
+    pg.select_unit("3", read=False)
+    assert pg.log_tabs.tabText(1) == "Unit log"
+    pg.unit_log_read()
+    settle(pg)
+    assert len(pg.unit_log_text().splitlines()) == 5 and "5 of 5 saved lines" in pg.ulog_info.text(), pg.ulog_info.text()
+    pg.unit_log_read()                                   # nothing new: the log is not wiped, not doubled
+    settle(pg)
+    assert len(pg.unit_log_text().splitlines()) == 5
+    fb.count = 8
+    pg.unit_log_read()
+    settle(pg)
+    assert len(pg.unit_log_text().splitlines()) == 8 and "mark 7" in pg.ulog.toPlainText()
+    pg.ulog_search.setText("mark 3")
+    assert "1 of 8 saved lines matching" in pg.ulog_info.text() and pg.ulog.toPlainText().count("mark") == 1
+    dest = WORK / "units" / "saved-copy.log"
+    assert pg.unit_log_save_as(str(dest)) == str(dest) and len(dest.read_text().splitlines()) == 8
+    pg.hide()
+    print("ok unit log tab")
+
+
 def main():
     app = QApplication([])
     WORK.mkdir(parents=True, exist_ok=True)
@@ -580,6 +627,7 @@ def main():
     ddc_serialised()
     banner_reason()
     real_backend_limit()
+    unit_log_tab(app)
     screenshot(app)
     print("PASS")
 

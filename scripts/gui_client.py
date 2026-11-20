@@ -282,7 +282,7 @@ def translate(name: str, extra: list[str], unit: str) -> list[tuple[str, dict]]:
     if name == "synclog":
         if _take(x, "--map") or "--delta" in x:
             return [("passthrough", {**p, "name": "synclog", "args": extra_without(extra, "--unit", "--dp", "--force")})]
-        return [("synclog", {**p, "whole": _flag(x, "--whole")})]
+        return [("synclog", {**p, "whole": _flag(x, "--whole"), "json": _flag(x, "--json")})]
     if name == "note":
         if _take(x, "--map"):
             return [("passthrough", {**p, "name": "note", "args": extra_without(extra, "--unit", "--dp", "--force")})]
@@ -468,7 +468,7 @@ def _command_form(x: list[str], p: dict, confirm: bool) -> tuple[str, dict]:
         if c == "saver":
             return "saver", {**p, **({"stop": True} if a == ["stop"] else {"name": a[0]})}
         if c == "synclog":
-            return "synclog", {**p, "whole": "--whole" in a}
+            return "synclog", {**p, "whole": "--whole" in a, "json": "--json" in a}
         if c == "note":
             return "note", {**p, "text": a[0], "open_console": "--open-console" in a}
         if c == "vcp":

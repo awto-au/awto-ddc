@@ -177,7 +177,7 @@ def settings(d, extra: list[str]) -> int:
 
 
 def synclog(d, extra: list[str]) -> int:
-    flags = [f for f in ("--whole", "--delta") if d._flag(extra, f)]
+    flags = [f for f in ("--whole", "--delta", "--json") if d._flag(extra, f)]
     given = d._opt(extra, "--map")
     _n, u = d._unit(extra)
     b = d._live_bus(u)
