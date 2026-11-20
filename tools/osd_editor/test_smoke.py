@@ -48,6 +48,7 @@ class FakeBackend:
 
     def __init__(self):
         self.calls, self.limits, self.fail, self.direct = [], [], None, 0
+        self.fail_on = []                                # [(substring of the argv, rc, text)] consumed by the first matching call
 
     def run(self, argv, limit_s):
         a = [str(x) for x in argv]
@@ -59,6 +60,10 @@ class FakeBackend:
         if self.fail:
             rc, text, self.fail = self.fail[0], self.fail[1], None
             return rc, text
+        for hit in self.fail_on:
+            if hit[0] in " ".join(a):
+                self.fail_on.remove(hit)
+                return hit[1], hit[2]
         if "ddc" in a and "get" in a:
             vals = {"0x62": "VCP 62 CNC x00 x64 x00 x25", "0x8D": "VCP 8D CNC x00 x01 x00 x01", "0x10": "VCP 10 C 64 100",
                     "0x60": "VCP 60 SNC x11", "0xEB": "VCP EB CNC x00 x08 x00 x00"}

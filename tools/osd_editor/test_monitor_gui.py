@@ -438,7 +438,7 @@ def one_click_rows():
     assert writes(fb)[n0:] == [f"settings set {enum3['name']} {enum3['min'] + 2} --unit 3", f"settings set {enum3['name']} {enum3['min']} --unit 3"]
     assert seg.w.currentIndex() == 0 or fb.readback[enum3["name"]] != 0              # shows the unit's answer, not the click
     # a failed write puts the widget back
-    fb.fail = (1, "write failed\n")
+    fb.fail_on.append((f"settings set {enum3['name']} {enum3['min'] + 1}", 1, "write failed\n"))   # keyed to this write: a timer job cannot take it
     before = seg.w.currentIndex()
     click(seg.w.btns[1])
     settle(pg)

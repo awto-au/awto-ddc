@@ -739,9 +739,26 @@ def window_without_port():
     print("ok window without port: start failure gives a reason, window and banner still there")
 
 
+def writes_need_an_explicit_unit():
+    r = Rig("wunit")
+    r.call("select", {"unit": "2"})
+    n0 = len(r.fb.calls)
+    for cmd, par in (("set", {"name": "volume", "value": 30}), ("save", {}), ("note", {"text": "x"}), ("host-time", {}),
+                     ("vcp", {"op": "set", "code": "0x10", "value": 0}), ("i2c", {"addr": 0x37, "write": [1]}),
+                     ("flash", {"args": []}), ("kvm", {"target": "hdmi-1"}), ("saver", {"name": "off"}),
+                     ("passthrough", {"name": "settings", "args": ["set", "brightness", "0"]})):
+        rep = r.call(cmd, par)
+        assert rep["ok"] is False and "explicit unit" in str(rep.get("error")), (cmd, rep)
+    assert len(r.fb.calls) == n0, r.fb.calls[n0:]                          # nothing reached the unit
+    assert r.call("get", {"names": ["volume"]})["ok"]                      # a read may use the window's unit
+    assert r.call("set", {"unit": "1", "name": "volume", "value": 30})["ok"]
+    r.close()
+    print("ok writes without unit / serial are refused (nothing sent); reads keep the window's unit")
+
+
 def main():
     app = QApplication([])
-    for fn in (commands_change_model_and_view, risky_and_actions, save_and_kvm, failed_call_keeps_view, parallel_and_serial, events_stream,
+    for fn in (commands_change_model_and_view, writes_need_an_explicit_unit, risky_and_actions, save_and_kvm, failed_call_keeps_view, parallel_and_serial, events_stream,
                security, autostart_and_no_app, cli_end_to_end, raw_i2c_parsing, flash_async_progress_and_guards, flash_client_and_rc,
                flash_survives_app_and_reattaches, startup_wait_polls_and_fails_with_log, stale_job_state_is_rederived, gui_jobs_command, handover_and_late_unlink, window_without_port):
         fn()

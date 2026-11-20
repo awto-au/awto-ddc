@@ -272,8 +272,12 @@ class ControlPort(QObject):
             finish(error=f"internal error: {e!r}")
 
     # --- helpers
-    def unit_of(self, p: dict) -> str:
+    def unit_of(self, p: dict, write: bool = False) -> str:
+        """unit of a request. write=True: an explicit unit or serial is required, never the window's selection (a client that
+        sent none must not hit whichever unit another client or the user selected)"""
         pg = self.page
+        if write and p.get("serial") is None and p.get("unit") is None:
+            raise PortError("a write needs an explicit unit or serial (the window's selected unit is never assumed)")
         if p.get("serial"):
             hit = [n for n, st in pg.states.items() if st.info["serial"] == p["serial"]]
             if not hit:
@@ -414,7 +418,7 @@ class ControlPort(QObject):
             done(error=self.page.refused or "not started")
 
     def m_set(self, p, done):
-        n, name = self.unit_of(p), p["name"]
+        n, name = self.unit_of(p, write=True), p["name"]
         r = self.row(name)
         if "ro" in r["flags"]:
             raise PortError(f"{name} is read-only")
@@ -447,7 +451,7 @@ class ControlPort(QObject):
     m_run = m_set
 
     def m_save(self, p, done):
-        n = self.unit_of(p)
+        n = self.unit_of(p, write=True)
         self.focus(n)
         names = list(p.get("verify") or [])
 
@@ -462,7 +466,7 @@ class ControlPort(QObject):
         self._job(done, self.page.save(n, after=saved))
 
     def m_kvm(self, p, done):
-        n = self.unit_of(p)
+        n = self.unit_of(p, write=True)
         raw = str(p["target"])
         t = raw.replace("-", "").replace("_", "")
         t = {k.lower(): k for k in KVM.PORTS}.get(t.lower(), t.lower())
@@ -496,7 +500,7 @@ class ControlPort(QObject):
         self._job(done, pg.input_select(t, n, after=switched))
 
     def m_saver(self, p, done):
-        n = self.unit_of(p)
+        n = self.unit_of(p, write=True)
         names = {lab.lower(): v for lab, v in MON.SAVER_NOW}
         key = "stop" if p.get("stop") else str(p.get("name", "")).lower()
         v = names.get(key, int(key) if key.isdigit() else None)
@@ -535,15 +539,16 @@ class ControlPort(QObject):
         self._plain(done, self.page.sync_log(n, whole=bool(p.get("whole", True)), after=self._out(done, "synclog")))
 
     def m_host_time(self, p, done):
-        n = self.unit_of(p)
+        n = self.unit_of(p, write=True)
         self._plain(done, self.page.host_time(n, after=self._out(done, "host time")))
 
     def m_note(self, p, done):
-        n = self.unit_of(p)
+        n = self.unit_of(p, write=True)
         self._plain(done, self.page.note(str(p["text"]), n, bool(p.get("open_console")), after=self._out(done, "note")))
 
     def m_vcp(self, p, done):
-        n, op = self.unit_of(p), p.get("op", "get")
+        op = p.get("op", "get")
+        n = self.unit_of(p, write=op != "get")
         pg, dp = self.page, (["--dp"] if p.get("link") == "dp" else [])
         if op == "get":
             codes = [str(c) for c in p["codes"]]
@@ -564,7 +569,7 @@ class ControlPort(QObject):
 
     def m_i2c(self, p, done):
         """raw I2C on the unit: addr (7-bit), write = byte list, read = count (both: write, repeated start, read)"""
-        n, pg = self.unit_of(p), self.page
+        n, pg = self.unit_of(p, write=bool(p.get("write"))), self.page
         args = [str(p["addr"]), *[str(b) for b in p.get("write", [])]]
         if p.get("read"):
             args += ["--read", str(int(p["read"]))]
@@ -574,7 +579,7 @@ class ControlPort(QObject):
 
     def m_passthrough(self, p, done):
         """a dev.py device command the port does not model: runs as the unit's queued job (ddc list / sleep, settings defaults, ...)"""
-        n, pg = self.unit_of(p), self.page
+        n, pg = self.unit_of(p, write=True), self.page
         name = p["name"]
         if name not in GC.ROUTED:
             raise PortError(f"passthrough: {name!r} is not a routed command {sorted(GC.ROUTED)}")
@@ -585,7 +590,7 @@ class ControlPort(QObject):
 
     def m_flash(self, p, done):
         """async: replies with the job at once; progress and the result stream as flash / flash_done events (see flash_status)"""
-        n = self.unit_of(p)
+        n = self.unit_of(p, write=True)
         try:
             job = self.page.flash_start(n, [str(a) for a in p.get("args", [])])
         except ValueError as e:

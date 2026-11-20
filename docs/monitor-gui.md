@@ -22,7 +22,7 @@ Launch: `python3 tools/osd_editor/run.py --monitor` (opens on the monitor tab) o
 - Probe policy per unit (`monitor.probe_policy`): `ddc` (HDMI / DVI) = `dev.py ddc get 0x62 --unit N` (read-only, EDID guard inside dev.py), per idle unit every 15 s while the tab is visible; the reply also refreshes the volume value.
   - `light` (connector `card*-DP-*`, I2C over DP AUX) = no DDC/CI at all: dot green when the sysfs scan sees the unit's EDID; Get all / quick read / sets stay on demand.
   - `dev.py ddc` / `ddc_ctl.py --bus N` no longer runs a full `ddcutil detect` (all buses incl. AUX, ~1 s): the connector comes from the DRM sysfs `ddc` link, one `ddcutil --bus N getvcp`.
-  - 2026-11-20 unit 2 'picture black' report: probes at the 15 s rate gave no DRM / link event; cause found = repeated `set brightness = 0` jobs (see the issue draft), not the probe.
+  - Unit 2 went black 2026-11-20 23:00: brightness set to 0 from the GUI (15 sets); the probe was tested and did not blank the unit; cause of the POWER-key pair near 23:02 unknown.
 - Auto-detect: EDID serials from `/sys/class/drm/*/edid` (kernel copy, no I2C from the GUI), rescanned every 15 s (hotplug). A unit whose serial is not seen is red and not probed or read. No known serial seen at all = no scan result, devices.json stands.
 - Per-unit state in memory (values, touched-not-set values, last read, tree node, output, banner): a switch is a view swap, no read.
 - "Get all" runs only on the button, the live-refresh checkbox, or when a selected unit's view is older than 60 s (or never read).
@@ -70,6 +70,7 @@ Launch: `python3 tools/osd_editor/run.py --monitor` (opens on the monitor tab) o
 - Strip tooltip: last successful read (any kind) as ISO time, or "not read yet".
 
 ## Control port (#276, 2026-11-20)
+- Writes (set / run / save / kvm / saver / note / host-time / vcp set / i2c with write bytes / passthrough / flash) need an explicit `unit` or `serial`: no fallback to the window's selected unit, error "a write needs an explicit unit or serial". Reads keep the fallback.
 - The GUI app is the only owner of the unit buses; scripts, agents and the human use its port. Code: `tools/osd_editor/control_port.py` (server), `scripts/gui_client.py` (client), `scripts/unit_ops.py` (the device ops), `scripts/flash_job.py` (detached flash).
 - One implementation: `scripts/unit_ops.py` (ddc, settings, synclog, note, kvm, i2c) + `dev.py _flash_direct`. The app's workers run `dev.py <cmd> --direct` (env `AWTO_GUI_WORKER=1`). `dev.py ddc / settings / kvm / synclog / note / i2c / flash` are thin port clients.
 - No fallback: no app answering = dev.py auto-starts `run.py --headless` (detached, log `tmp/logs/gui-headless.log`), prints `gui: starting the GUI app headless ...` and polls the socket every 0.1 s up to `START_WAIT_S` = 3 s, then FAILS naming that log (no silent retry; an app process that exits while starting fails at once with its rc). Nothing runs on the unit.
