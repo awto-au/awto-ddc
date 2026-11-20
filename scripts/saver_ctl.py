@@ -44,7 +44,7 @@ def ddc_set(bus, code, val):
 
 
 def alert(bus):
-    r = subprocess.run([sys.executable, str(ROOT / "scripts/alert.py"), "--bus", str(bus), "--wait"], capture_output=True, text=True, check=False)
+    r = subprocess.run([sys.executable, str(ROOT / "scripts/alert.py"), "--bus", str(bus), "--wait", "--auto"], capture_output=True, text=True, check=False)
     say(f"alert rc={r.returncode}")
 
 

@@ -860,7 +860,7 @@ def _flash_direct(extra: list[str]) -> int:
 def _flash_warn(bus: int) -> None:
     """Before the ISP session: 1 s alert tone (finished before the MCU is halted, #229), then the warning screen from the running firmware (#232).
     Old firmware: both are logged and skipped, the flash goes on."""
-    _py("alert.py", "--bus", str(bus), "--wait")
+    _py("alert.py", "--bus", str(bus), "--wait", "--auto")
     _py("flash_screen.py", "show", "--bus", str(bus))
 
 

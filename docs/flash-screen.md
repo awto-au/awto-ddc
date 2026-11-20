@@ -7,6 +7,7 @@ Status 2026-11-18. Seen on unit 3 (Dan: "looked great").
 - 1 s alert tone first, so the host never starts while the generator is on: `scripts/alert.py --wait`, DDC/CI VCP 0xEB = 6.
   - Rising beep, beep, long beep (880 / 1175 / 1568 Hz, 150 + 50 + 150 + 50 + 600 ms), monitor speaker at the monitor's own volume (VCP 0x62).
   - Same call for "an agent needs Dan": `./dev.py alert --unit 3`.
+  - Mute means mute: the flash warning (and the saver tour) call `alert.py --auto`: VCP 0x8D = 1 (muted), an unreadable mute state, or env `AWTO_SOUND=off` skips the tone; one log line either way (`alert tone skipped: ...` / `alert tone played`). Explicit `./dev.py alert` always plays.
 - Red full-panel screen with a static 36 x 36 px Pac-Man (3 x 2 tiles, mouth open, drawn once, never redrawn) and text rows, from the running firmware (VCP 0xEB = 5), then updated over ISP:
   - title: FLASHING - DO NOT POWER OFF
   - row 1: phase + bank (BANKED / BANK0 / COMMON / BOOT, `boot_last` order) + `SKIP n/N` (image sectors already matching, no need to flash / image sectors; erased = the `SEC n/N` of row 2; totals + on-device manifest: `docs/flash-registry.md`), row 2: address, sector n/N, %

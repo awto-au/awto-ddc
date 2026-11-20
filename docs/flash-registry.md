@@ -14,6 +14,8 @@ Decision (Dan, 2026-11-18): the registry lives ON the device; no host-side file 
 5. Erase / program / verify the write set, `boot_last` order, then the final CRC over the image runs (unchanged).
 6. Write the manifest LAST; skipped when the device already holds exactly it (a no-op flash writes nothing).
 
+Pre-flash alert tone honours mute (VCP 0x8D) and `AWTO_SOUND=off`: `docs/flash-screen.md`.
+
 - No valid manifest (erased, no valid word, bad CRC, aborted flash, other sector count, `--full`): hardware CRC of every image sector builds the diff (CRC8 per quarter sector, `flash_state.CRC_PARTS`, a changed sector hides with p = 2^-32), or a readback without the CRC engine. Logged `no valid device manifest (...)`. The manifest is written at the end.
 - `--no-device-manifest`: no invalidation and no manifest write (a valid manifest is still read and used).
 - Local `tmp/fw/<serial>-flash-state.json` is kept for MIXED-image tracking, deploy (EDID sector) and `_log_unit_state`; the diff never reads it.
