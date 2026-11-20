@@ -10,7 +10,7 @@ import time
 from dataclasses import dataclass, field
 from pathlib import Path
 
-from PySide6.QtCore import QSettings, QTimer, Qt
+from PySide6.QtCore import QSettings, QTimer, Qt, Signal
 from PySide6.QtGui import QBrush, QColor, QIcon, QKeySequence, QPainter, QPixmap, QShortcut
 from PySide6.QtWidgets import (QAbstractSpinBox, QApplication, QCheckBox, QComboBox, QFrame, QHBoxLayout, QLabel, QLineEdit,
                                QMessageBox, QPlainTextEdit, QPushButton, QScrollArea, QSlider, QSplitter, QStackedWidget,
@@ -26,19 +26,21 @@ PYTHON = "python3"
 LOG = ROOT / "tmp" / "logs" / "osd_editor.log"
 # Per-call limits = 3x the slowest unit-3 call measured 2026-11-18 (docs/osd-editor-spec.md section 7).
 # Expiry: TERM (dev.py's finally switches the debug link off), kill after TERM_GRACE_S, log line + banner.
-LIMIT_S = {"list": 20, "one": 4, "health": 13, "synclog": 4, "host_time": 5, "kvm": 10, "ddc": 5}
+LIMIT_S = {"list": 20, "one": 4, "health": 13, "synclog": 4, "host_time": 5, "kvm": 10, "ddc": 5, "ddcmany": 10}
 REFRESH_S = 15                                           # live refresh and status probe pace: one "list" takes ~6.4 s
 STALE_S = 60                                             # a unit view older than this is re-read when selected (Dan 2026-11-20)
-NO_ANSWER_RE = re.compile(r"no bus with (?:that )?EDID serial|DDC communication failed|no monitors detected|not found")
+NO_ANSWER_RE = re.compile(r"no bus with (?:that )?EDID serial|DDC communication failed|no monitors detected")
 SLOW_MS = 100                                            # sync log: a step slower than this is highlighted (#216)
 SLOW_BRUSH = QBrush(QColor("#ff5050"))
 INPUTS = ("D1", "D2", "D3")                              # scripts/kvm.py port names
 VCP_VOLUME, VCP_MUTE, VCP_SAVER = "0x62", "0x8D", "0xEB"
+PROBE_FAILS_DOWN = 2
 PROBE_VCP = VCP_VOLUME                                   # status dot: cheapest read-only call, dev.py ddc get (EDID guard inside)
 # VCP 0xEB start / stop values; the registry row screensaver_now lists 0..4, 5 = flash warning
 SAVER_NOW = (("Stop", 0), ("Selected", 1), ("Pac-Man", 2), ("Scope 2", 4), ("Flash warning", 5), ("Boot splash", 7), ("Asteroids", 8))
 QUICK_ROWS = ("volume", "mute", "brightness")            # registry rows reused as widgets in the Quick strip
 VCP_ROW = {"volume": VCP_VOLUME, "mute": VCP_MUTE}       # quick rows written through DDC/CI, the rest through the mailbox
+QUICK_VCP = ("volume", "mute", "brightness", "input", "screensaver_now")   # registry rows read by DDC/CI VCP code
 VALUE_RE = re.compile(r"(?:^|\s)(\w+) = .* \(raw (-?\d+)\)\s*$")
 VCP_GET_RE = re.compile(r"VCP\s+([0-9A-Fa-f]{2})\s+(C|SNC|CNC)\s+((?:x?[0-9A-Fa-f]+\s*){1,4})")   # dev.py ddc get (ddcutil --brief)
 STEP_RE = re.compile(r"(?:^|\s)(\d{1,5}):(?!\d)")        # sync_log line: "<ms since episode start>:text"
@@ -46,6 +48,8 @@ DOT = {"ok": "#3fb950", "busy": "#d29922", "down": "#ff5050", "unknown": "#80808
 PAGE_ROLE = Qt.UserRole
 ROW_ROLE = Qt.UserRole + 1
 EDID_GLOB = "/sys/class/drm/*/edid"                      # kernel's copy of each connected monitor's EDID: no I2C from the GUI
+ADVANCED_PAGES = ("debug", "service")                    # hidden unless "show advanced" (QSettings monitor/advanced)
+INPUT_VCP = "0x60"
 
 
 def load_units() -> dict:
@@ -91,6 +95,20 @@ def sync_summary(rows: list[tuple[str, str, bool]]) -> str:
             (f"slowest step +{slow[0]} ms" if slow else "no steps") + f", {sum(s for *_, s in rows)} over {SLOW_MS} ms")
 
 
+REASON_RE = re.compile(r"missing|not found|no bus|failed|expired|refus|not booted")
+ERROR_RE = re.compile(r"\bERROR\b|Traceback")
+
+
+def reason_line(out: str) -> str:
+    """banner text: the line that says why (mailbox missing, map not found, ...), else an ERROR line, else the last line"""
+    lines = [ln.strip() for ln in out.splitlines() if ln.strip()]
+    for rx in (REASON_RE, ERROR_RE):
+        hit = next((ln for ln in reversed(lines) if rx.search(ln)), None)
+        if hit:
+            return hit
+    return lines[-1] if lines else "no output"
+
+
 def row_of(name: str) -> dict:
     return next(r for r in T.ROWS if r["name"] == name)
 
@@ -117,6 +135,9 @@ class UnitState:
     values: dict = field(default_factory=dict)           # registry row name -> raw value last read or set
     dirty: dict = field(default_factory=dict)            # touched widget values not yet set (kept across a unit switch)
     last_read: float | None = None                       # monotonic time of the last full "settings list"
+    last_read_iso: str = ""                              # wall time of the last successful read of any kind (strip tooltip)
+    probe_fails: int = 0                                 # consecutive failed probes: one miss is an EDID read glitch (#76), two = down
+    unknown: bool = False                                # monitor seen by EDID, not in devices.json: shown, never touched
     node: str | None = None                              # selected tree node: "page:N" or "row:name"
     out: str = ""
     banner: str = ""
@@ -124,9 +145,11 @@ class UnitState:
 
     @property
     def writable(self) -> bool:
-        return bool(self.info.get("test"))
+        return bool(self.info.get("test")) and not self.unknown
 
     def dot(self) -> str:
+        if self.unknown:
+            return "unknown"
         if not self.writable:
             return "unknown"
         if self.detected is False:
@@ -146,6 +169,68 @@ def dot_icon(colour: str) -> QIcon:
     return QIcon(pm)
 
 
+SEGMENT_MAX = 4                                          # enums up to this many options are one-click buttons, larger ones a combo box
+
+
+class Choice(QWidget):
+    """One-click chooser with all options visible: a switch (2 on/off options) or a segmented button row.
+    Quacks like the combo box the row used before (currentIndex / setCurrentIndex / count); `picked` fires on a user click only."""
+
+    picked = Signal(int)
+
+    def __init__(self, options: list[str], switch: bool = False):
+        super().__init__()
+        self.options, self.switch, self.idx = list(options), switch, 0
+        lay = QHBoxLayout(self)
+        lay.setContentsMargins(0, 0, 0, 0)
+        lay.setSpacing(0)
+        self.btns: list[QPushButton] = []
+        for i, o in enumerate(self.options if not switch else [self.options[0]]):
+            b = QPushButton(o)
+            b.setCheckable(True)
+            b.setMinimumHeight(28)
+            b.setStyleSheet("QPushButton:checked { background: #2a6fb0; color: white; font-weight: bold; }")
+            b.clicked.connect(lambda _=False, i=i: self._click(i))
+            self.btns.append(b)
+            lay.addWidget(b)
+        lay.addStretch(1)
+        self.setCurrentIndex(0)
+
+    def _click(self, i: int):
+        self.setCurrentIndex(1 - self.idx if self.switch else i)
+        self.picked.emit(self.idx)
+
+    def count(self) -> int:
+        return len(self.options)
+
+    def currentIndex(self) -> int:
+        return self.idx
+
+    def currentText(self) -> str:
+        return self.options[self.idx]
+
+    def setCurrentIndex(self, i: int):
+        self.idx = max(0, min(i, len(self.options) - 1))
+        if self.switch:
+            self.btns[0].setText(f"{self.options[self.idx]}")
+            self.btns[0].setChecked(self.idx == 1)
+        else:
+            for k, b in enumerate(self.btns):
+                b.setChecked(k == self.idx)
+
+    def setCurrentText(self, t: str):
+        self.setCurrentIndex(self.options.index(t))
+
+
+def instant_options(r: dict) -> tuple[list[str], bool] | None:
+    """(options, is_switch) for a row that is one click (bool, enum with 2..SEGMENT_MAX options), None = slider or combo"""
+    if r["type"] == "bool":
+        return ["off", "on"], True
+    if r["type"] == "enum" and 2 <= len(r["options"]) <= SEGMENT_MAX:
+        return r["options"], [o.lower() for o in r["options"]] == ["off", "on"]
+    return None
+
+
 class SettingRow(QWidget):
     """One registry row: widget + value label + Set (the page runs the call). `ro` rows are shown, never writable.
     A row the user touched (drag, pick) keeps its widget value on refresh until Set succeeds."""
@@ -153,7 +238,8 @@ class SettingRow(QWidget):
     def __init__(self, r: dict, on_set, compact: bool = False):
         super().__init__()
         self.setAttribute(Qt.WA_StyledBackground, True)
-        self.r, self.dirty = r, False
+        self.r, self.dirty, self.instant = r, False, False
+        self.on_set = on_set
         self.read_only = "ro" in r["flags"]
         lay = QHBoxLayout(self)
         lay.setContentsMargins(0, 0, 0, 0)
@@ -170,7 +256,12 @@ class SettingRow(QWidget):
             self.w.actionTriggered.connect(self._touched)
             self.val = QLabel()
             self.val.setMinimumWidth(60 if compact else 80)
-        else:                                            # enum, bool (0/1 as combo too)
+        elif (ch := instant_options(r)) is not None:     # bool / small enum: one click = one write (Set button hidden)
+            self.w = Choice(*ch)
+            self.w.picked.connect(self._picked)
+            self.val = None
+            self.instant = True
+        else:                                            # large enum: combo box + Set
             self.w = QComboBox()
             self.w.addItems(r["options"] or ["off", "on"])
             self.w.activated.connect(self._touched)
@@ -184,6 +275,7 @@ class SettingRow(QWidget):
         self.btn = QPushButton("Set")
         self.btn.clicked.connect(lambda: on_set(self))
         lay.addWidget(self.btn)
+        self.btn.setVisible(not self.instant)
         self.w.setEnabled(not self.read_only)
         self.btn.setEnabled(not self.read_only)
         self._shown()
@@ -191,6 +283,16 @@ class SettingRow(QWidget):
     def _touched(self, *_):
         self.dirty = True
 
+    def _picked(self, *_):
+        self.dirty = True
+        self.on_set(self)
+
+    def set_writable(self, w: bool):
+        """greyed on a read-only unit; the one-click widget itself is the control, so it follows"""
+        on = w and not self.read_only
+        self.btn.setEnabled(on)
+        if self.instant:
+            self.w.setEnabled(on)
     def _shown(self, *_):
         if self.val:
             self.val.setText(f"{self.w.value()} {dict(percent='%', ms='ms', s='s').get(self.r['unit'], '')}".strip())
@@ -236,7 +338,7 @@ class SettingRow(QWidget):
 class ActionRow(QWidget):
     """An action row of the registry: one Run button (the page asks before it runs)"""
 
-    read_only, dirty = False, False
+    read_only, dirty, instant = False, False, False
 
     def __init__(self, r: dict, on_set):
         super().__init__()
@@ -265,6 +367,9 @@ class ActionRow(QWidget):
     def set_ok(self, v):
         pass
 
+    def set_writable(self, w: bool):
+        self.btn.setEnabled(w)
+
 
 class MonitorPage(QWidget):
     def __init__(self, backend=None, log_path: Path = LOG, settings: QSettings | None = None, detect=detect_serials):
@@ -273,8 +378,9 @@ class MonitorPage(QWidget):
         self.settings = settings or QSettings("awto", "osd_editor")
         self.queues = UnitQueues(backend or SubprocessBackend(), self)
         self.queues.done.connect(self._finish, Qt.QueuedConnection)   # UI-thread slot, emitted from the worker
-        self.units = load_units()
+        self.units = load_units()                        # devices.json only; self.states also holds unknown monitors
         self.states = {n: UnitState(n, u) for n, u in self.units.items()}
+        self.advanced = str(self.settings.value("monitor/advanced", "false")).lower() == "true"
         self.cur = next(iter(self.units))
         self.rows: dict[str, SettingRow] = {}               # registry rows with a value widget (int / enum / bool)
         self.all_rows: dict[str, QWidget] = {}              # every registry row's form widget (action rows too)
@@ -287,7 +393,8 @@ class MonitorPage(QWidget):
         self.unit_btns: dict[str, QPushButton] = {}
         self.highlight: QWidget | None = None
         lay = QVBoxLayout(self)
-        lay.addLayout(self._strip())
+        self.strip_row = self._strip()
+        lay.addLayout(self.strip_row)
         self.banner = QLabel()                           # unit does not answer / call timed out
         self.banner.setWordWrap(True)
         self.banner.setStyleSheet("color: #ff5050; font-weight: bold;")
@@ -310,6 +417,7 @@ class MonitorPage(QWidget):
         self.probe_timer.setInterval(REFRESH_S * 1000)
         self.probe_timer.timeout.connect(self.probe_tick)
         self._hotkeys()
+        self.apply_filters()
         last = str(self.settings.value("monitor/last_unit", ""))
         self.scan()
         self.select_unit(last if last in self.units else next((n for n, u in self.units.items() if u.get("test")), self.cur), read=False)
@@ -323,16 +431,8 @@ class MonitorPage(QWidget):
 
     def _strip(self) -> QHBoxLayout:
         row = QHBoxLayout()
-        for i, (n, u) in enumerate(self.units.items(), 1):
-            b = QPushButton()
-            b.setCheckable(True)
-            b.setAutoExclusive(True)
-            b.setMinimumHeight(44)
-            b.setToolTip(f"hotkey {i}" if i < 10 else "")
-            b.clicked.connect(lambda _=False, n=n: self.select_unit(n))
-            self.unit_btns[n] = b
-            row.addWidget(b)
-            self._strip_text(n)
+        for n in self.states:
+            self._add_unit_btn(n, row)
         row.addStretch(1)
         self.search = QLineEdit()
         self.search.setPlaceholderText("search name, label, id, VCP (Ctrl+F)")
@@ -343,13 +443,29 @@ class MonitorPage(QWidget):
         row.addWidget(self.search)
         return row
 
+    def _add_unit_btn(self, n: str, row: QHBoxLayout):
+        b = QPushButton()
+        b.setCheckable(True)
+        b.setAutoExclusive(True)
+        b.setMinimumHeight(44)
+        b.clicked.connect(lambda _=False, n=n: self.select_unit(n))
+        self.unit_btns[n] = b
+        row.insertWidget(len(self.unit_btns) - 1, b)
+        self._strip_text(n)
+
     def _strip_text(self, n: str):
         st, b = self.states[n], self.unit_btns[n]
-        i = list(self.units).index(n) + 1
-        b.setText(f"{i}  unit {n}  {'' if st.writable else '(ro) '}\n{st.info['serial'][-4:]}  {st.info['input']}")
+        i = list(self.states).index(n) + 1
+        if st.unknown:
+            b.setText(f"{i}  unknown  (ro)\n{st.info['serial'][-6:]}")
+        else:
+            b.setText(f"{i}  unit {n}  {'' if st.writable else '(ro) '}\n{st.info['serial'][-4:]}  {st.info['input']}")
         b.setIcon(dot_icon(DOT[st.dot()]))
         why = {"ok": "answers", "busy": "job running", "down": "no answer / not detected", "unknown": "not probed"}[st.dot()]
-        b.setToolTip(f"unit {n} {st.info['serial']}: {why}; hotkey {i}")
+        if st.unknown:
+            why = "monitor seen by EDID, not in devices.json: read-only, not probed"
+        b.setToolTip(f"unit {n} {st.info['serial']}: {why}; hotkey {i}\n"
+                     + (f"last read {st.last_read_iso}" if st.last_read_iso else "not read yet"))
 
     def _quick_panel(self) -> QWidget:
         f = QFrame()
@@ -363,11 +479,11 @@ class MonitorPage(QWidget):
             r1.addWidget(sr, 1)
         lay.addLayout(r1)
         r2 = QHBoxLayout()
-        self.inp = QComboBox()
-        self.inp.addItems(INPUTS)
+        self.inp = Choice(list(INPUTS))                  # one click = kvm.py selects that input
+        self.inp_touched = False
+        self.inp.picked.connect(self._input_picked)
         r2.addWidget(QLabel("input"))
         r2.addWidget(self.inp)
-        r2.addWidget(self._btn("Input select", self.input_select))
         r2.addSpacing(20)
         self.saver = QComboBox()
         for label, v in SAVER_NOW:
@@ -377,6 +493,8 @@ class MonitorPage(QWidget):
         r2.addWidget(self._btn("Start", self.saver_start))
         r2.addWidget(self._btn("Stop", self.saver_stop))
         r2.addStretch()
+        self.now_state = QLabel("unit shows: -")
+        r2.addWidget(self.now_state)
         r2.addWidget(self._btn("Read quick values", self.quick_get))
         lay.addLayout(r2)
         return f
@@ -402,6 +520,10 @@ class MonitorPage(QWidget):
         self.live = QCheckBox("hide inert rows")
         self.live.toggled.connect(self.apply_filters)
         lay.addWidget(self.live)
+        self.adv = QCheckBox(f"show advanced ({', '.join(ADVANCED_PAGES)})")
+        self.adv.setChecked(self.advanced)
+        self.adv.toggled.connect(self.set_advanced)
+        lay.addWidget(self.adv)
         return f
 
     def _form_panel(self) -> QWidget:
@@ -496,11 +618,11 @@ class MonitorPage(QWidget):
         fw = QApplication.focusWidget()
         if plain and isinstance(fw, (QLineEdit, QAbstractSpinBox, QPlainTextEdit)):
             return                                       # a digit typed into a field is text
-        if i < len(self.units):
-            self.select_unit(list(self.units)[i])
+        if i < len(self.states):
+            self.select_unit(list(self.states)[i])
 
     def next_unit(self):
-        ns = list(self.units)
+        ns = list(self.states)
         self.select_unit(ns[(ns.index(self.cur) + 1) % len(ns)])
 
     # --- visibility: scan + probes only while the page is shown
@@ -531,9 +653,32 @@ class MonitorPage(QWidget):
         except Exception as e:                           # a failed scan leaves the list as devices.json gives it
             self.say(f"monitor scan failed: {e!r}")
             return
-        known = any(st.info["serial"] in seen for st in self.states.values())
-        for n, st in self.states.items():
+        known = any(st.info["serial"] in seen for n, st in self.states.items() if n in self.units)
+        for n in self.units:
+            st = self.states[n]
             st.detected = (st.info["serial"] in seen) if known else None
+            self._strip_text(n)
+        self._sync_unknown(seen)
+
+    def _sync_unknown(self, seen: set[str]):
+        """monitors seen by EDID that devices.json does not list: read-only 'unknown' units, removed when unplugged"""
+        listed = {u["serial"] for u in self.units.values()}
+        have = {st.info["serial"]: n for n, st in self.states.items() if st.unknown}
+        for ser in sorted(seen - listed - set(have)):
+            n = f"?{ser}"
+            self.states[n] = UnitState(n, {"serial": ser, "input": "?"}, detected=True, unknown=True)
+            self._add_unit_btn(n, self.strip_row)
+            self.say(f"unknown monitor seen: EDID serial {ser}, not in devices.json (read-only)")
+        for ser, n in have.items():
+            if ser not in seen:
+                if self.cur == n:
+                    self.select_unit(next(iter(self.units)), read=False)
+                b = self.unit_btns.pop(n)
+                self.strip_row.removeWidget(b)
+                b.deleteLater()
+                del self.states[n]
+                self.say(f"unknown monitor {ser} unplugged")
+        for n in self.states:
             self._strip_text(n)
 
     def select_unit(self, n: str, read: bool = True):
@@ -551,7 +696,7 @@ class MonitorPage(QWidget):
         for b in self.buttons:
             b.setEnabled(w)
         for sr in [*self.rows.values(), *self.quick.values()]:
-            sr.btn.setEnabled(w and not sr.read_only)
+            sr.set_writable(w)
         for sr in self.all_rows.values():
             if isinstance(sr, ActionRow):
                 sr.btn.setEnabled(w)
@@ -560,9 +705,13 @@ class MonitorPage(QWidget):
         if not w:
             self.refresh.setChecked(False)
         self.refresh.setEnabled(w)
-        self.state.setText("test unit: writable" if w else "working screen: read-only, controls greyed")
+        self.state.setText("test unit: writable" if w else
+                           "unknown monitor (not in devices.json): read-only, controls greyed" if st.unknown else
+                           "working screen: read-only, controls greyed")
         self.state.setStyleSheet("" if w else "color: #ff5050;")
         self.out.setPlainText(st.out)
+        self.inp_touched = False
+        self._quick_state(n)
         self.banner.setText(st.banner)
         self.banner.setVisible(bool(st.banner))
         node = st.node or str(self.settings.value(f"monitor/node/{n}", "") or "") or "page:0"
@@ -582,13 +731,15 @@ class MonitorPage(QWidget):
         st = self.states[n]
         stale = st.last_read is None or time.monotonic() - st.last_read > STALE_S
         if stale and st.writable and st.detected is not False and not st.pending:
+            self.quick_get(n)                            # DDC/CI reads first: they work on every image, Get all needs the mailbox
             self.get_all(n)
 
     # --- tree, search
     def _select_node(self, node: str):
         kind, _, key = node.partition(":")
         it = self.page_items.get(int(key)) if kind == "page" and key.isdigit() else self.items.get(key) if kind == "row" else None
-        self.tree.setCurrentItem(it or self.page_items[0])
+        top = it if it is not None and it.parent() is None else it.parent() if it is not None else None
+        self.tree.setCurrentItem(it if it is not None and not top.isHidden() else self.page_items[0])
 
     def _node_changed(self, it, _prev=None):
         if it is None:
@@ -630,11 +781,22 @@ class MonitorPage(QWidget):
                 self.items[r["name"]].setHidden(not ok)
                 self.all_rows[r["name"]].setVisible(ok)
                 n += ok
+            if PAGES[p] in ADVANCED_PAGES and not self.advanced:
+                n = 0                                    # advanced pages are out of the tree, the form and the search
             pi.setHidden(n == 0)
             total = len(PAGE_ROWS[p])
             pi.setText(0, f"{PAGES[p]} ({n}/{total})" if (q.strip() or hide) else f"{PAGES[p]} ({total})")
             if q.strip():
                 pi.setExpanded(n > 0)
+
+    def set_advanced(self, on: bool):
+        self.advanced = on
+        self.settings.setValue("monitor/advanced", "true" if on else "false")
+        self.apply_filters()
+        it = self.tree.currentItem()
+        top = it if it is not None and it.parent() is None else it.parent() if it is not None else None
+        if top is not None and top.isHidden():           # the selected page just went away
+            self.tree.setCurrentItem(self.page_items[0])
 
     def jump_first_match(self):
         for p, pi in self.page_items.items():
@@ -676,7 +838,11 @@ class MonitorPage(QWidget):
         st = self.states[unit]
         if probe:
             old = st.dot()
-            st.status = "ok" if rc == 0 else "down"
+            st.probe_fails = 0 if rc == 0 else st.probe_fails + 1
+            st.status = "ok" if rc == 0 else "down" if st.probe_fails >= PROBE_FAILS_DOWN else st.status
+            if rc == 0:
+                self._vcp_got(unit, out)                 # the probe is a volume read: keep the quick value fresh
+                st.last_read_iso = isostamp.now()
             if st.dot() != old:
                 self.say(f"unit {unit} status {old} -> {st.dot()}")
             self._strip_text(unit)
@@ -686,7 +852,7 @@ class MonitorPage(QWidget):
         if unit == self.cur:
             self.out.setPlainText(st.out)
         extra = done(rc, out) if done else ""
-        last = next((ln.strip() for ln in reversed(out.splitlines()) if ln.strip()), "no output")
+        last = reason_line(out)
         st.banner = ""
         if rc == 0:
             verdict, st.status = "ok", "ok"
@@ -756,8 +922,10 @@ class MonitorPage(QWidget):
             if m and m.group(1) in {r["name"] for r in T.ROWS}:
                 self._put(n, m.group(1), int(m.group(2)))
                 k += 1
-        if full and rc == 0:
-            self.states[n].last_read = time.monotonic()
+        if rc == 0:
+            self.states[n].last_read_iso = isostamp.now()
+            if full:
+                self.states[n].last_read = time.monotonic()
         return f", {k} rows"
 
     def set_row(self, sr):
@@ -767,17 +935,21 @@ class MonitorPage(QWidget):
             what = "run" if r["type"] == "action" else f"set {v} on"
             if not self.confirm(f"Unit {n}: {what} {r['label']} ({name})?" + ("\nNeeds a reboot." if "reboot" in r["flags"] else "")):
                 self.say(f"unit {n} {name}: cancelled at the confirm dialog")
+                self._revert(n, sr)
                 return
         peers = [d[name] for d in (self.rows, self.quick) if name in d]
 
         def ok(rc, out):
             if rc != 0:
+                self._revert(n, sr)
                 return ", unit kept its value"
             self.states[n].values[name] = v
             self.states[n].dirty.pop(name, None)
             if n == self.cur:
                 for p in peers:
                     p.set_ok(v)
+            if sr.instant:
+                self._readback(n, name, r)               # a flip shows what the unit now reports, not what was sent
             return ""
 
         if name in VCP_ROW and sr in self.quick.values():       # volume / mute: DDC/CI like a host would
@@ -785,6 +957,20 @@ class MonitorPage(QWidget):
             self.run(f"set {name} = {v} (VCP {VCP_ROW[name]} = {vv})", self.dev("ddc", "set", VCP_ROW[name], vv), ok, "ddc")
         else:
             self.run(f"{'run' if r['type'] == 'action' else 'set'} {name} = {v}", self.dev("settings", "set", name, v), ok)
+
+    def _revert(self, n: str, sr):
+        """a cancelled or failed one-click flip puts the widget back to the unit's last known value"""
+        if sr.instant and n == self.cur:
+            self.states[n].dirty.pop(sr.r["name"], None)
+            for d in (self.rows, self.quick):
+                if sr.r["name"] in d:
+                    d[sr.r["name"]].load(self.states[n].values.get(sr.r["name"]), None)
+
+    def _readback(self, n: str, name: str, r: dict):
+        if name in VCP_ROW:
+            self.run(f"readback {name}", self.dev("ddc", "get", VCP_ROW[name], unit=n), lambda rc, out: self._vcp_got(n, out), "ddc", unit=n)
+        else:
+            self.run(f"readback {name}", self.dev("settings", "get", name, unit=n), lambda rc, out: self._got(n, rc, out), unit=n)
 
     def saver_start(self):
         self._saver(self.saver.currentData(), self.saver.currentText())
@@ -795,31 +981,55 @@ class MonitorPage(QWidget):
     def _saver(self, v: int, label: str):
         self.run(f"screensaver now = {label} (VCP {VCP_SAVER} = {v})", self.dev("ddc", "set", VCP_SAVER, v), None, "ddc")
 
-    def quick_get(self):
-        n = self.cur
-        for name, code in VCP_ROW.items():
-            self.run(f"get {name} (VCP {code})", self.dev("ddc", "get", code), lambda rc, out, name=name: self._vcp_got(n, out), "ddc")
-        for name in ("screensaver_now", "brightness"):
-            self.run(f"get {name}", self.dev("settings", "get", name), lambda rc, out: self._got(n, rc, out))
+    def quick_get(self, unit: str | None = None):
+        """volume, mute, brightness, input select, screensaver: DDC/CI reads of their VCP codes, one call each (no mailbox)"""
+        n = unit or self.cur
+        codes = [f"0x{row_of(name)['vcp']:02X}" for name in QUICK_VCP]
+        self.run(f"get quick values (VCP {' '.join(codes)})", self.dev("ddc", "get", *codes, unit=n),
+                 lambda rc, out, n=n: self._vcp_got(n, out), "ddcmany", unit=n)
 
     def _vcp_got(self, n: str, out: str) -> str:
-        m = VCP_GET_RE.search(out)
-        if not m:
+        """every `VCP xx ...` reply line in out (one per code); returns the log suffix"""
+        lines = [ln for ln in out.splitlines() if VCP_GET_RE.search(ln)]
+        if not lines:
             return ", reply not understood"
-        name = next(k for k, c in VCP_ROW.items() if c.lower() == "0x" + m.group(1).lower())
+        return "".join(self._vcp_line(n, VCP_GET_RE.search(ln)) for ln in lines)
+
+    def _vcp_line(self, n: str, m) -> str:
+        name = next((k for k in QUICK_VCP if f"{row_of(k)['vcp']:02x}" == m.group(1).lower()), None)
+        if name is None:
+            return ""
         f = m.group(3).split()
         hx = [int(x.lstrip("x"), 16) for x in f]
         raw = {"C": lambda: int(f[0]), "SNC": lambda: hx[0], "CNC": lambda: hx[2] << 8 | hx[3] if len(hx) == 4 else -1}[m.group(2)]()
+        st = self.states[n]
+        st.last_read_iso = isostamp.now()
         r = row_of(name)
         if r["option_vcp"]:
             if raw not in r["option_vcp"]:
                 return f", value {raw} not in the registry options"
             raw = r["min"] + r["option_vcp"].index(raw)
         self._put(n, name, raw)
+        self._quick_state(n)
         return f", {name} = {raw}"
+
+    def _quick_state(self, n: str):
+        """quick strip read-out of the two rows that have no slider: input select and screensaver"""
+        if n != self.cur:
+            return
+        v = self.states[n].values
+        inp, sav = v.get("input"), v.get("screensaver_now")
+        if inp is not None and not self.inp_touched:
+            self.inp.setCurrentIndex(inp)
+        self.now_state.setText(f"unit shows: input {row_of('input')['options'][inp] if inp is not None else '?'}, "
+                               f"screensaver {row_of('screensaver_now')['options'][sav] if sav is not None else '?'}")
 
     def save(self):
         self.run("settings save", self.dev("settings", "save"), None)
+
+    def _input_picked(self, *_):
+        self.inp_touched = True
+        self.input_select()
 
     def input_select(self):
         p = self.inp.currentText()

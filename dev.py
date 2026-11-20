@@ -1497,10 +1497,11 @@ DDC_SUBS = {"list": 0, "get": 1, "set": 2, "sleep": 0, "wake": 0, "brightness": 
 
 
 @command("DDC/CI via ddcutil on the unit's own bus: list | get CODE | set CODE VALUE | sleep | wake | brightness N",
-         args="[--unit N] list|get CODE|set CODE VALUE|sleep|wake|brightness N", kind="action")
+         args="[--unit N] list|get CODE [CODE...]|set CODE VALUE|sleep|wake|brightness N", kind="action")
 def cmd_ddc(extra: list[str]) -> int:
     _n, u = _unit(extra)
-    if not extra or extra[0] not in DDC_SUBS or len(extra) != 1 + DDC_SUBS[extra[0]] \
+    many = bool(extra) and extra[0] == "get" and 2 <= len(extra) <= 9          # get CODE [CODE...]: one detect for all codes
+    if not extra or extra[0] not in DDC_SUBS or (len(extra) != 1 + DDC_SUBS[extra[0]] and not many) \
             or any(x.startswith("-") for x in extra):
         raise SystemExit(f"ddc: one of {DDC_SUBS} (arg counts {list(DDC_SUBS.values())}); got {extra}; nothing done")
     return _py("ddc_ctl.py", "--bus", _bus(u), *extra)

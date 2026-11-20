@@ -49,6 +49,36 @@ class GateBackend(FakeBackend):
                 self.active[u] -= 1
 
 
+class FailUnit3(FakeBackend):
+    fail_unit3 = False
+
+    def run(self, argv, limit_s):
+        if self.fail_unit3 and "3" == str(argv[-1]) and "ddc" in argv:
+            return 1, "AWT26110003: no bus with that EDID serial\n"
+        return super().run(argv, limit_s)
+
+
+class ReadbackBackend(FakeBackend):
+    """`settings get NAME` answers with a chosen raw value (what the unit reports back after a write)"""
+    readback = {}
+
+    def run(self, argv, limit_s):
+        a = [str(x) for x in argv]
+        if "settings" in a and "get" in a and a[a.index("get") + 1] in self.readback:
+            self.calls.append(a)
+            n = a[a.index("get") + 1]
+            return 0, f"{n} = x (raw {self.readback[n]})\n"
+        return super().run(argv, limit_s)
+
+
+def click(w):
+    QTest.mouseClick(w, Qt.LeftButton)
+
+
+def writes(fb):
+    return [" ".join(c[2:]) for c in fb.calls if ("set" in c and ("settings" in c or "ddc" in c)) or "kvm.py" in " ".join(c)]
+
+
 def until(cond, what):
     t0 = time.monotonic()
     while not cond():
@@ -104,7 +134,8 @@ def strip_and_hotkeys(app):
     pg.states["2"].last_read = time.monotonic() - MON.STALE_S - 1
     pg.select_unit("2")
     settle(pg)
-    assert [" ".join(c[2:]) for c in fb.calls] == ["settings list --unit 2"], fb.calls
+    got = [" ".join(c[2:]) for c in fb.calls]
+    assert got == ["ddc get 0x62 0x8D 0x10 0x60 0xEB --unit 2", "settings list --unit 2"], got
     assert pg.states["2"].last_read > time.monotonic() - 5
     fb.calls.clear()
     pg.select_unit("3")
@@ -243,17 +274,24 @@ def remembered():
 def detect_and_probe():
     units = MON.load_units()
     seen = {units["1"]["serial"], units["3"]["serial"]}
-    pg, fb, _ = make("gui_detect", detect=lambda: seen)
+    pg, fb, _ = make("gui_detect", FailUnit3(), detect=lambda: seen)
     assert pg.states["2"].detected is False and pg.states["1"].detected and pg.states["2"].dot() == "down"
     pg.probe_tick()
     settle(pg)
     probed = sorted(c[-1] for c in fb.calls if "ddc" in c and "get" in c)
     assert probed == ["1", "3"], probed                                # absent unit 2 is not probed
     assert pg.states["1"].dot() == "ok" and pg.states["3"].dot() == "ok"
-    fb.fail = (1, "AWT26110003: no bus with that EDID serial\n")
+    fb.fail_unit3 = True
     pg.probe_tick()
     settle(pg)
-    assert "down" in {pg.states["1"].dot(), pg.states["3"].dot()}
+    assert pg.states["3"].dot() == "ok" and pg.states["1"].dot() == "ok"             # one miss is a glitch: dot stays
+    pg.probe_tick()
+    settle(pg)
+    assert pg.states["3"].dot() == "down" and pg.states["1"].dot() == "ok"           # two misses in a row: red
+    fb.fail_unit3 = False
+    pg.probe_tick()
+    settle(pg)
+    assert pg.states["3"].dot() == "ok"
     seen.add(units["2"]["serial"])                                     # hotplug: the next scan finds it
     pg.probe_tick()
     settle(pg)
@@ -261,9 +299,226 @@ def detect_and_probe():
     print("ok scan marks absent units (no probe), probes set green / red dots, hotplug is picked up")
 
 
+def advanced_pages():
+    pg, fb, ini = make("gui_adv")
+    hidden = lambda: [pg.page_items[p].isHidden() for p in pg.page_items]            # noqa: E731
+    adv = [p for p, name in MON.PAGES.items() if name in MON.ADVANCED_PAGES]
+    assert len(adv) == 2 and not pg.adv.isChecked()
+    assert [p for p, it in pg.page_items.items() if it.isHidden()] == adv, "debug + service hidden by default"
+    pg.search.setText("debug")                                                       # search skips hidden pages
+    assert all(pg.page_items[p].isHidden() for p in adv)
+    pg.search.clear()
+    pg.adv.setChecked(True)
+    assert not any(hidden()) and pg.settings.value("monitor/advanced") == "true"
+    pg.tree.setCurrentItem(pg.page_items[adv[0]])
+    pg.adv.setChecked(False)                                                         # the selected page goes away
+    assert pg.tree.currentItem() is pg.page_items[0] and pg.states[pg.cur].node == "page:0"
+    pg.adv.setChecked(True)
+    pg.settings.sync()
+    pg2 = MON.MonitorPage(FakeBackend(), WORK / "gui_adv2.log", QSettings(str(ini), QSettings.IniFormat), detect=lambda: set())
+    assert pg2.adv.isChecked() and not any(pg2.page_items[p].isHidden() for p in adv)
+    print("ok show advanced: debug + service hidden by default, remembered in QSettings, selection leaves a hidden page")
+
+
+def unknown_units():
+    units = MON.load_units()
+    seen = {u["serial"] for u in units.values()} | {"UK52307000611"}
+    pg, fb, _ = make("gui_unknown", detect=lambda: seen)
+    names = list(pg.states)
+    assert names[-1] == "?UK52307000611" and pg.states[names[-1]].unknown and len(pg.unit_btns) == len(units) + 1
+    b = pg.unit_btns[names[-1]]
+    assert "unknown" in b.text() and "not in devices.json" in b.toolTip() and pg.states[names[-1]].dot() == "unknown"
+    pg.select_index(len(units))                                                      # hotkey reaches it
+    assert pg.cur == names[-1] and not pg.writable()
+    assert "unknown monitor" in pg.state.text() and all(not x.isEnabled() for x in pg.buttons)
+    fb.calls.clear()
+    pg.probe_tick()
+    pg.set_row(pg.rows["brightness"])
+    pg.get_all()
+    settle(pg)
+    assert all(c[-1] in units for c in fb.calls) and not any("set" in c for c in fb.calls), fb.calls   # only the listed units are probed
+    seen.discard("UK52307000611")                                                    # unplugged: the button goes, view falls back
+    pg.probe_tick()
+    settle(pg)
+    assert "?UK52307000611" not in pg.states and len(pg.unit_btns) == len(units) and pg.cur in units
+    print("ok monitors seen by EDID but not in devices.json show as read-only unknown units, never touched, gone when unplugged")
+
+
+def last_read_tooltip():
+    pg, fb, _ = make("gui_lastread", fresh=False)
+    assert "not read yet" in pg.unit_btns["3"].toolTip()
+    pg.select_unit("3")
+    settle(pg)
+    tip = pg.unit_btns["3"].toolTip()
+    assert "last read 20" in tip and "T" in tip and "not read yet" not in tip, tip
+    print("ok strip tooltip carries the per-unit last-read time")
+
+
+def quick_reads():
+    pg, fb, _ = make("gui_quickread")
+    pg.select_unit("3", read=False)
+    pg.quick_get()
+    settle(pg)
+    assert pg.quick["volume"].w.value() == 37 and pg.quick["mute"].w.currentIndex() == 1 and pg.quick["brightness"].w.value() == 64
+    assert pg.inp.currentText() == "D2" and "input D2 HDMI" in pg.now_state.text() and "screensaver Stop" in pg.now_state.text(), pg.now_state.text()
+    assert pg.states["3"].values["volume"] == 37 and not any("settings" in c for c in fb.calls), fb.calls    # DDC only, no mailbox
+    assert len(fb.calls) == 1, fb.calls                                              # one call (one ddcutil detect) for all five
+    print("ok quick strip reads volume / mute / brightness / input / screensaver by VCP code, no mailbox")
+
+
+def switch_and_parallel_speed():
+    fb = GateBackend()
+    pg, fb, _ = make("gui_speed", fb)
+    for n in ("1", "2", "3"):
+        pg.select_unit(n, read=False)
+        pg.get_all(n)
+    settle(pg)
+    pg.show()
+    settle(pg)
+    t0 = time.perf_counter()
+    for i in range(30):
+        pg.select_unit(("1", "2", "3")[i % 3], read=False)
+    ms = (time.perf_counter() - t0) / 30 * 1000
+    assert ms < 100, ms                                                              # a switch is a view swap
+    print(f"ok unit switch = {ms:.1f} ms per switch (offscreen, fake values, no read)")
+    pg.hide()
+    fb.gated = {"1", "2", "3"}
+    for n in ("1", "2", "3"):
+        pg.get_all(n)
+    until(lambda: fb.max_all == 3, "three Get all at once")
+    fb.gate.set()
+    settle(pg)
+    assert all(st.pending == 0 for st in pg.states.values())
+    print("ok three units' Get all run in parallel")
+
+
+def one_click_rows():
+    plain = lambda r: r["type"] != "action" and not {"ro", "risky"} & set(r["flags"])        # noqa: E731
+    boolr = next(r for r in MON.T.ROWS if r["type"] == "bool" and plain(r))
+    enum3 = next(r for r in MON.T.ROWS if r["type"] == "enum" and len(r["options"]) == 3 and plain(r))
+    big = next(r for r in MON.T.ROWS if r["type"] == "enum" and len(r["options"]) > MON.SEGMENT_MAX)
+    kinds = {"bool": 0, "seg": 0, "combo": 0, "slider": 0}
+    for r in MON.T.ROWS:
+        if r["type"] != "action":
+            kinds["bool" if r["type"] == "bool" else "slider" if r["type"] == "int" else "seg" if MON.instant_options(r) else "combo"] += 1
+    assert kinds == {"bool": 29, "seg": 20, "combo": 9, "slider": 54}, kinds
+    fb = ReadbackBackend()
+    pg, fb, _ = make("gui_click", fb)
+    pg.select_unit("3", read=False)
+    pg.show()
+    settle(pg)
+    fb.calls.clear()
+    fb.readback = {boolr["name"]: 1, enum3["name"]: 2}
+    sr = pg.rows[boolr["name"]]
+    assert sr.instant and sr.btn.isHidden() and isinstance(sr.w, MON.Choice) and sr.w.switch
+    assert isinstance(pg.rows[big["name"]].w, MON.QComboBox) and not pg.rows[big["name"]].btn.isHidden()
+    sr.w.setCurrentIndex(0)
+    click(sr.w.btns[0])                                                              # flip 0 -> 1: one write, then the read-back
+    settle(pg)
+    assert writes(fb) == [f"settings set {boolr['name']} {boolr['min'] + 1} --unit 3"], fb.calls
+    assert sr.w.currentIndex() == 1 and "unit: " in sr.cur.text() and not sr.dirty
+    fb.readback[boolr["name"]] = 0
+    click(sr.w.btns[0])                                                              # A then B: second click flips back
+    settle(pg)
+    assert writes(fb)[-1] == f"settings set {boolr['name']} {boolr['min']} --unit 3" and len(writes(fb)) == 2
+    assert sr.w.currentIndex() == 0 and sr.cur.text().startswith(f"unit: {boolr['min']}"), sr.cur.text()
+    # segmented enum: a click on a segment writes that option, the read-back is what the unit reports
+    seg = pg.rows[enum3["name"]]
+    assert seg.instant and not seg.w.switch and len(seg.w.btns) == 3 and not any(b.isHidden() for b in seg.w.btns)
+    n0 = len(writes(fb))
+    click(seg.w.btns[2])
+    settle(pg)
+    click(seg.w.btns[0])
+    settle(pg)
+    assert writes(fb)[n0:] == [f"settings set {enum3['name']} {enum3['min'] + 2} --unit 3", f"settings set {enum3['name']} {enum3['min']} --unit 3"]
+    assert seg.w.currentIndex() == 0 or fb.readback[enum3["name"]] != 0              # shows the unit's answer, not the click
+    # a failed write puts the widget back
+    fb.fail = (1, "write failed\n")
+    before = seg.w.currentIndex()
+    click(seg.w.btns[1])
+    settle(pg)
+    assert seg.w.currentIndex() == before and not seg.dirty, (seg.w.currentIndex(), before)
+    # risky one-click rows ask first: cancel = no write and the widget stays; yes = exactly one write
+    risky = next(r for r in MON.T.ROWS if "risky" in r["flags"] and instant_ok(r))
+    rr = pg.rows[risky["name"]]
+    n0 = len(writes(fb))
+    asked = []
+    pg.confirm = lambda t: (asked.append(t), False)[1]
+    was = rr.w.currentIndex()
+    click(rr.w.btns[0 if rr.w.switch else (1 if was != 1 else 0)])
+    settle(pg)
+    assert len(asked) == 1 and len(writes(fb)) == n0 and rr.w.currentIndex() == was, (asked, was, rr.w.currentIndex())
+    pg.confirm = lambda t: (asked.append(t), True)[1]
+    click(rr.w.btns[0 if rr.w.switch else (1 if was != 1 else 0)])
+    settle(pg)
+    assert len(asked) == 2 and len(writes(fb)) == n0 + 1
+    # quick strip: mute is a switch, input a segmented row; one click = one write
+    assert pg.quick["mute"].w.switch and pg.quick["mute"].instant
+    n0 = len(writes(fb))
+    pg.quick["mute"].w.setCurrentIndex(0)
+    click(pg.quick["mute"].w.btns[0])
+    settle(pg)
+    assert writes(fb)[n0:] == ["ddc set 0x8D 1 --unit 3"], writes(fb)
+    click(pg.inp.btns[2])
+    settle(pg)
+    assert writes(fb)[-1] == "D3 --units 3" and len(writes(fb)) == n0 + 2, writes(fb)
+    # read-only unit: the one-click widgets are greyed
+    pg.select_unit("1", read=False)
+    pg.states["1"].info = {**pg.states["1"].info, "test": False}
+    pg.select_unit("1", read=False)
+    assert not sr.w.isEnabled() and not pg.quick["mute"].w.isEnabled() and not pg.inp.isEnabled()
+    pg.hide()
+    print("ok one-click rows: bool = switch, 2..4 options = segmented, larger enum = combo; one write per click, read-back shown, "
+          "A then B flips, failed / cancelled flip reverts, risky asks first, quick mute / input use them, greyed on a read-only unit")
+
+
+def instant_ok(r):
+    return r["type"] != "action" and MON.instant_options(r) is not None
+
+
+def ddc_serialised():
+    """ddc calls of different units never overlap (each runs a detect over all buses); other jobs still run in parallel"""
+    fb = GateBackend()
+    pg, fb, _ = make("gui_ddclock", fb)
+    fb.gated = {"1", "2", "3"}
+    for n in ("1", "2", "3"):
+        pg.run("probe", ["dev.py", "ddc", "get", "0x62", "--unit", n], None, "ddc", unit=n)
+    QTest.qWait(150)
+    fb.gate.set()
+    settle(pg)
+    assert fb.max_all == 1 and len(fb.calls) == 3, (fb.max_all, fb.calls)
+    print("ok ddc calls of three units run one at a time")
+
+
+def banner_reason():
+    pg, fb, _ = make("gui_reason")
+    pg.select_unit("1", read=False)
+    fb.fail = (1, "bus 18: debug link ON\n2026-11-20T20:38:00 mailbox magic missing: firmware has not run vcp_box_service\n"
+                  "2026-11-20 ERROR [dev.py] rc=1: settings_cli.py\n")
+    pg.get_all()
+    settle(pg)
+    assert "mailbox magic missing" in pg.banner.text() and "does not answer" not in pg.banner.text(), pg.banner.text()
+    assert pg.states["1"].dot() != "down"                                            # the unit answered, only the image lacks the mailbox
+    fb.fail = (1, "map /x/tmp/fw/a.map not found (flash an image first, or --map PATH); nothing done\n")
+    pg.get_all()
+    settle(pg)
+    assert "map /x/tmp/fw/a.map not found" in pg.banner.text() and pg.states["1"].dot() != "down"
+    print("ok banner names the reason line (mailbox missing, map not found); those are not 'no answer'")
+
+
+def real_backend_limit():
+    """the real SubprocessBackend stops a hung call at its limit (unplugged unit, wedged dev.py): rc 124, bounded time"""
+    import unit_jobs
+    t0 = time.monotonic()
+    rc, out = unit_jobs.SubprocessBackend().run(["python3", "-c", "import threading; threading.Event().wait()"], 0.5)
+    dt = time.monotonic() - t0
+    assert rc == 124 and "limit 0.5 s expired" in out and dt < 0.5 + unit_jobs.TERM_GRACE_S + 1, (rc, out, dt)
+    print(f"ok a hung call is stopped at its limit: rc 124 after {dt:.2f} s")
+
+
 def screenshot(app):
     units = MON.load_units()
-    pg, fb, _ = make("gui_shot", detect=lambda: {u["serial"] for u in units.values()})
+    pg, fb, _ = make("gui_shot", detect=lambda: {u["serial"] for u in units.values()} | {"UK52307000611"})
     pg.select_unit("3", read=False)
     pg.get_all()
     pg.select_unit("1", read=False)
@@ -282,15 +537,21 @@ def screenshot(app):
     pg.resize(1500, 860)
     pg.show()
     settle(pg)
-    pg.states["1"].status = "down"                                      # red: no answer
-    pg.states["3"].pending = 1                                          # amber: a job on unit 3
-    pg._strip_text("1")
-    pg._strip_text("3")
+    real = {"1": dict(volume=100, mute=1, brightness=64, input=1), "2": dict(volume=100, mute=1, brightness=100, input=0),
+            "3": dict(volume=50, mute=1, brightness=51, input=1)}      # values read live from the three units, 2026-11-20
+    for n, v in real.items():
+        pg.states[n].values.update(v)
+        pg.states[n].last_read_iso = "2026-11-20T20:43:05+11:00"
+        pg._strip_text(n)
+    for n in ("1", "2", "3"):
+        pg.states[n].status = "ok"
+        pg._strip_text(n)
+    pg.select_unit("1", read=False)                                     # reload the stored values into the form
+    pg.tree.setCurrentItem(pg.items["d1_enable"])
     app.processEvents()
     SHOTS.mkdir(parents=True, exist_ok=True)
     out = SHOTS / "monitor-gui.png"
     pg.grab().save(str(out))
-    pg.states["3"].pending = 0
     pg.hide()
     print("screenshot", out)
 
@@ -305,6 +566,15 @@ def main():
     parallel_jobs()
     remembered()
     detect_and_probe()
+    advanced_pages()
+    unknown_units()
+    last_read_tooltip()
+    quick_reads()
+    switch_and_parallel_speed()
+    one_click_rows()
+    ddc_serialised()
+    banner_reason()
+    real_backend_limit()
     screenshot(app)
     print("PASS")
 

@@ -396,6 +396,8 @@ def main(argv=None):
     app = QApplication(argv or sys.argv)
     app.setFont(QFont("monospace", 9))
     w = Window()
+    if "--monitor" in (argv or sys.argv):
+        w.go(2)                                                        # open straight on the monitor tab
     w.show()
     return app.exec()
 

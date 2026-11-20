@@ -115,7 +115,7 @@ def main():
     b = sub.add_parser("brightness")
     b.add_argument("value", type=int)
     b.add_argument("--monitor", default="all")
-    sub.add_parser("get").add_argument("code")
+    sub.add_parser("get").add_argument("code", nargs="+")      # several codes share one detect (a detect is ~0.5 s)
     s = sub.add_parser("set")
     s.add_argument("code")
     s.add_argument("value", type=lambda value: int(value, 0))
@@ -135,10 +135,13 @@ def main():
                   f"{('0x%02x' % pw[0]) if pw else '?':9}  {m['model']}")
         return 0
     if a.cmd == "get":
+        rc = 0
         for m in mons:
-            r = getvcp(m, a.code)
-            print(f"{m['connector']:16} bus={m['bus']:<3} {r[2] if r else 'ERROR'}")
-        return 0
+            for code in a.code:
+                r = getvcp(m, code)
+                rc |= 0 if r else 1
+                print(f"{m['connector']:16} bus={m['bus']:<3} {r[2] if r else 'ERROR ' + code}")
+        return rc
     if a.cmd == "set":
         if not 0 <= a.value <= 0xffff:
             ap.error("set value must be 0..65535")

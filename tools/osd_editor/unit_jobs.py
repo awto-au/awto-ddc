@@ -3,6 +3,7 @@ Units sit on different buses, so their jobs run in parallel; one unit's jobs run
 from __future__ import annotations
 
 import subprocess
+import threading
 import time
 from pathlib import Path
 
@@ -30,6 +31,13 @@ class SubprocessBackend:
         return p.returncode, out or ""
 
 
+DDC_LOCK = threading.Lock()   # every dev.py ddc call runs `ddcutil detect` over all buses: parallel calls slow each other (measured 3x) and time out
+
+
+def is_ddc(argv) -> bool:
+    return "ddc" in argv and any(a in argv for a in ("get", "set"))
+
+
 class _Job(QRunnable):
     def __init__(self, backend, argv, limit, owner, jid):
         super().__init__()
@@ -38,7 +46,12 @@ class _Job(QRunnable):
     def run(self):
         t0 = time.monotonic()
         try:
-            rc, out = self.backend.run(self.argv, self.limit)
+            if is_ddc(self.argv):                         # the limit starts when the call starts, not while it waits its turn
+                with DDC_LOCK:
+                    t0 = time.monotonic()
+                    rc, out = self.backend.run(self.argv, self.limit)
+            else:
+                rc, out = self.backend.run(self.argv, self.limit)
         except Exception as e:                           # backend failure is a result, never a dead worker
             rc, out = 125, f"backend error: {e!r}"
         self.owner.done.emit(self.jid, rc, out, time.monotonic() - t0)

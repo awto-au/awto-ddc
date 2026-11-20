@@ -57,7 +57,10 @@ class FakeBackend:
             rc, text, self.fail = self.fail[0], self.fail[1], None
             return rc, text
         if "ddc" in a and "get" in a:
-            return 0, "HDMI-A-2         bus=11  " + {"0x62": "VCP 62 CNC x00 x64 x00 x25", "0x8D": "VCP 8D CNC x00 x01 x00 x01"}[a[a.index("get") + 1]] + "\n"
+            vals = {"0x62": "VCP 62 CNC x00 x64 x00 x25", "0x8D": "VCP 8D CNC x00 x01 x00 x01", "0x10": "VCP 10 C 64 100",
+                    "0x60": "VCP 60 SNC x11", "0xEB": "VCP EB CNC x00 x08 x00 x00"}
+            codes = a[a.index("get") + 1:a.index("--unit") if "--unit" in a else None]
+            return 0, "".join(f"HDMI-A-2         bus=11  {vals[c]}\n" for c in codes)
         if "settings" in a and "list" in a:
             return 0, "\n".join(f"{r['name']} = x (raw {r['default'] + (1 if r['type'] == 'int' and r['name'] == 'brightness' else 0)})"
                                 for r in MON.T.ROWS if r["type"] != "action") + "\n"
@@ -93,7 +96,8 @@ def quick_test(app, pg, fb):
     settle(app, pg)
     sent = [" ".join(c[2:]) for c in fb.calls[n:]]
     assert sent == ["ddc set 0xEB 4 --unit 3", "ddc set 0xEB 0 --unit 3", "ddc set 0xEB 5 --unit 3", "ddc set 0x62 33 --unit 3",
-                    "ddc set 0x8D 1 --unit 3", "settings set disp_rotate 0 --unit 3"], sent
+                    "ddc set 0x8D 1 --unit 3", "settings set disp_rotate 0 --unit 3", "ddc get 0x8D --unit 3",
+                    "settings get disp_rotate --unit 3"], sent          # the two one-click rows read back after their write
     pg.quick["brightness"].w.setValue(70)                         # quick brightness: mailbox row like the tree
     pg.set_row(pg.quick["brightness"])
     settle(app, pg)
