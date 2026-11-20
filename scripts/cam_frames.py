@@ -37,6 +37,8 @@ FLASH_RATIO = 1.25       # Y above this x pre-reset level, with no picture colou
 GOOD_TOL = 0.12          # |Y - pre| / pre below this = the pre-reset picture level
 GLOW_MIN = 8.0           # Y steps below this above the dark floor are sensor noise (8-bit units)
 CHROMA_MIN = 0.12        # (B-G)/Y of the desktop below this = a neutral desktop: fall back to the Y level
+ONSET_GAP_S = 3.0        # restarts closer than this in one clip are one (the boot itself dips and flashes for ~2 s)
+PRE_FRAMES = 10          # frames kept before a restart's dark onset: the pre-reset level for the detector
 STABLE_HOLD = 5          # frames (200 ms) the picture must hold for the stable boot picture
 SETTLED_HOLD = 10        # frames (400 ms) for the settled picture
 PRE_ROLL_S = 3.0         # GOP 50 at 25 fps = 2 s to the first IDR, +1 s margin: the clip starts clean before the trigger
@@ -108,13 +110,18 @@ class Events:
         return b - a, self.pts_ms[b] - self.pts_ms[a]
 
 
-def decode(clip: Path) -> tuple[np.ndarray, list[float]]:
-    """Frames (n, H, W, 3) uint8 at TILE size + PTS in ms (every decoded frame, none dropped or duplicated)."""
+def iter_frames(clip: Path):
+    """Decoded frames (H, W, 3) uint8 at TILE size, every frame (none dropped or duplicated), streamed."""
     cmd = ["ffmpeg", "-nostdin", "-loglevel", "error", "-i", str(clip), "-vf", f"scale={TILE_W}:{TILE_H}",
            "-fps_mode", "passthrough", "-f", "rawvideo", "-pix_fmt", "rgb24", "-"]
-    raw = subprocess.run(cmd, capture_output=True, check=True).stdout
-    n = len(raw) // (TILE_W * TILE_H * 3)
-    frames = np.frombuffer(raw[: n * TILE_W * TILE_H * 3], np.uint8).reshape(n, TILE_H, TILE_W, 3)
+    size = TILE_W * TILE_H * 3
+    with subprocess.Popen(cmd, stdout=subprocess.PIPE) as p:
+        while len(buf := p.stdout.read(size)) == size:
+            yield np.frombuffer(buf, np.uint8).reshape(TILE_H, TILE_W, 3)
+
+
+def clip_pts(clip: Path, n: int) -> list[float]:
+    """Stream PTS in ms from the first frame; frame index * 40 ms if the container has none."""
     probe = subprocess.run(["ffprobe", "-v", "error", "-select_streams", "v:0", "-show_entries", "frame=pts_time",
                             "-of", "csv=p=0", str(clip)], capture_output=True, text=True, check=True).stdout
     pts = []
@@ -125,8 +132,25 @@ def decode(clip: Path) -> tuple[np.ndarray, list[float]]:
             pass
     if len(pts) != n:
         pts = [i * FRAME_MS for i in range(n)]
-    base = pts[0] if pts else 0.0
-    return frames, [p - base for p in pts]
+    return [p - pts[0] for p in pts] if pts else pts
+
+
+def clip_metrics(clip: Path, roi) -> tuple[dict[str, np.ndarray], list[float]]:
+    """Per-frame ROI metrics of the whole clip (frames are not kept) + PTS."""
+    parts, batch = [], []
+    for f in iter_frames(clip):
+        batch.append(f)
+        if len(batch) == 64:
+            parts.append(metrics(np.stack(batch), roi))
+            batch = []
+    if batch:
+        parts.append(metrics(np.stack(batch), roi))
+    m = {k: np.concatenate([q[k] for q in parts]) for k in parts[0]} if parts else {k: np.zeros(0) for k in ("Y", "R", "G", "B", "txt")}
+    return m, clip_pts(clip, len(m["Y"]))
+
+
+def grab(clip: Path, idxs: set[int]) -> dict[int, np.ndarray]:
+    return {i: f.copy() for i, f in enumerate(iter_frames(clip)) if i in idxs}
 
 
 def _crop(frames: np.ndarray, roi: tuple[float, float, float, float]) -> np.ndarray:
@@ -211,13 +235,23 @@ def table(ev: Events) -> list[str]:
     return out
 
 
-def contact_sheet(frames: np.ndarray, ev: Events, m: dict[str, np.ndarray], roi, path: Path) -> None:
-    from PIL import Image, ImageDraw
+def sheet_indices(ev: Events, off: int = 0) -> set[int]:
+    return {min(max(i - 1 + c, 0), ev.n_frames - 1) + off for _n, i in _marks(ev) for c in range(4)}
+
+
+def _marks(ev: Events) -> list[tuple[str, int]]:
     marks = [("last good", ev.last_good), ("dark", ev.dark), ("first light", ev.first_light), ("stable", ev.stable),
              ("console", ev.console), ("settled", ev.settled)]
     marks = [(k, i) for k, i in marks if i is not None]
     if ev.flash and ev.flash[0] != ev.first_light:
         marks.insert(3, ("flash", ev.flash[0]))
+    return marks
+
+
+def contact_sheet(frames: dict[int, np.ndarray], ev: Events, y: np.ndarray, roi, path: Path, off: int = 0, title: str = "") -> None:
+    """Rows = events, 4 columns = frame before, the event frame (marked <), 2 after. Frame numbers are clip frames (off + local)."""
+    from PIL import Image, ImageDraw
+    marks = _marks(ev)
     cols = 4
     sheet = Image.new("RGB", (cols * TILE_W, max(1, len(marks)) * TILE_H), (30, 30, 30))
     d = ImageDraw.Draw(sheet)
@@ -226,24 +260,54 @@ def contact_sheet(frames: np.ndarray, ev: Events, m: dict[str, np.ndarray], roi,
         for c in range(cols):
             j = min(max(i - 1 + c, 0), ev.n_frames - 1)
             ox, oy = c * TILE_W, r * TILE_H
-            sheet.paste(Image.fromarray(frames[j]), (ox, oy))
+            sheet.paste(Image.fromarray(frames[j + off]), (ox, oy))
             d.rectangle([ox + x0 * TILE_W, oy + y0 * TILE_H, ox + x1 * TILE_W, oy + y1 * TILE_H], outline=(255, 0, 0))
             d.rectangle([ox, oy, ox + TILE_W, oy + 13], fill=(0, 0, 0))
-            d.text((ox + 3, oy + 1), f"{name} f{j} {ev.pts_ms[j]:.0f}ms Y{m['Y'][j]:.0f}{' <' if j == i else ''}", fill=(255, 255, 0))
+            d.text((ox + 3, oy + 1), f"{title}{name} f{j} {ev.pts_ms[j]:.0f}ms Y{y[j]:.0f}{' <' if j == i else ''}", fill=(255, 255, 0))
     path.parent.mkdir(parents=True, exist_ok=True)
     sheet.save(path)
 
 
 def analyse(clip: Path, roi=ROI_BG, sheet: Path | None = None) -> Events:
-    frames, pts = decode(clip)
-    m = metrics(frames, roi)
+    m, pts = clip_metrics(clip, roi)
     ev = find_events(m, pts)
     for ln in table(ev):
         log(ln)
     if sheet is not None and ev.dark is not None:
-        contact_sheet(frames, ev, m, roi, sheet)
+        contact_sheet(grab(clip, sheet_indices(ev)), ev, m["Y"], roi, sheet)
         log(f"contact sheet {sheet}")
     return ev
+
+
+def run_onsets(m: dict[str, np.ndarray]) -> list[int]:
+    """First dark frame of each restart in a long clip: Y < DARK_FRAC x the median of the 1 s before, >= ONSET_GAP_S apart."""
+    y, out = m["Y"], []
+    for i in range(25, len(y)):
+        if y[i] < DARK_FRAC * np.median(y[i - 25:i]) and (not out or i - out[-1] >= int(ONSET_GAP_S * 25)):
+            out.append(i)
+    return out
+
+
+def analyse_sweep(clip: Path, roi=ROI_BG, sheet_dir: Path | None = None, expect: int | None = None) -> list[tuple[int, Events]]:
+    """One clip holding many restarts: split at the dark onsets (frame counts stay inside the video), events per restart."""
+    m, pts = clip_metrics(clip, roi)
+    on = run_onsets(m)
+    log(f"sweep clip {clip.name}: {len(m['Y'])} frames, {len(on)} restarts found" + (f", {expect} expected" if expect else ""))
+    res: list[tuple[int, Events]] = []
+    for k, o in enumerate(on):
+        a, b = max(0, o - PRE_FRAMES), (on[k + 1] - PRE_FRAMES if k + 1 < len(on) else len(m["Y"]))
+        seg = {key: v[a:b] for key, v in m.items()}
+        ev = find_events(seg, [t - pts[a] for t in pts[a:b]])
+        res.append((a, ev))
+    if sheet_dir is not None:
+        want: set[int] = set()
+        for a, ev in res:
+            want |= sheet_indices(ev, a) if ev.dark is not None else set()
+        got = grab(clip, want)
+        for k, (a, ev) in enumerate(res, 1):
+            if ev.dark is not None:
+                contact_sheet(got, ev, m["Y"][a:], roi, sheet_dir / f"run-{k:02d}.png", a, f"r{k} ")
+    return res
 
 
 # ---------------------------------------------------------------- capture

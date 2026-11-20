@@ -432,7 +432,9 @@ static __xdata _Bool s_bPnlLit;                           // backlight pin was o
 static __xdata _Bool s_bPnlWant;                          // backlight wanted and allowed: the on-delay counts from s_usPnlBlAt
 static __xdata WORD s_usBlk;                    // test knob, read at each panel-up: 0 = off (default), else ms + 1
 static __xdata BYTE s_ucBlkRef;                 // knob: 0 video not ready, 1 ready (s_usBlkRefAt), 2 pin on this panel-up
-static __xdata WORD s_usBlkRefAt;               // (WORD)AwtoMs() at the video-ready event
+static __xdata BYTE s_ucBlkSel;                 // knob reference: AWTO_BLK_REF_*
+static __xdata WORD s_usBlkRefAt;               // (WORD)AwtoMs() at the reference event
+static void UserCommonInterfacePanelBlkMark(BYTE ucRef);
 
 
 // usAt: the transition time (the step's start). Called before the step's action, so the line's ring time is the transition
@@ -516,25 +518,39 @@ static void UserCommonInterfacePanelVddOff(BYTE ucPhy)
 static void UserCommonInterfacePanelBlkRead(void)
 {
     WORD usMs = (WORD)g_aucAwtoBlKnob[1] | ((WORD)g_aucAwtoBlKnob[2] << 8);
+    BYTE ucRef = g_aucAwtoBlKnob[3];
 
     s_ucBlkRef = 0;
     s_usBlk = 0;
-    if((g_aucAwtoBlKnob[0] == AWTO_BLK_MAGIC) && (usMs <= AWTO_BLK_MAX_MS) &&
-       (g_aucAwtoBlKnob[3] == (BYTE)(AWTO_BLK_SEED ^ AWTO_BLK_MAGIC ^ g_aucAwtoBlKnob[1] ^ g_aucAwtoBlKnob[2])))
+    if((g_aucAwtoBlKnob[0] == AWTO_BLK_MAGIC) && (usMs <= AWTO_BLK_MAX_MS) && (ucRef < AWTO_BLK_REF_N) &&
+       (g_aucAwtoBlKnob[4] == (BYTE)(AWTO_BLK_SEED ^ AWTO_BLK_MAGIC ^ g_aucAwtoBlKnob[1] ^ g_aucAwtoBlKnob[2] ^ ucRef)))
     {
         s_usBlk = usMs + 1;
-        AWTO_PNL_LOG(AWTO_SW_EV_PANEL, AWTO_PNL_X_BLK_SET, usMs);
+        s_ucBlkSel = ucRef;
+        AWTO_PNL_LOG(AWTO_SW_EV_PANEL, (ucRef == AWTO_BLK_REF_ACTIVE) ? AWTO_PNL_X_BLK_SET :
+                     ((ucRef == AWTO_BLK_REF_STREAM) ? AWTO_PNL_X_BLK_SET_STREAM : AWTO_PNL_X_BLK_SET_POWERUP), usMs);
+        UserCommonInterfacePanelBlkMark(AWTO_BLK_REF_POWERUP);
     }
 }
 
-// The sys machine entered ACTIVE (display set, panel video ready): the knob's delay counts from here.
-void UserCommonInterfacePanelVideoReady(void)
+// Reference event reached (power-up here, stream on / ACTIVE below): the knob's delay counts from it.
+static void UserCommonInterfacePanelBlkMark(BYTE ucRef)
 {
-    if((s_usBlk != 0) && (s_ucBlkRef == 0))
+    if((s_usBlk != 0) && (s_ucBlkRef == 0) && (s_ucBlkSel == ucRef))
     {
         s_ucBlkRef = 1;
         s_usBlkRefAt = (WORD)AwtoMs();
     }
+}
+
+void UserCommonInterfacePanelVideoReady(void)      // the sys machine entered ACTIVE (display set, panel video ready)
+{
+    UserCommonInterfacePanelBlkMark(AWTO_BLK_REF_ACTIVE);
+}
+
+void UserCommonInterfacePanelStreamOn(void)        // eDP trained, stream on (panel machine VIDEO)
+{
+    UserCommonInterfacePanelBlkMark(AWTO_BLK_REF_STREAM);
 }
 
 // Backlight beside the link (Dan 2026-11-13: on at once, datasheet T8 not followed): wanted = target BL while VDD is on and
@@ -707,6 +723,7 @@ static bit UserCommonInterfacePanelStep(void)
             AWTO_PNL_LOG(AWTO_SW_EV_PANEL, (AWTO_PNL_LINK << 4) | AWTO_PNL_VIDEO, ((DWORD)usIn << 16) | (WORD)(usNow - s_usPnlEntry));
             s_ucPnlState = AWTO_PNL_VIDEO;
             s_usPnlEntry = usNow;
+            UserCommonInterfacePanelStreamOn();
             UserCommonInterfacePanelVideoMarks();
             return _TRUE;
 

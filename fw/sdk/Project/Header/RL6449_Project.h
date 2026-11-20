@@ -285,17 +285,21 @@ volatile __xdata __at(0xF69C) unsigned char g_stAwtoSnap[20];
 #else
 extern volatile __xdata __at(0xF69C) unsigned char g_stAwtoSnap[20];
 #endif
-// TEST knob "backlight on delay" (docs/bl-delay-sweep.md): 4 B no-init XDATA at 0xF698, kept over a warm reset, RAM only (never NVRAM).
-// Valid = magic + check; else off (default behaviour). Host writes it over debug slave 0x35 (scripts/bl_sweep.py).
-#define AWTO_BLK_ADDR                                           0xF698
+// TEST knob "backlight on delay" (docs/bl-delay-sweep.md): 5 B no-init XDATA at 0xF697, kept over a warm reset, RAM only (never NVRAM).
+// Valid = magic + check + ref < 3; else off (default behaviour). Host writes it over debug slave 0x35 (scripts/bl_sweep.py).
+#define AWTO_BLK_ADDR                                           0xF697
 #define AWTO_BLK_MAGIC                                          0x4C
-#define AWTO_BLK_SEED                                           0xB5    // check byte = seed ^ magic ^ ms lo ^ ms hi
+#define AWTO_BLK_SEED                                           0xB5    // check byte = seed ^ magic ^ ms lo ^ ms hi ^ ref
 #define AWTO_BLK_MAX_MS                                         2000    // larger = invalid (garbage in cold RAM)
-#define AWTO_BLK_REF_MAX_MS                                     5000    // no video-ready event within this from wanted: pin on anyway (E3 row)
+#define AWTO_BLK_REF_ACTIVE                                     0       // delay counts from ACTIVE (display set, panel video ready)
+#define AWTO_BLK_REF_STREAM                                     1       // ... from the eDP stream on (link trained, VIDEO state)
+#define AWTO_BLK_REF_POWERUP                                    2       // ... from the panel-up (boot / wake: backlight "wanted")
+#define AWTO_BLK_REF_N                                          3
+#define AWTO_BLK_REF_MAX_MS                                     5000    // no reference event within this from wanted: pin on anyway (E3 row)
 #ifdef _AWTO_DIAG_DEFINER
-volatile __xdata __at(0xF698) unsigned char g_aucAwtoBlKnob[4];     // magic, ms lo, ms hi, check
+volatile __xdata __at(0xF697) unsigned char g_aucAwtoBlKnob[5];     // magic, ms lo, ms hi, ref, check
 #else
-extern volatile __xdata __at(0xF698) unsigned char g_aucAwtoBlKnob[4];
+extern volatile __xdata __at(0xF697) unsigned char g_aucAwtoBlKnob[5];
 #endif
 #define AWTO_WDT_REC_N                                          25      // bytes under ucCheck
 #define AWTO_WDT_SEED                                           0xA5
@@ -1662,7 +1666,9 @@ extern unsigned char g_pucSourceSearchPriority[];
 #define AWTO_BL_TO_PWM_MS                                       0
 #endif
 #define AWTO_PNL_X_BLK                                          0xE1    // line 11 args of the backlight test knob: E1 pin on (value = ms2 since boot / since video ready)
-#define AWTO_PNL_X_BLK_SET                                      0xE2    // knob in effect (value = ms)
+#define AWTO_PNL_X_BLK_SET                                      0xE2    // knob in effect, reference ACTIVE (value = ms); E4 stream on, E5 power-up
+#define AWTO_PNL_X_BLK_SET_STREAM                               0xE4
+#define AWTO_PNL_X_BLK_SET_POWERUP                              0xE5
 #define AWTO_PNL_X_BLK_LATE                                     0xE3    // no video ready event in time (value = ms from wanted)
 // #162 panel machine (UserCommonInterface.c): the one driver of panel VDD, eDP-1 PHY / link / stream, backlight pin and PWM.
 // Callers request (UserCommonInterfacePanelPowerAction); UserCommonInterfacePanelPowerTick() steps it, never waits. docs/design-162.md.
@@ -1735,6 +1741,7 @@ extern void AwtoPanelForeign(unsigned char ucWhat);
 extern void UserCommonInterfacePanelBoot(void);
 extern void UserCommonInterfacePanelBootDuty(void);
 extern void UserCommonInterfacePanelVideoReady(void);
+extern void UserCommonInterfacePanelStreamOn(void);
 // #162 step 3 system machine (SysJudge.c): one state for power status + mode, one request entry (SysMachineRequest), one driver.
 // The SDK views (power status / target, mode state / reset target) are written there only (gate sysm). docs/design-162.md.
 #define AWTO_SYS_AC_ON                                          0       // boot: power AC_ON, mode POWER OFF
