@@ -1610,7 +1610,6 @@ fn	_ScalerDisplayDPTxStreamHanlder	3	0x043c	12
 fn	_ScalerGlobalDoubleBufferConfigReset	3	0x0448	20
 fn	_ScalerGlobalDoubleBufferEnable	3	0x045c	52
 fn	_ScalerGlobalWatchDog	3	0x0490	336
-fn	_ScalerMcuDdcRamEnable	3	0x05e0	100
 fn	_ScalerMcuGpioInitial	3	0x0644	220
 fn	_ScalerTMDSHdcpEnabled	3	0x0720	28
 fn	_ScalerTMDSHdmi2FormatResetEvent	3	0x073c	20
@@ -1808,6 +1807,7 @@ fn	_AwtoSwMode	3	0x7fd0	36
 fn	_AwtoSwRec	3	0x7ff4	160
 fn	_AwtoSysLog	3	0x8094	132
 fn	_AwtoSyncEdidOn	3	0x8118	36
+fn	_ScalerMcuDdcRamEnable	3	0x813c	108
 fn	_AwtoPsTmdsLive	3	0x81cc	40
 fn	_AwtoPsTmdsStart	3	0x81f4	76
 fn	_AwtoPsWakeArm	3	0x8240	176
@@ -2404,9 +2404,9 @@ fn	_ScalerTimerWDCancelTimerEvent_EXINT0	7	0x9c80	32
 fn	_ScalerDpRx1SetDpcdBitValue_EXINT0	7	0x9ca0	52
 fn	_AwtoTmdsRx2Hs	7	0x9cd4	20
 fn	_AwtoTmdsRx3Hs	7	0x9ce8	20
-fn	_ScalerTMDSRx2PhySetDeferred	7	0x9cfc	972
-fn	_ScalerTMDSRx3PhySetDeferred	7	0xa0c8	972
+fn	_ScalerTMDSRx2PhySetDeferred	7	0x9cfc	1008
 fn	_ScalerDpRx1AdjustLaneFLDBand_EXINT0	7	0xa494	516
+fn	_ScalerTMDSRx3PhySetDeferred	7	0xa698	1008
 const	_g_tAstData	8	0x0000	692
 const	_g_tAstOff	8	0x02b4	112
 const	_s_tAstBit	8	0x0324	12

@@ -1883,7 +1883,7 @@ typedef struct
 // VARIABLE EXTERN
 //****************************************************************************
 extern BYTE xdata pData_EXINT[6];
-extern WORD isr_g_usInputPixelClk;
+extern volatile WORD isr_g_usInputPixelClk;
 extern WORD isr_g_usTmdsOffLineMeasureClk;
 
 #if(_DIGITAL_PORT_SUPPORT == _ON)

@@ -776,7 +776,7 @@ extern unsigned char AwtoPortCable(unsigned char ucPort);
 // #81 per-port settings block (fw/input/ports.c): one bit per port per field, bit n = Dn (AWTO_PORT_BIT). Field today: enable.
 // Disabled port: HPD held low (PCB_Dn_HOTPLUG), EDID channel off (ScalerMcuDdcRamEnable), receiver off (ScalerGDIPhyPowerProc),
 // skipped by the search / AUTO (SysSourceHandler, SysSourceSwitchPort), the fast-switch cache and the wake poll.
-extern __xdata unsigned char isr_g_ucAwtoPortOff;
+extern volatile __xdata unsigned char isr_g_ucAwtoPortOff;
 #define AWTO_PORT_BIT(port)                                     ((unsigned char)(1 << ((port) - _D0_INPUT_PORT)))
 #define AWTO_PORT_OFF(port)                                     ((isr_g_ucAwtoPortOff & AWTO_PORT_BIT(port)) != 0)
 #define AWTO_PORT_HPD(n, x)                                     ((x) & (~isr_g_ucAwtoPortOff >> (n)) & 1)   // PCB_Dn_HOTPLUG (x = 0 / 1): high only when on; no branch
@@ -853,7 +853,7 @@ extern void AwtoDdcciPoll(void);
 extern __xdata unsigned char g_ucAwtoDdcDef;
 extern void AwtoWaitPump(void);       // #216: Get-VCP / capabilities answered inside a blocking wait (fw/ddcci/ddcci.c)
 #define AWTO_PUMP_SP_MAX                                        0xB0    // pump runs only with SP at or below; its Get path peaked 0xED from 0xBE (47 B), so 0xB0 stays under the 0xDB the rest of the firmware reaches (waits seen up to 0xA5)
-extern unsigned char isr_g_ucTMDSRx2PhyPend, isr_g_ucTMDSRx3PhyPend;
+extern volatile unsigned char isr_g_ucTMDSRx2PhyPend, isr_g_ucTMDSRx3PhyPend;
 extern void ScalerTMDSPhySetDeferred(void);
 #define AWTO_TMDS_PHY_PUMP()                                    { if(((isr_g_ucTMDSRx2PhyPend | isr_g_ucTMDSRx3PhyPend) != 0) && (SP <= AWTO_PUMP_SP_MAX)) { ScalerTMDSPhySetDeferred(); } }
 #if(_AWTO_DDCCI_NOPOLL == 1)
@@ -984,7 +984,7 @@ extern void AwtoDpFrameClear(void);
 #define AWTO_TMDS_MEM_D2                                        _BIT0   // isr_g_ucAwtoTmdsMem bit n = port worked at 1:40; bit n + 4 = this try came from the memory (logged by AwtoSyncScan)
 #define AWTO_TMDS_MEM_D3                                        _BIT1
 #if(_AWTO_TMDS_MODE_MEM == _ON)
-extern __xdata BYTE isr_g_ucAwtoTmdsMem;
+extern volatile __xdata BYTE isr_g_ucAwtoTmdsMem;
 #define AWTO_TMDS_MEM_USE(b)                                    (((isr_g_ucAwtoTmdsMem & (b)) != 0) ? ((isr_g_ucAwtoTmdsMem |= ((b) << 4)), _TRUE) : _FALSE)
 #define AWTO_TMDS_MEM_CLR(b)                                    (isr_g_ucAwtoTmdsMem &= ~(b))
 #define AWTO_TMDS_MEM_NOTE(b, r, hs)                            { if((r) != _SOURCE_NONE) { isr_g_ucAwtoTmdsMem = ((hs) != 0) ? (isr_g_ucAwtoTmdsMem | (b)) : (isr_g_ucAwtoTmdsMem & ~(b)); } }
@@ -1059,7 +1059,7 @@ typedef struct
     unsigned char ucN;                          // events recorded since the arm (max AWTO_SW_EVENTS)
     unsigned int usT0;                          // d_isr_g_usTimerCounter at the arm
     unsigned char ucLastMode;
-    unsigned char ucHpdLow[4];                  // HPD-low writes per port D0..D3 since boot (wraps)
+    volatile unsigned char ucHpdLow[4];                  // HPD-low writes per port D0..D3 since boot (wraps)
     unsigned char ucHoldBlocks;                 // SDK OSD paths stopped by a held visual (#28), wraps
     StAwtoSwEv stEv[AWTO_SW_EVENTS];
 } StAwtoSw;

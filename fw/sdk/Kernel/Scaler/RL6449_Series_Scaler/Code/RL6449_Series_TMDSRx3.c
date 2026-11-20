@@ -49,9 +49,9 @@
 //****************************************************************************
 StructTMDSCtrlInfo isr_g_stTMDSRx3CtrlInfo;
 volatile WORD isr_g_usTMDSRx3ClkCount;
-WORD isr_g_usTMDSRx3PhyCount;
-WORD isr_g_usTMDSRx3PhyClk;
-BYTE isr_g_ucTMDSRx3PhyPend;
+volatile WORD isr_g_usTMDSRx3PhyCount;
+volatile WORD isr_g_usTMDSRx3PhyClk;
+volatile BYTE isr_g_ucTMDSRx3PhyPend;
 
 volatile BYTE g_pucTMDSRx3LEMax[3];
 volatile BYTE g_pucTMDSRx3LEMin[3];
@@ -59,7 +59,7 @@ BYTE g_pucTMDSRx3Tap0Min[3];
 BYTE g_pucTMDSRx3Tap0Max[3];
 BYTE g_ucTMDSRx3Tap0Init;
 BYTE g_pucTMDSRx3Tap1Max[3];
-BYTE isr_g_ucTMDSRx3ClkIRQ;
+volatile BYTE isr_g_ucTMDSRx3ClkIRQ;
 BYTE g_ucTMDSRx3Z0Status;
 BYTE g_ucTMDSRx3SlaveAddr;
 

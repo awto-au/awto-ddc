@@ -5,8 +5,8 @@
 // - Rows: tAwtoPortRow maps a registry row to (field, port). A new per-port field = a new row kind + its bitmask.
 // - Readers: PCB_Dn_HOTPLUG (HPD), ScalerMcuDdcRamEnable (EDID), ScalerGDIPhyPowerProc (receiver), SysSource (search), fast-switch
 //   cache, wake poll, selector state.
-__xdata BYTE isr_g_ucAwtoPortOff;                   // 0 at reset: all on until the settings load (AwtoPortBoot)
-__xdata BYTE isr_g_ucAwtoTmdsMem;                  // #78: TMDS ports that worked at 1:40 last (RL6449_Project.h AWTO_TMDS_MEM_*); RAM only, 0 at reset
+volatile __xdata BYTE isr_g_ucAwtoPortOff;                   // 0 at reset: all on until the settings load (AwtoPortBoot)
+volatile __xdata BYTE isr_g_ucAwtoTmdsMem;                  // #78: TMDS ports that worked at 1:40 last (RL6449_Project.h AWTO_TMDS_MEM_*); RAM only, 0 at reset
 
 #ifdef _AWTO_NEW_SETTINGS
 extern unsigned char set_put(unsigned char ucId, int iV, unsigned char ucNow);

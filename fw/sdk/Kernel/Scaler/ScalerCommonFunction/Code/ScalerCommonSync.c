@@ -51,7 +51,7 @@
 //****************************************************************************
 BYTE xdata pData_EXINT[6];
 __xdata _Bool g_bPsWakeupHpd;
-WORD isr_g_usInputPixelClk;
+volatile WORD isr_g_usInputPixelClk;
 WORD isr_g_usTmdsOffLineMeasureClk;
 
 BYTE g_ucDpRx0LTStatus = _DP_LINK_TRAINING_NONE;

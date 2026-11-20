@@ -122,9 +122,9 @@
 //****************************************************************************
 extern StructTMDSCtrlInfo isr_g_stTMDSRx2CtrlInfo;
 extern volatile WORD isr_g_usTMDSRx2ClkCount;
-extern WORD isr_g_usTMDSRx2PhyCount;
-extern WORD isr_g_usTMDSRx2PhyClk;
-extern BYTE isr_g_ucTMDSRx2PhyPend;
+extern volatile WORD isr_g_usTMDSRx2PhyCount;
+extern volatile WORD isr_g_usTMDSRx2PhyClk;
+extern volatile BYTE isr_g_ucTMDSRx2PhyPend;
 
 #if(_D2_INPUT_PORT_TYPE == _D2_MHL_PORT)
 extern BYTE g_ucTMDSRx2ClkMode;
