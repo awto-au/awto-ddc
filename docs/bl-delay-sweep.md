@@ -49,6 +49,6 @@ Measured 2026-11-20, unit 3, warm reset (ISP 0xEE), image 50fd217, sync log ms f
 ## Result (2026-11-20, camera, unit 3; details and tables: docs/camera-lcd-timing.md)
 
 - Valid picture on the LCD: 1.44 s after the reset's dark onset (1360..1480 ms), equal to the firmware ACTIVE (1.40..1.48 s) within a frame.
-- Default (pin at MCU boot + 15 ms): white flash 5-6 frames (200-240 ms) in 9 of 9 runs. Pin at MCU boot + 91 ms or later (`--ref powerup`, N >= 20): 0 flash frames in every run (9 + 9 + 12 + ... runs; powerup N = 20..1600, stream N = 0..300, ACTIVE N = 0..400).
+- Default (pin at MCU boot + 15 ms): white flash 5-6 frames (200-240 ms) in 9 of 9 runs. Pin at MCU boot + 91 ms or later (`--ref powerup`, N >= 20): 0 flash frames in every run (powerup N = 20..1600, stream N = 0..300, ACTIVE N = 0..400: 73 runs).
 - Reference event does not matter; the absolute time after power-up does. Proposed value (Dan decides, product default unchanged): backlight pin 150 ms after power-up (0 flash with +60 ms margin over the 91 ms edge, picture still 1.3 s away).
 - DDC/CI sleep -> wake: same flash with the pin at power-up (4-5 frames), 0 at N >= 200 ms.
