@@ -467,6 +467,15 @@ void AwtoSyncInit(void)                             // boot (before SysMainSyste
     g_stAwtoSync.ucSpare = 0;
     g_stAwtoSync.ucOpenReq = 0;
     s_ucAwtoSyncRan = 1;
+    for(usI = 1; usI <= AWTO_SYNC_N; usI++)         // a kept ring: the note numbers go on (the DDR lines are keyed by them)
+    {
+        puc = (BYTE __xdata *)&g_stAwtoSync.stEv[AWTO_SYNC_IDX(AWTO_SYNC_BACK(g_stAwtoSync.ucSeq, usI))];
+        if(puc[0] == AWTO_SYNC_EV_NOTE)
+        {
+            g_usAwtoNoteN = ((WORD)puc[6] << 8) | puc[7];
+            break;
+        }
+    }
     g_ucAwtoSyncPwr = _POWER_STATUS_AC_ON;
     s_usAwtoT2Base = 0xFFFF;
     AwtoSyncBegin(AWTO_SYNC_K_POWER_ON, 0xFF);

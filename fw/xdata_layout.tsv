@@ -1,7 +1,6 @@
 # module	hole	offset	slot   (scripts/xdata_layout.py; one fixed XDATA slot per module, fw/xdata_layout.tsv)
-scope_saver2	0xd700	0	188
-fastsw	0xd700	188	169
-keytest	0xd700	357	154
+saver_canvas	0xd700	0	229
+scope_saver2	0xd700	229	188
 ScalerMDomain	0xd700	511	132
 awto_osd_ui	0xd700	643	125
 hostnote	0xd700	768	124
@@ -109,7 +108,6 @@ RL6449_Series_MemoryFunction	0xe580	46	2
 RL6449_Series_OsdSramBaseAddressSet	0xe580	48	2
 RTD2014Ddcci	0xe580	50	2
 ScalerIDomain	0xe580	52	2
-ScalerRotation	0xe580	54	2
 SysPower	0xe580	56	2
 dpframe	0xe580	58	2
 osd_rot	0xe580	60	2
@@ -127,13 +125,15 @@ SysAudio	0xe580	73	1
 SysCec	0xe580	74	1
 __ovl	0xe580	75	1
 flash_screen	0xe580	76	1
+keytest	0xe580	77	154
 sync	0xe780	37	676
 asteroids	0xe780	713	515
 ScalerCommonDebug	0xe780	1228	363
 awto_settings_settings	0xe780	1591	325
-console	0xe780	1916	316
+awto_settings_menu	0xe780	1916	135
+fastsw	0xe780	2051	169
+ScalerRotation	0xe780	2220	2
 swlog	0xe780	2232	278
 inputs	0xe780	2510	232
-saver_canvas	0xe780	2742	229
-awto_settings_menu	0xe780	2971	135
+console	0xe780	2742	317
 ScalerDisplay	0xe780	3106	7

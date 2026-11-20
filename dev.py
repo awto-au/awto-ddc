@@ -1518,6 +1518,24 @@ def cmd_ddr_addr(extra: list[str]) -> int:
     return _py("ddr_addr_test.py", "--unit", n, "--bus", _live_bus(u), "--map", m, *extra)
 
 
+@command("DDR marker at the top of the 32 MiB: fill | verify (freeze image; survival over an event, scripts/ddr_keep_probe.py)",
+         args="[--unit N] [--map F] fill|verify|cmd 0xNN", kind="action")
+def cmd_ddr_keep(extra: list[str]) -> int:
+    n, u = _unit(extra)
+    given = _opt(extra, "--map")
+    b = _live_bus(u)
+    return _dbg_py(b, "ddr_keep_probe.py", "--unit", n, "--bus", b, "--map", Path(_fwmap(u, given)), *extra)
+
+
+@command("host-note lines from the DDR note store over the debug link (docs/note-store.md): --last K | --seq S ...",
+         args="[--unit N] [--map F] [--last K | --seq S ...]", kind="action")
+def cmd_ddr_notes(extra: list[str]) -> int:
+    n, u = _unit(extra)
+    given = _opt(extra, "--map")
+    b = _live_bus(u)
+    return _dbg_py(b, "ddr_note_read.py", "--unit", n, "--bus", b, "--map", Path(_fwmap(u, given)), *extra)
+
+
 @command("read-only I2C address probe of the unit's host bus (i2cdetect -r, then i2cget regs 0..F of every extra ACKing address; no writes)",
          args="[--unit N] [--reps N] [--halt] [--extras]", kind="action")
 def cmd_i2c_probe(extra: list[str]) -> int:

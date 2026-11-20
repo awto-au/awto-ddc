@@ -1344,6 +1344,23 @@ extern void osd_tc_bar(unsigned char ucWin, unsigned int usX0, unsigned int usY0
 #define AWTO_NOTE_LEN                                           2       // slot byte 2: length
 #define AWTO_NOTE_TXT                                           3       // slot byte 3..: text
 #define AWTO_NOTE_SIZE                                          (AWTO_NOTE_TXT + AWTO_NOTE_CHARS)
+
+// DDR note store (log-keep, option F): each note's text is also written to the top 128 KiB of the 32 MiB DDR through MCU_DC port A, one 128 B line
+// per note sequence (docs/note-store.md); the console reads it back when the 119 B slot holds a newer note. Line = tag (2 B BE) len text, rest 0.
+#define AWTO_DDRN_UNITS0                                        0x3FC000UL  // first 8 B unit: 2^22 units (the wrap) less 1024 lines of 16 units
+#define AWTO_DDRN_SLOTS                                         1024        // lines: note sequence & (slots - 1)
+#define AWTO_DDRN_LINE_UNITS                                    16          // 128 B = 8 bursts
+#define AWTO_DDRN_BURSTS                                        8
+#define AWTO_DDRN_BURST_BYTES                                   16          // MCU_DC burst; write / read buffer halves are swapped (memory byte j = buffer byte j + 8)
+#define AWTO_DDRN_HALF                                          8
+#define AWTO_DDRN_CMD_WRITE                                     0x80        // MCU_DC_CMD [7:5] = 100 (fw/test/ddr_draw.c AWTO_DRW_OPC_WRITE)
+#define AWTO_DDRN_CMD_READ                                      0xA0        // [7:5] = 101
+#define AWTO_DDRN_READ_FLAG                                     0x01        // MCU_DC_READ_FLAG_A [0]
+#define AWTO_DDRN_SPIN                                          255         // CMD / flag polls before the ms limit
+#define AWTO_DDRN_STALL_MS                                      50          // 3 frames of DDR arbitration (ddr_draw.c AWTO_DRW_STALL_MS); expiry = no text, "text overwritten"
+#define AWTO_DDRN_BYTE(j)                                       AWTO_XB(AWTO_R_MCU_DC_DATABUF_R_00_A + (((j) + AWTO_DDRN_HALF) % AWTO_DDRN_BURST_BYTES))
+extern void AwtoDdrNoteWrite(void);                 // g_aucAwtoNote -> its DDR line (sequence g_usAwtoNoteN)
+extern unsigned char AwtoDdrNoteRead(unsigned int usSeq, unsigned char ucBurst);    // 1 = burst ucBurst of that line is in the read buffer (AWTO_DDRN_BYTE)
 #define AWTO_TC_HOST_NOTE                                       0x35    // test cmd: the host wrote the slot (tag = g_usAwtoNoteN + 1) over 0x35: log it (#273)
 extern __xdata unsigned int g_usAwtoNoteN;
 extern __xdata unsigned char g_aucAwtoNote[AWTO_NOTE_SIZE];

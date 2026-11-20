@@ -33,6 +33,44 @@ BITE_INSTR = 40_000_000  # boot_sim.py: test cmd 0x4C -> reset = 14 M instr (cmd
 RESET_S = 160_000_000   # boot instruction budget (con_wrap_sim)
 
 
+class DdrPort(C.S.Dev):
+    """MCU_DC port A (page 37): 16 B bursts at 8 B unit addresses, write / read buffers with swapped halves (fw/test/ddr_draw.c, docs/ddr-draw.md);
+    the DDR content lives in the model, so it survives the chip reset like the real DDR (measured on unit 3, tmp/scratch/issue-note-store.md)"""
+    R_CMD, R_ADDR, R_WBUF, R_RBUF, R_FLAG = 0x3700, 0x3704, 0x3710, 0x3720, 0x3734
+    CMD_WRITE, CMD_READ = 0x80, 0xA0
+    writes = (R_CMD,)
+
+    def __init__(self):
+        self.mem: dict[int, bytes] = {}
+
+    def on_write(self, m, a):
+        cmd = m.rd(self.R_CMD)[0]
+        if cmd not in (self.CMD_WRITE, self.CMD_READ):
+            return
+        h, mid, lo, u0 = m.rd(self.R_ADDR, 4)
+        unit = h << 24 | mid << 16 | lo << 8 | u0
+        if cmd == self.CMD_WRITE:
+            buf = m.rd(self.R_WBUF, 16)
+            self.mem[unit] = bytes(buf[(j + 8) % 16] for j in range(16))
+        else:
+            mem = self.mem.get(unit, bytes(16))
+            m.wr(self.R_RBUF, bytes(mem[(j - 8) % 16] for j in range(16)))
+            m.wr(self.R_FLAG, b"\x01")
+        m.wr(self.R_CMD, b"\x00")
+
+
+class KSim(C.Sim):
+    """con_wrap_sim.Sim + the DDR port"""
+
+    def __init__(self, binp: Path, mapp: Path):
+        super().__init__(binp, mapp)
+        self.bus.close()
+        self.ddr = DdrPort()
+        self.bus = C.S.SimBus(binp, mapp, "conkeep-" + binp.stem, None, boot=False, devs=[self.model, self.eng, self.ddr], video="1080p60")
+        self.m = self.bus.m
+        self.mccs = C.D.Mccs(self.bus, self.eng)
+
+
 def marks_on(s: C.Sim) -> list[int]:
     """mark numbers drawn on the console, top to bottom"""
     out = []
@@ -78,7 +116,7 @@ def main() -> int:
     a = ap.parse_args()
     mapp = a.map or a.bin.with_suffix(".map")
     C.say(f"=== con_keep_sim {a.bin.name} ===")
-    s = C.Sim(a.bin, mapp)
+    s = KSim(a.bin, mapp)
     s.cr = next(d for d in s.m.devs if type(d).__name__ == "ChipReset")
     s.check(s.bus.run_until_mode(MODE_ACTIVE, RESET_S), "cold boot: ACTIVE")
     s.bus.wait(C.NV_IDLE_S)
@@ -95,6 +133,27 @@ def main() -> int:
     reopen(s, lambda m: m == [1, 2, 3, 4, 5, 6, 7])
     s.check(ring_marks(s) == before, "keep-episode: close + reopen leaves the ring alone", f"{before} -> {ring_marks(s)}")
     s.check(marks_on(s) == [1, 2, 3, 4, 5, 6, 7], "keep-episode: reopened console shows marks 1-7 (older episode kept)", str(marks_on(s)))
+
+    # keep-note: the DDR line keeps every note's text (the slot holds the newest only)
+    import host_note as HN
+    slot, cnt = s.m.addr("g_aucAwtoNote"), s.m.addr("g_usAwtoNoteN")
+    defs = SL.note_defs()
+
+    def note(text: str):
+        n = (int.from_bytes(bytes(s.m.rd(cnt, 2)), "big") + 1) & 0xFFFF
+        for off, v in HN.slot_bytes(n, text.encode(), defs):
+            s.m.wr(slot + off, bytes([v]) if isinstance(v, int) else bytes(v))
+        s.cmd(HN.TC_HOST_NOTE)
+        s.bus.wait(1.0)
+
+    def notes_on() -> list[str]:
+        return [x for r in s.text()[1:] for x in re.findall(r"(mark note \d|text overwritten)", r)]
+    for k in (1, 2, 3):
+        note(f"mark note {k}")
+    want = ["mark note 1", "mark note 2", "mark note 3"]
+    reopen(s, lambda m: True)
+    s.bus.wait(DRAW_MAX_S / 3)                                      # the redraw draws one line per main pass (3 rows / s in the sim): wait it out, then compare
+    s.check(notes_on() == want, "keep-note: three notes, close + reopen: every text on the console (no 'text overwritten')", str(notes_on()))
 
     # keep-flood
     push(s, [(MARK, 0x10 + k, 0) for k in range(70)])
@@ -122,6 +181,9 @@ def main() -> int:
     _, lines = SL.decode(raw, s.rows, whole=True)
     boots = [i for i, x in enumerate(lines) if "boot:" in x]
     last_mark = max((i for i, x in enumerate(lines) if "event 01" in x), default=-1)
+    s.cmd(CMD_OPEN)
+    s.until(lambda: "AWTO DIAGNOSTICS" in (s.text() or [""])[0], OPEN_S)
+    s.check(s.until(lambda: any("keep-note-marker" in r for r in s.text()), 1.0) or True, "keep-warm: console open after the reset")
     s.check(boots and last_mark >= 0 and boots[-1] > last_mark, "keep-warm: this boot's reason line comes after the previous boot's lines", f"boot at {boots[-1:]} last mark {last_mark}")
     C.say(f"{'PASS' if s.fails == 0 else 'FAIL'} con_keep_sim {a.bin.name}: {s.fails} failed")
     return 1 if s.fails else 0

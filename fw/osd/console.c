@@ -1359,17 +1359,34 @@ static void AwtoPutWall(void)                   // s_ulLnAbs -> "HH:MM:SS.mmm" (
 
 static __xdata BYTE s_ucNoteI;                  // AwtoPutNote loop index (XDATA: the DATA overlay path is full)
 
-static void AwtoPutNote(BYTE ucLen, WORD usN)    // #273 fmt note: the slot's text, explicit when a newer note took the slot
+static __xdata BYTE s_ucNoteP;                  // AwtoPutNote: byte position in the DDR line
+
+static void AwtoPutNote(BYTE ucLen, WORD usN)    // #273 fmt note: the slot's text; a newer note took the slot: the DDR line of this note (fw/log/hostnote.c)
 {
-    if((((WORD)g_aucAwtoNote[AWTO_NOTE_TAG] << 8) | g_aucAwtoNote[AWTO_NOTE_TAG + 1]) != usN)
+    if((((WORD)g_aucAwtoNote[AWTO_NOTE_TAG] << 8) | g_aucAwtoNote[AWTO_NOTE_TAG + 1]) == usN)
+    {
+        for(s_ucNoteI = 0; s_ucNoteI < ucLen; s_ucNoteI++)
+        {
+            AwtoPutChar(((g_aucAwtoNote[AWTO_NOTE_TXT + s_ucNoteI] >= ' ') && (g_aucAwtoNote[AWTO_NOTE_TXT + s_ucNoteI] <= '~')) ?
+                        g_aucAwtoNote[AWTO_NOTE_TXT + s_ucNoteI] : '?');
+        }
+        return;
+    }
+    if((AwtoDdrNoteRead(usN, 0) == 0) || ((((WORD)AWTO_DDRN_BYTE(AWTO_NOTE_TAG) << 8) | AWTO_DDRN_BYTE(AWTO_NOTE_TAG + 1)) != usN))
     {
         AwtoPutStr("text overwritten");
         return;
     }
     for(s_ucNoteI = 0; s_ucNoteI < ucLen; s_ucNoteI++)
     {
-        AwtoPutChar(((g_aucAwtoNote[AWTO_NOTE_TXT + s_ucNoteI] >= ' ') && (g_aucAwtoNote[AWTO_NOTE_TXT + s_ucNoteI] <= '~')) ?
-                    g_aucAwtoNote[AWTO_NOTE_TXT + s_ucNoteI] : '?');
+        s_ucNoteP = AWTO_NOTE_TXT + s_ucNoteI;
+        if(((s_ucNoteP % AWTO_DDRN_BURST_BYTES) == 0) && (AwtoDdrNoteRead(usN, s_ucNoteP / AWTO_DDRN_BURST_BYTES) == 0))
+        {
+            AwtoPutChar('?');
+            return;
+        }
+        AwtoPutChar(((AWTO_DDRN_BYTE(s_ucNoteP % AWTO_DDRN_BURST_BYTES) >= ' ') && (AWTO_DDRN_BYTE(s_ucNoteP % AWTO_DDRN_BURST_BYTES) <= '~')) ?
+                    AWTO_DDRN_BYTE(s_ucNoteP % AWTO_DDRN_BURST_BYTES) : '?');
     }
 }
 

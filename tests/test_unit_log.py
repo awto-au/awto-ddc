@@ -108,3 +108,17 @@ def test_no_poll_while_a_flash_runs(tmp_path):
     assert out == [] and called == []
     out = U.poll_once("3", store_for=lambda ser: U.Store(ser, tmp_path), read=lambda u: snap(0, 3), busy=lambda u: False)
     assert len(out) == 3
+
+
+def test_note_text_falls_back_to_the_ddr_line_when_the_slot_moved_on():
+    import sync_log as SL
+    d = {"TAG": 0, "LEN": 2, "TXT": 3, "CHARS": 119, "SIZE": 122}
+    slot = (7).to_bytes(2, "big") + bytes([3]) + b"new" + bytes(116)
+    assert SL.note_text(slot, 3, 7, d) == "new"
+    assert SL.note_text(slot, 5, 6, d) == "text overwritten"
+    SL.NOTE_DDR = lambda seq: "from ddr" if seq == 6 else None
+    try:
+        assert SL.note_text(slot, 5, 6, d) == "from ddr"
+        assert SL.note_text(slot, 5, 5, d) == "text overwritten"
+    finally:
+        SL.NOTE_DDR = None

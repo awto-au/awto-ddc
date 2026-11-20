@@ -292,13 +292,16 @@ def note_defs(header: Path | None = None) -> dict:
     return out
 
 
+NOTE_DDR = None                          # callable(seq) -> text | None: the DDR note store (docs/note-store.md), set by main() on an image that has it
+
+
 def note_text(slot: bytes | None, length: int, seq: int, d: dict | None = None) -> str:
     """text of note `seq` from the slot bytes: explicit when a newer note took the slot (tag != seq) or the slot was not read"""
     d = d or note_defs()
     if slot is None:
         return f"text not read ({length} chars)"
     if int.from_bytes(slot[d["TAG"]:d["TAG"] + 2], "big") != seq & 0xFFFF:
-        return "text overwritten"
+        return (NOTE_DDR(seq) if NOTE_DDR else None) or "text overwritten"
     return "".join(chr(c) if 0x20 <= c <= 0x7E else "?" for c in slot[d["TXT"]:d["TXT"] + min(length, d["CHARS"])])
 
 
@@ -459,11 +462,18 @@ def main() -> int:
     raw = read_ring(lambda ad, n: X.read_blocks(io, ad, n), sym(a.map, "g_stAwtoSync"))
     ht, t2 = read_ht(io, a.map) if raw is not None else (None, None)
     note = read_note(io, a.map) if raw is not None else None
-    io.close()
+    if raw is not None and " _AwtoDdrNoteWrite " in a.map.read_text(errors="replace"):
+        import ddr_note_read as DN
+        global NOTE_DDR
+        cache: dict = {}
+        NOTE_DDR = lambda seq: cache.setdefault(seq, DN.text_of(io, seq))
+    try:
+        h, lines = (decode(bytes(raw), rows, a.whole, note) if raw is not None else (None, []))
+    finally:
+        io.close()
     if raw is None:
         log("sync: read over 0x35 failed")
         return 1
-    h, lines = decode(bytes(raw), rows, a.whole, note)
     if h["magic"] != b"SY":                              # #158: wrong map (not the running image) reads another address
         st = ROOT / f"tmp/fw/{a.serial}-flash-state.json" if a.serial else None
         img = json.loads(st.read_text()).get("image") if st and st.exists() else "? (pass --serial)"
