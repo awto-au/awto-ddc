@@ -9,18 +9,25 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "scripts"))
 import cam_frames as cf
 
 
-def _clip(path: Path) -> None:
-    size = f"{cf.TILE_W}x{cf.TILE_H}"
-    pic = f"color=c=0x606080:s={size}:r=25:d={{d}}"
-    text = ",drawbox=x=20:y=80:w=120:h=60:color=0x00ff00:t=fill"
-    srcs = [pic.format(d=2), f"color=c=0x080808:s={size}:r=25:d=1", f"color=c=white:s={size}:r=25:d=0.12",
-            pic.format(d=3)]
-    fx = ["", "", "", text]
+TEXT = ",drawbox=x=20:y=80:w=120:h=60:color=0x00ff00:t=fill,drawbox=x=200:y=20:w=100:h=200:color=0x202040:t=fill"
+
+
+def _concat(path: Path, parts: list[str]) -> None:
     cmd = ["ffmpeg", "-nostdin", "-y", "-loglevel", "error"]
-    for s, f in zip(srcs, fx, strict=True):
-        cmd += ["-f", "lavfi", "-i", s + f]
-    cmd += ["-filter_complex", "[0][1][2][3]concat=n=4:v=1:a=0,format=yuv420p", "-c:v", "libx264", "-crf", "12", "-g", "50", str(path)]
+    for p in parts:
+        cmd += ["-f", "lavfi", "-i", p]
+    cmd += ["-filter_complex", f"concat=n={len(parts)}:v=1:a=0,format=yuv420p", "-c:v", "libx264", "-crf", "12", "-g", "50", str(path)]
     subprocess.run(cmd, check=True)
+
+
+def _restart(secs: str) -> list[str]:
+    size = f"{cf.TILE_W}x{cf.TILE_H}"
+    return [f"color=c=0x606080:s={size}:r=25:d={secs}" + TEXT, f"color=c=0x080808:s={size}:r=25:d=1",
+            f"color=c=white:s={size}:r=25:d=0.12", f"color=c=0x606080:s={size}:r=25:d=3" + TEXT]
+
+
+def _clip(path: Path) -> None:
+    _concat(path, _restart("2"))
 
 
 @pytest.fixture(scope="module")
@@ -47,17 +54,10 @@ def test_console_after_flash(events):
 
 
 def test_sweep_clip_split_per_restart(tmp_path):
-    size = f"{cf.TILE_W}x{cf.TILE_H}"
-    pic = f"color=c=0x606080:s={size}:r=25:d="
-    parts = [pic + "3", f"color=c=0x080808:s={size}:r=25:d=1", f"color=c=white:s={size}:r=25:d=0.2", pic + "4"] * 2
-    cmd = ["ffmpeg", "-nostdin", "-y", "-loglevel", "error"]
-    for p in parts:
-        cmd += ["-f", "lavfi", "-i", p]
     clip = tmp_path / "sweep.mkv"
-    cmd += ["-filter_complex", f"concat=n={len(parts)}:v=1:a=0,format=yuv420p", "-c:v", "libx264", "-crf", "12", str(clip)]
-    subprocess.run(cmd, check=True)
+    _concat(clip, _restart("3") + _restart("4"))
     res = cf.analyse_sweep(clip, sheet_dir=tmp_path / "sheets", expect=2)
     assert len(res) == 2
     for _off, ev in res:
-        assert len(ev.flash) == 5 and ev.stable is not None
+        assert len(ev.flash) == 3 and ev.stable is not None
     assert (tmp_path / "sheets" / "run-02.png").is_file()

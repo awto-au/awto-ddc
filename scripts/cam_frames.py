@@ -31,12 +31,16 @@ FRAME_MS = 40.0                  # 25 fps stream (camera encoder setting)
 TILE_W, TILE_H = 352, 264        # analysis size for both streams (ROIs are fractions of the frame)
 ROI_BG = (0.62, 0.56, 0.96, 0.78)    # flat desktop area right of the console, clear of the VLC window and the head
 ROI_TXT = (0.04, 0.24, 0.58, 0.73)   # diag console text area
+ROI_SCR = (0.03, 0.12, 0.97, 0.9)    # whole screen: structure (std of luminance) tells a picture from a uniform flash
+SD_FLAT = 0.5            # std below this x the pre-reset std = uniform field (white flash)
+SD_PIC = 0.5             # std above this x the pre-reset std = a picture with detail
+PIC_STEP = 1.8           # picture appears as a brightness step of at least this over the preceding 8 frames
+PIC_KEEP = 0.8           # and stays above this fraction of that level for the hold (auto exposure ramps down slowly)
 DARK_FRAC = 0.6          # Y below this fraction of the pre-reset level = screen dark
 GLOW_FRAC = 0.1          # first light = Y step over 2 frames above this fraction of (pre-reset level - dark floor)
 FLASH_RATIO = 1.25       # Y above this x pre-reset level, with no picture colour = flash (white / garbage)
 GOOD_TOL = 0.12          # |Y - pre| / pre below this = the pre-reset picture level
 GLOW_MIN = 8.0           # Y steps below this above the dark floor are sensor noise (8-bit units)
-CHROMA_MIN = 0.12        # (B-G)/Y of the desktop below this = a neutral desktop: fall back to the Y level
 ONSET_GAP_S = 3.0        # restarts closer than this in one clip are one (the boot itself dips and flashes for ~2 s)
 PRE_FRAMES = 10          # frames kept before a restart's dark onset: the pre-reset level for the detector
 STABLE_HOLD = 5          # frames (200 ms) the picture must hold for the stable boot picture
@@ -158,13 +162,19 @@ def _crop(frames: np.ndarray, roi: tuple[float, float, float, float]) -> np.ndar
     return frames[:, int(y0 * TILE_H):int(y1 * TILE_H), int(x0 * TILE_W):int(x1 * TILE_W), :]
 
 
+def _screen_sd(frames: np.ndarray) -> np.ndarray:
+    c = _crop(frames, ROI_SCR).astype(np.float32)
+    return (0.299 * c[..., 0] + 0.587 * c[..., 1] + 0.114 * c[..., 2]).std(axis=(1, 2))
+
+
 def metrics(frames: np.ndarray, roi: tuple[float, float, float, float], roi_txt=ROI_TXT) -> dict[str, np.ndarray]:
     c = _crop(frames, roi).astype(np.float32)
     y = 0.299 * c[..., 0] + 0.587 * c[..., 1] + 0.114 * c[..., 2]
     t = _crop(frames, roi_txt).astype(np.int16)
     text = (t.max(axis=-1) > 150) & (t[..., 1] - t[..., 0] >= 30)      # bright green / cyan console text
     return {"Y": y.mean(axis=(1, 2)), "R": c[..., 0].mean(axis=(1, 2)), "G": c[..., 1].mean(axis=(1, 2)),
-            "B": c[..., 2].mean(axis=(1, 2)), "txt": text.mean(axis=(1, 2))}
+            "B": c[..., 2].mean(axis=(1, 2)), "txt": text.mean(axis=(1, 2)),
+            "sd": _screen_sd(frames)}
 
 
 def _first_hold(ok: np.ndarray, start: int, hold: int) -> int | None:
@@ -175,15 +185,15 @@ def _first_hold(ok: np.ndarray, start: int, hold: int) -> int | None:
 
 
 def find_events(m: dict[str, np.ndarray], pts_ms: list[float]) -> Events:
-    """Picture present = the desktop's colour (chroma) is back, not its brightness: camera auto exposure drifts for
-    seconds after a flash / dark phase. Flash = bright and neutral (white, no picture colour)."""
-    y, n = m["Y"], len(m["Y"])
+    """Camera auto exposure drifts for seconds after a dark phase, so levels are compared inside one restart only:
+    first light = a brightness step; flash = bright AND uniform (low std); picture = a step to a field with detail
+    (high std) that keeps its level."""
+    y, sd, n = m["Y"], m["sd"], len(m["Y"])
     ev = Events(n_frames=n, pts_ms=pts_ms)
     if n < 30:
         ev.note = "clip too short"
         return ev
-    chroma = (m["B"] - m["G"]) / np.maximum(y, 1.0)
-    pre, pre_c = float(np.median(y[:10])), float(np.median(chroma[:10]))
+    pre, pre_sd = float(np.median(y[:10])), float(np.median(sd[:10]))
     ev.level_pre = pre
     dark_idx = np.nonzero(y < DARK_FRAC * pre)[0]
     if not len(dark_idx):
@@ -194,29 +204,30 @@ def find_events(m: dict[str, np.ndarray], pts_ms: list[float]) -> Events:
     ev.last_good = int(good[-1]) if len(good) else None
     floor = float(np.min(y[ev.dark:ev.dark + 10]))
     ev.level_dark = floor
+    thr = max(GLOW_MIN, GLOW_FRAC * (pre - floor))
     step = y[ev.dark + 2:] - y[ev.dark:-2]               # a step, not the slow auto-exposure ramp of a dark screen
-    lit = np.nonzero(step > max(GLOW_MIN, GLOW_FRAC * (pre - floor)))[0]
+    lit = np.nonzero(step > thr)[0]
     if not len(lit):
         ev.note = "never lit again"
         return ev
-    thr = max(GLOW_MIN, GLOW_FRAC * (pre - floor))
     ev.first_light = ev.dark + 2 + int(lit[0])
     if y[ev.first_light - 1] - y[ev.first_light - 2] > thr / 2:      # the step started one frame earlier (rolling shutter)
         ev.first_light -= 1
-    coloured = chroma >= 0.5 * pre_c if pre_c >= CHROMA_MIN else np.abs(y - pre) <= GOOD_TOL * pre
-    coloured &= y > floor + GLOW_MIN
-    ev.stable = _first_hold(coloured, ev.first_light, STABLE_HOLD)
+    pic = np.zeros(n, bool)
+    for i in range(8, n - STABLE_HOLD):
+        pic[i] = (sd[i] >= SD_PIC * pre_sd and y[i] >= PIC_STEP * float(np.min(y[i - 8:i]))
+                  and bool((y[i + 1:i + STABLE_HOLD] >= PIC_KEEP * y[i]).all()))
+    cand = np.nonzero(pic[ev.first_light:])[0]
+    ev.stable = ev.first_light + int(cand[0]) if len(cand) else None
     end = ev.stable if ev.stable is not None else n
-    neutral = np.abs(chroma) < 0.5 * max(pre_c, CHROMA_MIN)
+    ev.flash = [i for i in range(ev.first_light, end) if y[i] > FLASH_RATIO * pre and sd[i] < SD_FLAT * pre_sd]
     txt = np.convolve(m["txt"], np.ones(3) / 3, mode="same")
     txt_final = float(np.median(m["txt"][-15:]))
-    bare = m["txt"] < 0.25 * txt_final if txt_final > 0.002 else np.ones(n, bool)     # a washed-out picture still shows its text
-    ev.flash = [i for i in range(ev.first_light, end) if y[i] > FLASH_RATIO * pre and neutral[i] and bare[i]]
     if txt_final > 0.002:
         c = np.nonzero(txt[ev.first_light:] > 0.5 * txt_final)[0]
         ev.console = ev.first_light + int(c[0]) if len(c) else None
-        ok = coloured & (txt > 0.5 * txt_final)
-        ev.settled = _first_hold(ok, ev.first_light, SETTLED_HOLD)
+        if ev.stable is not None:
+            ev.settled = _first_hold(txt > 0.5 * txt_final, ev.stable, SETTLED_HOLD)
     ev.level_settled = float(np.median(y[-15:]))
     return ev
 
@@ -236,7 +247,7 @@ def table(ev: Events) -> list[str]:
         d = f"{i - prev:>9}{ev.pts_ms[i] - ev.pts_ms[prev]:>8.0f}" if prev is not None else ""
         out.append(f"{name:<26}{i:>6}{ev.pts_ms[i]:>9.0f}{d}")
         prev = i
-    out.append(f"flash frames (first light to stable, Y > {FLASH_RATIO} x pre, neutral): {len(ev.flash)}  {ev.flash}")
+    out.append(f"flash frames (first light to stable, Y > {FLASH_RATIO} x pre, uniform): {len(ev.flash)}  {ev.flash}")
     return out
 
 

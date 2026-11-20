@@ -198,12 +198,16 @@ def one_run(unit: str, k: int, n: int, planned: int, gap_s: float, ref: str = "a
 
 
 def summary(rows: list[dict]) -> str:
-    out = ["", f"{'delay ms':>9} {'runs':>4} {'ok':>3} {'after video ready ms (min / mean / max)':>42}"]
+    """per planned delay: runs, OK, pin-on after the reference (fw), camera: flash frames per run, first light -> picture (ms)"""
+    out = ["", f"{'delay ms':>9} {'runs':>4} {'ok':>3} {'pin after ref ms (min/mean/max)':>32} {'cam flash frames':>18} {'dark->picture ms (min/med/max)':>31}"]
     for p in sorted({r["planned_ms"] for r in rows}):
         rs = [r for r in rows if r["planned_ms"] == p]
         ms = [r["bl_after_video_ms"] for r in rs if r.get("bl_after_video_ms") is not None]
         stat = f"{min(ms)} / {sum(ms) / len(ms):.0f} / {max(ms)}" if ms else "-"
-        out.append(f"{p:>9} {len(rs):>4} {sum(r['verdict'] == 'OK' for r in rs):>3} {stat:>42}")
+        fl = [r["cam_flash_frames"] for r in rs if r.get("cam_flash_frames") is not None]
+        dp = sorted(r["cam_dark_picture_ms"] for r in rs if r.get("cam_dark_picture_ms") is not None)
+        dps = f"{dp[0]} / {dp[len(dp) // 2]} / {dp[-1]}" if dp else "-"
+        out.append(f"{p:>9} {len(rs):>4} {sum(r['verdict'] == 'OK' for r in rs):>3} {stat:>32} {','.join(map(str, fl)) or '-':>18} {dps:>31}")
     return "\n".join(out)
 
 
