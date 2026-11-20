@@ -154,6 +154,10 @@ def keil_compat():
     return _KC
 
 
+# Default off: SDK delay loops poll ISR-set flags (#23). "on" needs the compiler with awto-sdcc#156 (keil loop re-read scope) and a unit boot test.
+GENCONSTPROP = [] if os.environ.get("AWTO_GENCONSTPROP", "off") == "on" else ["--nogenconstprop"]
+
+
 # module:func list (awto-sdcc scripts/fl_iram_select.py; regenerate after source changes that move DATA frames, #205)
 FAR_LOCALS = ROOT / "fw/far_locals_select.txt"
 FAR_MODE = os.environ.get("AWTO_FAR_LOCALS", "list")    # list (default) | all (every function, #205 trial) | off
@@ -177,7 +181,7 @@ def sdcc_cmd(c: Path, uv2dir: Path, defines, incs, model):
            "--norestartseqatomics",                           # trunk: else every ISR exits via sdcc_atomic_maybe_rollback
            "--nooverlay",                                     # `data` locals -> DSEG for sdcc_overlay (call-graph aware), not OSEG
            "--noinvariant",                                   # hoisted loop invariants become DATA spill slots (#8)
-           "--nogenconstprop",                                # SDK polls ISR-set non-volatile flags; trunk folded the delay loop away (#23)
+           *GENCONSTPROP,                                     # --nogenconstprop unless AWTO_GENCONSTPROP=on (#23, docs/genconstprop-switch.md)
            *keil_compat(),                                    # Keil ~bit (replaces the ~bX -> !bX rule, #26), /0, loop re-read, eval order (awto-sdcc#25)
            "-Wp-Wundef",                                      # undefined name in #if = 0: a build error unless allowed (undef_gate, #162)
            f"-Wp-include,{SHIM / 'keil_compat.h'}", f"-I{SHIM}"]
