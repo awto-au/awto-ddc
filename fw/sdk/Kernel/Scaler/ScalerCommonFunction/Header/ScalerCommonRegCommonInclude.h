@@ -58,7 +58,8 @@ extern DWORD AwtoRbGetDWord(WORD usAddr);
 #define ScalerGetWordVar(usAddr)                    AwtoRbGetWord((WORD)(usAddr))
 #define ScalerGetDWordVar(usAddr)                   AwtoRbGetDWord((WORD)(usAddr))
 #endif
-extern volatile BYTE xdata isr_g_ucAwtoRbDirty;
+#define AWTO_RB_NO_DWORD                            0xFFFF // no listed page has this dword index (FFFC..FFFF is the MCU page)
+extern volatile WORD xdata isr_g_usAwtoRbLast;
 
 //--------------------------------------------------
 // Macros of controlling the scaler registers

@@ -111,6 +111,11 @@ STEPS = {
     "f175_70p": (1, 5, 2, 0),
     "f175_70dp": (1, 5, 2, FL_DUAL),
 }
+CKCONS = {}                               # name -> CKCON[2:0] MOVX stretch while held (flag FL_CKCON): MOVX = 2 + n cycles
+for _base, _st in (("m351", (1, 5, 1)), ("m175", (2, 4, 1))):
+    for _n in (1, 2, 3, 4, 7):
+        STEPS[f"{_base}_k{_n}"] = (*_st, FL_CKCON)
+        CKCONS[f"{_base}_k{_n}"] = _n
 PADS = {"s58p": (7, 0xFF), "s70p": (7, 0xFF), "s70dp": (7, 0xFF), "f175_58p": (7, 0xFF), "f175_70p": (7, 0xFF), "f175_70dp": (7, 0xFF)}   # (drive 0..7 = 2 + 0.5 x n mA, slew 0/1); 0xFF = keep
 KEEP = 0xFF
 # FF6C[5:2] = latch_so_rise (bit 5), drive_si_fall (4), si_dly_sel (3:2) while the step is held; PASSES = CRC passes (stress; 0 = 3)
@@ -213,6 +218,7 @@ class Ctx:
         self.stock_e = None
         self.max_mhz = MAX_M2PLL_DEF_MHZ
         self.keep = 0
+        self.rb_addr = 0                      # g_stAwtoOsdHw + 39 (aucBuf) + 51: read-behind test result bytes N, raw stale, helper wrong
         self.override = (0xFF, 0)
 
 
@@ -254,7 +260,7 @@ def send(ctx, go: int, limit_s: float, f=0, f2=0, m=0, flags=0, hold_s=HOLD_S, l
     """Write the request, go; poll until the firmware clears go (the main loop serves it; reads fail while it is busy)."""
     ck = ctx.ck
     if go == OP_APPLY:
-        ck.wr(C_F, bytes([f, f2, m, 0, flags]))
+        ck.wr(C_F, bytes([f, f2, m, CKCONS.get(name_, 0), flags]))
         ck.wr(C_DRIVE, bytes(pad))
         ck.wr(C_TUNE, bytes([TUNE.get(name_, 0xFF), PASSES.get(name_, 0)]))
         ck.wr(C_FLN, bytes(FLASH_TESTS.get(name_, (0, 0))))
@@ -461,6 +467,9 @@ def run_step(ctx, name: str, ck_checks: bool = True) -> dict | None:
     say(f"  info cpu loop {alu} ms (196608 it) = {196608 / max(alu, 1):.0f} kit/s; cache-miss reads {miss} ms for 16384 = {miss * 1000 / 16.384:.0f} ns each; "
         f"cache meter over the CRC pass: {ref} reads, {mis} misses ({100 * mis / max(ref, 1):.1f} %), {rst} memory restarts; DDC debounce {be(r, C_DEB, 2)}")
     res.update(alu_ms=alu, miss_ms=miss, ref=ref, misses=mis, crc_ms=be(r, C_CRCMS, 2))
+    rbn, rbr, rbh = ctx.rdabs(ctx.rb_addr, 3) if ctx.rb_addr else (0, 0, 0)
+    say(f"  info read-behind (fw reads at the step clock): raw first reads stale {rbr} of {rbn}; helper reads wrong {rbh} of {2 * rbn} (8-bit counters)")
+    res.update(rbn=rbn, rb_raw=rbr, rb_helper=rbh)
     if name in FLASH_TESTS:
         n_fl, ck_fl = FLASH_TESTS[name]
         done, fail, be_, bp_ = r[C_FLDONE], r[C_FLFAIL], be(r, C_FLBADE, 2), be(r, C_FLBADP, 2)
@@ -539,7 +548,7 @@ def run_step(ctx, name: str, ck_checks: bool = True) -> dict | None:
 
 
 def tsv(row: dict) -> None:
-    keys = ["step", "rb_stale", "rb_elig", "rb_bad", "pll_mhz", "mcu", "spi", "dual", "pass", "fl_done", "fl_fail", "fl_bad", "fl_erase_ms", "fl_prog_ms", "img_bad", "img_ms", "crc_ms", "alu_ms", "miss_ms", "ref", "misses", "scope2_fps", "s2_miss_frame", "ast_fps", "fail"]
+    keys = ["step", "rbn", "rb_raw", "rb_helper", "rb_stale", "rb_elig", "rb_bad", "pll_mhz", "mcu", "spi", "dual", "pass", "fl_done", "fl_fail", "fl_bad", "fl_erase_ms", "fl_prog_ms", "img_bad", "img_ms", "crc_ms", "alu_ms", "miss_ms", "ref", "misses", "scope2_fps", "s2_miss_frame", "ast_fps", "fail"]
     TSV.parent.mkdir(parents=True, exist_ok=True)
     new = not TSV.exists()
     with TSV.open("a") as f:
@@ -632,6 +641,7 @@ def main() -> int:
             return None
         ctx = Ctx(dev, ck, rdabs, sync_addr, want)
         ctx.max_mhz, ctx.keep, ctx.override = a.ctx_opts
+        ctx.rb_addr = S.sym(a.map, "g_stAwtoOsdHw") + 90
         ctx.relink = lambda: relink(a.bus)
         try:
             fails = run(ctx, names, a)

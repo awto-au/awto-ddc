@@ -1178,6 +1178,7 @@ static void AwtoClkChecks(void)
 // Writes go through UserCommonFlashErasePage / UserCommonFlashWrite (the production path); g_ucAwtoFlCk sets the MOVX stretch the SDK macro uses.
 #define AWTO_CLK_FL_BANK                        15
 #define AWTO_CLK_FL_PAGE                        14                  // page x 0x1000 = 0xE000
+#define AWTO_CLK_RB_REPS                        16                  // first reads per page and pair
 #define AWTO_CLK_FL_SIZE                        4096
 #define AWTO_CLK_FL_CHUNK                       16                  // flash call size, <= AWTO_OHW_BUF (shared buffer)
 #define AWTO_CLK_FL_MAX                         20                  // wear limit: <= 100 erases in total (Dan), N + 1 erases per call
@@ -1368,6 +1369,84 @@ static void AwtoClkImgRef(void)                                     // stock clo
         s_aulClkImgRef[ucK] = AwtoClkImgBank(ucK);
     }
     s_ucClkImgRef = 1;
+}
+
+#define AWTO_CLK_RB_N                           g_stAwtoOsdHw.aucBuf[AWTO_OHW_BUF - 3]   // result bytes in the OSD op buffer (idle after the checks); host reads 3 bytes at g_stAwtoOsdHw + 39 + 51
+#define AWTO_CLK_RB_RAW                         g_stAwtoOsdHw.aucBuf[AWTO_OHW_BUF - 2]
+#define AWTO_CLK_RB_HELP                        g_stAwtoOsdHw.aucBuf[AWTO_OHW_BUF - 1]
+static const __code BYTE tAwtoClkRbPage[] = {0xA0, 0xA8, 0x88, 0x8E, 0xC8, 0xCE};
+
+static void AwtoClkRbTest(void)                                     // read-behind pages at the step clock: raw first read vs repeat, helper read vs settled
+{
+    BYTE ucP;
+    BYTE ucK;
+    BYTE ucN;
+    BYTE ucOffA;
+    BYTE ucOffB;
+    BYTE ucTa;
+    BYTE ucTb;
+    BYTE ucV;
+    WORD usPg;
+    WORD usA;
+    WORD usB;
+
+    AWTO_CLK_RB_N = 0;
+    AWTO_CLK_RB_RAW = 0;
+    AWTO_CLK_RB_HELP = 0;
+    for(ucP = 0; ucP < sizeof(tAwtoClkRbPage); ucP++)
+    {
+        usPg = (WORD)tAwtoClkRbPage[ucP] << 8;
+        ucN = 0;
+        ucOffA = 0;
+        ucOffB = 0;
+        ucTa = 0;
+        ucTb = 0;
+        for(ucK = 0; ucK < 64; ucK++)                                 // first two stable dwords of different value
+        {
+            usA = usPg + ((WORD)ucK << 2);
+            ucV = AWTO_XFR(usA);
+            ucV = AWTO_XFR(usA);
+            if(ucV != AWTO_XFR(usA))
+            {
+                continue;
+            }
+            if(ucN == 0)
+            {
+                ucOffA = ucK << 2;
+                ucTa = ucV;
+                ucN = 1;
+            }
+            else if(ucV != ucTa)
+            {
+                ucOffB = ucK << 2;
+                ucTb = ucV;
+                ucN = 2;
+                break;
+            }
+        }
+        if(ucN < 2)
+        {
+            continue;
+        }
+        usA = usPg + ucOffA;
+        usB = usPg + ucOffB;
+        for(ucK = 0; ucK < AWTO_CLK_RB_REPS; ucK++)
+        {
+            ucV = AWTO_XFR(usB);                                      // B loaded: the next read of A is a first read of a new dword
+            ucV = AWTO_XFR(usA);
+            AWTO_CLK_RB_N++;
+            AWTO_CLK_RB_RAW += (ucV != AWTO_XFR(usA));
+            ucV = AWTO_XFR(usB);
+            isr_g_usAwtoRbLast = AWTO_RB_NO_DWORD;                    // raw reads moved the cache behind the helper's tracking
+            ucV = ScalerGetByteVar(usA);
+            AWTO_CLK_RB_HELP += (ucV != ucTa);
+            isr_g_usAwtoRbLast = AWTO_RB_NO_DWORD;
+            ucV = AWTO_XFR(usB);
+            ucV = ScalerGetByteVar(usA);
+            AWTO_CLK_RB_HELP += (ucV != ucTa);
+        }
+    }
+    (void)ucTb;
 }
 
 static void AwtoClkImgPasses(void)
@@ -1807,6 +1886,7 @@ static void AwtoClkApply(void)
     s_usClkT0 = (WORD)AwtoMs();
     g_stAwtoClk.ucState = AWTO_CLK_ST_HELD;
     AwtoClkChecks();
+    AwtoClkRbTest();
     AwtoClkImgPasses();
     AwtoClkFlashTest();
     AwtoClkReadback();
@@ -3015,7 +3095,7 @@ static __xdata unsigned int s_usAwtoDemoAt;     // AwtoMs() of the last push
 #define AWTO_TC_FFF4_PROBE                      0x35
 #define AWTO_FFF4_MARK                          0xA5    // a value no probed register's low address byte has
 #define AWTO_FFF4_DONE                          0x5A    // [6]: the probe ran
-__xdata BYTE g_pucAwtoFff4Probe[8];             // [0] FFF4 at entry, [1] after writing the mark, [2] after a P0_01 read,
+__xdata BYTE g_pucAwtoFff4Probe[7];             // [0] FFF4 at entry, [1] after writing the mark, [2] after a P0_01 read,
                                                 // [3] after a P0_02 read, [4] after a P3A_18 same-value write, [5] FFF3, [6] AWTO_FFF4_DONE
 static void AwtoFff4Probe(void)
 {
