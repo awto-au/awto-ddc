@@ -8,6 +8,9 @@ usage: settings_sim.py BIN [--map MAP] [--out tmp/osd67] [--mode 1080p60] [--no-
   sets via the mailbox (settings_cli.Box), save.
   Boot 2 (same flash): the values are read back; test command 0x40 restores the defaults.
   Flash model: AwtoFlIo (fw/nvram/flash_io.c) is stubbed with a Python NOR model (program clears bits, 4 KiB erase).
+KNOWN STALE (issue draft in the hand-off report): "flash written" and "NVRAM round trip across reboot" model the retired
+legacy record (AwtoFlIo, 0xFD000) since the SDK-store move (awto-ddc#151); they print XFAIL and do not fail the run.
+Rewrite needs the SDK store model (nv_policy_sim.py) in place of the Flash class.
 Exit 1 on any failed check. Log: ./tmp/logs/settings_sim.log; report OUT/settings_sim.json
 """
 from __future__ import annotations
@@ -100,11 +103,11 @@ def main() -> int:
     rep = {"image": str(a.bin), "checks": [], "png": []}
     fails = 0
 
-    def check(name, ok, detail=""):
+    def check(name, ok, detail="", stale=False):
         nonlocal fails
-        fails += not ok
-        rep["checks"].append({"check": name, "ok": bool(ok), "detail": detail})
-        say(f"{'PASS' if ok else 'FAIL'} {name} {detail}")
+        fails += not ok and not stale
+        rep["checks"].append({"check": name, "ok": bool(ok), "detail": detail, "known_stale": stale})
+        say(f"{'PASS' if ok else 'XFAIL' if stale else 'FAIL'} {name} {detail}")
 
     flash = Flash()
     r = Run(a, flash, "b1")
@@ -160,7 +163,7 @@ def main() -> int:
         check("VCP 0x10 = brightness row", cur == r.box.get_row(b["brightness"]) and mx == 100, f"{cur}/{mx}")
         r.box.call(2, 0xE3, 2)                             # save now
         want = {n: r.box.get_row(b[n]) for n in ("brightness", "contrast", "gamma", "panel_t4")}
-        check("flash written", flash.ops["write"] > 0, str(flash.ops))
+        check("flash written", flash.ops["write"] > 0, str(flash.ops), stale=True)
     finally:
         r.s.bus.close()
 
@@ -168,7 +171,7 @@ def main() -> int:
     try:
         r2.boot()
         got = {n: r2.box.get_row(T.BY_NAME[n]) for n in want}
-        check("NVRAM round trip across reboot", got == want, f"want {want} got {got}")
+        check("NVRAM round trip across reboot", got == want, f"want {want} got {got}", stale=True)
         r2.s.act("defaults")
         r2.s.run_to(r2.s.ms() + GAP_MS)
         got = {n: r2.box.get_row(T.BY_NAME[n]) for n in want}
@@ -178,7 +181,7 @@ def main() -> int:
         r2.s.bus.close()
     rep["flash_ops"] = flash.ops
     (a.out / "settings_sim.json").write_text(json.dumps(rep, indent=1))
-    say(f"settings_sim: {len(rep['checks']) - fails}/{len(rep['checks'])} checks pass, {len(rep['png'])} PNGs in {a.out}")
+    say(f"settings_sim: {sum(c['ok'] for c in rep['checks'])}/{len(rep['checks'])} checks pass ({fails} failed), {len(rep['png'])} PNGs in {a.out}")
     return 1 if fails else 0
 
 

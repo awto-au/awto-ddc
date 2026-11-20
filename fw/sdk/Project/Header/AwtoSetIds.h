@@ -174,5 +174,5 @@
 #define AWTO_SET_DEF_PANEL_HOURS      0
 #define AWTO_SET_DEF_PANEL_MIN        0
 #define AWTO_SET_SCHEMA              0x5EFF
-#define AWTO_SET_AUX_MAX             57
+#define AWTO_SET_AUX_MAX             48
 #endif

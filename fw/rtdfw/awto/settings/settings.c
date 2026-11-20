@@ -226,6 +226,13 @@ static uint8_t st_byte(void)                       /* row loaded: an int row wit
     return row.type == STY_INT && row.min >= 0 && row.max <= 255;
 }
 
+static uint8_t st_step(void)                       /* else a step grid of <= 255 steps: one byte, (v - min) / step */
+{
+    int16_t span = row.max - row.min;
+
+    return row.type == STY_INT && !st_byte() && row.step > 1 && span % row.step == 0 && span / row.step <= 255;
+}
+
 static uint8_t st_aux_check(void)                  /* layout check: ids, types and widths of the aux rows */
 {
     uint8_t i, c = 0x5A;
@@ -233,7 +240,7 @@ static uint8_t st_aux_check(void)                  /* layout check: ids, types a
     for (i = 0; i < SET_COUNT; i++) {
         set_row(i, &row);
         if ((row.flags & (SF_NV | SF_SDK)) == SF_NV)
-            c = (uint8_t)((c << 1 | c >> 7) ^ row.id ^ (row.type << 6) ^ (st_byte() ? 0x35 : 0));
+            c = (uint8_t)((c << 1 | c >> 7) ^ row.id ^ (row.type << 6) ^ (st_byte() ? 0x35 : 0) ^ (st_step() ? 0x6B : 0));
     }
     return c;
 }
@@ -249,6 +256,10 @@ uint8_t set_aux_pack(void)
         if ((row.flags & (SF_NV | SF_SDK)) != SF_NV)
             continue;
         v = (pend_id != 0 && row.id == pend_id) ? pend_old : val[i];     /* a pending risky value is never stored */
+        if (st_step()) {
+            rec[n++] = (uint8_t)((v - row.min + row.step / 2) / row.step);     /* off-grid: nearest step at save */
+            continue;
+        }
         rec[n++] = (uint8_t)v;
         if (row.type == STY_INT && !st_byte())
             rec[n++] = (uint8_t)((uint16_t)v >> 8);
@@ -268,7 +279,9 @@ void set_aux_unpack(uint8_t len)
         if ((row.flags & (SF_NV | SF_SDK)) != SF_NV)
             continue;
         v = rec[n++];
-        if (row.type == STY_INT && !st_byte())
+        if (st_step())
+            v = row.min + v * row.step;
+        else if (row.type == STY_INT && !st_byte())
             v |= (int16_t)((uint16_t)rec[n++] << 8);
         if (v >= row.min && v <= row.max)
             val[i] = v;

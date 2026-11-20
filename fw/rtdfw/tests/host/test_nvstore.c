@@ -119,6 +119,17 @@ int main(void)
     CHECK(set_get(SET_ID_BACKLIGHT_ON_DELAY) == 255, "255 ms round trip: %d", set_get(SET_ID_BACKLIGHT_ON_DELAY));
     set_put(SET_ID_BACKLIGHT_ON_DELAY, 100, 0);
     len = set_aux_pack(); memcpy(save, set_aux_buf(), len);
+    CHECK(len == 48, "aux block 48 B (4 items of 14): %u", len);
+
+    /* 3c. step-grid rows: (v - min) / step in one byte; off-grid rounds to the nearest step at save */
+    set_put(SET_ID_SEARCH_DP_MS, 4350, 0); set_confirm();
+    set_put(SET_ID_PWR_L3_S, 3600, 0);
+    len = set_aux_pack(); memcpy(save, set_aux_buf(), len);
+    set_load(); set_aux_unpack(len);
+    CHECK(set_get(SET_ID_SEARCH_DP_MS) == 4400 && set_get(SET_ID_PWR_L3_S) == 3600, "step rows %d %d",
+          set_get(SET_ID_SEARCH_DP_MS), set_get(SET_ID_PWR_L3_S));
+    set_load(); set_put(SET_ID_SEARCH_DP_MS, 3000, 0); set_confirm();
+    len = set_aux_pack(); memcpy(save, set_aux_buf(), len);
 
     save[0] ^= 1;
     memcpy(set_aux_buf(), save, len);

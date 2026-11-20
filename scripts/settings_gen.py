@@ -169,9 +169,17 @@ def aux_rows(rows):
     return [r for r in rows if "nv" in r["flagset"] and "sdk" not in r["flagset"]]
 
 
+def aux_width(r) -> int:
+    """stored bytes of an aux row (mirrors settings.c st_byte / st_step): int within 0..255 raw; int on a step grid of
+    <= 255 steps as (v - min) / step; other ints 2 B"""
+    if r["type"] != "int" or (r["min"] >= 0 and r["max"] <= 255):
+        return 1
+    span = r["max"] - r["min"]
+    return 1 if r["step"] > 1 and span % r["step"] == 0 and span // r["step"] <= 255 else 2
+
+
 def aux_bytes(rows) -> int:
-    """int rows within 0..255 are one byte (mirrors settings.c st_byte)"""
-    return 1 + sum(2 if r["type"] == "int" and not (r["min"] >= 0 and r["max"] <= 255) else 1 for r in aux_rows(rows))
+    return 1 + sum(aux_width(r) for r in aux_rows(rows))
 
 
 def cstr(s: str) -> str:
@@ -381,6 +389,11 @@ def gen_doc(rows, pages, tree, sch):
            "`0xE4` = menu command (op << 8 | arg) / state, `0xE5` = cursor item (read).",
            f"- DDC/CI capabilities (generated): `{caps_string(rows)}`",
            "- Recovery (all defaults): VCP 0x04 or debug test command 0x40 (no key recovery, awto-ddc#132).",
+           "- Stored width: ints within 0..255 are 1 B raw; ints on a step grid of <= 255 steps are 1 B as (value - min) / step, "
+           "so a value set off the grid rounds to the nearest step when saved (RAM keeps the exact value until reboot); "
+           "other ints 2 B. The schema change that introduced this resets the stored rows without an SDK field to defaults "
+           "once (the aux block fails its layout check): search_*, nocable_*, pwr_*, panel_t*, bl_pwm_ms, screensaver*, "
+           "backlight_on_delay, input enables, etc.; SDK-field rows (brightness ...) keep their values.",
            "- Risky rows (`risky`): applied, then reverted after 15 s unless confirmed (Menu, or VCP 0xE3 = 1).",
            "- Flags: `nv` stored, `live` applied while adjusting, `risky` auto-revert, `reboot` after restart, "
            "`ro` status, `inert` stored only: dimmed with `*` after the label, not changed from the menu (DDC/CI still "
