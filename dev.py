@@ -61,6 +61,7 @@ sys.path.insert(0, str(REPO / "scripts"))
 import disk_guard
 import flash_registry
 import i2cbus
+import unit_ops
 
 TMP = REPO / "tmp"           # scratch, pidfiles
 LOGS = TMP / "logs"          # logs, per the ./tmp/logs/ rule
@@ -353,6 +354,36 @@ BOOT_PORTS = {"DP": "_D1_INPUT_PORT", "HDMI": "_D2_INPUT_PORT"}               # 
 MODES = {"1080p50": "1920x1080@50.000", "1080p60": "1920x1080@60.000", "4k30": "3840x2160@30.000",
          "4k60": "3840x2160@60.000", "4k5994": "3840x2160@59.940",
          "off": "off"}                  # off: remove the connector from the desktop, other monitors unchanged
+
+
+def _say(msg: str) -> None:
+    """a client line, timestamped like every dev.py line unless it already starts with an ISO time (tool output does)"""
+    for ln in str(msg).splitlines() or [""]:
+        print(ln if _ISO_START.match(ln) or not ln.strip() else f"{_stamp()}  {ln}", flush=True)
+
+
+def _thin(name: str, extra: list[str], direct_fn) -> int:
+    """dev.py <name> is a thin client of the GUI app's control port (#276): the app's workers run the one implementation
+    (`direct_fn`, via --direct); a script never picks --direct itself. No app = auto-start headless, else a clear error."""
+    import gui_client as GC
+    extra = list(extra)
+    if _flag(extra, "--direct"):
+        if os.environ.get("AWTO_GUI_WORKER") != "1" and GC.is_write(name, extra) and GC.app_live():
+            _say(f"{name}: refused: the GUI app is running and owns the unit buses. Use ./dev.py {name} without --direct (it goes through "
+                 f"the app's port) or ./dev.py gui ...; --direct is for the app's own workers and for recovery with the app stopped (#276)")
+            return 2
+        return direct_fn(extra)
+    if name == "settings" and (extra[:1] == ["rows"] or "--sim" in extra):
+        return direct_fn(extra)                      # offline: the table / the simulator, no unit bus
+    unit = str(_opt(extra, "--unit", None) or _default_unit())
+    try:
+        if name == "flash":
+            args = [str(Path(a).resolve()) if a.endswith(".bin") and Path(a).is_file() else a for a in extra]
+            return GC.run_flash(args, unit, say=_say)
+        return GC.run_legacy(name, extra, unit, say=_say)
+    except GC.GuiError as e:
+        _say(f"{name}: {e}")
+        return 2
 
 
 def _units() -> dict:
@@ -738,6 +769,11 @@ def _settings_restore(u: dict, bus: int, snap, m: Path, tbl: Path | None) -> Non
          args="[--unit N] [--full] [--any-image] [--force-ungated] "
               "[--verify crc|readback] [--write-mode byte|burst] [--aux-fast auto|off] [--max-min M] [image.bin]", kind="action")
 def cmd_flash(extra: list[str]) -> int:
+    return _thin("flash", extra, _flash_direct)
+
+
+def _flash_direct(extra: list[str]) -> int:
+    """the ONE flash implementation: runs in the GUI app's detached flash worker (flash_job.py), or by hand with --direct (app stopped)"""
     _layout_watch()
     _n, u = _unit(extra)
     full = _flag(extra, "--full")
@@ -889,7 +925,7 @@ def cmd_deploy(extra: list[str]) -> int:
                   "--verify", verify, *(["--write-mode", wmode] if isinstance(wmode, str) else []),
                   *(["--full"] if full else []),
                   *(["--force"] if not u.get("test") else []), *(["--force-ungated"] if ungated else []), str(img)]
-    rc = cmd_flash(flash_args)
+    rc = _flash_direct(flash_args)
     if rc:
         log(f"deploy: shared firmware failed (rc={rc}); EDID was not programmed", "ERROR")
         return rc
@@ -932,10 +968,10 @@ def cmd_edid(extra: list[str]) -> int:
     return rc
 
 
-@command("KVM: switch every unit's input at once over DDC/CI VCP 0x60, one process per bus (scripts/kvm.py, #60)",
-         args="<D1|D2|D3|dp|hdmi1|hdmi2|next> [--units 1,2,3] [--ddcutil] [--verify] [--dry-run]", kind="action")
+@command("KVM: switch the input of test units over DDC/CI VCP 0x60 through the GUI app's control port (#276); read back verified",
+         args="<D1|D2|D3|dp|hdmi1|hdmi2|next|here> --units 1,2 [--direct]", kind="action")
 def cmd_kvm(extra: list[str]) -> int:
-    return _py("kvm.py", *extra)
+    return _thin("kvm", extra, lambda e: unit_ops.kvm(sys.modules[__name__], e))
 
 
 @command("mains power-cycle a unit via its relay (scripts/power_cycle.py)", args="[--unit N] [--on|--off]",
@@ -1137,21 +1173,11 @@ def cmd_sound_test(extra: list[str]) -> int:
                "--map", _fwmap(u, given), *more)
 
 
-@command("settings registry (#67) on a unit or the sim: list | get NAME | set NAME VALUE | defaults | save | rows "
-         "(rows = the table, offline)", args="[--unit N | --sim BIN] [--map F] [--no-confirm] CMD [ARGS]", kind="action")
+@command("settings registry (#67) on a unit through the GUI app's control port (#276): list | get NAME | set NAME VALUE | defaults | save | "
+         "rows (the table, offline); --sim BIN runs the sim offline", args="[--unit N | --sim BIN] [--map F] [--no-confirm] [--direct] CMD [ARGS]",
+         kind="action")
 def cmd_settings(extra: list[str]) -> int:
-    sim, given = _opt(extra, "--sim"), _opt(extra, "--map")
-    if extra[:1] == ["rows"]:
-        return _py("settings_cli.py", "--map", "-", *extra)
-    if sim:
-        mp = given or str(Path(sim).with_suffix(".map"))
-        return _py("settings_cli.py", "--sim", sim, "--map", mp, *extra)
-    _n, u = _unit(extra)
-    b = _live_bus(u)
-    mp = _fwmap(u, given)
-    if not given:
-        _registry_verify(u, b)
-    return _dbg_py(b, "settings_cli.py", "--bus", str(b), "--serial", u["serial"], "--map", mp, *extra)
+    return _thin("settings", extra, lambda e: unit_ops.settings(sys.modules[__name__], e))
 
 
 @command("1 s alert tone on the unit's speaker (VCP 0xEB = 6): flash warning, or an agent calling Dan; --wait returns after the tone; every image, volume = the monitor VCP 0x62",
@@ -1161,14 +1187,10 @@ def cmd_alert(extra: list[str]) -> int:
     return _py("alert.py", "--bus", str(_live_bus(u)), *(["--wait"] if _flag(extra, "--wait") else []))
 
 
-@command("boot / sync log ring of a running unit, decoded (scripts/sync_log.py, #139); --whole = all episodes",
-         args="[--unit N] [--map F] [--whole] [--delta]", kind="action")
+@command("boot / sync log ring of a running unit, decoded (scripts/sync_log.py, #139) through the GUI app's control port (#276); --whole = all episodes",
+         args="[--unit N] [--map F] [--whole] [--delta] [--direct]", kind="action")
 def cmd_synclog(extra: list[str]) -> int:
-    flags = [f for f in ("--whole", "--delta") if _flag(extra, f)]
-    given = _opt(extra, "--map")
-    _n, u = _unit(extra)
-    b = _live_bus(u)
-    return _dbg_py(b, "sync_log.py", b, "--serial", u["serial"], "--map", _fwmap(u, given), *flags)
+    return _thin("synclog", extra, lambda e: unit_ops.synclog(sys.modules[__name__], e))
 
 
 @command("n warm resets of a unit, one timeline row each (picture time, EDID read, scan call, stages), median at the end (scripts/sync_bench.py)",
@@ -1179,18 +1201,11 @@ def cmd_syncbench(extra: list[str]) -> int:
     return _py("sync_bench.py", "--unit", str(_n), "--map", _fwmap(u, given), "--runs", runs or "5", "--label", label or "run", *(["--switch", sw] if sw else []))
 
 
-@command("add a free-text line to the unit's diag log (host note, #273): tests show what they do on the unit's console; "
+@command("add a free-text line to the unit's diag log (host note, #273) through the GUI app's control port (#276); "
          "--open-console opens the console first and leaves it open",
-         args="[--unit N] [--map F] [--open-console] TEXT", kind="action")
+         args="[--unit N] [--map F] [--open-console] [--direct] TEXT", kind="action")
 def cmd_note(extra: list[str]) -> int:
-    given, openc = _opt(extra, "--map"), _flag(extra, "--open-console")
-    _n, u = _unit(extra)
-    text = list(extra)
-    if given is True or len(text) != 1 or text[0].startswith("--"):
-        raise SystemExit("note: one TEXT argument (quote it); nothing done")
-    b = _live_bus(u)
-    return _dbg_py(b, "host_note.py", b, "--serial", u["serial"], "--map", _fwmap(u, given), *(["--open-console"] if openc else []),
-                   text[0], keep_console=openc)
+    return _thin("note", extra, lambda e: unit_ops.note(sys.modules[__name__], e))
 
 
 @command("start / stop a saver by name (VCP 0xEB from fw/awto/savers.tsv: off stop selected pacman scope2 flash splash alert "
@@ -1521,18 +1536,29 @@ def cmd_scdc(extra: list[str]) -> int:
     return _py("hdmi_scdc.py", _bus(u))
 
 
-DDC_SUBS = {"list": 0, "get": 1, "set": 2, "sleep": 0, "wake": 0, "brightness": 1}
-
-
-@command("DDC/CI via ddcutil on the unit's own bus: list | get CODE | set CODE VALUE | sleep | wake | brightness N",
-         args="[--unit N] list|get CODE [CODE...]|set CODE VALUE|sleep|wake|brightness N", kind="action")
+@command("DDC/CI via ddcutil on the unit's own bus through the GUI app's control port (#276): list | get CODE | set CODE VALUE | sleep | wake | brightness N",
+         args="[--unit N] [--direct] list|get CODE [CODE...]|set CODE VALUE|sleep|wake|brightness N", kind="action")
 def cmd_ddc(extra: list[str]) -> int:
-    _n, u = _unit(extra)
-    many = bool(extra) and extra[0] == "get" and 2 <= len(extra) <= 9          # get CODE [CODE...]: one detect for all codes
-    if not extra or extra[0] not in DDC_SUBS or (len(extra) != 1 + DDC_SUBS[extra[0]] and not many) \
-            or any(x.startswith("-") for x in extra):
-        raise SystemExit(f"ddc: one of {DDC_SUBS} (arg counts {list(DDC_SUBS.values())}); got {extra}; nothing done")
-    return _py("ddc_ctl.py", "--bus", _bus(u), *extra)
+    return _thin("ddc", extra, lambda e: unit_ops.ddc(sys.modules[__name__], e))
+
+
+@command("raw I2C transfer on the unit's EDID-proven bus through the GUI app's control port (#276): ADDR [BYTES...] [--read N]",
+         args="[--unit N] [--dp] [--direct] ADDR [BYTES...] [--read N]", kind="action")
+def cmd_i2c(extra: list[str]) -> int:
+    return _thin("i2c", extra, lambda e: unit_ops.i2c(sys.modules[__name__], e))
+
+
+@command("drive the monitor GUI through its control port (#276): list | state | select | get | set | save | kvm | saver | run | health | synclog | "
+         "note | host-time | vcp | i2c | ddc | flash-status | events | quit, or flag form: --serial S --kvm hdmi-1 --save",
+         args="[--serial S | --unit N] [--hdmi|--dp] [--confirm] [--json] CMD ... | --kvm T --set NAME=VALUE --volume N --mute on --save --i2c ADDR BYTES",
+         kind="action")
+def cmd_gui(extra: list[str]) -> int:
+    import gui_client
+    try:
+        return gui_client.run_gui(extra, _default_unit(), say=_say)
+    except gui_client.GuiError as e:
+        _say(f"gui: {e}")
+        return 2
 
 
 @command("identify the unit: EDID, DDC caps, scaler chip, flash params (ISP session halts the MCU, reboots after)",
@@ -1578,7 +1604,7 @@ def cmd_recover(extra: list[str]) -> int:
         bus = None
     if bus is not None and _py("rtd_reset.py", bus, "--serial", u["serial"]) == 0:
         log("recover: ISP reset sent (fast path, no mains cycle)")   # 0x4A answered: no 8 s relay cycle needed
-        return cmd_flash(["--unit", n, "--bus", str(bus), *wm,
+        return _flash_direct(["--unit", n, "--bus", str(bus), *wm,
                           *(["--any-image"] if any_image else []),
                           *(["--force-ungated"] if ungated else []), *img])
     rc = cmd_power_cycle(["--unit", n])
@@ -1596,7 +1622,7 @@ def cmd_recover(extra: list[str]) -> int:
                 + ("--bus" if given_bus else f"connector {u['connector']}'s ddc link (devices.json)")
                 + "; identity from this unit's own relay", "WARN")
     # no safe-window hold in the current firmware (StAwtoSafe retired; 0xF6B0 is the WDT record, #131): flash over ISP
-    return cmd_flash(["--unit", n, "--bus", str(bus), *wm, *(["--any-image"] if any_image else []),
+    return _flash_direct(["--unit", n, "--bus", str(bus), *wm, *(["--any-image"] if any_image else []),
                           *(["--force-ungated"] if ungated else []), *img])
 
 

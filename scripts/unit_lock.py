@@ -46,7 +46,7 @@ def lock_root(cwd: Path | None = None) -> Path:
 
 
 ROOT = repo_root()
-LOCKS = lock_root() / "tmp" / "locks"
+LOCKS = Path(os.environ.get("AWTO_LOCK_DIR") or lock_root() / "tmp" / "locks")   # env: tests keep real unit locks out of it
 SESSION_COMM = ("claude", "node")
 
 

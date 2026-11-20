@@ -230,7 +230,7 @@ def test_dev_flash_refuses_other_unit_image_before_bus(dev, tmp_path, monkeypatc
     img = _img(tmp_path, "AWT26110002-abc-be.bin", b"AWT26110002")
     monkeypatch.setattr(dev, "_bus", lambda u: pytest.fail("bus touched"))
     with pytest.raises(SystemExit):
-        dev.cmd_flash(["--unit", "3", str(img)])
+        dev._flash_direct(["--unit", "3", str(img)])
 
 
 def test_deploy_uses_shared_image_then_programs_unit_edid(dev, tmp_path, monkeypatch):
@@ -239,7 +239,7 @@ def test_deploy_uses_shared_image_then_programs_unit_edid(dev, tmp_path, monkeyp
     calls = []
     monkeypatch.setattr(dev, "_firmware_edid_sector", lambda p: 0x5000)
     monkeypatch.setattr(dev, "_bus", lambda u: 21)
-    monkeypatch.setattr(dev, "cmd_flash", lambda a: calls.append(("flash", a)) or 0)
+    monkeypatch.setattr(dev, "_flash_direct", lambda a: calls.append(("flash", a)) or 0)
     monkeypatch.setattr(dev, "_py", lambda script, *a, env=None, shield=False:
                         calls.append((script, list(a), shield)) or 0)
     assert dev.cmd_deploy(["--unit", "3", "--force", "--force-ungated", str(img)]) == 0
@@ -279,7 +279,7 @@ def test_dev_flash_bus_passes_identity(dev, tmp_path, monkeypatch):
         def __enter__(s): return 1000
         def __exit__(s, *a): return False
     monkeypatch.setattr(dev.i2cbus, "fast_bus", FB)
-    assert dev.cmd_flash(["--unit", "3", "--bus", "11", "--force-ungated", str(img)]) == 0
+    assert dev._flash_direct(["--unit", "3", "--bus", "11", "--force-ungated", str(img)]) == 0
     assert "--identity" in seen[0]
 
 
@@ -306,7 +306,7 @@ def test_failed_flash_leaves_no_stale_tag(dev, tmp_path, monkeypatch):
     import json
     img, fj = _flash_setup(dev, tmp_path, monkeypatch)
     monkeypatch.setattr(dev, "_py", lambda *a, env=None, shield=False: 7)
-    assert dev.cmd_flash(["--unit", "3", "--force-ungated", str(img)]) == 7
+    assert dev._flash_direct(["--unit", "3", "--force-ungated", str(img)]) == 7
     d = json.loads(fj.read_text())
     assert d["tag"] == "" and d["attempted_image"] == str(img)
     with pytest.raises(SystemExit):                 # dbg/osd/health map lookup refuses
@@ -321,7 +321,7 @@ def test_flash_exception_leaves_no_stale_tag(dev, tmp_path, monkeypatch):
         raise KeyboardInterrupt
     monkeypatch.setattr(dev, "_py", boom)
     with pytest.raises(KeyboardInterrupt):
-        dev.cmd_flash(["--unit", "3", "--force-ungated", str(img)])
+        dev._flash_direct(["--unit", "3", "--force-ungated", str(img)])
     assert json.loads(fj.read_text())["tag"] == ""
 
 
@@ -329,7 +329,7 @@ def test_successful_flash_records_new_tag(dev, tmp_path, monkeypatch):
     import json
     img, fj = _flash_setup(dev, tmp_path, monkeypatch)
     monkeypatch.setattr(dev, "_py", lambda *a, env=None, shield=False: 0)
-    assert dev.cmd_flash(["--unit", "3", "--force-ungated", str(img)]) == 0
+    assert dev._flash_direct(["--unit", "3", "--force-ungated", str(img)]) == 0
     d = json.loads(fj.read_text())
     assert d["tag"] == "AWT26110003-new-be" and d["sha256"] == __import__("hashlib").sha256(img.read_bytes()).hexdigest()
     assert (dev.TMP / "flashed" / "images" / d["images_dir"] / "AWT26110003-new-be.bin").is_file()
@@ -354,7 +354,7 @@ def _recover_setup(dev, tmp_path, monkeypatch, bus_results):
     monkeypatch.setattr(dev, "_bus", fake_bus)
     monkeypatch.setattr(dev, "cmd_power_cycle", lambda e: events.append(("relay",)) or 0)
     monkeypatch.setattr(dev, "_diag", lambda u, *a, bus=None: pytest.fail("recover no longer holds the unit"))
-    monkeypatch.setattr(dev, "cmd_flash", lambda e: events.append(("flash", e)) or 0)
+    monkeypatch.setattr(dev, "_flash_direct", lambda e: events.append(("flash", e)) or 0)
     return img, events
 
 
@@ -546,33 +546,33 @@ def _gated_setup(dev, tmp_path, monkeypatch, gates=None, sha_of=None, complete=T
 def test_flash_refuses_image_without_gate_record(dev, tmp_path, monkeypatch):
     img, ran = _gated_setup(dev, tmp_path, monkeypatch, write=False)
     with pytest.raises(SystemExit, match="no AWT26110003-new-be.gates.json"):
-        dev.cmd_flash(["--unit", "3", str(img)])
+        dev._flash_direct(["--unit", "3", str(img)])
     assert ran == []
 
 
 def test_flash_refuses_gate_record_for_changed_image(dev, tmp_path, monkeypatch):
     img, ran = _gated_setup(dev, tmp_path, monkeypatch, sha_of=b"another build")
     with pytest.raises(SystemExit, match="SHA-256 mismatch"):
-        dev.cmd_flash(["--unit", "3", str(img)])
+        dev._flash_direct(["--unit", "3", str(img)])
     assert ran == []
 
 
 def test_flash_refuses_failed_gate(dev, tmp_path, monkeypatch):
     img, ran = _gated_setup(dev, tmp_path, monkeypatch, gates={"link": {"result": "PASS"}, "wake": {"result": "FAIL"}})
     with pytest.raises(SystemExit, match="FAILED: wake"):
-        dev.cmd_flash(["--unit", "3", str(img)])
+        dev._flash_direct(["--unit", "3", str(img)])
     assert ran == []
 
 
 def test_flash_refuses_partial_gate_record(dev, tmp_path, monkeypatch):
     img, _ran = _gated_setup(dev, tmp_path, monkeypatch, complete=False)
     with pytest.raises(SystemExit, match="partial"):
-        dev.cmd_flash(["--unit", "3", str(img)])
+        dev._flash_direct(["--unit", "3", str(img)])
 
 
 def test_flash_accepts_pass_and_skip(dev, tmp_path, monkeypatch):
     img, ran = _gated_setup(dev, tmp_path, monkeypatch)
-    assert dev.cmd_flash(["--unit", "3", str(img)]) == 0
+    assert dev._flash_direct(["--unit", "3", str(img)]) == 0
     assert "rtd_flash_image.py" in ran
 
 
@@ -580,7 +580,7 @@ def test_force_ungated_flashes_and_logs_loudly(dev, tmp_path, monkeypatch):
     img, _ran = _gated_setup(dev, tmp_path, monkeypatch, gates={"link": {"result": "FAIL"}})
     lines = []
     monkeypatch.setattr(dev, "log", lambda msg, level="INFO": lines.append((level, msg)))
-    assert dev.cmd_flash(["--unit", "3", "--force-ungated", str(img)]) == 0
+    assert dev._flash_direct(["--unit", "3", "--force-ungated", str(img)]) == 0
     assert any(l == "ALERT" and "UNGATED IMAGE FLASHED ON PURPOSE" in m and "FAILED: link" in m for l, m in lines)
 
 
@@ -588,7 +588,7 @@ def test_archived_image_needs_no_gate_record(dev, tmp_path, monkeypatch):
     img, _ran = _gated_setup(dev, tmp_path, monkeypatch, write=False)
     (tmp_path / "build-debris" / "images").mkdir(parents=True)                   # fw_archive.py DEST
     (tmp_path / "build-debris" / "images" / img.name).write_bytes(img.read_bytes())
-    assert dev.cmd_flash(["--unit", "3", str(img)]) == 0
+    assert dev._flash_direct(["--unit", "3", str(img)]) == 0
 
 
 def test_archived_name_with_other_bytes_is_not_accepted(dev, tmp_path, monkeypatch):
@@ -596,7 +596,7 @@ def test_archived_name_with_other_bytes_is_not_accepted(dev, tmp_path, monkeypat
     (tmp_path / "build-debris" / "images").mkdir(parents=True)
     (tmp_path / "build-debris" / "images" / img.name).write_bytes(b"different")
     with pytest.raises(SystemExit, match="flash refused"):
-        dev.cmd_flash(["--unit", "3", str(img)])
+        dev._flash_direct(["--unit", "3", str(img)])
 
 
 def test_deploy_refuses_ungated_before_any_step(dev, tmp_path, monkeypatch):
@@ -617,7 +617,7 @@ def _flash_args(dev, tmp_path, monkeypatch, unit, bus, kind, *extra):
     monkeypatch.setattr(dev.i2cbus, "fast_bus", _FB)
     monkeypatch.setattr(dev.i2cbus, "bus_kind", lambda b, hint=None: kind or hint or "unknown")
     monkeypatch.setattr(dev, "_py", lambda script, *a, env=None, shield=False: seen.append(list(map(str, a))) or 0)
-    assert dev.cmd_flash(["--unit", unit, "--force-ungated", *extra, str(img)]) == 0
+    assert dev._flash_direct(["--unit", unit, "--force-ungated", *extra, str(img)]) == 0
     a = seen[0]
     return {k: a[a.index(k) + 1] for k in ("--write-mode", "--max-min", "--bus-kind") if k in a}
 
