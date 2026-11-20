@@ -1418,3 +1418,13 @@ void ScalerFRCSetDDomainSourceSelect(EnumDDomainSourceSelect enumSourceSelect)
     ScalerSetBit(P45_AD_DISP_STATUS, ~(_BIT4), _BIT4);
 }
 
+
+// Frame buffers the registers hold (sync log, AwtoSyncDisplay): ctrl3 bit 0 = triple, ctrl1 bit 5 = double, else single.
+BYTE AwtoFbRegCount(void)
+{
+    if(ScalerGetBit(P5_29_CAP_M1_DDR_CTRL3, (_BIT2 | _BIT1 | _BIT0)) == _BIT0)
+    {
+        return 3;
+    }
+    return (ScalerGetBit(P5_27_CAP_M1_DDR_CTRL1, _BIT5) != 0x00) ? 2 : 1;
+}

@@ -276,7 +276,13 @@ void SysSourceHandler(void)
 
             if(GET_SOURCE_DETECTING() == _FALSE)
             {
+                BYTE ucAwtoOld = g_ucSearchIndex;
+
                 SysSourceSwitchPort();
+                if(g_ucSearchIndex != ucAwtoOld)
+                {
+                    AwtoSyncVisit(GET_INPUT_PORT(GET_INPUTPORT_TYPE(ucAwtoOld)));
+                }
             }
 
             if(GET_SOURCE_SEARCH_PORT_INITIAL() == _TRUE)
@@ -478,6 +484,7 @@ void SysSourceDetectPort(BYTE ucSearchIndex)
                 {
                 #if(_AWTO_TMDS_MEASURE_ACCEPT == _ON)
                     // accept a TMDS port only once its timing measures (was a Mindray branch; it measured the current port)
+                    AWTO_SCAN_BEGIN(AWTO_SCAN_TMDS_PHY);
                     ucSourceType = ScalerTMDSScanInputPort(enumSearchPort, GET_INPUTPORT_TYPE(ucSearchIndex));
                     if(ucSourceType != _SOURCE_NONE)
                     {
@@ -485,9 +492,11 @@ void SysSourceDetectPort(BYTE ucSearchIndex)
                         {
                             DebugMessageSystem("TMDS Measure Fail", 0);
                             ucSourceType = _SOURCE_NONE;
+                            AWTO_SCAN_STAGE(AWTO_SCAN_TMDS_MEAS);
                         }
                     }
                     SET_SOURCE_TYPE(ucSearchIndex, ucSourceType);
+                    AwtoSyncScan(enumSearchPort, ucSourceType);
                 #else
                     SET_SOURCE_TYPE(ucSearchIndex, ScalerTMDSScanInputPort(enumSearchPort, GET_INPUTPORT_TYPE(ucSearchIndex)));
                 #endif
@@ -596,7 +605,9 @@ void SysSourceDetectPort(BYTE ucSearchIndex)
             {
                 if((GET_SOURCE_SEARCH_DELAY_MODE() != _SOURCE_SEARCH_POLLING_MODE) && (GET_SOURCE_PREDETECT(ucSearchIndex) == _TRUE))
                 {
+                    AWTO_SCAN_BEGIN(AWTO_SCAN_DP_LT);
                     SET_SOURCE_TYPE(ucSearchIndex, ScalerDpScanInputPort(enumSearchPort));
+                    AwtoSyncScan(enumSearchPort, GET_SOURCE_TYPE(ucSearchIndex));
                 }
             }
 
@@ -1248,6 +1259,22 @@ void SysSourceSearchTimeInitial(BYTE ucSearchIndex)
 // Input Value  : None
 // Output Value : None
 //--------------------------------------------------
+// Input-sync timeline: a port is taken; why = the scan type, and for an auto search whether the last used (NVRAM) port answered.
+static void AwtoSyncSelect(void)
+{
+    BYTE ucWhy = AWTO_SEL_WHY_OTHER;
+
+    if(GET_SOURCE_SCAN_TYPE() == _SOURCE_SWITCH_FIXED_PORT)
+    {
+        ucWhy = AWTO_SEL_WHY_FIXED;
+    }
+    else if((GET_SOURCE_SCAN_TYPE() == _SOURCE_SWITCH_AUTO_IN_GROUP) || (GET_SOURCE_SCAN_TYPE() == _SOURCE_SWITCH_AUTO_WITHOUT_GROUP))
+    {
+        ucWhy = (g_ucSearchIndex == SysSourceConvertSearchPort(UserCommonNVRamGetSystemData(_SEARCH_PORT))) ? AWTO_SEL_WHY_AUTO_LAST : AWTO_SEL_WHY_AUTO_OTHER;
+    }
+    AwtoSyncPush(AWTO_SYNC_EV_SELECT, ucWhy, ((WORD)GET_INPUT_PORT(GET_INPUTPORT_TYPE(g_ucSearchIndex)) << 8) | GET_SOURCE_TYPE(g_ucSearchIndex));
+}
+
 void SysSourceJudge(void)
 {
 #if((_D6_INPUT_PORT_TYPE == _D6_DP_PORT) && (_D6_INPUT_PORT_SWITCH_FROM == _SWITCH_FROM_D0))
@@ -1274,6 +1301,7 @@ void SysSourceJudge(void)
 
                 // Choose Current Source to proceed
                 AwtoSwEvent(AWTO_SW_EV_PROBE, 19);
+                AwtoSyncSelect();
                 SET_SOURCE_JUDGE(g_ucSearchIndex, _TRUE);
 
                 CLR_SOURCE_SWITCH_FINISH();

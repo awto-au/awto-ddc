@@ -6,12 +6,25 @@
 extern WORD g_usTmdsOffLineMeasureClk;              // ScalerCommonSync.c: SDK TMDS clock at freq-stable, 0.1 MHz
 __xdata StAwtoSync g_stAwtoSync;
 static __xdata BYTE s_pucAwtoSyncDet[3];          // D1..D3: last predetect (bit0) | source type << 1 seen by the port detect
+__xdata BYTE g_ucAwtoScanStage;                     // input-sync timeline: step a scan stopped at (AWTO_SCAN_STAGE sites in the SDK)
+__xdata WORD g_usAwtoScanT0;
+__xdata BYTE g_ucAwtoFbRule;                        // ScalerScalingUpdateFIFOScalingSize: which frame buffer rule fired
+__xdata WORD g_usAwtoHsdBw;                         // FRC width limits (pixels) from DDR bandwidth / space, 0xFFFF = not limited
+__xdata WORD g_usAwtoHsdSp;
+static __xdata WORD s_usAwtoDpLtT0;                 // DP: AwtoMs low word when the main loop first saw link training under way (0 = not)
+static __xdata BYTE s_pucAwtoScanWhy[3];            // D1..D3: last scan line written (repeats are not logged)
+static __xdata BYTE s_ucAwtoScanN;                  // scan / visit / slow-wait lines this episode (caps AWTO_SCAN_LOG_MAX / AWTO_WAIT_SYNC_MAX)
+static __xdata BYTE s_ucAwtoVisitN;
+static __xdata BYTE s_ucAwtoWaitN;
+static __xdata WORD s_usAwtoVisitT0;
+static __xdata WORD s_usAwtoStageT0;
+static bit d_s_bAwtoStageOn;
 static __xdata BYTE s_pucAwtoDdcAge[3];           // D1..D3: DDC polls left in which the port counts as live
 
 // GENERATED-BEGIN awto_sync_rows
-#define AWTO_SYNC_ROWS 268
+#define AWTO_SYNC_ROWS 355
 #pragma place bank(11)
-static const __code BYTE tAwtoSyncRowId[268] = {
+static const __code BYTE tAwtoSyncRowId[355] = {
     0xD0, 0xD0, 0xD0, 0xD0, 0xD0, 0xD1, 0xD1, 0xD1, 0xD1, 0xD1, 0xD2, 0xD2, 0xD2, 0xD4, 0xD4, 0xD4,
     0xD4, 0xD4, 0xD4, 0xD4, 0xD4, 0xD4, 0xD4, 0xD4, 0xD4, 0xD4, 0xD4, 0xD4, 0xD5, 0xD6, 0xD7, 0xD8,
     0xD8, 0xD9, 0xC0, 0xC0, 0xC0, 0xC0, 0x10, 0x10, 0x10, 0x10, 0x10, 0x10, 0x10, 0x10, 0x10, 0x10,
@@ -27,10 +40,16 @@ static const __code BYTE tAwtoSyncRowId[268] = {
     0xE5, 0xE5, 0xE5, 0xE5, 0xE5, 0xE5, 0xE5, 0xE5, 0xE5, 0xE5, 0xE5, 0xE5, 0xE5, 0xE5, 0xE2, 0xE2,
     0xE2, 0xE2, 0xE2, 0xE2, 0xE2, 0xE3, 0xE3, 0xE3, 0xE3, 0xE3, 0xE3, 0xE3, 0xE3, 0xE3, 0xE3, 0xE3,
     0xE4, 0xE4, 0xE4, 0xE4, 0xE4, 0xE4, 0xE4, 0xE4, 0xE4, 0xE4, 0xE4, 0xE4, 0xE4, 0xE4, 0xE4, 0xE4,
-    0xE4, 0xE4, 0xCF, 0xCF, 0xCF, 0xCF, 0xCF, 0xCF, 0xE6, 0xE6, 0xE6, 0xEB, 0xED, 0xED, 0xED, 0xED,
-    0xED, 0xED, 0xED, 0xED, 0xED, 0xED, 0xED, 0xED, 0xED, 0xED, 0xED, 0xEE};
+    0xE4, 0xE4, 0xCF, 0xCF, 0xCF, 0xCF, 0xCF, 0xCF, 0xF0, 0xF0, 0xF0, 0xF0, 0xF1, 0xF1, 0xF1, 0xF1,
+    0xF2, 0xF2, 0xF2, 0xF2, 0xF2, 0xF2, 0xF2, 0xF2, 0xF2, 0xF2, 0xF2, 0xF2, 0xF2, 0xF2, 0xF2, 0xF2,
+    0xF2, 0xF2, 0xF2, 0xF2, 0xF2, 0xF2, 0xF3, 0xF4, 0xF4, 0xF4, 0xF4, 0xF4, 0xF4, 0xF4, 0xF4, 0xF4,
+    0xF4, 0xF4, 0xF4, 0xF4, 0xF4, 0xF5, 0xF5, 0xF5, 0xF5, 0xF5, 0xF5, 0xF5, 0xF5, 0xF5, 0xF5, 0xF6,
+    0xF6, 0xF6, 0xF6, 0xF6, 0xF6, 0xF7, 0xF7, 0xF7, 0xF7, 0xF7, 0xF7, 0xF7, 0xF8, 0xF8, 0xF8, 0xF8,
+    0xF8, 0xF8, 0xF8, 0xF8, 0xF8, 0xF9, 0xF9, 0xF9, 0xFB, 0xFB, 0xFB, 0xFB, 0xFB, 0xFB, 0xFC, 0xE6,
+    0xE6, 0xE6, 0xEB, 0xED, 0xED, 0xED, 0xED, 0xED, 0xED, 0xED, 0xED, 0xED, 0xED, 0xED, 0xED, 0xED,
+    0xED, 0xED, 0xEE};
 #pragma place bank(11)
-static const __code BYTE tAwtoSyncRowArg[268] = {
+static const __code BYTE tAwtoSyncRowArg[355] = {
     0x01, 0x02, 0x03, 0x04, 0x05, 0x01, 0x02, 0x03, 0x04, 0x06, 0x01, 0x02, 0x03, 0x01, 0x02, 0x03,
     0x04, 0x05, 0x11, 0x12, 0x13, 0x14, 0x15, 0x16, 0x21, 0x17, 0x20, 0x0C, 0xFF, 0xFF, 0xFF, 0x01,
     0x02, 0xFF, 0x01, 0x02, 0x03, 0x04, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0x0A, 0x0B, 0x0C, 0x0E,
@@ -46,8 +65,14 @@ static const __code BYTE tAwtoSyncRowArg[268] = {
     0x13, 0x14, 0x15, 0x16, 0x30, 0x40, 0x41, 0x42, 0x43, 0x44, 0x45, 0x46, 0x50, 0x51, 0x01, 0x09,
     0x0B, 0x0D, 0x20, 0xFF, 0xFE, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x10, 0x11, 0x12, 0x13, 0x14,
     0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0x0A, 0x0B, 0x0C, 0x0D, 0x0E, 0x0F,
-    0x20, 0x21, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x01, 0x02, 0x03, 0xFF, 0x00, 0x14, 0x3A, 0x3C,
-    0x0A, 0x0B, 0x0C, 0x0D, 0x0E, 0x0F, 0x10, 0x11, 0x39, 0x81, 0x82, 0xFF};
+    0x20, 0x21, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x00, 0x01, 0x02, 0x03, 0x01, 0x02, 0x03, 0x04,
+    0x01, 0x10, 0x11, 0x12, 0x13, 0x14, 0x15, 0x16, 0x17, 0x20, 0x21, 0x22, 0x24, 0x30, 0x31, 0x32,
+    0x33, 0x34, 0x35, 0x36, 0x37, 0xFF, 0x00, 0x00, 0x08, 0x09, 0x0A, 0x0B, 0x10, 0x11, 0x12, 0x13,
+    0x18, 0x19, 0x1A, 0x1B, 0xFF, 0x00, 0x01, 0x02, 0x03, 0x04, 0x10, 0x11, 0x12, 0x13, 0x14, 0x00,
+    0x11, 0x12, 0x13, 0x14, 0xFF, 0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x00, 0x01, 0x02, 0x03,
+    0x04, 0x05, 0x06, 0x07, 0x08, 0x00, 0x01, 0x02, 0x00, 0x10, 0x01, 0x11, 0x02, 0x12, 0x01, 0x01,
+    0x02, 0x03, 0xFF, 0x00, 0x14, 0x3A, 0x3C, 0x0A, 0x0B, 0x0C, 0x0D, 0x0E, 0x0F, 0x10, 0x11, 0x39,
+    0x81, 0x82, 0xFF};
 #pragma place bank(11)
 static const __code WORD tAwtoSyncIdRow[256] = {
     0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
@@ -64,8 +89,8 @@ static const __code WORD tAwtoSyncIdRow[256] = {
     97, 98, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
     35, 99, 101, 102, 103, 104, 100, 105, 106, 0, 107, 108, 109, 153, 154, 243,
     1, 6, 11, 155, 14, 29, 30, 31, 32, 34, 158, 159, 156, 157, 160, 161,
-    163, 174, 207, 214, 225, 185, 249, 110, 111, 114, 113, 252, 0, 253, 268, 0,
-    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
+    163, 174, 207, 214, 225, 185, 336, 110, 111, 114, 113, 339, 0, 340, 355, 0,
+    249, 253, 257, 279, 280, 294, 304, 310, 317, 326, 0, 329, 335, 0, 0, 0};
 #pragma place bank(11)
 WORD AwtoSyncRow(BYTE ucId, BYTE ucArg)           // row + 1 of the first match (arg 0xFF = any), 0 = not logged
 {
@@ -176,7 +201,7 @@ static bit AwtoSyncSame(BYTE ucBack, BYTE ucId, BYTE ucArg, DWORD ulVal)    // e
            (puc[6] == (BYTE)(ulVal >> 8)) && (puc[7] == (BYTE)ulVal);
 }
 
-static void AwtoSyncPut(BYTE ucId, BYTE ucArg, DWORD ulVal)
+static void AwtoSyncPutRaw(BYTE ucId, BYTE ucArg, DWORD ulVal)
 {
     BYTE ucN = g_stAwtoSync.ucSeq;
     BYTE __xdata *puc = (BYTE __xdata *)&g_stAwtoSync.stEv[AWTO_SYNC_IDX(ucN)];
@@ -191,10 +216,22 @@ static void AwtoSyncPut(BYTE ucId, BYTE ucArg, DWORD ulVal)
     puc[6] = (BYTE)(ulVal >> 8);
     puc[7] = (BYTE)ulVal;
     g_stAwtoSync.ucSeq = AWTO_SYNC_NEXT(ucN);
+}
+
+
+static void AwtoSyncPut(BYTE ucId, BYTE ucArg, DWORD ulVal)
+{
+    AwtoSyncPutRaw(ucId, ucArg, ulVal);
     if(g_stAwtoGpio.ucOpen != 0)
     {
         AwtoConLogSync();                           // #144 live: the line shows now, also inside a blocking SDK step (panel on)
     }
+}
+
+// Ring line without the live console draw (AwtoWaitLog runs inside the deepest DATA path; the console catches up next pass) and without repeat collapse.
+static void AwtoSyncPushQuiet(BYTE ucId, BYTE ucArg, DWORD ulVal)
+{
+    AwtoSyncPutRaw(ucId, ucArg, ulVal);
 }
 
 // Repeats collapse (#150): the last line again is dropped (probes in retry loops); a pair repeating (A B A B, e.g. an idle
@@ -299,6 +336,11 @@ void AwtoWaitLog(unsigned char ucKind, unsigned int usArg, unsigned int usT0, un
         g_stAwtoWait.ucQuick++;                 // under 2 ms (a 1 ms measure poll every ~100 ms floods the ring): counted, not logged
         return;
     }
+    if(((usDur >= AWTO_WAIT_SYNC_MS) || ((ucKind & AWTO_WAIT_TIMEOUT) != 0)) && (s_ucAwtoWaitN < AWTO_WAIT_SYNC_MAX))
+    {
+        s_ucAwtoWaitN++;
+        AwtoSyncPushQuiet(AWTO_SYNC_EV_WAITSLOW, (ucKind & 3) | (((ucKind & AWTO_WAIT_TIMEOUT) != 0) ? 0x10 : 0), ((DWORD)usArg << 16) | usDur);
+    }
     g_stAwtoWait.stEv[ucI].usMs = usNow;
     g_stAwtoWait.stEv[ucI].ucKind = ucKind;
     g_stAwtoWait.stEv[ucI].usArg = usArg;
@@ -382,7 +424,12 @@ void AwtoSyncBegin(BYTE ucKind, BYTE ucPort)
     for(ucI = 0; ucI < 3; ucI++)
     {
         s_pucAwtoSyncDet[ucI] = _SOURCE_NONE << 1;
+        s_pucAwtoScanWhy[ucI] = 0;
     }
+    s_ucAwtoScanN = 0;
+    s_ucAwtoVisitN = 0;
+    s_ucAwtoWaitN = 0;
+    s_usAwtoVisitT0 = usNow;
     if(ucKind == AWTO_SYNC_K_POWER_ON)
     {
         AwtoSyncPush(AWTO_SYNC_EV_BOOT, AwtoBootReason(), AwtoBootValue());     // first line: why it is running (#29)
@@ -448,6 +495,12 @@ void AwtoSyncDetect(BYTE ucPort, BYTE ucKind, BYTE ucPre, BYTE ucType)
         return;
     }
     ucOld = s_pucAwtoSyncDet[ucI];
+#if(_DP_SUPPORT == _ON)
+    if((ucKind == _PORT_DP) && (s_usAwtoDpLtT0 == 0) && ((ucPre & 1) == 0) && (AwtoDpRx1LtBusy() != 0))
+    {
+        s_usAwtoDpLtT0 = (WORD)AwtoMs() | 1;
+    }
+#endif
 #if(_AWTO_PS_WAKE == _ON)
     if(((s_ucTmdsPend & ((BYTE)1 << ucI)) != 0) && (AwtoPsTmdsStable(0x70 + ucI) != 0))
     {
@@ -466,6 +519,8 @@ void AwtoSyncDetect(BYTE ucPort, BYTE ucKind, BYTE ucPre, BYTE ucType)
         if(ucKind == _PORT_DP)
         {
             AwtoSyncPush(AWTO_SYNC_EV_DP, ucPort, ((DWORD)ScalerDpGetLinkRate(ucPort) << 8) | ScalerDpGetLaneCount(ucPort));
+            AwtoSyncPush(AWTO_SYNC_EV_DPLT, 1, ((DWORD)ucPort << 16) | (s_usAwtoDpLtT0 == 0) ? 0 : (WORD)((WORD)AwtoMs() - s_usAwtoDpLtT0));   // 0: training finished before the loop saw it
+            s_usAwtoDpLtT0 = 0;
         }
         else
 #endif
@@ -477,6 +532,7 @@ void AwtoSyncDetect(BYTE ucPort, BYTE ucKind, BYTE ucPre, BYTE ucType)
     else if(((ucNew & 1) == 0) && ((ucOld & 1) != 0))
     {
         AwtoSyncPush(AWTO_SYNC_EV_LOST, ucPort, 0);
+        s_pucAwtoScanWhy[ucI] = 0;
         s_ucTmdsPend &= ~((BYTE)1 << ucI);
     }
     if(((ucNew >> 1) != _SOURCE_NONE) && ((ucNew >> 1) != (ucOld >> 1)))
@@ -485,11 +541,87 @@ void AwtoSyncDetect(BYTE ucPort, BYTE ucKind, BYTE ucPre, BYTE ucType)
     }
 }
 
+void AwtoSyncScan(BYTE ucPort, BYTE ucType)         // SysSourceDetectPort: a predetected port was scanned; one line per change of the outcome
+{
+    BYTE ucI = ucPort - _D1_INPUT_PORT;
+    BYTE ucWhy = (ucType != _SOURCE_NONE) ? AWTO_SCAN_OK : g_ucAwtoScanStage;
+
+    if((ucI > 2) || (s_pucAwtoScanWhy[ucI] == ucWhy))
+    {
+        return;
+    }
+    s_pucAwtoScanWhy[ucI] = ucWhy;
+    if(s_ucAwtoScanN >= AWTO_SCAN_LOG_MAX)
+    {
+        if(s_ucAwtoScanN == AWTO_SCAN_LOG_MAX)
+        {
+            s_ucAwtoScanN++;
+            AwtoSyncPush(AWTO_SYNC_EV_SCANW, 0xFF, 0);
+        }
+        return;
+    }
+    s_ucAwtoScanN++;
+    AwtoSyncPush(AWTO_SYNC_EV_SCANW, ucWhy, ((DWORD)ucPort << 16) | (WORD)((WORD)AwtoMs() - g_usAwtoScanT0));
+}
+
+void AwtoSyncVisit(BYTE ucOldPort)                  // SysSourceHandler: the search moved on from ucOldPort
+{
+    WORD usNow = (WORD)AwtoMs();
+
+    if(s_ucAwtoVisitN < AWTO_SCAN_LOG_MAX)
+    {
+        s_ucAwtoVisitN++;
+        AwtoSyncPush(AWTO_SYNC_EV_VISIT, 0, ((DWORD)ucOldPort << 16) | (WORD)(usNow - s_usAwtoVisitT0));
+    }
+    s_usAwtoVisitT0 = usNow;
+}
+
+void AwtoStageMs(BYTE ucStg)                        // SysMachineWork probes: 0 = a stage starts (once, the SDK retries the call); else it took ms
+{
+    WORD usNow = (WORD)AwtoMs();
+
+    if(ucStg == 0)
+    {
+        if(d_s_bAwtoStageOn == 0)
+        {
+            d_s_bAwtoStageOn = 1;
+            s_usAwtoStageT0 = usNow;
+        }
+        return;
+    }
+    AwtoSyncPush(AWTO_SYNC_EV_STAGE_MS, ucStg, (WORD)(usNow - s_usAwtoStageT0));
+    s_usAwtoStageT0 = usNow;                        // display setting ends where the colour proc starts
+    d_s_bAwtoStageOn = (ucStg == AWTO_STG_DISPLAY);
+}
+
 void AwtoSyncTiming(void)                           // SysModeHandler: timing confirmed (measure done)
 {
     BYTE ucPort = SysSourceGetInputPort();
 
+    BYTE ucKind = 0;                                  // 0 DVI, 1 HDMI 1.4 (TMDS 1:10), 2 HDMI 2.0 (1:40), 3 DP
+
     AwtoSyncPush(AWTO_SYNC_EV_TIMING, ucPort, ((DWORD)GET_INPUT_TIMING_HWIDTH() << 16) | GET_INPUT_TIMING_VHEIGHT());
+    if(SysSourceGetSourceType() == _SOURCE_DP)
+    {
+        ucKind = 3;
+    }
+    else if(SysSourceGetSourceType() == _SOURCE_HDMI)
+    {
+        ucKind = 1;
+#if(_D2_HDMI_2_0_SUPPORT == _ON)
+        if((ucPort == _D2_INPUT_PORT) && (AwtoTmdsRx2Hs() != 0))
+        {
+            ucKind = 2;
+        }
+#endif
+#if(_D3_HDMI_2_0_SUPPORT == _ON)
+        if((ucPort == _D3_INPUT_PORT) && (AwtoTmdsRx3Hs() != 0))
+        {
+            ucKind = 2;
+        }
+#endif
+    }
+    AwtoSyncFormat(ucKind);
 }
 
 void AwtoSyncFreq(void)                             // SysModeHandler: display setting done; exact values (#34) when counted

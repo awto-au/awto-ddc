@@ -12,6 +12,8 @@
 #   -     no value          port  "Dn " prefix from arg (port byte, D0 = 3)     vport  value = port byte -> "Dn" (0xFF = auto)
 #   res   value = H << 16 | V -> "3840x2160"          mhz1  value in 0.1 MHz -> "594.0 MHz"     hz1  value in 0.1 Hz -> "60.0 Hz"
 #   hz3   value in mHz -> "59.997 Hz"                 mhz3  value in kHz -> "594.000 MHz"       dp   value = rate << 8 | lanes -> "HBR2 x4"
+#   pms   value = port << 16 | ms -> "D2, 188ms"   psrc  value = port << 8 | source type -> "D2 HDMI"   rms  value = register << 16 | ms -> "71A4 40ms"
+#   lim   value = width << 16 | limit -> "3840 of 4096 px"
 #   src   value = SDK source type -> "HDMI"           harg  arg in hex
 #   pc    value = cause << 24 | bank << 16 | PC -> "STALL, PC 0B:FFD0" (#29 boot reason)
 #   ms    value in ms -> "12 ms" (#150)   n  value as a number (#150)   x  value in hex (#150)
@@ -282,6 +284,94 @@ CF	03	vport	wake suppressed (AUX command, once per sleep):%
 CF	04	vport	wake suppressed (DPCD 600h, once per sleep):%
 CF	05	vport	wake suppressed (cable unplug, once per sleep):%
 CF	06	vport	wake suppressed (TMDS clock, once per sleep):%
+# Input-sync timeline + SDK decisions (docs/input-sync-timeline.md; fmts pms psrc rms lim added for them)
+F0	00	psrc	input taken:% (fixed port: selector / VCP 0x60 / menu / setting)
+F0	01	psrc	input taken:% (auto search, the last used port answered)
+F0	02	psrc	input taken:% (auto search, not the last used port)
+F0	03	psrc	input taken:% (other scan type)
+F1	01	ms	stage:measure took %	timing
+F1	02	ms	stage:display setting took % (M-domain, DCLK, scaling)	timing
+F1	03	ms	stage:colour set-up took %	timing
+F1	04	ms	stage:first-active work took %	timing
+F2	01	pms	scan ok:%	timing
+F2	10	pms	scan wait:HPD event running (%)	warning
+F2	11	pms	scan wait:PHY not set, freq detect not stable yet (%)	warning
+F2	12	pms	scan fail:CDR not locked at 1:10, retry 1:40 (%)	error
+F2	13	pms	scan fail:DFE not ready at 1:10, retry 1:40 (%)	error
+F2	14	pms	scan fail:no video at 1:10, retry 1:40 (%)	error
+F2	15	pms	scan fail:CDR not locked at 1:40, retry 1:10 (%)	error
+F2	16	pms	scan fail:DFE not ready at 1:40, retry 1:10 (%)	error
+F2	17	pms	scan fail:no video at 1:40, retry 1:10 (%)	error
+F2	20	pms	scan fail:no RGBHV video (%)	error
+F2	21	pms	scan fail:DE only video (%)	error
+F2	22	pms	scan fail:deep colour PLL not locked (%)	error
+F2	24	pms	scan fail:timing measure failed (%)	error
+F2	30	pms	scan wait:DP link not trained (%)	warning
+F2	31	pms	scan fail:DP HDCP check (%)	error
+F2	32	pms	scan fail:DP no video stream (%)	error
+F2	33	pms	scan fail:DP MSA check (%)	error
+F2	34	pms	scan fail:DP video info (%)	error
+F2	35	pms	scan fail:DP display format (%)	error
+F2	36	pms	scan fail:DP stream clock (%)	error
+F2	37	pms	scan fail:DP FIFO delay (%)	error
+F2	FF	-	scan lines stop for this episode	warning
+F3	00	pms	search left the port:%	timing
+F4	00	n	format:DVI, RGB, % bit	timing
+F4	08	n	format:HDMI 1.4 (1:10), RGB, % bit	timing
+F4	09	n	format:HDMI 1.4 (1:10), YCbCr 4:2:2, % bit	timing
+F4	0A	n	format:HDMI 1.4 (1:10), YCbCr 4:4:4, % bit	timing
+F4	0B	n	format:HDMI 1.4 (1:10), YCbCr 4:2:0, % bit	timing
+F4	10	n	format:HDMI 2.0 (1:40), RGB, % bit	timing
+F4	11	n	format:HDMI 2.0 (1:40), YCbCr 4:2:2, % bit	timing
+F4	12	n	format:HDMI 2.0 (1:40), YCbCr 4:4:4, % bit	timing
+F4	13	n	format:HDMI 2.0 (1:40), YCbCr 4:2:0, % bit	timing
+F4	18	n	format:DP, RGB, % bit	timing
+F4	19	n	format:DP, YCbCr 4:2:2, % bit	timing
+F4	1A	n	format:DP, YCbCr 4:4:4, % bit	timing
+F4	1B	n	format:DP, YCbCr 4:2:0, % bit	timing
+F4	*	harg	format:other link or colour space, code %	timing
+F5	00	n	frame buffers:SDK 1 (default); register says %	timing
+F5	01	n	frame buffers:SDK 2 (rotation, input faster, IVTotal period over DDEN); register says %	timing
+F5	02	n	frame buffers:SDK 3 (rotation, input faster, IVTotal period within DDEN); register says %	timing
+F5	03	n	frame buffers:SDK 2 (rotation, input not faster); register says %	timing
+F5	04	n	frame buffers:SDK 2 (not frame sync, FRC check); register says %	timing
+F5	10	n	frame buffers:MISMATCH SDK 1 (default); register says %	error
+F5	11	n	frame buffers:MISMATCH SDK 2 (rotation, input faster, IVTotal period over DDEN); register says %	error
+F5	12	n	frame buffers:MISMATCH SDK 3 (rotation, input faster, IVTotal period within DDEN); register says %	error
+F5	13	n	frame buffers:MISMATCH SDK 2 (rotation, input not faster); register says %	error
+F5	14	n	frame buffers:MISMATCH SDK 2 (not frame sync, FRC check); register says %	error
+F6	00	n	memory:line buffer mode, frame sync, % bit per pixel	timing
+F6	11	n	memory:work mode (FRC), frame sync frame buffer, % bit per pixel	timing
+F6	12	n	memory:work mode (FRC), free run frame buffer, % bit per pixel	timing
+F6	13	n	memory:work mode (FRC), M/N frame sync frame buffer, % bit per pixel	timing
+F6	14	n	memory:work mode (FRC), free run, no input, % bit per pixel	timing
+F6	*	harg	memory:select / config code %	timing
+F7	00	hz1	display frame rate:1 IVF, display = input rate, %	timing
+F7	01	hz1	display frame rate:2 IVF, display = 2x input, %	timing
+F7	02	hz1	display frame rate:3 IVF, display = 3x input, %	timing
+F7	03	hz1	display frame rate:free run, panel typical, %	timing
+F7	04	hz1	display frame rate:2.5 IVF, %	timing
+F7	05	hz1	display frame rate:5/4 IVF, %	timing
+F7	06	hz1	display frame rate:6/5 IVF, %	timing
+F8	00	res	scaling:H none, V none, display %	timing
+F8	01	res	scaling:H none, V up, display %	timing
+F8	02	res	scaling:H none, V down, display %	timing
+F8	03	res	scaling:H up, V none, display %	timing
+F8	04	res	scaling:H up, V up, display %	timing
+F8	05	res	scaling:H up, V down, display %	timing
+F8	06	res	scaling:H down, V none, display %	timing
+F8	07	res	scaling:H down, V up, display %	timing
+F8	08	res	scaling:H down, V down, display %	timing
+F9	00	lim	FRC width:% (not limited)	timing
+F9	01	lim	FRC width:% (limited by DDR bandwidth)	timing
+F9	02	lim	FRC width:% (limited by DDR space)	timing
+FB	00	rms	slow delay (ms asked) + took:%	warning
+FB	10	rms	EXPIRED delay (ms asked) + took:%	error
+FB	01	rms	slow poll (register) + took:%	warning
+FB	11	rms	EXPIRED poll (register) + took:%	error
+FB	02	rms	slow event wait (event) + took:%	warning
+FB	12	rms	EXPIRED event wait (event) + took:%	error
+FC	01	pms	DP link trained:% after the loop first saw it training	timing
 # #162 step 3 name tables 15..1B (looked up by row index, never logged): at the end, so the per-event row scan stops before them
 15	00	-	AC ON
 15	01	-	OFF

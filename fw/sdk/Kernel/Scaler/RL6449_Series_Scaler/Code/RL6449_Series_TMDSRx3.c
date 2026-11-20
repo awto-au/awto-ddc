@@ -3616,6 +3616,7 @@ BYTE ScalerTMDSRx3TMDSScanInputPort(BYTE ucInputType)
 
     if(GET_TMDS_RX3_HPD_TRIGGER_EVENT() != _TMDS_HPD_NONE)
     {
+        AWTO_SCAN_STAGE(AWTO_SCAN_TMDS_HPD);
         return _SOURCE_NONE;
     }
 
@@ -3636,14 +3637,14 @@ BYTE ScalerTMDSRx3TMDSScanInputPort(BYTE ucInputType)
 
 #if(_D3_HDMI_2_0_SUPPORT == _ON)
 
-        if((ScalerTMDSRx3CheckCDRStable(isr_g_usTMDSRx3ClkCount) == _FALSE) || (ScalerTMDSRx3CheckDataDFE() == _FALSE) ||
+        if(((AWTO_SCAN_STAGE(1), ScalerTMDSRx3CheckCDRStable(isr_g_usTMDSRx3ClkCount)) == _FALSE) || ((AWTO_SCAN_STAGE(2), ScalerTMDSRx3CheckDataDFE()) == _FALSE) ||
            ((GET_D3_TMDS_MODE() == _TMDS_MHL_MODE) && (ScalerMHLRx3DetectClkMode() == _FALSE)) ||
-           (ScalerTMDSRx3TMDSVideoDetect(_WAIT) == _TMDS_VIDEO_DATA_NONE))
+           ((AWTO_SCAN_STAGE(3), ScalerTMDSRx3TMDSVideoDetect(_WAIT)) == _TMDS_VIDEO_DATA_NONE))
 
 #else
 
         // Detect MHL Mode
-        if((ScalerTMDSRx3CheckCDRStable(isr_g_usTMDSRx3ClkCount) == _FALSE) || (ScalerTMDSRx3CheckDataDFE() == _FALSE) ||
+        if(((AWTO_SCAN_STAGE(1), ScalerTMDSRx3CheckCDRStable(isr_g_usTMDSRx3ClkCount)) == _FALSE) || ((AWTO_SCAN_STAGE(2), ScalerTMDSRx3CheckDataDFE()) == _FALSE) ||
            ((GET_D3_TMDS_MODE() == _TMDS_MHL_MODE) && (ScalerMHLRx3DetectClkMode() == _FALSE)))
 
 #endif
@@ -3652,9 +3653,9 @@ BYTE ScalerTMDSRx3TMDSScanInputPort(BYTE ucInputType)
 
 #if(_D3_HDMI_2_0_SUPPORT == _ON)
 
-        if((ScalerTMDSRx3CheckCDRStable(isr_g_usTMDSRx3ClkCount) == _FALSE) || (ScalerTMDSRx3CheckDataDFE() == _FALSE) || (ScalerTMDSRx3TMDSVideoDetect(_WAIT) == _TMDS_VIDEO_DATA_NONE))
+        if(((AWTO_SCAN_STAGE(1), ScalerTMDSRx3CheckCDRStable(isr_g_usTMDSRx3ClkCount)) == _FALSE) || ((AWTO_SCAN_STAGE(2), ScalerTMDSRx3CheckDataDFE()) == _FALSE) || ((AWTO_SCAN_STAGE(3), ScalerTMDSRx3TMDSVideoDetect(_WAIT)) == _TMDS_VIDEO_DATA_NONE))
 #else
-        if((ScalerTMDSRx3CheckCDRStable(isr_g_usTMDSRx3ClkCount) == _FALSE) || (ScalerTMDSRx3CheckDataDFE() == _FALSE))
+        if(((AWTO_SCAN_STAGE(1), ScalerTMDSRx3CheckCDRStable(isr_g_usTMDSRx3ClkCount)) == _FALSE) || ((AWTO_SCAN_STAGE(2), ScalerTMDSRx3CheckDataDFE()) == _FALSE))
 #endif
 
 #endif // End of #if(_D3_INPUT_PORT_TYPE == _D3_MHL_PORT)
@@ -3684,6 +3685,7 @@ BYTE ScalerTMDSRx3TMDSScanInputPort(BYTE ucInputType)
 
 #if(_D3_HDMI_2_0_SUPPORT == _ON)
 
+            AWTO_SCAN_STAGE(AWTO_SCAN_TMDS_LOCK + g_ucAwtoScanStage + ((GET_TMDS_RX3_HIGH_SPEED_MODE() != 0) ? 3 : 0));    // lock step failed, 1:10 / 1:40 tried
             if((GET_TMDS_RX3_HIGH_SPEED_MODE() == _FALSE) && (GET_D3_TMDS_MODE() != _TMDS_MHL_MODE)) // HDMI mode
             {
                 DebugMessageRx3("TMDS Rx3 First 1:10 set phy not success", 1);
@@ -3801,6 +3803,7 @@ BYTE ScalerTMDSRx3TMDSScanInputPort(BYTE ucInputType)
         if(ucTMDSVideoDataType == _TMDS_VIDEO_DATA_DE_ONLY)
         {
             DebugMessageRx3("DE Only Mode", 0x00);
+            AWTO_SCAN_STAGE(AWTO_SCAN_TMDS_DE);
 
 #if(_DVI_DE_ONLY_SUPPORT == _ON)
             if(ucTMDSType == _SOURCE_DVI)
@@ -3823,6 +3826,7 @@ BYTE ScalerTMDSRx3TMDSScanInputPort(BYTE ucInputType)
         }
         else
         {
+            AWTO_SCAN_STAGE(AWTO_SCAN_TMDS_VIDEO);
             return _SOURCE_NONE;
         }
 
@@ -3866,6 +3870,7 @@ BYTE ScalerTMDSRx3TMDSScanInputPort(BYTE ucInputType)
                 {
                     // Restore Input Pixel clk
                     SET_INPUT_PIXEL_CLK(usInputPixelClk);
+                    AWTO_SCAN_STAGE(AWTO_SCAN_TMDS_DEEP);
 
                     return _SOURCE_NONE;
                 }
@@ -4558,3 +4563,10 @@ void ScalerTMDSRx3Hdcp1p4AksvClear(void)
 }
 
 #endif // End of #if(_D3_TMDS_SUPPORT == _ON)
+
+#if(_D3_HDMI_2_0_SUPPORT == _ON)
+BYTE AwtoTmdsRx3Hs(void)                          // sync log: the 1:40 (HDMI 2.0) PHY mode is set
+{
+    return (GET_TMDS_RX3_HIGH_SPEED_MODE() != 0);
+}
+#endif

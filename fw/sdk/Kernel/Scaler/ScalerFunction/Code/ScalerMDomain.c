@@ -1964,3 +1964,33 @@ void ScalerMDomainUpdateInputInfo(void)
 }
 #endif
 
+
+// Display setting done: the SDK's memory / scaling decisions next to the registers they wrote (docs/input-sync-timeline.md).
+void AwtoSyncDisplay(void)
+{
+    BYTE ucReg = AwtoFbRegCount();
+    BYTE ucSdk = (GET_MEMORY_FRAME_BUFFER() == _MEMORY_3_FRAME_BUFFER) ? 3 : (GET_MEMORY_FRAME_BUFFER() == _MEMORY_2_FRAME_BUFFER) ? 2 : 1;   // 1.5 is never chosen
+    WORD usLim;
+    BYTE ucRule = 0;
+
+    AwtoSyncPush(AWTO_SYNC_EV_FBUF, g_ucAwtoFbRule | ((ucSdk != ucReg) ? 0x10 : 0), ucReg);
+    AwtoSyncPush(AWTO_SYNC_EV_MCFG, GET_MEMORY_SELECT() | (GET_MEMORY_CONFIG() << 4), GET_MEMORY_DATA_BIT());
+    AwtoSyncPush(AWTO_SYNC_EV_DVF, GET_MEMORY_DVF_SELECT(), g_usDVFreq);
+    AwtoSyncPush(AWTO_SYNC_EV_SCALE, (((GET_H_SCALE_UP() != 0) ? 1 : (GET_H_SCALE_DOWN() != 0) ? 2 : 0) * 3) +
+                 ((GET_V_SCALE_UP() != 0) ? 1 : (GET_V_SCALE_DOWN() != 0) ? 2 : 0),
+                 ((DWORD)GET_MDOMAIN_OUTPUT_HWIDTH() << 16) | GET_MDOMAIN_OUTPUT_VHEIGHT());
+    if(GET_MEMORY_CONFIG() == _MEMORY_WORK_MODE)
+    {
+        usLim = (g_usAwtoHsdBw < g_usAwtoHsdSp) ? g_usAwtoHsdBw : g_usAwtoHsdSp;
+        if(usLim < GET_FIFO_HWIDTH() + 2)
+        {
+            ucRule = (g_usAwtoHsdBw < g_usAwtoHsdSp) ? 1 : 2;
+        }
+        AwtoSyncPush(AWTO_SYNC_EV_LIMIT, ucRule, ((DWORD)GET_FIFO_HWIDTH() << 16) | usLim);
+    }
+}
+
+void AwtoSyncFormat(BYTE ucKind)                    // timing confirmed: link kind (0 DVI, 1 HDMI 1.4, 2 HDMI 2.0, 3 DP), colour space, depth
+{
+    AwtoSyncPush(AWTO_SYNC_EV_FORMAT, (ucKind << 3) | GET_COLOR_SPACE(), GET_COLOR_DEPTH());
+}

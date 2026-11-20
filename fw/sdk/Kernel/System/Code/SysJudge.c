@@ -764,6 +764,7 @@ void SysMachineWork(void)
 
                 // Measure Current Input Timing to gather all required timing Info
                 AwtoSwEvent(AWTO_SW_EV_PROBE, 17);
+                AwtoStageMs(0);
                 if(ScalerMeasureInputInfo(GET_SOURCE_TYPE(g_ucSearchIndex), SysSourceGetInputPort()) == _TRUE)
                 {
                     DebugMessageSystem("Input Timing H Polarity is Positive", (GET_INPUT_TIMING_H_POLARITY() == _HIGH));
@@ -781,6 +782,7 @@ void SysMachineWork(void)
                     DebugMessageSystem("Input Timing VSyncSWidth", GET_INPUT_TIMING_VSYNCWIDTH());
 
                     AwtoSyncTiming();
+                    AwtoStageMs(AWTO_STG_MEASURE);
                     AwtoSwEvent(AWTO_SW_EV_PROBE, 18);
                     SET_MODE_TIMING_CONFIRM();
                     SET_INPUT_TIMING_DOUBLE_CHECK();
@@ -823,6 +825,7 @@ void SysMachineWork(void)
             if(GET_MODE_DISPLAY_SETTING_READY() == _FALSE)
             {
                 AwtoSwEvent(AWTO_SW_EV_PROBE, 14);
+                AwtoStageMs(0);
                 if(SysModeDisplaySetting() == _TRUE)
                 {
 #if(_DEBUG_MESSAGE_CHECK_MDOMAIN == _ON)
@@ -830,9 +833,12 @@ void SysMachineWork(void)
 #endif
                     // #162: the panel machine brings video up on request (power switch, UserCommonInterfaceReadyForActive)
                     AwtoSwEvent(AWTO_SW_EV_PROBE, 15);
+                    AwtoStageMs(AWTO_STG_DISPLAY);
                     UserCommonInterfaceAdjustColorProc();
+                    AwtoStageMs(AWTO_STG_COLOUR);
 
                     AwtoSyncFreq();
+                    AwtoSyncDisplay();
                     AwtoSwEvent(AWTO_SW_EV_PROBE, 16);
                     SET_MODE_DISPLAY_SETTING_READY();
                     ScalerTimerCancelTimerEvent(_SYSTEM_TIMER_EVENT_JUDGE_NOSUPPORT_STATE);
@@ -845,12 +851,14 @@ void SysMachineWork(void)
         case AWTO_SYS_HOLD:
             if(GET_MODE_STATE_CHANGE_MODE() == _TRUE)
             {
+                AwtoStageMs(0);
                 ScalerGlobalFirstActiveProc(GET_SOURCE_TYPE(g_ucSearchIndex), SysSourceGetInputPort());
                 AwtoSwEvent(AWTO_SW_EV_PROBE, 11);
                 UserCommonInterfaceOsdActiveProc();
                 UserCommonInterfacePanelPowerAction(AWTO_PNL_REQ(_BACKLIGHT_ON, AWTO_PNL_BY_FIRST_ACTIVE));
                 AwtoSwCacheStore();
                 AwtoSwEvent(AWTO_SW_EV_PROBE, 12);
+                AwtoStageMs(AWTO_STG_ACTIVE);
                 SysSourceFirstActiveProc();
             }
 

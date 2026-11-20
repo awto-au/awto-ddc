@@ -1078,7 +1078,7 @@ extern void AwtoWaitLog(unsigned char ucKind, unsigned int usArg, unsigned int u
 #define AWTO_PS_COUNT(i, v)                                     { if((v) != 0) { if(i == 28) { g_pucAwtoInCnt[0]++; } } }
 // GENERATED-END awto_port_cnt
 extern __xdata unsigned char g_pucAwtoInCnt[];   // fw/input/inputs.c: rising edges per counted input (wraps), read by the selector
-#define AWTO_SYNC_N                                             48      // >= cold boot 38 lines x1.25 = 47.5 (boot_sim, #165); divides WRAP (#233)
+#define AWTO_SYNC_N                                             80      // cold boot 38 lines + the input-sync lines (docs/input-sync-timeline.md) x1.1; divides WRAP (#233)
 #define AWTO_SYNC_WRAP                                          240     // seq counts 0..239 (a multiple of AWTO_SYNC_N): entry = seq % N
 #define AWTO_SYNC_IDX(s)                                        ((unsigned char)((s) % AWTO_SYNC_N))
 #define AWTO_SYNC_NEXT(s)                                       ((unsigned char)((((s) + 1) >= AWTO_SYNC_WRAP) ? 0 : ((s) + 1)))
@@ -1385,6 +1385,61 @@ extern void AwtoSyncSw(unsigned char ucId, unsigned char ucArg);
 extern void AwtoSyncDetect(unsigned char ucPort, unsigned char ucKind, unsigned char ucPre, unsigned char ucType);
 extern void AwtoSyncTiming(void);
 extern void AwtoSyncFreq(void);
+// Input-sync timeline (docs/input-sync-timeline.md, sync.tsv rows F0..FC): one line per stage / decision, durations in the value
+#define AWTO_SYNC_EV_SELECT                                     0xF0    // input taken: arg AWTO_SEL_WHY_*, value port << 8 | source type (psrc)
+#define AWTO_SYNC_EV_STAGE_MS                                   0xF1    // stage took: arg AWTO_STG_*, value ms
+#define AWTO_SYNC_EV_SCANW                                      0xF2    // scan of a predetected port: arg AWTO_SCAN_* (1 = found, else why not), value port << 16 | ms
+#define AWTO_SYNC_EV_VISIT                                      0xF3    // search left a port: value port << 16 | ms on it
+#define AWTO_SYNC_EV_FORMAT                                     0xF4    // link format at timing confirm: arg kind << 3 | colour space, value = colour depth, bits
+#define AWTO_SYNC_EV_FBUF                                       0xF5    // frame buffers: arg = rule (AWTO_FB_RULE_*) | 0x10 when the register disagrees, value = register count
+#define AWTO_SYNC_EV_MCFG                                       0xF6    // memory: arg select | config << 4, value = bits per pixel
+#define AWTO_SYNC_EV_DVF                                        0xF7    // display frame rate: arg = SDK _x_IVF select, value = frame rate 0.1 Hz
+#define AWTO_SYNC_EV_SCALE                                      0xF8    // scaling: arg = H * 3 + V (0 none, 1 up, 2 down), value = display W << 16 | H
+#define AWTO_SYNC_EV_LIMIT                                      0xF9    // FRC width limit: arg 0 none / 1 bandwidth / 2 space, value = FIFO width << 16 | limit
+#define AWTO_SYNC_EV_WAITSLOW                                   0xFB    // slow / expired wait: arg kind | 0x10 expired, value = register / event << 16 | ms
+#define AWTO_SYNC_EV_DPLT                                       0xFC    // DP link trained: value port << 16 | ms since the main loop first saw the training under way
+#define AWTO_SEL_WHY_FIXED                                      0
+#define AWTO_SEL_WHY_AUTO_LAST                                  1
+#define AWTO_SEL_WHY_AUTO_OTHER                                 2
+#define AWTO_SEL_WHY_OTHER                                      3
+#define AWTO_STG_MEASURE                                        1       // probes 17 -> 18
+#define AWTO_STG_DISPLAY                                        2       // 14 -> 15
+#define AWTO_STG_COLOUR                                         3       // 15 -> 16
+#define AWTO_STG_ACTIVE                                         4       // 11 -> 12
+#define AWTO_SCAN_OK                                            0x01
+#define AWTO_SCAN_TMDS_PHY                                      0x11    // TMDS: PHY not set, waiting for the clock stable IRQ
+#define AWTO_SCAN_TMDS_LOCK                                     0x11    // + 1 CDR / 2 DFE / 3 video detect; + 3 when the 1:40 try failed (retry 1:10)
+#define AWTO_SCAN_TMDS_HPD                                      0x10
+#define AWTO_SCAN_TMDS_VIDEO                                    0x20    // no RGBHV
+#define AWTO_SCAN_TMDS_DE                                       0x21    // DE only
+#define AWTO_SCAN_TMDS_DEEP                                     0x22    // deep colour PLL
+#define AWTO_SCAN_TMDS_MEAS                                     0x24    // timing measure failed
+#define AWTO_SCAN_DP_LT                                         0x30    // + SDK step: 1 HDCP, 2 stream, 3 MSA, 4 video info, 5 format, 6 stream clock, 7 FIFO
+#define AWTO_SCAN_LOG_MAX                                       12
+#define AWTO_WAIT_SYNC_MS                                       20      // waits of this length or more (and expired ones) reach the sync ring
+#define AWTO_WAIT_SYNC_MAX                                      10
+#define AWTO_FB_RULE_DEFAULT                                    0
+#define AWTO_FB_RULE_ROT_SLOWER                                 1
+#define AWTO_FB_RULE_ROT_3                                      2
+#define AWTO_FB_RULE_ROT_FASTER                                 3
+#define AWTO_FB_RULE_FRC                                        4
+extern __xdata unsigned char g_ucAwtoScanStage;
+extern __xdata unsigned int g_usAwtoScanT0;
+extern __xdata unsigned char g_ucAwtoFbRule;
+extern __xdata unsigned int g_usAwtoHsdBw;
+extern __xdata unsigned int g_usAwtoHsdSp;
+#define AWTO_SCAN_BEGIN(stage)                                  { g_ucAwtoScanStage = (stage); g_usAwtoScanT0 = (unsigned int)AwtoMs(); }
+#define AWTO_SCAN_STAGE(k)                                      (g_ucAwtoScanStage = (k))
+#define AWTO_FB_RULE(r)                                         (g_ucAwtoFbRule = (r))
+extern void AwtoSyncScan(unsigned char ucPort, unsigned char ucType);
+extern void AwtoSyncVisit(unsigned char ucOldPort);
+extern void AwtoStageMs(unsigned char ucStg);
+extern void AwtoSyncDisplay(void);
+extern void AwtoSyncFormat(unsigned char ucKind);
+extern unsigned char AwtoTmdsRx2Hs(void);
+extern unsigned char AwtoTmdsRx3Hs(void);
+extern unsigned char AwtoFbRegCount(void);
+extern unsigned char AwtoDpRx1LtBusy(void);
 extern void AwtoSyncPoll(void);
 extern unsigned int AwtoSyncRow(unsigned char ucId, unsigned char ucArg);
 extern unsigned char AwtoSyncStage(unsigned char ucPort);

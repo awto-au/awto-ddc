@@ -5377,6 +5377,7 @@ BYTE ScalerDpRx1ScanInputPort(void)
     ScalerDpRx1ScrambleSetting();
 
     AWTO_SW_MARK(30);
+    AWTO_SCAN_STAGE(AWTO_SCAN_DP_LT + 1);
     if(ScalerDpRx1HdcpCheck() == _FALSE)
     {
         DebugMessageRx1("7. DP HDCP Check Fail", 0);
@@ -5394,6 +5395,7 @@ BYTE ScalerDpRx1ScanInputPort(void)
     }
 
     AWTO_SW_MARK(31);
+    AWTO_SCAN_STAGE(AWTO_SCAN_DP_LT + 2);
     if(ScalerDpRx1GetVideoStream() == _FALSE)
     {
         DebugMessageRx1("7. DP Video Stream Fail", 0);
@@ -5413,6 +5415,7 @@ BYTE ScalerDpRx1ScanInputPort(void)
 #endif
 
     AWTO_SW_MARK(32);
+    AWTO_SCAN_STAGE(AWTO_SCAN_DP_LT + 3);
     if(ScalerDpRx1MSACheck() == _FALSE)
     {
         DebugMessageRx1("7. DP MSA Fail", 0);
@@ -5428,6 +5431,7 @@ BYTE ScalerDpRx1ScanInputPort(void)
 #endif
 
     AWTO_SW_MARK(33);
+    AWTO_SCAN_STAGE(AWTO_SCAN_DP_LT + 4);
     if(ScalerDpRx1GetVideoInfo() == _FALSE)
     {
         DebugMessageRx1("7. DP Get Video Info Fail", 0);
@@ -5440,6 +5444,7 @@ BYTE ScalerDpRx1ScanInputPort(void)
     }
 
     AWTO_SW_MARK(34);
+    AWTO_SCAN_STAGE(AWTO_SCAN_DP_LT + 5);
     if(ScalerDpRx1DisplayFormatSetting() == _FALSE)
     {
         DebugMessageRx1("7. DP Display Format Fail", 0);
@@ -5455,6 +5460,7 @@ BYTE ScalerDpRx1ScanInputPort(void)
 #endif
 
     AWTO_SW_MARK(35);
+    AWTO_SCAN_STAGE(AWTO_SCAN_DP_LT + 6);
     if(ScalerDpRx1StreamClkRegenerate() == _FALSE)
     {
         DebugMessageRx1("7. DP SteamClk Fail", 0);
@@ -5470,6 +5476,7 @@ BYTE ScalerDpRx1ScanInputPort(void)
 #endif
 
     AWTO_SW_MARK(36);
+    AWTO_SCAN_STAGE(AWTO_SCAN_DP_LT + 7);
     if(ScalerDpRx1FifoCheck(_DP_FIFO_DELAY_CHECK) == _FALSE)
     {
 #if(_DP_FREESYNC_SUPPORT == _ON)
@@ -7142,3 +7149,8 @@ void ScalerDpRx1DfpDeviceDetailConfig(void)
 
 #endif // End of #if(_D1_DP_EXIST == _ON)
 
+
+BYTE AwtoDpRx1LtBusy(void)                          // sync log: link training under way (status not NONE)
+{
+    return (GET_DP_RX1_LINK_TRAINING_STATUS() != _DP_LINK_TRAINING_NONE);
+}

@@ -102,6 +102,14 @@ def value(fmt: str, arg: int, v: int) -> str:
         return f"{DP_RATE.get(r, f'{r:02X}')} x{v & 0xFF}"
     if fmt == "src":
         return SRC.get(v, str(v))
+    if fmt == "pms":                                     # #139 value = port << 16 | ms: "D2, 188ms"
+        return f"D{((v >> 16) & 0xFF) - D0}, {v & 0xFFFF}ms"
+    if fmt == "psrc":                                    # value = port << 8 | source type: "D2 HDMI"
+        return f"D{((v >> 8) & 0xFF) - D0} {SRC.get(v & 0xFF, str(v & 0xFF))}"
+    if fmt == "lim":                                     # value = width << 16 | limit
+        return f"{(v >> 16) & 0xFFFF} of {v & 0xFFFF} px"
+    if fmt == "rms":                                     # value = register / argument << 16 | ms: "71A4 40ms"
+        return f"{(v >> 16) & 0xFFFF:04X} {v & 0xFFFF}ms"
     if fmt == "harg":
         return f"{arg:02X}"
     if fmt == "ms":                                      # #150 NVRAM save timing

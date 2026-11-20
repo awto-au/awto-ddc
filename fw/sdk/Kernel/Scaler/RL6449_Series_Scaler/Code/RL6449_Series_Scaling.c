@@ -518,6 +518,9 @@ void ScalerScalingUpdateFIFOScalingSize(StructSDRAMDataInfo *pstData)
 #endif
 
     SET_MEMORY_FRAME_BUFFER(_MEMORY_1_FRAME_BUFFER);
+    AWTO_FB_RULE(AWTO_FB_RULE_DEFAULT);
+    g_usAwtoHsdBw = 0xFFFF;
+    g_usAwtoHsdSp = 0xFFFF;
 #endif // End of #if(_FRC_SUPPORT == _ON)
 
     //-----------------------------------------------
@@ -572,6 +575,8 @@ void ScalerScalingUpdateFIFOScalingSize(StructSDRAMDataInfo *pstData)
         }
 
         ulHSDSpace = ScalerComputeDwordMulDiv(((DWORD)_MEMORY_ROW * _MEMORY_BANK), ((DWORD)_MEMORY_COL_PER_BANK * _MEMORY_BIT_NUM), ((DWORD)GET_MEMORY_DATA_BIT() * pstData->usInputVHeight));
+        g_usAwtoHsdBw = (ulHSDBW > 0xFFFF) ? 0xFFFF : (WORD)ulHSDBW;
+        g_usAwtoHsdSp = (ulHSDSpace > 0xFFFF) ? 0xFFFF : (WORD)ulHSDSpace;
 
 #if(_DISPLAY_ROTATION_SUPPORT == _ON)
         if(((GET_ROT_TYPE() == _ROT_CW180) || (GET_ROT_TYPE() == _ROT_VER_MIRROR)) &&
@@ -610,12 +615,14 @@ void ScalerScalingUpdateFIFOScalingSize(StructSDRAMDataInfo *pstData)
                 {
                     ulHSDSpace /= 2;
                     SET_MEMORY_FRAME_BUFFER(_MEMORY_2_FRAME_BUFFER);
+                    AWTO_FB_RULE(AWTO_FB_RULE_ROT_SLOWER);
                     ScalerRotationSetRotInputSlowerFasterStyle(_TRUE);
                 }
                 else
                 {
                     ulHSDSpace /= 3;
                     SET_MEMORY_FRAME_BUFFER(_MEMORY_3_FRAME_BUFFER);
+                    AWTO_FB_RULE(AWTO_FB_RULE_ROT_3);
                     // set to default value
                     ScalerRotationSetRotInputSlowerFasterStyle(_FALSE);
                 }
@@ -624,6 +631,7 @@ void ScalerScalingUpdateFIFOScalingSize(StructSDRAMDataInfo *pstData)
             {
                 ulHSDSpace /= 2;
                 SET_MEMORY_FRAME_BUFFER(_MEMORY_2_FRAME_BUFFER);
+                AWTO_FB_RULE(AWTO_FB_RULE_ROT_FASTER);
                 ScalerRotationSetRotInputSlowerFasterStyle(_FALSE);
             }
 
@@ -654,6 +662,7 @@ void ScalerScalingUpdateFIFOScalingSize(StructSDRAMDataInfo *pstData)
             if((GET_MEMORY_SELECT() != _FRAME_SYNC_MEMORY) && (ScalerFRCCheckDoubleFrameBuffer(pstData->usInputHWidth, pstData->usInputVHeight) == _TRUE))
             {
                 SET_MEMORY_FRAME_BUFFER(_MEMORY_2_FRAME_BUFFER);
+                AWTO_FB_RULE(AWTO_FB_RULE_FRC);
 
                 ulHSDSpace = ScalerComputeDwordMulDiv(((DWORD)_MEMORY_ROW * _MEMORY_BANK), ((DWORD)_MEMORY_COL_PER_BANK * _MEMORY_BIT_NUM), ((DWORD)2 * GET_MEMORY_DATA_BIT() * pstData->usInputVHeight));
 
