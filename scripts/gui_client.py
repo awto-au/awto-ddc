@@ -321,6 +321,10 @@ def format_reply(method: str, params: dict, rep: dict) -> str:
     if "values" in res and isinstance(res["values"], dict) and "name" not in res:
         return "\n".join(f"{k} = {v['label'] or v['value']} (raw {v['value']})" if isinstance(v, dict) else f"{k} = {v}"
                          for k, v in res["values"].items())
+    if "writes" in res and "values" in res:
+        return (f"drag {res['name']} {res['from']} -> {res['to']}: {res['values']} value changes, {res['writes']} writes sent, {res['saves']} saves, "
+                f"{res['duration_s']} s, median write {res['median_write_ms']} ms, floor {res['floor_ms']} ms, read back {res['readback']}"
+                f"{'  verified' if res['verified'] else '  NOT verified'}")
     if "name" in res and "value" in res:
         return f"{res['name']} = {res.get('label') or res['value']} (raw {res['value']})" + ("  verified" if res.get("verified") else "")
     return json.dumps(res)
@@ -403,7 +407,7 @@ def _flash_end(ev: dict, say) -> int:
 
 # --- `dev.py gui`
 SUBCOMMANDS = ("ping", "list", "state", "select", "get", "set", "save", "kvm", "saver", "run", "health", "synclog", "note", "host-time",
-               "vcp", "i2c", "ddc", "flash-status", "jobs", "events", "quit")
+               "vcp", "i2c", "ddc", "drag", "flash-status", "jobs", "events", "quit")
 
 
 def parse_gui(argv: list[str], default_unit: str | None = None) -> tuple[list[tuple[str, dict]], dict]:
@@ -453,6 +457,10 @@ def _command_form(x: list[str], p: dict, confirm: bool) -> tuple[str, dict]:
             if c == "set" and len(a) != 2:
                 raise PortCannotCarry("set NAME VALUE")
             return "set", {**p, "name": a[0], **({"value": a[1]} if len(a) > 1 else {}), "confirm": confirm}
+        if c == "drag":
+            steps, step_ms = _take(a, "--steps"), _take(a, "--step-ms")
+            return "drag", {**p, "name": a[0], "from": a[1], "to": a[2], **({"steps": steps} if steps not in (None, True) else {}),
+                            **({"step_ms": step_ms} if step_ms not in (None, True) else {})}
         if c == "save":
             return "save", {**p, "verify": a}
         if c == "kvm":

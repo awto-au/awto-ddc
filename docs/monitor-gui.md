@@ -10,7 +10,7 @@ Launch: `python3 tools/osd_editor/run.py --monitor` (opens on the monitor tab) o
 
 ## Layout
 - Top: unit strip (one button per unit) + search box.
-- Quick strip: volume (VCP 0x62), mute (0x8D), brightness (mailbox `settings set`), input select (`scripts/kvm.py`), screensaver start / stop (VCP 0xEB).
+- Quick strip: volume (VCP 0x62, live), mute (0x8D), backlight (VCP 0x10, live), input select (`scripts/kvm.py`), screensaver start / stop (VCP 0xEB).
 - Left: tree page > setting (counts per page; `[risky]`, `[action]`, `[ro]` tags).
 - Middle: form of the selected page, one `SettingRow` per row; selecting a setting highlights its row and shows id, VCP code, range, default, flags, note.
 - Right: host time, health, action log, boot / sync log, last output.
@@ -113,6 +113,26 @@ Launch: `python3 tools/osd_editor/run.py --monitor` (opens on the monitor tab) o
 - Nothing signals a flash. The app refuses `quit` (port, headless SIGINT / SIGTERM) while one is followed; the window asks before closing. The flash runs on either way.
 - GUI: strip dot violet "FLASHING 47 %", progress panel (bar, sectors, errors, recoveries, ETA, last log lines). The unit's other operations and probes are refused with "flashing" until the lock is released.
 - Not routed through the port: `deploy`, `recover` (they call the flash code in-process).
+
+## Live sliders (#277, 2026-11-20)
+- Live rows = registry flag `live`, not `risky` / `ro`; sliders 11: brightness (label Backlight), black_level, contrast, user_red / green / blue, osd_hpos / vpos / transparency, volume, screensaver_s. Combos 3 (stored settings only): gamma, colour_temp, screensaver (one write on pick). `power_mode` and `screensaver_now` are `live` but commands: keep Set. Other rows keep Set; a live row has no Set button. Quick strip volume + backlight are the same rows.
+- Coalescing, per unit + setting (`tools/osd_editor/live_writer.py`): one write in flight, one pending value (the latest). A completed write sends the latest pending value at once. A value equal to the last sent value (or the pre-drag value) is skipped. Release sends the exact released value last, then ONE read-back. Keyboard / wheel steps coalesce the same way; no release event, so `SETTLE_S` 0.5 s without a change = released (above key-repeat and wheel gaps).
+- Floor between write starts = max(30 ms, 1.25 x median of the unit's last 8 write times). 30 ms: the firmware serves DDC/CI in one pass per `AWTO_SET_LOOP_MS` (20 ms), one deferred request per engine. A slow bus (DP AUX) raises the floor by itself from its measured latency.
+- Esc during a drag / key run: the pre-drag value is written back (one write, none if nothing was sent), read back, the widget shows it. Row shows "sending" while a write or the read-back runs; the label shows the read-back as `unit: N`.
+- Log: one line per drag, e.g. `drag 20 -> 100: 161 value changes, 55 writes sent, 70 values never sent, 0 saves, 1.77 s, median write 2.1 ms, floor 30 ms`; event `live` on the port stream.
+- Backlight safety (unit 2 was blacked by `set brightness = 0` x15, 2026-11-20): the backlight slider (row `brightness`) stops at `BL_MIN` 5 % ("min 5 %"; Home / wheel too). 0 % only through the "0 %..." button, which asks "Backlight 0 % = black screen. Set?"; port `set brightness 0` needs `--confirm`, any 1..100 never does. After any backlight set below `BL_LOW` 10 % the quick strip shows "Restore previous backlight (N %)" for 10 s (`BL_RESTORE_MS`).
+- Port: `./dev.py gui --unit N drag NAME FROM TO [--steps N] [--step-ms M]` = a scripted drag through the same path (summary reply); `set` is unchanged (one write). `vcp set CODE VALUE` now runs in-process too.
+
+### Fast write path
+- `scripts/unit_ops.py`: `set_frame` / `get_frame` / `parse_get_reply` (frame `51 84 03 code hi lo chk`, chk = 0x6E ^ all bytes; reply chk seeded 0x50), `DdcSession` (persistent `/dev/i2c-N` fd via `i2cbus.Bus`, EDID serial proven once at open, frames spaced >= 20 ms, 40 ms Get wait, paged rows 0xE0 select once per drag then 0xE1). The app keeps one session per unit and runs it on the unit's worker thread (`UnitQueues.submit_fn`); no `ddcutil detect`.
+- `dev.py ddc set CODE VALUE` (also the workers' subprocess) uses the same session. A bus error is logged (`fast DDC/CI write failed ... falling back to ddcutil`) and then runs the old `ddc_ctl.py` path; get / list / sleep / wake stay on ddcutil.
+- Measured 2026-11-20, unit 1 (NVIDIA HDMI, bus 18, HDMI DDC), backlight 0x10: old `ddc_ctl.py set` 1.24-1.28 s per write (detect); first in-process write 0.6 s (open + EDID proof); warm write 2-3 ms; Get read-back 65 ms (40 ms MCCS wait); `gui vcp set` with read-back 67-70 ms over the port. DP AUX units not measured (unit 2 is out of bounds today): the floor derives from the measured median at run time.
+- Scripted drag 100 -> 20 and back, 161 value changes 10 ms apart, 6 drags: 49-56 writes each (1.8 s, floor 30 ms), 0 saves, every read-back = the released value, no NAK. Unit restored to backlight 64, read back 64.
+
+### NVRAM (#151) during a drag
+- A VCP set = `vcp_set` -> `set_put(.., apply_now 1)`: RAM store + apply; a changed stored value marks the record dirty (`set_sdk_put` / `set_nv_dirty`), an equal value stores nothing. No flash write in the handler.
+- The flush gate (`fw/nvram/nv_gate.c`, constants `AWTO_NV_*` in `RL6449_Project.h`): writes when stable >= 3000 ms, DDC/CI idle >= 500 ms (every DDC/CI request restarts it) and 2000 ms since the last change; or 30000 ms after the first dirty value regardless (`AWTO_NV_FORCE_MS`, the forced branch does not wait for DDC idle). MCCS save (0x0C) only sets a commit flag (no 2 s wait).
+- Consequences for a live drag: writes 30 ms apart keep DDC idle at 0, so no flush while moving. One flush ~2 s after the last change. A pause > 2 s mid-drag with the mouse held flushes once (and each later pause > 2 s again). A drag longer than 30 s from the first change is forced to flush once mid-drag. The live path never sends 0x0C; the row stays dirty until the firmware gate or the explicit Save.
 
 ## Not done
 - Search flattens by hiding tree items, not a separate result list.

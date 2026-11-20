@@ -3,6 +3,8 @@ import os
 import re
 import sys
 import tempfile
+import threading
+import time
 from pathlib import Path
 
 os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
@@ -44,11 +46,42 @@ def roundtrip(bpp, geom, win):
 
 
 class FakeBackend:
-    """canned script output; records every argv (no hardware, no subprocess)"""
+    """canned script output; records every argv (no hardware, no subprocess).
+    live_set / live_get = the in-process DDC/CI writes of the live sliders: `live_latency_s` per call, recorded in `live_calls`"""
+
+    live_latency_s = 0.0
 
     def __init__(self):
         self.calls, self.limits, self.fail, self.direct = [], [], None, 0
         self.fail_on = []                                # [(substring of the argv, rc, text)] consumed by the first matching call
+        self.live_calls, self.live_active, self.live_max, self.live_value, self.live_fail, self.live_times = [], 0, 0, {}, None, []
+        self._live_lock = threading.Lock()
+
+    def _live(self, call):
+        with self._live_lock:
+            self.live_active += 1
+            self.live_max = max(self.live_max, self.live_active)
+            self.live_calls.append(call)
+            self.live_times.append(time.monotonic())
+        try:
+            time.sleep(self.live_latency_s)                 # the fake write time (a test stand-in for the bus latency)
+            if self.live_fail:
+                return 1, self.live_fail
+            return 0, ""
+        finally:
+            with self._live_lock:
+                self.live_active -= 1
+
+    def live_set(self, u, code, value, row_id, reselect):
+        rc, out = self._live(("set", u["serial"], code, value, row_id, reselect))
+        if rc == 0:
+            self.live_value[(u["serial"], code, row_id)] = value
+        return rc, out
+
+    def live_get(self, u, code, row_id):
+        rc, out = self._live(("get", u["serial"], code, row_id))
+        v = self.live_value.get((u["serial"], code, row_id), 0)
+        return (0, f"value {v} max 100") if rc == 0 else (rc, out)
 
     def run(self, argv, limit_s):
         a = [str(x) for x in argv]
@@ -95,7 +128,7 @@ def quick_test(app, pg, fb):
     pg.saver_stop()
     pg.saver.setCurrentText("Flash warning")
     pg.saver_start()
-    pg.quick["volume"].w.setValue(33)
+    pg.quick["volume"].set_value(33)
     pg.set_row(pg.quick["volume"])
     pg.quick["mute"].w.setCurrentIndex(1)                          # On -> VCP 0x8D = 1
     pg.set_row(pg.quick["mute"])
@@ -106,7 +139,7 @@ def quick_test(app, pg, fb):
     assert sent == ["ddc set 0xEB 4 --unit 3", "ddc set 0xEB 0 --unit 3", "ddc set 0xEB 5 --unit 3", "ddc set 0x62 33 --unit 3",
                     "ddc set 0x8D 1 --unit 3", "settings set disp_rotate 0 --unit 3", "ddc get 0x8D --unit 3",
                     "settings get disp_rotate --unit 3"], sent          # the two one-click rows read back after their write
-    pg.quick["brightness"].w.setValue(70)                         # quick brightness: mailbox row like the tree
+    pg.quick["brightness"].set_value(70)                         # quick brightness: mailbox row like the tree
     pg.set_row(pg.quick["brightness"])
     settle(app, pg)
     assert " ".join(fb.calls[-1][2:]) == "settings set brightness 70 --unit 3" and pg.rows["brightness"].w.value() == 70
@@ -121,8 +154,7 @@ def quick_test(app, pg, fb):
     assert len(pg.page_items) == 15 and len(pg.all_rows) == len(MON.T.ROWS)
     # a refresh keeps a touched row and a dragged slider
     sr = pg.rows["brightness"]
-    sr.w.setValue(80)
-    sr._touched()
+    sr.set_value(80)
     pg.get_all()
     settle(app, pg)
     assert sr.w.value() == 80 and sr.cur.text() == "unit: 51", (sr.w.value(), sr.cur.text())
@@ -201,7 +233,7 @@ def monitor_test(app, win):
     app.processEvents()
     assert fb.calls[-1][-5:] == ["settings", "list", "--unit", "3"][-4:] or fb.calls[-1][2:] == ["settings", "list", "--unit", "3"]
     assert pg.rows["brightness"].w.value() == 51 and pg.rows["gamma"].w.currentIndex() == 0
-    pg.rows["brightness"].w.setValue(60)
+    pg.rows["brightness"].set_value(60)
     pg.rows["gamma"].w.setCurrentIndex(3)
     pg.set_row(pg.rows["brightness"])
     pg.set_row(pg.rows["gamma"])

@@ -427,6 +427,8 @@ class ControlPort(QObject):
             raise PortError(f"{name} is {'an action' if action else 'risky'}: send confirm=true (the GUI's dialog)"
                             + (" (needs a reboot)" if "reboot" in r["flags"] else ""))
         v = 1 if action else parse_value(r, p["value"])
+        if name in MON.BACKLIGHT_ROWS and v == 0 and not p.get("confirm"):
+            raise PortError(f"{name} 0 = black screen: send confirm=true ({MON.BL_ZERO_ASK}); any value 1..100 needs none")
         pg = self.page
         self.focus(n)
         sr = pg.quick[name] if name in MON.VCP_ROW else pg.all_rows[name]
@@ -449,6 +451,44 @@ class ControlPort(QObject):
         self._job(done, jid)
 
     m_run = m_set
+
+    def m_drag(self, p, done):
+        """scripted slider drag through the live path: NAME from FROM to TO in `steps` valueChanged events `step_ms` apart (then released);
+        replies with the writes-per-drag summary. A backlight drag is clamped at MON.BL_MIN like the slider"""
+        n, name = self.unit_of(p), p["name"]
+        r = self.row(name)
+        if not MON.live_row(r):
+            raise PortError(f"{name} is not a live row")
+        if "unit" not in p and "serial" not in p:
+            raise PortError("drag: send the unit explicitly (writes never go to a default unit)")
+        a, b = int(p["from"]), int(p["to"])
+        steps, step_ms = int(p.get("steps", 100)), int(p.get("step_ms", 5))
+        lo = MON.BL_MIN if name in MON.BACKLIGHT_ROWS else r["min"]
+        if not (lo <= min(a, b) and max(a, b) <= r["max"]) or steps < 1:
+            raise PortError(f"{name}: drag {a}..{b} outside {lo}..{r['max']}")
+        pg, lw = self.page, self.page.live_writer
+        self.focus(n)
+        sr = pg.quick[name] if name in pg.quick else pg.all_rows[name]
+        if not (st := pg.states[n]).writable or st.flash:
+            raise PortError(pg.refused or f"unit {n} is read-only or flashing")
+        vals = [round(a + (b - a) * i / steps) for i in range(steps + 1)]
+
+        def finished(res):
+            if res["unit"] == n and res["name"] == name:
+                lw.listeners.remove(finished)
+                done(res, res["error"] or None)
+        lw.listeners.append(finished)
+        lw.hold(n, name, a)
+        it = iter(vals)
+
+        def tick():
+            v = next(it, None)
+            if v is None:
+                return lw.release(n, name, b)
+            sr.set_value(v)
+            lw.change(n, name, v, a)
+            QTimer.singleShot(step_ms, tick)
+        tick()
 
     def m_save(self, p, done):
         n = self.unit_of(p, write=True)
@@ -559,13 +599,35 @@ class ControlPort(QObject):
         if op != "set":
             raise PortError("vcp: op get | set")
         code, val = str(p["code"]), str(p["value"])
+        u, backend = pg.states[n].info, pg.queues.backend
+
+        def slow_set(why: str):                              # the old path, said out loud: the in-process write failed (not silent)
+            pg.say(f"unit {n} vcp set {code} = {val}: in-process write failed ({why}); falling back to dev.py ddc set")
+            self._plain(done, pg.run(f"vcp set {code} = {val}", pg.dev("ddc", "set", code, val, *dp, unit=n), None, "ddc", unit=n, after=wrote))
 
         def wrote(rc, out, secs):
             if rc != 0 or not p.get("readback"):
                 return done({"rc": rc, "output": out}, None if rc == 0 else f"vcp set failed: {MON.reason_line(out)}")
-            pg.run(f"vcp readback {code}", pg.dev("ddc", "get", code, *dp, unit=n), lambda rc2, o2: pg._vcp_got(n, o2), "ddc", unit=n,
-                   after=lambda rc2, o2, s2: done({"rc": rc2, "output": o2, "wrote": val}, None if rc2 == 0 else MON.reason_line(o2)))
-        self._plain(done, pg.run(f"vcp set {code} = {val}", pg.dev("ddc", "set", code, val, *dp, unit=n), None, "ddc", unit=n, after=wrote))
+            c = int(code, 16)
+
+            def rb():
+                rc2, o2 = backend.live_get(u, c, None)
+                return rc2, (f"VCP {c:02X} C {o2.split()[1]} {o2.split()[3]}" if rc2 == 0 else o2)
+            jid = pg.live_call(f"vcp readback {code}", rb, lambda rc2, o2, s2: (pg._vcp_got(n, o2) if rc2 == 0 else None, done(
+                {"rc": rc2, "output": o2, "wrote": val}, None if rc2 == 0 else MON.reason_line(o2))), unit=n)
+            self._job(done, jid)
+
+        def fast(rc, out, secs):
+            if rc != 0:
+                return slow_set(out.strip())
+            wrote(0, out, secs)
+        try:
+            c, v = int(code, 16), int(val, 0)
+        except ValueError:
+            return slow_set("code / value not a number")
+        if p.get("link") == "dp":
+            return slow_set("dp link: the old path resolves the DP AUX bus")
+        self._job(done, pg.live_call(f"vcp set {code} = {val}", lambda: backend.live_set(u, c, v, None, False), fast, unit=n))
 
     def m_i2c(self, p, done):
         """raw I2C on the unit: addr (7-bit), write = byte list, read = count (both: write, repeated start, read)"""

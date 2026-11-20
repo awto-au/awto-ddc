@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import os
 import subprocess
+import sys
 import threading
 import time
 from pathlib import Path
@@ -15,7 +16,8 @@ TERM_GRACE_S = 2                                         # debug-link swap is 0.
 
 
 class SubprocessBackend:
-    """run(argv, limit_s) -> (rc, output); rc 124 = limit expired, process stopped."""
+    """run(argv, limit_s) -> (rc, output); rc 124 = limit expired, process stopped.
+    live_set / live_get = DDC/CI frames straight on the unit's bus from the unit's worker thread (persistent fd, awto-ddc#277)."""
 
     def run(self, argv: list[str], limit_s: float) -> tuple[int, str]:
         p = subprocess.Popen(argv, cwd=ROOT, env={**os.environ, "AWTO_GUI_WORKER": "1"}, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True)
@@ -31,6 +33,27 @@ class SubprocessBackend:
             return 124, f"limit {limit_s} s expired, process stopped: {' '.join(map(str, argv))}\n{out or ''}"
         return p.returncode, out or ""
 
+    def _session(self, u: dict):
+        if str(ROOT) not in sys.path:
+            sys.path.insert(0, str(ROOT))                # dev.py (the EDID-proven bus lookup) sits at the repo root
+        import dev
+        import unit_ops
+        return unit_ops.session_for(dev, u)
+
+    def live_set(self, u: dict, code: int, value: int, row_id: int | None, reselect: bool) -> tuple[int, str]:
+        try:
+            self._session(u).set_vcp(code, value, reselect=reselect, row_id=row_id)
+        except (OSError, ValueError, SystemExit) as e:   # SystemExit = dev._bus: no bus with that EDID serial
+            return 1, f"live set {code:#04x} = {value}: {e!r}"
+        return 0, ""
+
+    def live_get(self, u: dict, code: int, row_id: int | None) -> tuple[int, str]:
+        try:
+            cur, mx = self._session(u).get_vcp(code, row_id=row_id)
+        except (OSError, ValueError, SystemExit) as e:
+            return 1, f"live get {code:#04x}: {e!r}"
+        return 0, f"value {cur} max {mx}"
+
 
 DDC_LOCK = threading.Lock()   # every dev.py ddc call runs `ddcutil detect` over all buses: parallel calls slow each other (measured 3x) and time out
 
@@ -40,14 +63,16 @@ def is_ddc(argv) -> bool:
 
 
 class _Job(QRunnable):
-    def __init__(self, backend, argv, limit, owner, jid):
+    def __init__(self, backend, argv, limit, owner, jid, fn=None):
         super().__init__()
-        self.backend, self.argv, self.limit, self.owner, self.jid = backend, argv, limit, owner, jid
+        self.backend, self.argv, self.limit, self.owner, self.jid, self.fn = backend, argv, limit, owner, jid, fn
 
     def run(self):
         t0 = time.monotonic()
         try:
-            if is_ddc(self.argv):                         # the limit starts when the call starts, not while it waits its turn
+            if self.fn is not None:                       # in-process call on this unit's worker thread (live writes): no ddcutil, no DDC_LOCK
+                rc, out = self.fn()
+            elif is_ddc(self.argv):                         # the limit starts when the call starts, not while it waits its turn
                 with DDC_LOCK:
                     t0 = time.monotonic()
                     rc, out = self.backend.run(self.argv, self.limit)
@@ -74,6 +99,16 @@ class UnitQueues(QObject):
             pool.setMaxThreadCount(1)                    # one script at a time per unit: they share its bus
         jid = self.next_id = self.next_id + 1
         pool.start(_Job(self.backend, [str(a) for a in argv], limit_s, self, jid))
+        return jid
+
+    def submit_fn(self, unit: str, fn) -> int:
+        """run fn() -> (rc, output) on the unit's worker thread, in order with that unit's other jobs; same `done` signal"""
+        pool = self.pools.get(unit)
+        if pool is None:
+            pool = self.pools[unit] = QThreadPool(self)
+            pool.setMaxThreadCount(1)
+        jid = self.next_id = self.next_id + 1
+        pool.start(_Job(self.backend, [], 0, self, jid, fn))
         return jid
 
     def wait_idle(self):

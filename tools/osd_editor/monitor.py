@@ -23,6 +23,7 @@ import flash_job  # noqa: E402
 import isostamp  # noqa: E402
 import unit_lock  # noqa: E402
 import settings_table as T  # noqa: E402
+from live_writer import LiveWriter  # noqa: E402
 
 PYTHON = "python3"
 LOG = ROOT / "tmp" / "logs" / "osd_editor.log"
@@ -54,6 +55,11 @@ ROW_ROLE = Qt.UserRole + 1
 EDID_GLOB = "/sys/class/drm/*/edid"                      # kernel's copy of each connected monitor's EDID: no I2C from the GUI
 ADVANCED_PAGES = ("debug", "service")                    # hidden unless "show advanced" (QSettings monitor/advanced)
 INPUT_VCP = "0x60"
+BACKLIGHT_ROWS = ("brightness",)                         # registry label "Backlight", VCP 0x10, apply backlight (black_level is the digital "Brightness")
+BL_MIN = 5                                               # a dragged / stepped backlight never goes below this %: 0 is a black screen (unit 2 was blacked 2026-11-20)
+BL_LOW = 10                                              # a backlight set below this % shows "Restore previous backlight"
+BL_RESTORE_MS = 10_000                                   # how long that button stays: long enough to notice a dark screen and reach for it
+BL_ZERO_ASK = "Backlight 0 % = black screen. Set?"
 
 
 def load_units() -> dict:
@@ -293,15 +299,57 @@ def instant_options(r: dict) -> tuple[list[str], bool] | None:
     return None
 
 
+class LiveSlider(QSlider):
+    """slider that reports Esc (restore the pre-drag value) and swallows the rest of a cancelled drag until the mouse is released"""
+
+    escape = Signal()
+
+    def __init__(self, *a):
+        super().__init__(*a)
+        self.cancelling = False
+
+    def keyPressEvent(self, e):
+        if e.key() == Qt.Key_Escape:
+            self.escape.emit()
+            return
+        super().keyPressEvent(e)
+
+    def cancel_drag(self):
+        if self.isSliderDown():
+            self.cancelling = True
+            self.setSliderDown(False)
+
+    def mouseMoveEvent(self, e):
+        if not self.cancelling:
+            super().mouseMoveEvent(e)
+
+    def mouseReleaseEvent(self, e):
+        super().mouseReleaseEvent(e)
+        self.cancelling = False
+
+
+def live_row(r: dict) -> bool:
+    """rows that write while they are moved: registry flag `live`, a slider or a many-option combo (one-click rows are instant already);
+    risky / read-only rows never; a combo only when it is a stored setting (nv): power_mode and screensaver_now are commands (they sleep the
+    unit / start a screensaver on pick) and keep Set"""
+    return "live" in r["flags"] and not ({"risky", "ro"} & set(r["flags"])) and (r["type"] == "int" or (
+        r["type"] == "enum" and "nv" in r["flags"] and instant_options(r) is None))
+
+
 class SettingRow(QWidget):
     """One registry row: widget + value label + Set (the page runs the call). `ro` rows are shown, never writable.
     A row the user touched (drag, pick) keeps its widget value on refresh until Set succeeds."""
 
-    def __init__(self, r: dict, on_set, compact: bool = False):
+    def __init__(self, r: dict, on_set, compact: bool = False, live: LiveWriter | None = None):
         super().__init__()
         self.setAttribute(Qt.WA_StyledBackground, True)
         self.r, self.dirty, self.instant = r, False, False
         self.on_set = on_set
+        self.live = live if live is not None and live_row(r) else None   # LiveWriter: this row writes while it moves (awto-ddc#277)
+        self.is_bl = r["name"] in BACKLIGHT_ROWS
+        self.zero = None
+        self.base = None                                 # the value the unit has (last read / set): the pre-drag value
+        self.ind = None
         self.read_only = "ro" in r["flags"]
         lay = QHBoxLayout(self)
         lay.setContentsMargins(0, 0, 0, 0)
@@ -310,12 +358,17 @@ class SettingRow(QWidget):
         lab.setToolTip(f"{r['name']} (id {r['id']}) {','.join(r['flags'])}\n{r['note']}")
         lay.addWidget(lab)
         if r["type"] == "int":
-            self.w = QSlider(Qt.Horizontal)
+            self.w = LiveSlider(Qt.Horizontal)
             self.w.setRange(r["min"], r["max"])
             self.w.setSingleStep(r["step"])
             self.w.valueChanged.connect(self._shown)
             self.w.sliderMoved.connect(self._touched)
             self.w.actionTriggered.connect(self._touched)
+            if self.live:
+                self.w.sliderPressed.connect(self._live_press)
+                self.w.valueChanged.connect(self._live_changed)
+                self.w.sliderReleased.connect(self._live_release)
+                self.w.escape.connect(self._live_escape)
             self.val = QLabel()
             self.val.setMinimumWidth(60 if compact else 80)
         elif (ch := instant_options(r)) is not None:     # bool / small enum: one click = one write (Set button hidden)
@@ -327,6 +380,8 @@ class SettingRow(QWidget):
             self.w = QComboBox()
             self.w.addItems(r["options"] or ["off", "on"])
             self.w.activated.connect(self._touched)
+            if self.live:
+                self.w.activated.connect(self._live_picked)
             self.val = None
         lay.addWidget(self.w, 1)
         if self.val:
@@ -334,16 +389,80 @@ class SettingRow(QWidget):
         self.cur = QLabel("-")
         self.cur.setMinimumWidth(70 if compact else 130)
         lay.addWidget(self.cur)
+        if self.live:
+            self.ind = QLabel("")                        # "sending" while a write or the read-back is in flight
+            self.ind.setStyleSheet("color: #d29922;")
+            self.ind.setMinimumWidth(10 if compact else 60)
+            lay.addWidget(self.ind)
         self.btn = QPushButton("Set")
         self.btn.clicked.connect(lambda: on_set(self))
         lay.addWidget(self.btn)
-        self.btn.setVisible(not self.instant)
+        self.btn.setVisible(not self.instant and not self.live)   # a live row has no Set: it is written as it moves
+        if self.is_bl:                                   # 0 % is never one drag away: an explicit button, then a confirm dialog
+            self.zero = QPushButton("0 %…")
+            self.zero.setToolTip(f"{BL_ZERO_ASK} (asks first); the slider stops at {BL_MIN} %")
+            self.zero.clicked.connect(self._zero)
+            lay.addWidget(self.zero)
         self.w.setEnabled(not self.read_only)
         self.btn.setEnabled(not self.read_only)
         self._shown()
 
     def _touched(self, *_):
         self.dirty = True
+
+    def _unit(self) -> str:
+        return self.live.page.cur
+
+    def _live_ok(self) -> bool:
+        pg = self.live.page
+        st = pg.states[pg.cur]
+        if not st.writable or st.flash:
+            pg.say(f"unit {pg.cur} live {self.r['name']}: refused, {'read-only unit' if not st.writable else 'unit is flashing'}")
+            return False
+        return True
+
+    def _live_press(self):
+        if self._live_ok():
+            self.live.hold(self._unit(), self.r["name"], self.base)
+
+    def _zero(self):
+        self._move(0, base=False)
+        self.dirty = True
+        self.on_set(self)
+
+    def _live_changed(self, v: int):
+        if self.w.cancelling or not self._live_ok():
+            return
+        if self.is_bl and v < BL_MIN:                    # safety floor: clamp, say so
+            v = BL_MIN
+            self.w.blockSignals(True)
+            self.w.setValue(v)
+            self.w.blockSignals(False)
+            self.val.setText(f"min {BL_MIN} %")
+        self.dirty = True
+        self.live.change(self._unit(), self.r["name"], v, self.base)
+
+    def _live_release(self):
+        if not self.w.cancelling:
+            self.live.release(self._unit(), self.r["name"], self.w.value())
+
+    def _live_escape(self):
+        n, name = self._unit(), self.r["name"]
+        if self.live.busy(n, name):
+            self.w.cancel_drag()
+            self.live.cancel(n, name)
+            if self.base is not None:
+                self._move(self.base)
+
+    def _live_picked(self, *_):
+        if self._live_ok():
+            self.live.begin(self._unit(), self.r["name"], self.base)
+            self.live.change(self._unit(), self.r["name"], self.raw(), self.base)
+            self.live.release(self._unit(), self.r["name"], self.raw())
+
+    def set_sending(self, text: str):
+        if self.ind is not None:
+            self.ind.setText("●" if text and self.ind.minimumWidth() < 20 else text)
 
     def _picked(self, *_):
         self.dirty = True
@@ -355,6 +474,8 @@ class SettingRow(QWidget):
         self.btn.setEnabled(on)
         if self.instant:
             self.w.setEnabled(on)
+        if self.zero is not None:
+            self.zero.setEnabled(on)
     def _shown(self, *_):
         if self.val:
             self.val.setText(f"{self.w.value()} {dict(percent='%', ms='ms', s='s').get(self.r['unit'], '')}".strip())
@@ -370,7 +491,9 @@ class SettingRow(QWidget):
     def dragging(self) -> bool:
         return self.r["type"] == "int" and self.w.isSliderDown()
 
-    def _move(self, v: int):
+    def _move(self, v: int, base: bool = True):
+        if base:
+            self.base = v
         self.w.blockSignals(True)
         if self.r["type"] == "int":
             self.w.setValue(v)
@@ -399,7 +522,7 @@ class SettingRow(QWidget):
     def set_value(self, v: int):
         """what a click or drag does to the widget (control port): the value is touched, not yet set"""
         self.dirty = True
-        self._move(v)
+        self._move(v, base=False)
 
 
 class ActionRow(QWidget):
@@ -448,6 +571,9 @@ class MonitorPage(QWidget):
         self.settings = settings or QSettings("awto", "osd_editor")
         self.queues = UnitQueues(backend or SubprocessBackend(), self)
         self.queues.done.connect(self._finish, Qt.QueuedConnection)   # UI-thread slot, emitted from the worker
+        self.live_jobs: dict[int, object] = {}              # job id -> callback(rc, out, secs) of an in-process live write / read-back
+        self.live_writer = LiveWriter(self)                 # live sliders: coalesced writes while a control moves (awto-ddc#277)
+        self.live_writer.state.connect(self._live_state)
         self.units = load_units()                        # devices.json only; self.states also holds unknown monitors
         self.states = {n: UnitState(n, u) for n, u in self.units.items()}
         self.advanced = str(self.settings.value("monitor/advanced", "false")).lower() == "true"
@@ -576,10 +702,20 @@ class MonitorPage(QWidget):
         r1 = QHBoxLayout()
         r1.addWidget(QLabel("<b>Quick</b>"))
         for name in QUICK_ROWS:
-            sr = SettingRow(row_of(name), self.set_row, compact=True)
+            sr = SettingRow(row_of(name), self.set_row, compact=True, live=self.live_writer)
             self.quick[name] = sr
             r1.addWidget(sr, 1)
         lay.addLayout(r1)
+        self.bl_prev: dict[str, int] = {}                # unit -> last backlight >= BL_LOW (what Restore writes)
+        self.restore_btn = QPushButton("Restore previous backlight")
+        self.restore_btn.setStyleSheet("background: #b03030; color: white; font-weight: bold;")
+        self.restore_btn.clicked.connect(self.bl_restore)
+        self.restore_btn.hide()
+        self.restore_timer = QTimer(self)
+        self.restore_timer.setSingleShot(True)
+        self.restore_timer.setInterval(BL_RESTORE_MS)
+        self.restore_timer.timeout.connect(self.restore_btn.hide)
+        r1.addWidget(self.restore_btn)
         r2 = QHBoxLayout()
         self.inp = Choice(list(INPUTS))                  # one click = kvm.py selects that input
         self.inp_touched = False
@@ -650,7 +786,7 @@ class MonitorPage(QWidget):
                 if r["type"] == "action":
                     sr = ActionRow(r, self.set_row)
                 else:
-                    sr = SettingRow(r, self.set_row)
+                    sr = SettingRow(r, self.set_row, live=self.live_writer)
                     self.rows[r["name"]] = sr
                 self.all_rows[r["name"]] = sr
                 il.addWidget(sr)
@@ -949,7 +1085,98 @@ class MonitorPage(QWidget):
             self.say(f"unit {n} {label}: started (limit {LIMIT_S[limit]} s)")
         return jid
 
+    def bl_seen(self, n: str, v: int | None, before: int | None):
+        """a backlight value was set on unit n: remember the last normal one; a low one offers Restore for BL_RESTORE_MS"""
+        if v is None:
+            return
+        if v >= BL_LOW:
+            self.bl_prev[n] = v
+            return
+        if before is not None and before >= BL_LOW:
+            self.bl_prev[n] = before
+        if n in self.bl_prev and n == self.cur:
+            self.restore_btn.setText(f"Restore previous backlight ({self.bl_prev[n]} %)")
+            self.restore_btn.show()
+            self.restore_timer.start()
+
+    def bl_restore(self):
+        n = self.cur
+        v = self.bl_prev.get(n)
+        self.restore_btn.hide()
+        if v is None:
+            return
+        sr = self.quick["brightness"]
+        self.say(f"unit {n}: restore previous backlight {v} %")
+        sr._move(v, base=False)
+        sr.dirty = True
+        self.live_writer.begin(n, "brightness", sr.base)
+        self.live_writer.change(n, "brightness", v, sr.base)
+        self.live_writer.release(n, "brightness", v)
+
+    def live_call(self, label: str, fn, after, unit: str | None = None):
+        """run fn() -> (rc, out) in-process on the unit's worker thread (persistent DDC/CI fd); after(rc, out, secs) on the UI thread.
+        Same refusals as run(); one log line per call. Returns the job id, or None when refused (reason in self.refused)."""
+        n = unit or self.cur
+        st = self.states[n]
+        self.refused = ""
+        if not st.writable:
+            self.refused = f"unit {n} is read-only (not a test unit in devices.json)"
+        elif st.flash:
+            self.refused = f"unit {n} is flashing ({st.flash}): jobs refused until the unit lock is released"
+        if self.refused:
+            self.say(f"unit {n} {label}: refused, {self.refused}")
+            return None
+        jid = self.queues.submit_fn(n, fn)
+
+        def cb(rc, out, secs):
+            self.say(f"unit {n} {label}: {'ok' if rc == 0 else 'FAILED ' + out.strip()} ({secs * 1000:.0f} ms, in-process)")
+            after(rc, out, secs)
+        self.live_jobs[jid] = cb
+        return jid
+
+    def _live_state(self, unit: str, name: str, text: str):
+        if unit == self.cur:
+            for d in (self.rows, self.quick):
+                if name in d:
+                    d[name].set_sending(text)
+
+    def live_finished(self, res: dict):
+        """a drag / keyboard run / combo pick ended: show what the unit reports, log one summary line, emit the event"""
+        n, name = res["unit"], res["name"]
+        st = self.states[n]
+        peers = [d[name] for d in (self.rows, self.quick) if name in d]
+        v = res["readback"] if res["readback"] is not None else res["to"]
+        if name in BACKLIGHT_ROWS and not res["error"]:
+            self.bl_seen(n, v, res["from"])
+        what = f"{res['from']} -> {res['to']}{' (cancelled, pre-drag value restored)' if res['cancelled'] else ''}"
+        stats = (f"{res['values']} value changes, {res['writes']} writes sent, {res['skipped']} values never sent, {res['saves']} saves, "
+                 f"{res['duration_s']:.2f} s, median write {res['median_write_ms']} ms, floor {res['floor_ms']} ms")
+        if res["error"]:
+            st.banner = f"unit {n}: live {name} failed: {res['error']}"
+            self.say(f"unit {n} live {name}: FAILED {res['error']} ({what}; {stats})")
+            st.dirty.pop(name, None)
+            if n == self.cur:
+                self.banner.setText(st.banner)
+                self.banner.setVisible(True)
+                for p in peers:
+                    p.load(st.values.get(name), None)
+        else:
+            st.banner = ""
+            st.values[name] = v
+            st.dirty.pop(name, None)
+            st.last_read_iso = isostamp.now()
+            if n == self.cur:
+                self.banner.setVisible(False)
+                for p in peers:
+                    p.set_ok(v)
+            self.say(f"unit {n} live {name}: drag {what}: {stats}, read back {res['readback']}{'' if res['verified'] else ' (differs)'}")
+        self._strip_text(n)
+        self.emit("live", **{k: res[k] for k in ("unit", "name", "from", "to", "values", "writes", "saves", "readback", "verified", "error")})
+
     def _finish(self, jid, rc, out, secs):
+        cb = self.live_jobs.pop(jid, None)
+        if cb is not None:                               # in-process live write / read-back: no job log line, no banner, no strip state
+            return cb(rc, out, secs)
         label, done, unit, limit, probe, after = self.jobs.pop(jid)
         st = self.states[unit]
         if probe:
@@ -1075,6 +1302,11 @@ class MonitorPage(QWidget):
                          f"unit {n} {name}: not confirmed, nothing sent")
                 self._revert(n, sr)
                 return None
+        if name in BACKLIGHT_ROWS and v == 0:
+            if not (confirmed if confirmed is not None else self.confirm(BL_ZERO_ASK)):
+                self.say(f"unit {n} {name}: 0 % not confirmed, nothing sent")
+                self._revert(n, sr, force=True)
+                return None
         peers = [d[name] for d in (self.rows, self.quick) if name in d]
         read_after = sr.instant if readback is None else readback
 
@@ -1082,8 +1314,11 @@ class MonitorPage(QWidget):
             if rc != 0:
                 self._revert(n, sr, force=after is not None)
                 return ", unit kept its value"
+            before = self.states[n].values.get(name)
             self.states[n].values[name] = v
             self.states[n].dirty.pop(name, None)
+            if name in BACKLIGHT_ROWS:
+                self.bl_seen(n, v, before)
             if n == self.cur:
                 for p in peers:
                     p.set_ok(v)

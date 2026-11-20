@@ -196,7 +196,7 @@ def risky_confirm():
     assert risky["label"] in asked[0] and act["label"] in asked[1]
     pg.confirm = lambda text: (asked.append(text), True)[1]
     pg.set_row(pg.all_rows[act["name"]])
-    pg.rows["brightness"].w.setValue(20)
+    pg.rows["brightness"].set_value(20)
     pg.set_row(pg.rows["brightness"])                                  # not risky: no dialog
     settle(pg)
     assert len(asked) == 3 and [" ".join(c[2:]) for c in fb.calls] == [
@@ -401,7 +401,7 @@ def one_click_rows():
     plain = lambda r: r["type"] != "action" and not {"ro", "risky"} & set(r["flags"])        # noqa: E731
     boolr = next(r for r in MON.T.ROWS if r["type"] == "bool" and plain(r))
     enum3 = next(r for r in MON.T.ROWS if r["type"] == "enum" and len(r["options"]) == 3 and plain(r))
-    big = next(r for r in MON.T.ROWS if r["type"] == "enum" and len(r["options"]) > MON.SEGMENT_MAX)
+    big = next(r for r in MON.T.ROWS if r["type"] == "enum" and len(r["options"]) > MON.SEGMENT_MAX and not MON.live_row(r))
     kinds = {"bool": 0, "seg": 0, "combo": 0, "slider": 0}
     for r in MON.T.ROWS:
         if r["type"] != "action":
