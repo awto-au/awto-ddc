@@ -34,7 +34,7 @@ Status 2026-11-16. Code: `fw/sdk/Kernel/System/Code/SysJudge.c` (system machine)
 ## Log lines
 
 - Wake triggers in power saving (sync.tsv `CB` cable, `CC` EDID read, `CD` AUX, `CE` DPCD 600h, `D3` unplug, `DC` TMDS clock) and their suppressed repeats (`CF`) are unchanged.
-- `E7` (new): `<port> EDID read by source: awake, no wake needed` - an EDID read by the source in any state but power saving. `AwtoEdidPoll` (per main-loop pass, `swlog.c`): logs on the 0 -> 1 edge of the DDCn_EDID_IRQ bit 0 flag and clears it (W1C).
+- `E7` (new): `<port> EDID read` - an EDID read by the source in any state but power saving. `AwtoEdidPoll` (per main-loop pass, `swlog.c`): logs on the 0 -> 1 edge of the DDCn_EDID_IRQ bit 0 flag and clears it (W1C).
 - `E5` audio: text is "audio on / off"; a mute / unmute that changes nothing logs `E5 05 / 06` "already on / already off" (never dropped).
 - Request outcomes `18`: 00 accepted, 01 already, 02 replaces, 03 refused, 04 kept, 05 dropped, 06 **ignored**.
 

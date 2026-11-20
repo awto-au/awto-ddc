@@ -365,7 +365,7 @@ def main():
         sup = [x for x in r.lines() if "suppressed (cable" in x]
         r.check(any("cable unplug, once per sleep):D2" in x for x in sup) and any("(cable, once per sleep):D2" in x for x in sup),
                 "repeat plug / unplug: suppressed once per direction", str(sup))
-        r.wake_case("D2 EDID read", lambda: r.m.wr(DDC_D2, bytes([r.m.rd(DDC_D2)[0] | 1])), "D2 EDID read by source:wake",
+        r.wake_case("D2 EDID read", lambda: r.m.wr(DDC_D2, bytes([r.m.rd(DDC_D2)[0] | 1])), "D2 EDID read while asleep:wake",
                     BOUND_LATCH_MS)
         r.wake_case("D2 EDID read again (no picture since)", lambda: r.m.wr(DDC_D2, bytes([r.m.rd(DDC_D2)[0] | 1])), None, 0)
         r.check(any("wake suppressed (EDID read, once per sleep):D2" in x for x in r.lines()), "suppression logged once",

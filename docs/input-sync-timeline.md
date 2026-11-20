@@ -21,7 +21,7 @@ Issues: #78 (wake time), #139 (sync log), #239 (350.8 MHz boot), #256 / #147 / #
 | FC | 1 | port, ms | `DP link trained:D1, 120ms after the loop first saw it training` |
 | FA | 0 / 1 HPD pin low / high, 2 EDID channels enabled | port / pin mask (bit0 = D1) | `D2 HPD high`, `EDID channels on:HPD pin mask 6 (bit0 = D1)` |
 
-HPD lines: pins polled once per main-loop pass (`AwtoEdidPoll`, <= 2.5 ms), the first pass logs all three levels; `E7` (EDID read by source) is the DDC / AUX read latch, same poll.
+HPD lines: pins polled once per main-loop pass (`AwtoEdidPoll`, <= 2.5 ms), the first pass logs all three levels; `E7` (`Dn EDID read`) is the DDC / AUX read latch, same poll.
 
 Scan outcome codes (F2 arg, set by `AWTO_SCAN_STAGE` at the SDK step, one line per change of outcome per port, 12 lines per episode):
 - 01 ok; 02 the PHY set-up took 1:40 from the per-port memory (line before the outcome); 10 HPD event running; 11 PHY not set / freq detect not stable; 12..14 CDR / DFE / video detect failed at 1:10 (retry 1:40); 15..17 same at 1:40 (retry 1:10)

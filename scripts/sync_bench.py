@@ -45,7 +45,7 @@ def parse(text: str) -> dict:
         ms, t = int(m.group(1)), m.group(2)
         if t.startswith("boot:main() entered"):
             r["first"] = ms
-        elif "EDID read by source" in t and r["edid"] is None:
+        elif re.match(r"D\d EDID read", t) and r["edid"] is None:
             r["edid"] = ms
         elif t.startswith("scan ok:"):
             mm = re.search(r"(\d+)ms$", t)

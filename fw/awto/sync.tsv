@@ -144,8 +144,8 @@ C7	*	porthz3	refresh %	timing
 C8	*	portmhz3	pixel clock %	timing
 CA	*	-	console opened (sync log)	boot
 CB	*	port	cable plugged in:wake
-CC	*	port	EDID read by source:wake
-E7	*	port	EDID read by source:awake, no wake needed
+CC	*	port	EDID read while asleep:wake
+E7	*	port	EDID read
 FA	00	vport	% HPD low	timing
 FA	01	vport	% HPD high	timing
 FA	02	n	EDID channels on:HPD pin mask % (bit0 = D1)	timing
