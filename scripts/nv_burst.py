@@ -47,7 +47,7 @@ def main() -> int:
     old = gui(a.unit, "get", a.row).get("value")
     base = 40 if old != 40 else 60
     marker = f"nv_burst {a.label} start"
-    subprocess.run([str(ROOT / "dev.py"), "note", "--unit", a.unit, marker], capture_output=True, cwd=ROOT)
+    subprocess.run([str(ROOT / "dev.py"), "note", "--unit", a.unit, marker], capture_output=True, cwd=ROOT, check=False)
     t0 = time.monotonic()
     for i in range(a.count):
         gui(a.unit, "set", a.row, str(base + (i % 2) * 5))
