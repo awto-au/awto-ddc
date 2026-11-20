@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
 """Offline tests for scripts/msg_table.py (#56): encode/decode, stability, image lookup, fallback. Run: python3 scripts/msg_table_test.py"""
-import json
 import sys
 import tempfile
 import unittest
 from pathlib import Path
+from unittest.mock import patch
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import msg_table as M
@@ -53,14 +53,17 @@ class T(unittest.TestCase):
             blk = M.build(M.rows_from_tsv("0101\tSystem\tKernel/A.c:10\tfrom image\t1\n"))
             img[M.MSG_ADDR:M.MSG_ADDR + len(blk)] = blk
             (root / "tmp/fw/u-img.bin").write_bytes(img)
-            (root / "tmp/fw/U-flashed.json").write_text(json.dumps({"image": str(root / "tmp/fw/u-img.bin")}))
+            import flash_registry
+            patch.object(flash_registry, "base", lambda: root / "tmp/flashed").start()   # the shared record, inside the temp tree
+            self.addCleanup(patch.stopall)
+            flash_registry.record("U", root / "tmp/fw/u-img.bin")
             ids, src = M.load_ids(root, "U")
             self.assertEqual(ids[0x101], ("Kernel/A.c:10", "from image"))
             self.assertTrue(src.startswith("flashed image"))
-            ids, src = M.load_ids(root, "nosuch")                      # no flashed.json -> tsv
+            ids, src = M.load_ids(root, "nosuch")                      # no flash record -> tsv
             self.assertEqual(src, "fw/msgids.tsv")
             self.assertEqual(ids[0x110][1], "VSC change")              # tsv fallback keeps disabled rows
-            (root / "tmp/fw/u-img.bin").write_bytes(b"\xff" * 0x100000)  # image without a table -> tsv
+            Path(flash_registry.current("U")["bin"]).write_bytes(b"\xff" * 0x100000)  # image without a table -> tsv
             self.assertEqual(M.load_ids(root, "U")[1], "fw/msgids.tsv")
 
 

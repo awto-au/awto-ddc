@@ -35,10 +35,10 @@ def repo_root() -> Path:
         return Path(__file__).resolve().parent.parent
 
 
-def lock_root() -> Path:
+def lock_root(cwd: Path | None = None) -> Path:
     """The locks guard shared hardware: one dir for every worktree = the main checkout (git common dir's parent)."""
     try:
-        c = subprocess.check_output(["git", "rev-parse", "--path-format=absolute", "--git-common-dir"], cwd=Path(__file__).parent,
+        c = subprocess.check_output(["git", "rev-parse", "--path-format=absolute", "--git-common-dir"], cwd=cwd or Path(__file__).parent,
                                     text=True, stderr=subprocess.DEVNULL).strip()
         return Path(c).parent
     except (subprocess.CalledProcessError, FileNotFoundError):

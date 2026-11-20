@@ -230,7 +230,7 @@ def main() -> int:
     ap.add_argument("--dp", action="store_true", help="sweep the unit's DP connector: DP-1 takes HDMI-2's slot (same position, "
                     "HDMI-2 off; the firmware's search finds D1), Dan's layout put back at the end")
     ap.add_argument("--resume", type=Path, help="TSV of an interrupted sweep: modes already in it (not SETFAIL) are skipped, rows appended")
-    ap.add_argument("--recover-image", help="image for dev.py recover on HANG (default: flashed.json image)")
+    ap.add_argument("--recover-image", help="image for dev.py recover on HANG (default: the image in the flash record)")
     a = ap.parse_args()
     u = dev._units()[a.unit]
     if not u.get("test"):

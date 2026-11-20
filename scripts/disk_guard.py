@@ -55,9 +55,10 @@ def prune_fw(fw: Path | None = None, keep: int = KEEP_TAGS) -> int:
     """Delete tmp/fw/<tag>.{bin,map,ids.tsv} beyond the newest `keep` tags; never a flashed/attempted/last tag."""
     fw = fw or _repo() / "tmp/fw"
     pinned: set[str] = set()
-    for j in fw.glob("*-flashed.json"):
+    import flash_registry
+    for j in flash_registry.base().glob("*.json"):
         d = json.loads(j.read_text())
-        pinned |= {d.get("tag", ""), d.get("attempted", ""), Path(d.get("image", "x")).stem}
+        pinned |= {d.get("tag", ""), d.get("attempted", ""), Path(d.get("attempted_image", "x")).stem}
     pinned |= {t.read_text().strip() for t in fw.glob("*-last.txt")}
     tags: dict[str, float] = {}
     for b in fw.glob("*.bin"):

@@ -21,6 +21,9 @@ def dev(monkeypatch, tmp_path):
     monkeypatch.setattr(m, "REPO", tmp_path)
     monkeypatch.setattr(m, "TMP", tmp_path / "tmp")
     monkeypatch.setattr(m, "FW", tmp_path / "tmp" / "fw")
+    flash_registry = m.flash_registry         # the shared record lives in the main checkout: keep tests inside tmp_path
+    monkeypatch.setattr(flash_registry, "base", lambda: tmp_path / "tmp" / "flashed")
+    monkeypatch.setattr(flash_registry, "debris_dir", lambda: tmp_path / "build-debris" / "images")
     monkeypatch.setattr(m, "_flash_warn", lambda bus: None)                   # no ddcutil / tone / screen from a test
     monkeypatch.setattr(m, "_unit_settings", lambda u, bus, mp: None)         # no DDC/CI write to a unit from a test
     monkeypatch.setattr(m, "LOGS", tmp_path / "tmp" / "logs")
@@ -37,7 +40,7 @@ def dev(monkeypatch, tmp_path):
 
 def test_clean_keeps_images_state_regs_logs(dev, tmp_path):
     t = tmp_path / "tmp"
-    keep = ["fw/AWT1-abc-be.bin", "fw/AWT1-abc-be.map", "fw/AWT1-abc-be.ids.tsv", "fw/AWT1-flashed.json",
+    keep = ["fw/AWT1-abc-be.bin", "fw/AWT1-abc-be.map", "fw/AWT1-abc-be.ids.tsv", "flashed/AWT1.json",
             "fw/AWT1-flash-state.json", "regs/dump.txt", "logs/x.log", "notes.md"]
     gone = ["sdcc-port/asm/a.asm", "fw/AWT1/fw.bin", "fw/AWT1/fw.map"]
     for f in keep + gone:
@@ -245,7 +248,7 @@ def test_deploy_uses_shared_image_then_programs_unit_edid(dev, tmp_path, monkeyp
     sector = next(x for x in calls if x[0] == "rtd_flash_sector.py")
     assert sector[1][0:2] == [21, "0x5000"]
     assert "--expect-current" in sector[1] and "--write" in sector[1]
-    state = json.loads((dev.FW / "AWT26110003-flashed.json").read_text())
+    state = json.loads((dev.TMP / "flashed" / "AWT26110003.json").read_text())
     assert state["edid_serial"] == "AWT26110003"
 
 
@@ -280,7 +283,7 @@ def test_dev_flash_bus_passes_identity(dev, tmp_path, monkeypatch):
     assert "--identity" in seen[0]
 
 
-# --- #52.12 flashed.json invalidated before the write ---------------------------
+# --- #52.12 flash record invalidated before the write ---------------------------
 
 class _FB:
     def __init__(s, bus): pass
@@ -291,8 +294,9 @@ class _FB:
 def _flash_setup(dev, tmp_path, monkeypatch):
     img = _img(tmp_path, "AWT26110003-new-be.bin", b"AWT26110003")
     dev.FW.mkdir(parents=True)
-    fj = dev.FW / "AWT26110003-flashed.json"
-    fj.write_text('{"tag": "AWT26110003-old-be", "image": "old.bin"}')
+    fj = dev.TMP / "flashed" / "AWT26110003.json"
+    old = _img(tmp_path, "AWT26110003-old-be.bin", b"AWT26110003 old")
+    dev.flash_registry.record("AWT26110003", old)
     monkeypatch.setattr(dev, "_bus", lambda u: 11)
     monkeypatch.setattr(dev.i2cbus, "fast_bus", _FB)
     return img, fj
@@ -304,7 +308,7 @@ def test_failed_flash_leaves_no_stale_tag(dev, tmp_path, monkeypatch):
     monkeypatch.setattr(dev, "_py", lambda *a, env=None, shield=False: 7)
     assert dev.cmd_flash(["--unit", "3", "--force-ungated", str(img)]) == 7
     d = json.loads(fj.read_text())
-    assert d["tag"] == "" and d["image"] == str(img)
+    assert d["tag"] == "" and d["attempted_image"] == str(img)
     with pytest.raises(SystemExit):                 # dbg/osd/health map lookup refuses
         dev._fwmap(dev._units()["3"], None)
 
@@ -326,7 +330,9 @@ def test_successful_flash_records_new_tag(dev, tmp_path, monkeypatch):
     img, fj = _flash_setup(dev, tmp_path, monkeypatch)
     monkeypatch.setattr(dev, "_py", lambda *a, env=None, shield=False: 0)
     assert dev.cmd_flash(["--unit", "3", "--force-ungated", str(img)]) == 0
-    assert json.loads(fj.read_text()) == {"tag": "AWT26110003-new-be", "image": str(img)}
+    d = json.loads(fj.read_text())
+    assert d["tag"] == "AWT26110003-new-be" and d["sha256"] == __import__("hashlib").sha256(img.read_bytes()).hexdigest()
+    assert (dev.TMP / "flashed" / "images" / d["images_dir"] / "AWT26110003-new-be.bin").is_file()
 
 
 # --- #52.2 / #52.3 / #48 recover, probe --bus; #52.1 hold bounded ---------------------------------------------
@@ -355,7 +361,7 @@ def _recover_setup(dev, tmp_path, monkeypatch, bus_results):
 def test_recover_bad_image_refused_before_relay(dev, tmp_path, monkeypatch):
     _image, events = _recover_setup(dev, tmp_path, monkeypatch, [11])
     with pytest.raises(SystemExit):
-        dev.cmd_recover(["--unit", "3"])                # no flashed.json, no image
+        dev.cmd_recover(["--unit", "3"])                # no flash record, no image
     with pytest.raises(SystemExit):
         dev.cmd_recover(["--unit", "3", str(_img(tmp_path, "AWT26110002-x-be.bin", b"AWT26110002"))])
     assert events == []

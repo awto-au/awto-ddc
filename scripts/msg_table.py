@@ -12,12 +12,11 @@ Block (big-endian multi-byte, sorted by id; changes only when the enabled set / 
   16 total_len u32 | 20 hash 8 B = sha256(block with this field zeroed)[:8] | 28 u32 0
   32 cats (NUL strings) | files (NUL strings, de-duplicated) | index count x 8 B | text (NUL strings, de-duplicated)
   index entry: id u16 | cat u8 | file u8 | line u16 | text offset u16 (from txt_off)
-Host lookup order (load_ids): table in the flashed image (tmp/fw/<serial>-flashed.json) -> cache tmp/msgtable/<hash>.bin
+Host lookup order (load_ids): table in the flashed image (shared flash record, docs/flash-record.md) -> cache tmp/msgtable/<hash>.bin
 -> fw/msgids.tsv. Log: ./tmp/logs/msg_table.log
 """
 import argparse
 import hashlib
-import json
 import struct
 import sys
 from pathlib import Path
@@ -134,12 +133,10 @@ def load_ids(root: Path, serial: str | None = None, table: Path | None = None):
     if table:
         cands.append(("table " + str(table), Path(table)))
     elif serial:
-        fj = root / f"tmp/fw/{serial}-flashed.json"
-        if fj.exists():
-            try:
-                cands.append(("flashed image", Path(json.loads(fj.read_text())["image"])))
-            except (ValueError, KeyError):
-                pass
+        import flash_registry
+        img = flash_registry.current(serial).get("bin")
+        if img:
+            cands.append(("flashed image", Path(img)))
     for what, p in cands:
         try:
             info = parse(block_of(p.read_bytes()))

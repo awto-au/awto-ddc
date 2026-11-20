@@ -311,7 +311,7 @@ def _main() -> int:
     ap.add_argument("--release", action="store_true", help="send end (0x2A) + stop (0x2F), retried, to un-halt the firmware")
     ap.add_argument("--secs", type=float, default=MSG_SECS, metavar="S",
                     help=f"--messages stops after S seconds (default {MSG_SECS:g}; 0 = until interrupted)")
-    ap.add_argument("--serial", help="--messages: take the id table from this unit's flashed image (tmp/fw/<serial>-flashed.json)")
+    ap.add_argument("--serial", help="--messages: take the id table from this unit's flashed image (shared flash record)")
     ap.add_argument("--table", type=Path, help="--messages: id table block or firmware image (scripts/msg_table.py)")
     ap.add_argument("--map", help="image .map: also print the input timing with exact frequencies (default $AWTO_DDC_MAP, else the newest tmp/fw/*/fw.map)")
     ap.add_argument("--be", action="store_true", default=os.environ.get("AWTO_SDCC_BE") == "1",

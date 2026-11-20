@@ -59,6 +59,7 @@ def _repo_root() -> Path:
 REPO = _repo_root()
 sys.path.insert(0, str(REPO / "scripts"))
 import disk_guard
+import flash_registry
 import i2cbus
 
 TMP = REPO / "tmp"           # scratch, pidfiles
@@ -217,7 +218,7 @@ def cmd_doctor(_extra: list[str]) -> int:
     return 0
 
 
-@command("remove build output only (tmp/sdcc-port, tmp/fw/<serial>/ build dirs); images, maps, manifests, flashed.json, regs, logs kept",
+@command("remove build output only (tmp/sdcc-port, tmp/fw/<serial>/ build dirs); images, maps, manifests, regs, logs kept",
          kind="action")
 def cmd_clean(_extra: list[str]) -> int:
     # #52.17: tmp/ also holds frozen images, flash state, measurements and logs - not regenerable
@@ -537,10 +538,7 @@ def _build_unit_edid_sector(u: dict, img: Path) -> tuple[int, Path, Path, int]:
 
 def _record_unit_edid(u: dict, img: Path, sector_addr: int, patched: Path) -> None:
     """Record the verified post-deployment sector in both state manifests."""
-    fj = FW / f"{u['serial']}-flashed.json"
-    state = _flashed(u)
-    state.update({"edid_serial": u["serial"], "shared_firmware": str(img)})
-    fj.write_text(json.dumps(state))
+    flash_registry.update(u["serial"], edid_serial=u["serial"], shared_firmware=str(img))
     try:
         import flash_state
         manifest = FW / f"{u['serial']}-flash-state.json"
@@ -634,8 +632,8 @@ def _py(script: str, *args, env: dict | None = None, shield: bool = False) -> in
 
 
 def _flashed(u: dict) -> dict:
-    f = FW / f"{u['serial']}-flashed.json"
-    return json.loads(f.read_text()) if f.exists() else {}
+    """The unit's shared flash record (scripts/flash_registry.py, docs/flash-record.md): tag, image, map, ..."""
+    return flash_registry.current(u["serial"])
 
 
 @command("build firmware (the only build entry; engine scripts/fwimage.py): FRC + rotation by default; frozen to tmp/fw/<serial>-<tag>-be.{bin,map,sync.tsv,settings_table.py}; tag = <commit>[+][-freeze|-nofrc][-audio-test] unless --tag",
@@ -714,24 +712,24 @@ def _layout_watch() -> None:
 def _settings_snapshot(u: dict, bus: int):
     """Stored settings of the running image by name -> tmp/settings/<serial>-<stamp>.json (awto-ddc#219); None when there is no
     running image to ask (a failure only warns: the flash goes on)."""
-    tag = _flashed(u).get("tag", "")
-    m = FW / f"{tag}.map"
-    if not tag or not m.is_file():
+    cur = _flashed(u)
+    m = cur.get("map")
+    if not m:
         log("flash: no settings snapshot (no map for the image on the unit)", "WARN")
         return None
     out = REPO / "tmp/settings" / f"{u['serial']}-{time.strftime('%Y%m%d-%H%M%S')}.json"
-    tbl = FW / f"{tag}.settings_table.py"
+    tbl = cur.get("settings_table_py")
     rc = _py("settings_keep.py", "snapshot", "--bus", str(bus), "--serial", u["serial"], "--map", str(m),
-             *(["--table", str(tbl)] if tbl.is_file() else []), "--out", str(out))
+             *(["--table", str(tbl)] if tbl else []), "--out", str(out))
     if rc:
         log("flash: settings snapshot failed; stored settings are not protected against a registry change in this flash", "WARN")
         return None
     return out
 
 
-def _settings_restore(u: dict, bus: int, snap, m: Path, tbl: Path) -> None:
+def _settings_restore(u: dict, bus: int, snap, m: Path, tbl: Path | None) -> None:
     rc = _py("settings_keep.py", "restore", "--bus", str(bus), "--serial", u["serial"], "--map", str(m),
-             *(["--table", str(tbl)] if tbl.is_file() else []), "--snapshot", str(snap))
+             *(["--table", str(tbl)] if tbl else []), "--snapshot", str(snap))
     if rc:
         log(f"flash: settings restore incomplete (rc {rc}); snapshot {snap} kept: settings_keep.py restore --snapshot {snap}", "WARN")
 
@@ -780,9 +778,8 @@ def cmd_flash(extra: list[str]) -> int:
     _flash_warn(bus)
     # #52.12: from here the flash holds an unknown mix; the old tag/map must not be used by dbg/osd/health.
     # tag "" -> _fwmap/_diag find nothing; image stays so `recover` can retry it.
-    fj = FW / f"{u['serial']}-flashed.json"
-    before = fj.read_text() if fj.is_file() else None
-    fj.write_text(json.dumps({"tag": "", "image": str(img), "attempted": tag}))
+    before = flash_registry.snapshot(u["serial"])
+    flash_registry.invalidate(u["serial"], img, tag)
     args = [bus, img, "--serial", u["serial"], "--write", "--no-backup",
             *([] if u.get("relay") else ["--per-sector"]),   # no relay: per sector, boot/common last (#71)
             "--max-min", max_min, *(["--bus-kind", kind] if kind != "unknown" else []),
@@ -809,16 +806,18 @@ def cmd_flash(extra: list[str]) -> int:
         if attempt == 1 and not identity:
             _bus(u, wait_s=RECOVER_BUS_WAIT_S)     # EDID back = rebooted (and the same unit)
     if rc == 5 and before is not None:      # nothing erased: the flash still holds the old image
-        fj.write_text(before)
+        flash_registry.restore(u["serial"], before)
     if rc:
         _log_unit_state(u, bus, img, rc)
     if rc == 0:
-        fj.write_text(json.dumps({"tag": tag, "image": str(img)}))
+        rec = flash_registry.record(u["serial"], img)
+        log(f"flash: recorded {rec['tag']} ({rec['sha256'][:12]}) in the shared flash record")
         if _py("fw_archive.py", img):      # every flashed image kept in build-debris/images; failure doesn't fail the flash
             log(f"flash: fw_archive.py failed for {img} (see tmp/logs/fw_archive.log)")
-        if keep:
-            _settings_restore(u, bus, keep, FW / f"{tag}.map", FW / f"{tag}.settings_table.py")
-        _unit_settings(u, bus, FW / f"{tag}.map")
+        rec_now = _flashed(u)
+        if keep and rec_now.get("map"):
+            _settings_restore(u, bus, keep, rec_now["map"], rec_now.get("settings_table_py"))
+        _unit_settings(u, bus, rec_now["map"])
     return rc
 
 
@@ -972,9 +971,9 @@ def cmd_isp_port(extra: list[str]) -> int:
             return 1
         return _py("isp_port.py", b, "--serial", u["serial"], "--draw", "--reset",
                    "--identity", f"bus {b}: 0x4A reg 0x6F bit7 set (halted by isp-port --draw)")
-    tag = _flashed(u).get("tag", "")
-    m = FW / f"{tag}.map"
-    return _py("isp_port.py", _bus(u), "--serial", u["serial"], *(["--map", m] if m.is_file() else []),
+    cur = _flashed(u)
+    m, tag = cur.get("map"), cur.get("tag", "")
+    return _py("isp_port.py", _bus(u), "--serial", u["serial"], *(["--map", m] if m else []),
                "--tag", tag.removeprefix(u["serial"] + "-"), *(["--draw"] if draw else []))
 
 
@@ -1004,9 +1003,30 @@ def _dbg_py(bus: int, script: str, *args, keep_console: bool = False, **kw) -> i
         return _py(script, *args, **kw)
 
 
+def _registry_verify(u: dict, bus: int) -> None:
+    """The record's map must answer on the unit (scripts/fw_probe.py, reads only); stale -> exit with what is known."""
+    if _dbg_py(bus, "fw_probe.py", bus, "--serial", u["serial"]):
+        raise SystemExit(f"{u['serial']}: flash record does not match the running firmware (message above); nothing done")
+
+
+@command("shared flash record (docs/flash-record.md): show = the unit's record, list = all units, "
+         "scan = which known maps the running firmware answers (reads only), adopt IMAGE.bin = record it without flashing",
+         args="[--unit N] show | list | scan [--max N] | adopt IMAGE.bin", kind="action")
+def cmd_flash_record(extra: list[str]) -> int:
+    mx = _opt(extra, "--max", None)
+    _n, u = _unit(extra)
+    what, rest = (extra or ["show"])[0], (extra or ["show"])[1:]
+    if what == "scan":
+        b = _live_bus(u)
+        return _dbg_py(b, "fw_probe.py", b, "--serial", u["serial"], "--scan", *(["--max", mx] if isinstance(mx, str) else []))
+    if what in ("show", "adopt", "list") and (what != "adopt" or len(rest) == 1):
+        return _py("flash_registry.py", what, *([] if what == "list" else [u["serial"]]), *rest)
+    raise SystemExit("flash-record: show | list | scan [--max N] | adopt IMAGE.bin; nothing done")
+
+
 def _diag(u: dict, *args, bus: int | None = None) -> int:
-    ids = FW / f"{_flashed(u).get('tag', '')}.ids.tsv"
-    more = ["--ids", ids] if ids.is_file() else []
+    ids = _flashed(u).get("ids_tsv")
+    more = ["--ids", ids] if ids else []
     b = bus if bus is not None else _live_bus(u)
     return _dbg_py(b, "rtd_diag.py", b, *(["--be"] if u["be"] else []), *args, *more)
 
@@ -1071,13 +1091,7 @@ def _pairs(items: list[str], what: str) -> list[str]:
 
 def _fwmap(u: dict, given) -> str:
     """Link map of the image on the unit (the flashed tag); addresses from another image would poke the wrong bytes."""
-    if given:
-        m = Path(str(given))
-    else:
-        m = FW / f"{_flashed(u).get('tag', '')}.map"
-    if not m.is_file():
-        raise SystemExit(f"map {m} not found (flash an image first, or --map PATH); nothing done")
-    return str(m.resolve())
+    return str(flash_registry.map_for(u["serial"], given).resolve())
 
 
 @command("OSD test events/keys/popup in the running firmware (debug slave 0x35, EDID-guarded)",
@@ -1134,7 +1148,10 @@ def cmd_settings(extra: list[str]) -> int:
         return _py("settings_cli.py", "--sim", sim, "--map", mp, *extra)
     _n, u = _unit(extra)
     b = _live_bus(u)
-    return _dbg_py(b, "settings_cli.py", "--bus", str(b), "--serial", u["serial"], "--map", _fwmap(u, given), *extra)
+    mp = _fwmap(u, given)
+    if not given:
+        _registry_verify(u, b)
+    return _dbg_py(b, "settings_cli.py", "--bus", str(b), "--serial", u["serial"], "--map", mp, *extra)
 
 
 @command("1 s alert tone on the unit's speaker (VCP 0xEB = 6): flash warning, or an agent calling Dan; --wait returns after the tone; every image, volume = the monitor VCP 0x62",
@@ -1233,7 +1250,7 @@ def cmd_pacman_sim(extra: list[str]) -> int:
         u = _units()["2"]
         state = _flashed(u)
         img = Path(state.get("image", ""))
-        mp = Path(str(given)) if given else FW / f"{state.get('tag', '')}.map"
+        mp = Path(str(given)) if given else (state.get("map") or Path(""))
     if not img.is_file() or not mp.is_file():
         raise SystemExit(f"pacman-sim: need matching BIN+MAP, got {img} and {mp}")
     py = "/usr/bin/python3"                         # Fedora pygame package; project CPython 3.15t has no wheel
@@ -1261,8 +1278,11 @@ def cmd_health(extra: list[str]) -> int:
         raise SystemExit("health: --map/--host-mode need a value; nothing done")
     no_osd = _flag(extra, "--no-osd")
     _done(extra, "health")
+    mp = _fwmap(u, given)
     b = _live_bus(u)
-    return _dbg_py(b, "unit_health.py", b, "--serial", u["serial"], "--map", _fwmap(u, given),
+    if not given:
+        _registry_verify(u, b)
+    return _dbg_py(b, "unit_health.py", b, "--serial", u["serial"], "--map", mp,
                *(["--host-mode", hm] if hm else ["--gdctl", u["gdctl"]]), *(["--no-osd"] if no_osd else []))
 
 
@@ -1540,7 +1560,7 @@ def cmd_recover(extra: list[str]) -> int:
     # everything that can refuse does so BEFORE the relay: image exists, is a .bin, belongs to this unit (#52.3)
     p = Path(img[0]) if img[0] else None
     if p is None or p.suffix != ".bin" or not p.is_file():
-        raise SystemExit(f"recover: no usable image ({img[0] or 'no flashed.json image'!r}); give one; nothing done")
+        raise SystemExit(f"recover: no usable image ({img[0] or 'no image in the flash record'!r}); give one; nothing done")
     if not any_image:
         check_image_identity(u, p)
     check_gated(p, ungated)                 # refuse before the relay too

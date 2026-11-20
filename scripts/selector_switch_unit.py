@@ -2,7 +2,7 @@
 """Selector switch to ANOTHER input on unit 2 (Dan 2026-11-12: "cannot switch to input with cable", awto-ddc#132).
 
 usage: selector_switch_unit.py MAP [--how idle|auto|both] [--keep-link]
-- MAP = tmp/fw/<image>.map of the image ON unit 2 (checked against tmp/fw/AWT26110002-flashed.json: a wrong map = wrong addresses).
+- MAP = tmp/fw/<image>.map of the image ON unit 2 (checked against the shared flash record: a wrong map = wrong addresses).
 - Cases per --how: D2 -> D1 -> D2, D2 -> D3 -> D2. SOURCE opens the selector, SOURCE steps until the highlighted item
   (g_stOSDUserData.ucOsdInputPort) is the target, then the idle commit (AWTO_SRC_IDLE_COMMIT_MS) or AUTO takes it.
 - Every key waits for its effect (OSD state / item byte), never a fixed settle. Per case: port + mode after, the new ring lines.
@@ -16,7 +16,6 @@ usage: selector_switch_unit.py MAP [--how idle|auto|both] [--keep-link]
 Log: tmp/logs/selector_switch_unit.log
 """
 import argparse
-import json
 import os
 import re
 import sys
@@ -167,7 +166,8 @@ def main():
     ap.add_argument("--how", choices=("idle", "auto", "both"), default="both")
     ap.add_argument("--keep-link", action="store_true", help="leave the debug link on (a next run follows)")
     a = ap.parse_args()
-    flashed = json.loads((K.ROOT / f"tmp/fw/{K.SERIAL}-flashed.json").read_text())["tag"]
+    import flash_registry
+    flashed = flash_registry.current(K.SERIAL).get("tag", "")
     if flashed != a.map.stem:
         raise SystemExit(f"unit 2 runs {flashed}, map is {a.map.stem}: wrong map = wrong addresses")
     import dbg_link

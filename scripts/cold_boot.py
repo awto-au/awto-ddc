@@ -48,7 +48,8 @@ def main() -> int:
     if not u.get("relay"):
         sys.exit(f"unit {a.unit} has no relay; nothing done")
     if a.map is None:
-        a.map = Path(json.loads((ROOT / f"tmp/fw/{u['serial']}-flashed.json").read_text())["image"]).with_suffix(".map")
+        import flash_registry
+        a.map = flash_registry.map_for(u["serial"])
     mp = a.map.read_text(errors="replace")
     diag, mode_a, sw = mapsym(mp, "isr_g_stAwtoDiag") or 0xF6D0, mapsym(mp, "isr_g_stModeInfo"), mapsym(mp, "isr_g_stAwtoSw")
     lf = (ROOT / "tmp/logs/cold_boot.log").open("a", buffering=1)
