@@ -74,3 +74,86 @@ def test_flash_progress_erase_all_mode():
     p.feed("erased 8/8 sectors (1s)")
     p.feed("written+verified 4/8 sectors (2s)")
     assert p.percent() == 75.0
+
+
+def test_job_without_pid_is_lost_not_running():
+    """a job file whose wrapper never started (no pid, no rc) used to count as running forever: os.kill(0, 0) succeeds (2026-11-20)"""
+    job = {"id": "x", "serial": "S", "unit": "1"}
+    assert not flash_job.running(job) and flash_job.lost(job)
+
+
+def test_failed_spawn_leaves_a_finished_job(tmp_path, monkeypatch):
+    """Popen failing (interpreter of a deleted venv) = rc 255 recorded and a clear refusal, no stuck 'running' job"""
+    monkeypatch.setattr(flash_job, "JOBS", tmp_path)
+    monkeypatch.setattr(flash_job.unit_lock, "read", lambda serial: None)
+    with pytest.raises(SystemExit, match="could not start"):
+        flash_job.start("S1", "1", ["true"], python=str(tmp_path / "no-such-python"))
+    job = flash_job.load("S1")
+    assert job["rc"] == 255 and not flash_job.running(job)
+
+
+def test_event_stream_survives_repeated_read_timeouts(tmp_path):
+    """flash client: the 5 s event read timed out twice and the second read raised OSError (dead makefile reader), crashing the client mid-flash"""
+    import json
+    import socket
+    sock = tmp_path / "s.sock"
+    srv = socket.socket(socket.AF_UNIX)
+    srv.bind(str(sock))
+    srv.listen(1)
+    sock.chmod(0o600)
+    c = GC.Client(sock, timeout=0.05)
+    conn, _ = srv.accept()
+    ev = c.events()
+    assert next(ev) is None and next(ev) is None          # two timeouts in a row
+    conn.sendall(json.dumps({"event": "flash"}).encode() + b"\n" + b'{"event": "fl')
+    assert next(ev) == {"event": "flash"}
+    conn.sendall(b'ash_done"}\n')
+    assert next(ev) == {"event": "flash_done"}            # a line split across reads is joined
+    c.close()
+    conn.close()
+    srv.close()
+
+
+def _repo(tmp_path):
+    (tmp_path / "scripts").mkdir()
+    (tmp_path / "tools/osd_editor").mkdir(parents=True)
+    (tmp_path / "dev.py").write_text("a")
+    (tmp_path / "scripts/x.py").write_text("a")
+    return tmp_path
+
+
+def test_code_stamp_changes_with_the_code(tmp_path):
+    r = _repo(tmp_path)
+    a = GC.code_stamp(r)
+    assert a == GC.code_stamp(r)
+    (r / "scripts/x.py").write_text("bb")
+    assert GC.code_stamp(r) != a
+
+
+def test_stale_app_reasons(tmp_path):
+    r = _repo(tmp_path)
+    ok = {"root": str(r), "code": GC.code_stamp(r)}
+    assert GC.stale_reason(ok, r) is None
+    assert "no version" in GC.stale_reason({"pid": 1}, r)                           # an app older than the handshake
+    assert "gone" in GC.stale_reason({"root": str(tmp_path / "deleted-worktree"), "code": "x"}, r)
+    assert "changed" in GC.stale_reason({**ok, "code": "other"}, r)
+    other = tmp_path / "other"
+    other.mkdir()
+    assert GC.stale_reason({"root": str(other), "code": "x"}, r) is None             # another live worktree's app is left alone
+
+
+def test_stale_job_record_is_closed_not_crashing(tmp_path, monkeypatch):
+    monkeypatch.setattr(flash_job, "JOBS", tmp_path)
+    flash_job.save({"id": "x", "serial": "S9", "unit": "9", "started_mono_wall": time.time() - 100})   # wrapper never started
+    job = flash_job.load("S9")
+    assert job["rc"] == 255 and "stale" in job["error"] and not flash_job.running(job)
+    flash_job.save({"id": "y", "serial": "S8", "unit": "8", "started_mono_wall": time.time()})          # just written: spawn in progress
+    assert "rc" not in flash_job.load("S8")
+
+
+def test_clean_removes_finished_and_stale_records(tmp_path, monkeypatch):
+    monkeypatch.setattr(flash_job, "JOBS", tmp_path)
+    flash_job.save({"id": "x", "serial": "S9", "unit": "9", "started_mono_wall": 1.0})
+    flash_job.save({"id": "z", "serial": "S7", "unit": "7", "rc": 0, "reported": True})
+    assert sorted(flash_job.clean()) == ["S7", "S9"]
+    assert flash_job.load("S9") is None and flash_job.load("S7") is None

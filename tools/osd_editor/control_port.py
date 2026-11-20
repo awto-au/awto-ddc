@@ -23,6 +23,7 @@ import gui_client as GC
 import kvm as KVM
 
 PROTOCOL = 1
+CODE_AT_START = GC.code_stamp()     # ping handshake: dev.py restarts an app whose code changed on disk (gui_client.stale_reason)
 # A request waits for its chain of device calls (write + read back + save, each <= 5 s) plus queueing behind the other
 # units' serialised ddc calls (<= 2 x 5 s): worst ~25 s, x1.8 = 45 s. Expiry: error reply; the jobs still finish in the app.
 REQUEST_LIMIT_S = GC.SERVER_LIMIT_S
@@ -315,7 +316,8 @@ class ControlPort(QObject):
 
     # --- methods
     def m_ping(self, p, done):
-        done({"pid": os.getpid(), "headless": self.headless, "protocol": PROTOCOL, "socket": str(self.path)})
+        done({"pid": os.getpid(), "headless": self.headless, "protocol": PROTOCOL, "socket": str(self.path),
+              "root": str(GC.ROOT), "code": CODE_AT_START})
 
     def m_quit(self, p, done):
         fl = self.page.flash_running()

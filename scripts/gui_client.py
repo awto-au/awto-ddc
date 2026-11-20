@@ -25,6 +25,7 @@ PING_S = 2                               # a ping is answered on the UI thread's
 START_WAIT_S = float(os.environ.get("AWTO_GUI_START_WAIT_S", "0.5"))   # env: tests only. 1.25 x slowest of 5 starts (0.4 s, page cache warm, 2026-11-20)
 START_POLL_S = 0.1                       # poll pace of the socket while the app starts
 FLASH_SILENCE_S = 60                     # flash client: no event for this long = a WARN line (the flash is never stopped by the client)
+QUIT_WAIT_S = 3                          # a quitting app closes its socket within ~1 s (Qt event loop exit); expiry: start anyway
 FLASH_STATUS_S = 5                       # flash client: cross-check the job state when no event arrived (events may be missed)
 
 
@@ -73,13 +74,21 @@ class Client:
         except OSError as e:
             self.s.close()
             raise GuiUnavailable(f"control port {self.path} does not answer: {e}") from e
-        self.f = self.s.makefile("rwb")
+        self.buf = b""                       # own line buffer: a makefile() reader is dead after its first timeout (OSError on the next read)
 
     def close(self):
-        try:
-            self.f.close()
-        finally:
-            self.s.close()
+        self.s.close()
+
+    def readline(self) -> bytes:
+        """one line, b"" when the peer closed; TimeoutError after the socket timeout with the buffer kept (the next call continues)"""
+        while b"\n" not in self.buf:
+            chunk = self.s.recv(65536)
+            if not chunk:
+                rest, self.buf = self.buf, b""
+                return rest
+            self.buf += chunk
+        line, self.buf = self.buf.split(b"\n", 1)
+        return line + b"\n"
 
     def __enter__(self):
         return self
@@ -90,10 +99,9 @@ class Client:
     def call(self, method: str, params: dict | None = None) -> dict:
         """one request, one reply: {"ok", "result" | "error", "elapsed_ms", ...}"""
         self.n += 1
-        self.f.write(json.dumps({"id": self.n, "method": method, "params": params or {}}).encode() + b"\n")
-        self.f.flush()
+        self.s.sendall(json.dumps({"id": self.n, "method": method, "params": params or {}}).encode() + b"\n")
         try:
-            line = self.f.readline()
+            line = self.readline()
         except TimeoutError as e:
             raise GuiError(f"{method}: no reply in {self.timeout} s") from e
         if not line:
@@ -104,7 +112,7 @@ class Client:
         """after subscribe(): yields event dicts until the connection ends; None on a read timeout"""
         while True:
             try:
-                line = self.f.readline()
+                line = self.readline()
             except TimeoutError:
                 yield None
                 continue
@@ -119,6 +127,50 @@ def try_call(path: Path, method: str, params: dict, timeout: float = PING_S) -> 
             return c.call(method, params)
     except (GuiError, OSError, ValueError):
         return None
+
+
+def code_stamp(root: Path | None = None) -> str:
+    """12 hex of (path, mtime, size) of the code the app and its workers run: dev.py, scripts/*.py, tools/osd_editor/*.py"""
+    import hashlib
+    r = Path(root or ROOT)
+    h = hashlib.sha1()
+    for p in [r / "dev.py", *sorted((r / "scripts").glob("*.py")), *sorted((r / "tools/osd_editor").glob("*.py"))]:
+        try:
+            st = p.stat()
+        except OSError:
+            continue
+        h.update(f"{p.relative_to(r)}:{st.st_mtime_ns}:{st.st_size}\n".encode())
+    return h.hexdigest()[:12]
+
+
+def stale_reason(ping: dict, root: Path | None = None) -> str | None:
+    """why a running app must be replaced (None = fine). Another LIVE worktree's app is left alone (AWTO_GUI_SOCKET isolates)."""
+    r = Path(root or ROOT)
+    app_root = ping.get("root")
+    if not app_root or not ping.get("code"):
+        return "no version in its ping (older than the handshake)"
+    if not Path(app_root).is_dir():
+        return f"its tree {app_root} is gone (deleted worktree)"
+    if Path(app_root) == r and ping["code"] != code_stamp(r):
+        return "its code changed on disk since it started"
+    return None
+
+
+def restart_if_stale(path: Path, launcher, say=print) -> None:
+    """quit a stale app (refused while a flash is followed: then it is kept) and start a fresh one; bounded by QUIT_WAIT_S"""
+    r = try_call(path, "ping", {})
+    why = stale_reason(r["result"], ROOT) if r and r.get("ok") else None
+    if not why:
+        return
+    q = try_call(path, "quit", {}, timeout=PING_S)
+    if not q or not q.get("ok"):
+        say(f"gui: the running app is stale ({why}) but kept: {q.get('error') if q else 'no reply'}")
+        return
+    say(f"gui: restarting the app: {why}")
+    t0 = time.monotonic()
+    while app_live(path) and time.monotonic() - t0 < QUIT_WAIT_S:
+        time.sleep(START_POLL_S)
+    launcher(path)
 
 
 def app_live(path: Path | None = None) -> bool:
@@ -141,7 +193,9 @@ def default_launcher(path: Path) -> None:
 def ensure_app(path: Path | None = None, launcher=default_launcher, wait_s: float | None = None, say=print) -> Path:
     path = Path(path or socket_path())
     if app_live(path):
-        return path
+        restart_if_stale(path, launcher, say)
+        if app_live(path):
+            return path                                # fine, or stale but kept (flash running)
     wait = START_WAIT_S if wait_s is None else wait_s
     say(f"gui: no app answers on {path}; starting it headless (waiting up to {wait:g} s)")
     launcher(path)

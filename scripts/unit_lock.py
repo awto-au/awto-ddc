@@ -57,6 +57,8 @@ def log(s: str) -> None:
 
 
 def alive(pid: int) -> bool:
+    if pid <= 0:
+        return False                        # os.kill(0, 0) signals our own process group and succeeds
     try:
         os.kill(pid, 0)
     except ProcessLookupError:

@@ -35,10 +35,29 @@ def job_path(serial: str) -> Path:
 
 
 def load(serial: str) -> dict | None:
+    """the job record; one that never got a pid (wrapper spawn died) is closed here as rc 255, logged, never left 'running'"""
     try:
-        return json.loads(job_path(serial).read_text())
+        job = json.loads(job_path(serial).read_text())
     except (FileNotFoundError, ValueError):
         return None
+    if "rc" not in job and not job.get("pid") and time.time() - job.get("started_mono_wall", 0) > 2 * SPAWN_WAIT_S:
+        job = {**job, "rc": 255, "finished": isostamp.now(), "error": "stale: the wrapper never started (no pid)"}
+        save(job)
+        unit_lock.log(f"flash job {serial} {job.get('id')}: stale record without a pid closed as rc 255")
+    return job
+
+
+def clean() -> list[str]:
+    """delete finished (reported or stale) records and their logs; returns the serials. Human: python3 scripts/flash_job.py clean"""
+    gone = []
+    for p in sorted(JOBS.glob("*.json")):
+        job = load(p.stem)
+        if job and "rc" in job and (job.get("reported") or job.get("error")):
+            p.unlink()
+            if job.get("log"):
+                Path(job["log"]).unlink(missing_ok=True)
+            gone.append(p.stem)
+    return gone
 
 
 def save(job: dict) -> None:
@@ -71,14 +90,19 @@ def start(serial: str, unit: str, argv: list[str], python: str = sys.executable)
     job = {"id": jid, "unit": unit, "serial": serial, "argv": [str(a) for a in argv], "started": isostamp.now(),
            "started_mono_wall": time.time(), "log": str(JOBS / f"{serial}.{jid}.log")}
     save(job)
-    subprocess.Popen([python, str(Path(__file__).resolve()), "run", str(job_path(serial))], stdin=subprocess.DEVNULL,
+    try:
+        subprocess.Popen([python, str(Path(__file__).resolve()), "run", str(job_path(serial))], stdin=subprocess.DEVNULL,
                          stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, start_new_session=True, cwd=unit_lock.ROOT)
+    except OSError as e:
+        save({**job, "rc": 255, "finished": isostamp.now(), "error": repr(e)})      # no stuck job file
+        raise SystemExit(f"flash job for {serial}: could not start the wrapper ({python}): {e!r}") from None
     t0 = time.monotonic()
     while time.monotonic() - t0 < SPAWN_WAIT_S:       # the wrapper's first act is writing its pid into the job file
         cur = load(serial)
         if cur and cur.get("id") == jid and cur.get("pid"):
             return cur
         time.sleep(SPAWN_POLL_S)
+    save({**job, "rc": 255, "finished": isostamp.now(), "error": "wrapper never reported its pid"})
     raise SystemExit(f"flash job for {serial}: wrapper did not report its pid in {SPAWN_WAIT_S} s (python start is ~0.05 s); see {job['log']}")
 
 
@@ -171,4 +195,7 @@ def run(jobfile: Path) -> int:
 if __name__ == "__main__":
     if len(sys.argv) == 3 and sys.argv[1] == "run":
         sys.exit(run(Path(sys.argv[2])))
+    if sys.argv[1:] == ["clean"]:
+        print("removed:", " ".join(clean()) or "nothing")
+        sys.exit(0)
     sys.exit("flash_job.py is started by the GUI app (start()); see the module docstring")
