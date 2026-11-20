@@ -18,7 +18,7 @@ Code: `fw/sdk/Kernel/User Common Function/Code/UserCommonInterface.c` (panel mac
 
 - Wake from power saving (DDC/CI or other): `SysPower.c` PS_TO_NORMAL requests the backlight when VDD is up (11 C1 / D1); link and video follow as above, ACTIVE last.
 - Backlight pin is on from step 3 (133 ms), before the link trains (375 ms) and ACTIVE (1423 ms): the panel shows whatever its timing controller holds until video arrives; what the LCD really shows is in docs/camera-lcd-timing.md.
-- Existing registry row 118 `bl_on_delay` delays the pin from "wanted" (step 3), not from video ready. Default 0.
+- Registry row 127 `backlight_on_delay` (default 100 ms from power-up) is the product setting; row 118 `bl_on_delay` (default 0) is retired. The test record below overrides it.
 - Datasheet T8 (video valid -> LED on, >= 200 ms): not followed (Dan); `docs/delays.md`, `docs/monitors/panel-innolux-m280dca-e3b.md`.
 
 Measured 2026-11-20, unit 3, warm reset (ISP 0xEE), image 50fd217, sync log ms from the reset (knob 150 ms run): boot reason 113, GPIO 129, M2PLL 133, VDD kept on / backlight on by boot 133 (default image), PHY on 209, HPD 300, link trained + stream on 375, ACTIVE 1423 (DISPLAY SETTING 519 ms), backlight on with knob 150: 1575 (= 152 ms after ACTIVE). Default: backlight pin on at 133 ms, stream on 375 ms, ACTIVE 1423 ms (firmware's own belief). When the LCD shows a valid picture is measured by the camera, not by these rows: docs/camera-lcd-timing.md.

@@ -8,7 +8,7 @@ Recorded: every write to the panel VDD pin (FE1A), backlight pins (FE25 / FE2A),
 the DPTx link / stream / PHY functions, each with the firmware's g_ucAwtoPanelOwn (1 = written by the panel machine).
 FAIL (gate): a write or call outside the machine after its first step; a firmware 'outside the panel machine' line; a
 backlight blink (pin off -> on with no panel-off between); a link training outside a panel bring-up; backlight pin on with VDD
-off, or later than BL_AFTER_VDD_MS after a VDD on (Dan 2026-11-13: backlight at once, no T3 wait; registry bl_on_delay default 0);
+off, or outside BL_DELAY_MS..BL_AFTER_VDD_MS after a VDD on (Dan 2026-11-13: backlight_on_delay after VDD on, default 100 ms, Dan 2026-11-20);
 cold boot: backlight pin later than BL_AFTER_M2PLL_MS after the M2PLL line (D1 03); VDD off sooner than T4 + T5 after backlight off;
 VDD on sooner than T6 after VDD off;
 #162 s3b: a VDD / backlight pin edge by the machine without its line (OFF -> VDD, * -> T6, backlight pin on (11 C1 / D1) / off
@@ -38,10 +38,10 @@ PWR_OFF, PWR_NORMAL, PWR_SAVING = 1, 2, 3                    # Global.h EnumPowe
 MODE_DS, MODE_ACTIVE = 2, 3
 # Panel times: registry defaults in fw/sdk/Panel/AWTO_M280DCA_E3B.h (read from --tree when given).
 PANEL = {"T4": 250, "T5": 20, "T6": 900}
-# Backlight on (Dan 2026-11-13): pin in the same machine step as VDD on (bl_on_delay 0): sim 1-4 ms (VDD line, pin log, PWM
-# frequency set) x1.25 = 5 ms.
-# Cold boot: request right after pin share + timer-event init, both after the M2PLL switch (SysMainSystemInitial): ~1 ms x5.
-BL_AFTER_VDD_MS, BL_AFTER_M2PLL_MS = 5, 5
+# Backlight on (Dan 2026-11-20): pin backlight_on_delay (default 100 ms) after VDD on, + the machine pass: sim 27-30 ms x1.25 = 38.
+# Cold boot: also waits for the settings load: sim 145 ms after the M2PLL switch line, x1.25 = 180.
+BL_DELAY_MS, BL_PASS_MS, BL_AFTER_M2PLL_MS = 100, 38, 180
+BL_AFTER_VDD_MS = BL_DELAY_MS + BL_PASS_MS
 M2PLL_LINE = (0xD1, 0x03)                                    # sync.tsv 'boot:MCU set up (M2PLL clock, ...)'
 # Phase bounds (firmware ms; expiry = FAIL): cold boot to ACTIVE sim ~0.9 s (s2-1) x ~2; power off = T4 + T5 + T6 + flash
 # flush, sim worst x1.25 (#54); signal-loss hold: L1 needs one judge run (10 ms slow path) + a pass; settle 1 s.
@@ -274,9 +274,9 @@ class Run:
         for tv, ph, v in vdd:
             if v == 1:
                 b = next((t for t in blon if t >= tv), None)
-                if b is None or b - tv > BL_AFTER_VDD_MS:
+                if b is None or not BL_DELAY_MS <= b - tv <= BL_AFTER_VDD_MS:
                     late.append(f"{ph} VDD@{tv} -> BL {'never' if b is None else f'+{b - tv}'}")
-        self.check(not late, f"backlight pin on <= {BL_AFTER_VDD_MS} ms after each VDD on (no T3 wait)", "; ".join(late[:4]))
+        self.check(not late, f"backlight pin {BL_DELAY_MS}..{BL_AFTER_VDD_MS} ms after each VDD on (registry backlight_on_delay)", "; ".join(late[:4]))
         self.m2pll_check()
         offs = []                                    # backlight off -> the VDD off that follows with no backlight on between
         for x in (x for x in bl if x[2] == 0):
@@ -294,7 +294,7 @@ class Run:
         m = next((ms for i, a, ms, _ in self.ring_ev if (i, a) == M2PLL_LINE), None)
         b = next((ms for i, a, ms, _ in self.ring_ev if i == 0x11 and a in EDGE_LINES[("BL pin", 1)]), None)
         d = None if m is None or b is None else ((b - m) & 0xFFFF)
-        self.check(d is not None and d <= BL_AFTER_M2PLL_MS, f"cold boot:backlight pin <= {BL_AFTER_M2PLL_MS} ms after the M2PLL switch line",
+        self.check(d is not None and BL_DELAY_MS <= d <= BL_AFTER_M2PLL_MS, f"cold boot:backlight pin {BL_DELAY_MS}..{BL_AFTER_M2PLL_MS} ms after the M2PLL switch line",
                    f"M2PLL @{m}, backlight pin @{b}, {d} ms")
 
     def edge_lines(self, ev):

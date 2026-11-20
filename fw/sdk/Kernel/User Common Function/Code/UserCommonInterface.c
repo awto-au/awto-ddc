@@ -433,6 +433,7 @@ static __xdata _Bool s_bPnlWant;                          // backlight wanted an
 static __xdata WORD s_usBlk;                    // test knob, read at each panel-up: 0 = off (default), else ms + 1
 static __xdata BYTE s_ucBlkRef;                 // knob: 0 video not ready, 1 ready (s_usBlkRefAt), 2 pin on this panel-up
 static __xdata BYTE s_ucBlkSel;                 // knob reference: AWTO_BLK_REF_*
+static __xdata _Bool s_bBlSet;                  // settings loaded (boot): the registry delay can be read
 static __xdata WORD s_usBlkRefAt;               // (WORD)AwtoMs() at the reference event
 static void UserCommonInterfacePanelBlkMark(BYTE ucRef);
 
@@ -553,9 +554,8 @@ void UserCommonInterfacePanelStreamOn(void)        // eDP trained, stream on (pa
     UserCommonInterfacePanelBlkMark(AWTO_BLK_REF_STREAM);
 }
 
-// Backlight beside the link (Dan 2026-11-13: on at once, datasheet T8 not followed): wanted = target BL while VDD is on and
-// the panel is not going down (VDD .. VIDEO). Wait = registry bl_on_delay from wanted (0 = same step); before the registry
-// load the row reads 0 (zeroed XDATA) = at once. Off: PWM dark, PWM-to-backlight, pin off (before T4 / VDD off).
+// Backlight beside the link: wanted = target BL while VDD is on (VDD .. VIDEO). Pin on backlight_on_delay after wanted (power-up;
+// docs/camera-lcd-timing.md), or per the test record. Off: PWM dark, PWM-to-backlight, pin off (before T4 / VDD off).
 static void UserCommonInterfacePanelBlStep(void)
 {
     WORD usNow = (WORD)AwtoMs();
@@ -576,11 +576,16 @@ static void UserCommonInterfacePanelBlStep(void)
                 s_usPnlBlAt = usNow;
                 usIn = 0;
             }
-            if(usIn < AWTO_BL_ON_DELAY_MS)
+            if(s_usBlk == 0)                    // product: registry backlight_on_delay from power-up (wanted)
             {
-                return;
+                if((usIn < AWTO_BL_ON_DELAY_MS) || ((s_bBlSet == _FALSE) && (usIn < AWTO_BLK_REF_MAX_MS)))
+                {
+                    return;
+                }
+                AWTO_PNL_LOG(AWTO_SW_EV_PANEL, AWTO_PNL_X_BLK_DEF, AWTO_BL_ON_DELAY_MS);
+                AWTO_PNL_LOG(AWTO_SW_EV_PANEL, AWTO_PNL_X_BLK, ((DWORD)usIn << 16) | usNow);
             }
-            if((s_usBlk != 0) && (s_ucBlkRef != 2))        // test knob: pin on at video ready + knob ms (or late after the cap)
+            else if(s_ucBlkRef != 2)            // test record: pin on at its reference + ms (or late after the cap)
             {
                 if(s_ucBlkRef == 0)
                 {
@@ -802,21 +807,10 @@ void UserCommonInterfacePanelBoot(void)
     UserCommonInterfacePanelBlkRead();
     UserCommonInterfacePanelGo(AWTO_PNL_VDD, usNow);
     s_ucPnlTarget = AWTO_PNL_TGT_BL;
-    // backlight on at once, PWM 100 % (Dan 2026-11-13): the SDK enables PWM outputs only at the power switch
+    // backlight stays dark: the machine lights it backlight_on_delay after power-up (Dan 2026-11-20), PWM outputs enabled here
     g_ucAwtoPanelOwn = 1;
-    if(s_usBlk != 0)                            // test knob: backlight stays dark; the machine lights it after video ready + knob
-    {
-        ScalerMcuPwmControl(_POWER_STATUS_NORMAL);
-        g_ucAwtoPanelOwn = 0;
-        return;
-    }
-    UserCommonInterfacePanelBlGo(AWTO_PNL_BL_LIT, 0, usNow);
     ScalerMcuPwmControl(_POWER_STATUS_NORMAL);
-    PCB_BACKLIGHT_PWM(AWTO_PWM_FULL);
-    PCB_BACKLIGHT_POWER(_LIGHT_CONTROL_ON);
-    ScalerDisplayDPTxPowerSequenceProc(_DPTX_POWER_SEQUENCE_BACKLIGHT_ON);
     g_ucAwtoPanelOwn = 0;
-    s_bPnlLit = _TRUE;
 }
 
 //--------------------------------------------------
@@ -826,6 +820,7 @@ void UserCommonInterfacePanelBoot(void)
 //--------------------------------------------------
 void UserCommonInterfacePanelBootDuty(void)
 {
+    s_bBlSet = _TRUE;
     if(s_ucPnlBl == AWTO_PNL_BL_LIT)
     {
         UserCommonInterfacePanelBlGo(AWTO_PNL_BL_LIT, 0, (WORD)AwtoMs());

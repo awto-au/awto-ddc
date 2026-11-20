@@ -1834,7 +1834,7 @@ fn	_SysMachineWork	3	0xa370	920
 fn	_AwtoSyncVisit	3	0xa708	148
 fn	_AwtoEdidPoll	3	0xa7bc	324
 fn	_AwtoSyncScan	3	0xa900	352
-fn	_UserCommonInterfacePanelBlStep	3	0xaa60	688
+fn	_UserCommonInterfacePanelBlStep	3	0xaa60	836
 const	_tDDR2_PLL_PHASE	4	0x0000	16
 const	_tAwtoAudioTestAmp	4	0x0010	12
 const	_tAwtoAudioTestGain	4	0x001c	16

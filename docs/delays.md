@@ -207,6 +207,8 @@ Abbreviations in the table:
 
 ## (a) Added margin: the code value exceeds its source
 
+- **Backlight on delay** (registry 127 `backlight_on_delay`, default 100 ms after power-up): measured, not datasheet. Camera 2026-11-20 (docs/camera-lcd-timing.md): pin at MCU boot + 15 ms -> white flash 200-240 ms; +91 ms or later -> none. 100 ms is +9 ms over the 91 ms edge (Dan's pick).
+
 - **Panel T3**: 550 ms against the datasheet T8 min 200 ms (2.75x). Against the registry note "500 ms per 27-inch 4K eDP datasheets" it is +10 %.
 - **Panel T4**: 250 ms against datasheet T9 min 200 ms (1.25x, plus 1 tick).
 - **Panel T2**: 250 ms against datasheet T3 max 200 ms (1.25x). This one is a timeout, so the 1.25 rule applies.

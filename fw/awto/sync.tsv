@@ -102,10 +102,11 @@ C0	04	vport	power key on, %
 11	C2	-	panel:backlight on at once at boot, PWM full (Dan:as early as possible)
 11	CA	ms	panel:backlight PWM:user brightness, settings loaded % after the boot full duty	timing
 11	D1	ms	panel:backlight pin on, % after wanted (menu:backlight on delay)	timing
-11	E1	ms2	panel:backlight on, % after MCU boot, % after the knob's reference (test knob)	timing
+11	E1	ms2	panel:backlight on, % after MCU boot, % after its reference (power-up, or the test record's)	timing
 11	E2	ms	panel:test knob backlight on delay %, counts from video ready (ACTIVE)	timing
 11	E4	ms	panel:test knob backlight on delay %, counts from stream on (eDP trained)	timing
 11	E5	ms	panel:test knob backlight on delay %, counts from power-up (panel-up)	timing
+11	E6	ms	panel:backlight on delay % from power-up (registry backlight_on_delay, default; no test record)	timing
 11	E3	ms	panel:test knob: no reference event in %, backlight on anyway	warning
 11	C6	ms	panel:backlight PWM duty set, % after the pin	timing
 11	C7	ms	panel:backlight off wanted % after the pin, PWM dark	timing

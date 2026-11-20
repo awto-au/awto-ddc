@@ -1657,18 +1657,19 @@ extern unsigned char g_pucSourceSearchPriority[];
 #undef _AWTO_WAKE_HOLD
 #define _AWTO_WAKE_HOLD                                         _OFF
 #endif
-// Backlight on (Dan 2026-11-13): wanted -> pin on after bl_on_delay, pin -> PWM duty after bl_pwm_ms; defaults 0 = at once
+// Backlight on (Dan 2026-11-20): power-up -> pin on after backlight_on_delay (default 100 ms), pin -> PWM duty after bl_pwm_ms
 #ifdef _AWTO_NEW_SETTINGS
-#define AWTO_BL_ON_DELAY_MS                                     AWTO_SET(BL_ON_DELAY)       // #67 registry, default 0
+#define AWTO_BL_ON_DELAY_MS                                     AWTO_SET(BACKLIGHT_ON_DELAY)       // #67 registry, default 100 (docs/camera-lcd-timing.md)
 #define AWTO_BL_TO_PWM_MS                                       AWTO_SET(BL_PWM_MS)         // #67 registry, default 0
 #else
-#define AWTO_BL_ON_DELAY_MS                                     0
+#define AWTO_BL_ON_DELAY_MS                                     100
 #define AWTO_BL_TO_PWM_MS                                       0
 #endif
 #define AWTO_PNL_X_BLK                                          0xE1    // line 11 args of the backlight test knob: E1 pin on (value = ms2 since boot / since video ready)
 #define AWTO_PNL_X_BLK_SET                                      0xE2    // knob in effect, reference ACTIVE (value = ms); E4 stream on, E5 power-up
 #define AWTO_PNL_X_BLK_SET_STREAM                               0xE4
 #define AWTO_PNL_X_BLK_SET_POWERUP                              0xE5
+#define AWTO_PNL_X_BLK_DEF                                      0xE6    // pin on by the registry delay, no test record (value = ms)
 #define AWTO_PNL_X_BLK_LATE                                     0xE3    // no video ready event in time (value = ms from wanted)
 // #162 panel machine (UserCommonInterface.c): the one driver of panel VDD, eDP-1 PHY / link / stream, backlight pin and PWM.
 // Callers request (UserCommonInterfacePanelPowerAction); UserCommonInterfacePanelPowerTick() steps it, never waits. docs/design-162.md.

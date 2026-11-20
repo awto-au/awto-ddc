@@ -25,7 +25,7 @@ def test_rows_sane():
 
 
 def test_power_levels_and_recovery_rows_present():
-    for n in ("pwr_l1_en", "pwr_l1_ms", "pwr_l2_s", "pwr_l3_s", "wake_d1", "wake_d3", "debug_link", "bl_on_delay"):
+    for n in ("pwr_l1_en", "pwr_l1_ms", "pwr_l2_s", "pwr_l3_s", "wake_d1", "wake_d3", "debug_link", "backlight_on_delay"):
         assert n in T.BY_NAME
 
 

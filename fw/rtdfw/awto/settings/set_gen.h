@@ -5,7 +5,7 @@
 
 #define SET_COUNT   118u
 #define SET_PAGES   15u
-#define SET_SCHEMA  0x4BAFu    /* CRC-16 of the NV rows (id, type, min, max) */
+#define SET_SCHEMA  0x38C0u    /* CRC-16 of the NV rows (id, type, min, max) */
 #define SET_NV_COUNT 96u
 #define SET_TEXT_LEN 2164u
 #define SET_AUX_MAX 60u    /* aux block: check byte + stored rows without an SDK field (awto-ddc#151) */
@@ -84,7 +84,6 @@
 #define SET_ID_OSD_ROTATE           63u
 #define SET_ID_PANEL_T1             67u
 #define SET_ID_PANEL_T2             68u
-#define SET_ID_BL_ON_DELAY          118u
 #define SET_ID_PANEL_T4             71u
 #define SET_ID_PANEL_T5             72u
 #define SET_ID_PANEL_T6             73u
@@ -128,6 +127,7 @@
 #define SET_ID_MONITOR              124u
 #define SET_ID_CEC_EN               125u
 #define SET_ID_CEC_CTL              126u
+#define SET_ID_BACKLIGHT_ON_DELAY   127u
 
 #define SET_PAGE_PICTURE          0u
 #define SET_PAGE_COLOUR           1u

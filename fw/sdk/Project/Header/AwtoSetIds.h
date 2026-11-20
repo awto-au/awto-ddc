@@ -76,7 +76,6 @@
 #define AWTO_SET_OSD_ROTATE           63
 #define AWTO_SET_PANEL_T1             67
 #define AWTO_SET_PANEL_T2             68
-#define AWTO_SET_BL_ON_DELAY          118
 #define AWTO_SET_PANEL_T4             71
 #define AWTO_SET_PANEL_T5             72
 #define AWTO_SET_PANEL_T6             73
@@ -120,6 +119,7 @@
 #define AWTO_SET_MONITOR              124
 #define AWTO_SET_CEC_EN               125
 #define AWTO_SET_CEC_CTL              126
+#define AWTO_SET_BACKLIGHT_ON_DELAY   127
 #define AWTO_PCT_TO_255(p)           ((BYTE)(((WORD)(p) * 255) / 100))   // SDK store field of a percent row: 0..255
 #define AWTO_SET_DEF_BRIGHTNESS       50
 #define AWTO_SET_DEF_BLACK_LEVEL      50
@@ -173,6 +173,6 @@
 #define AWTO_SET_DEF_SSC              0
 #define AWTO_SET_DEF_PANEL_HOURS      0
 #define AWTO_SET_DEF_PANEL_MIN        0
-#define AWTO_SET_SCHEMA              0x4BAF
+#define AWTO_SET_SCHEMA              0x38C0
 #define AWTO_SET_AUX_MAX             60
 #endif

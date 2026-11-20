@@ -3,7 +3,8 @@
 # - id: stable, never reused (NVRAM key, VCP paged id, docs anchor). 1..255 (the NVRAM record keys are one byte).
 # - retired ids (never reuse): 64 menu_select, 93 vendor_menu (Realtek SDK menu built out, awto-ddc#120); 65 logo,
 #   66 logo_ms (boot logo removed, the console shows the power-on log, awto-ddc#144); 69 panel_t3, 70 panel_t3_own
-#   (backlight no longer waits for video: 118 bl_on_delay, Dan 2026-11-13, awto-ddc#162).
+#   (backlight no longer waits for video: 118 bl_on_delay, Dan 2026-11-13, awto-ddc#162); 118 bl_on_delay (counted from wanted,
+#   default 0) replaced by 127 backlight_on_delay (Dan 2026-11-20): old stored values must not carry over.
 # - type: bool | enum | int | action. unit: none percent ms s step hz dhz (0.1 Hz).
 # - flags: nv (saved), live (applied on every change, else on confirm), risky (can blank or cut access: auto-revert
 #   unless confirmed), reboot (takes effect after a restart), ro (status, read from the firmware), inert (stored only:
@@ -92,7 +93,6 @@
 63	osd_rotate	enum	none	osd	nv,inert,sdk	0	3	1	0	auto	-	-	Menu rotate	0|90|270|180	[sdk-ui]
 67	panel_t1	int	ms	panel	nv,risky,reboot	0	100	1	10	auto	-	-	T1 VDD rise	-	Realtek SDK example value, no datasheet [sdk-value]
 68	panel_t2	int	ms	panel	nv,risky,reboot	0	1000	10	250	auto	-	-	T2 VDD to link	-	[sdk-value]
-118	bl_on_delay	int	ms	panel	nv	0	1000	10	0	auto	-	-	Backlight on delay	-	backlight wanted (boot on M2PLL, POWER on, wake: from VDD on) -> pin on; not gated by video; 0 = at once (Dan, datasheet T8 not followed)
 71	panel_t4	int	ms	panel	nv,risky	0	1000	10	250	auto	-	-	T4 BL to link off	-	[sdk-value]
 72	panel_t5	int	ms	panel	nv,risky	0	500	10	20	auto	-	-	T5 link to VDD off	-	[sdk-value]
 73	panel_t6	int	ms	panel	nv,risky	500	5000	100	900	auto	-	-	T6 off to on	-	minimum VDD off time: datasheet T11 >= 1000 ms - 10 % (delay rule)
@@ -136,3 +136,4 @@
 124	monitor	bool	none	debug	nv,live	0	1	1	1	auto	-	-	Health monitor	-	every AWTO_MON_MS: ADC A0-A3, IOSC trim, loop rate + longest gap, uptime, stack -> sync log rows (changes + heartbeat) and g_stAwtoMon; fw/diag/monitor.c, docs/monitoring.md
 125	cec_en	bool	none	signal	nv,live	0	1	1	1	auto	-	-	CEC	-	HDMI CEC sink on (default on, Dan 2026-11-19): block + replies in fw/cec; the board has no proven CEC pad, docs/cec.md (awto-ddc#101)
 126	cec_ctl	bool	none	signal	nv,live	0	1	1	0	auto	-	-	CEC control	-	CEC may act on Standby / Image View On / Active Source / User Control; off = logged only; on = hook rows logged, no action yet (docs/cec.md)
+127	backlight_on_delay	int	ms	display	nv	0	2000	10	100	auto	-	-	Backlight on delay	-	ms after power-up (boot and wake) until the backlight pin comes on; read at each panel-up: it cannot change a backlight that is already lit. Camera 2026-11-20: 0 ms (pin at MCU boot + 15 ms) shows a 200-240 ms white flash, 91 ms or more hides it (docs/camera-lcd-timing.md); default 100 (Dan)
