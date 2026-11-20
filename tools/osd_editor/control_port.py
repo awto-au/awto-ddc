@@ -455,12 +455,10 @@ class ControlPort(QObject):
     def m_drag(self, p, done):
         """scripted slider drag through the live path: NAME from FROM to TO in `steps` valueChanged events `step_ms` apart (then released);
         replies with the writes-per-drag summary. A backlight drag is clamped at MON.BL_MIN like the slider"""
-        n, name = self.unit_of(p), p["name"]
+        n, name = self.unit_of(p, write=True), p["name"]
         r = self.row(name)
         if not MON.live_row(r):
             raise PortError(f"{name} is not a live row")
-        if "unit" not in p and "serial" not in p:
-            raise PortError("drag: send the unit explicitly (writes never go to a default unit)")
         a, b = int(p["from"]), int(p["to"])
         steps, step_ms = int(p.get("steps", 100)), int(p.get("step_ms", 5))
         lo = MON.BL_MIN if name in MON.BACKLIGHT_ROWS else r["min"]

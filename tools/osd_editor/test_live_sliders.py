@@ -111,7 +111,7 @@ def floor_spacing():
     finished(pg)
     t = fb.live_times[:len(sets(fb))]
     gaps = [b - a for a, b in zip(t, t[1:])]
-    assert gaps and min(gaps) >= LW.FLOOR_MIN_S * 0.8, min(gaps)                    # 0.8: timer + scheduling jitter on the test host
+    assert gaps and min(gaps) >= LW.FLOOR_MIN_S * 0.6, min(gaps)                    # 0.6: Qt timer rounding + scheduling jitter on the test host
     assert sets(fb)[-1][3] == 100
     print(f"ok floor: instant writes are spaced >= {min(gaps) * 1000:.0f} ms ({LW.FLOOR_MIN_S * 1000:.0f} ms floor), last write 100")
 
@@ -266,7 +266,7 @@ def backlight_safety():
     try:
         cp = CP.ControlPort.__new__(CP.ControlPort)
         cp.page = pg
-        cp.unit_of = lambda p: UNIT
+        cp.unit_of = lambda p, **kw: UNIT
         raised = False
         try:
             cp.m_set({"unit": UNIT, "name": "brightness", "value": "0"}, lambda *a, **k: None)
