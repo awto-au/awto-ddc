@@ -35,8 +35,18 @@ def repo_root() -> Path:
         return Path(__file__).resolve().parent.parent
 
 
+def lock_root() -> Path:
+    """The locks guard shared hardware: one dir for every worktree = the main checkout (git common dir's parent)."""
+    try:
+        c = subprocess.check_output(["git", "rev-parse", "--path-format=absolute", "--git-common-dir"], cwd=Path(__file__).parent,
+                                    text=True, stderr=subprocess.DEVNULL).strip()
+        return Path(c).parent
+    except (subprocess.CalledProcessError, FileNotFoundError):
+        return repo_root()
+
+
 ROOT = repo_root()
-LOCKS = ROOT / "tmp" / "locks"
+LOCKS = lock_root() / "tmp" / "locks"
 SESSION_COMM = ("claude", "node")
 
 
