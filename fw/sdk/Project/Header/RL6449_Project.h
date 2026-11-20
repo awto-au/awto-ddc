@@ -1134,7 +1134,6 @@ extern __xdata StAwtoSyncEv g_stAwtoSyncPin;  // #150: this boot's reason line, 
 #define AWTO_SEL_EV_KEPT_AUTO                                   0x04    // AUTO on the input it opened on: closed, no switch
 #define AWTO_SEL_EV_CANCEL                                      0x05    // MENU: closed, the input it opened on kept
 #define AWTO_SEL_EV_NOCABLE                                     0x06    // take of a port with no cable: switched, dead-port auto search held off
-#define AWTO_SEL_EV_DPVER                                       0x07    // take ignored: DP version pop-up up
 #define AWTO_SEL_EV_NOPORT                                      0x08    // take ignored: the item is no port of this board (value = item)
 #define AWTO_SEL_EV_RESET                                       0x09    // closed by the SDK OSD reset (mode reset / signal back), nothing to take
 #define AWTO_SEL_EV_CON_CLOSE                                   0x0A    // SOURCE closed a console that opened by itself, for the selector

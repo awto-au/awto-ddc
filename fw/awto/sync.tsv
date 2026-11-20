@@ -202,7 +202,6 @@ E0	03	vport	input selector:% kept (no key for {AWTO_SRC_IDLE_COMMIT_MS/1000}s, t
 E0	04	vport	input selector:% kept (AUTO on the input it opened on), closed
 E0	05	vport	input selector cancelled (MENU):% kept
 E0	06	vport	input selector:% taken, no cable: no-signal card, dead-port auto search held off
-E0	07	-	input selector:take ignored, DP version pop-up up
 E0	08	x	input selector:item % is no port of this board; stays open	warning
 E0	09	vport	input selector closed by a mode reset (SDK OSD reset):% kept
 E0	0A	-	console (opened by itself) closed by SOURCE:input selector next	boot
