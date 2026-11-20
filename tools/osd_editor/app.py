@@ -453,8 +453,15 @@ def main(argv=None):
     if "--monitor" in argv or headless:
         w.go(2)                                                        # open straight on the monitor tab
     port = ControlPort(w.monitor, headless=headless, on_quit=app.quit)
-    if not port.start():
-        w.monitor.say(f"control port not served: {port.why}")
+    try:
+        ok = port.start()
+    except Exception as e:  # noqa: BLE001  a window without the control port beats no window
+        ok, port.why = False, f"{type(e).__name__}: {e}"
+    if not ok:
+        print(f"control port unavailable: {port.why}", file=sys.stderr, flush=True)
+        w.monitor.say(f"control port unavailable: {port.why}")
+        w.monitor.banner.setText(f"control port unavailable: {port.why}")
+        w.monitor.banner.show()
     if headless:
         for sig in (signal.SIGINT, signal.SIGTERM):                    # polled below: Python handlers need the interpreter to run
             signal.signal(sig, lambda *_: setattr(w, "stop_asked", True))

@@ -83,6 +83,8 @@ class ControlPort(QObject):
         self.headless, self.uid = headless, os.getuid() if uid is None else uid
         self.idle_exit_s, self.on_quit = idle_exit_s, on_quit
         self.srv: socket.socket | None = None
+        self.ident: tuple[int, int] | None = None        # (st_dev, st_ino) of our bound socket file
+        self.why = ""
         self.subs: list[queue.Queue] = []
         self.sub_lock = threading.Lock()
         self.last_request = time.monotonic()
@@ -106,20 +108,30 @@ class ControlPort(QObject):
                     return False
                 GC.try_call(self.path, "quit", {}, timeout=GC.PING_S)         # a window takes over from the headless app
                 t0 = time.monotonic()
-                while self.path.exists() and GC.try_call(self.path, "ping", {}, timeout=GC.PING_S) and time.monotonic() - t0 < TAKEOVER_WAIT_S:
+                while GC.try_call(self.path, "ping", {}, timeout=GC.PING_S) and time.monotonic() - t0 < TAKEOVER_WAIT_S:
                     QTimer.singleShot(0, lambda: None)
                     threading.Event().wait(0.05)
-            try:
-                self.path.unlink()
-            except FileNotFoundError:
-                pass
+                if GC.try_call(self.path, "ping", {}, timeout=GC.PING_S):
+                    self.why = f"headless app pid {peer['result'].get('pid')} still serves {self.path} {TAKEOVER_WAIT_S} s after quit was asked"
+                    return False
+        # bind to a private temp name, chmod, then atomic rename: the final path is never missing or world-open,
+        # and a late unlink by the old app cannot hit our socket (stop() checks the inode)
+        tmp = self.path.with_name(f"{self.path.name}.{os.getpid()}.tmp")
+        tmp.unlink(missing_ok=True)
+        s = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
         old = os.umask(0o177)
         try:
-            s = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
-            s.bind(str(self.path))
+            s.bind(str(tmp))
+            os.chmod(tmp, 0o600)
+            st = tmp.stat()
+            os.rename(tmp, self.path)
+        except BaseException:
+            s.close()
+            tmp.unlink(missing_ok=True)
+            raise
         finally:
             os.umask(old)
-        os.chmod(self.path, 0o600)
+        self.ident = (st.st_dev, st.st_ino)
         s.listen(16)
         self.srv = s
         threading.Thread(target=self._accept, name="gui-port-accept", daemon=True).start()
@@ -137,7 +149,9 @@ class ControlPort(QObject):
             finally:
                 self.srv = None
         try:
-            self.path.unlink()
+            st = self.path.stat()
+            if self.ident == (st.st_dev, st.st_ino):
+                self.path.unlink()                           # only our own socket: a successor may already own the path
         except FileNotFoundError:
             pass
 

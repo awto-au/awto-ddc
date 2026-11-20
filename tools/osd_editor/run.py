@@ -20,6 +20,8 @@ def main() -> int:
     os.environ.setdefault("GIO_USE_VOLUME_MONITOR", "unix")
     if "--headless" in sys.argv:
         os.environ["QT_QPA_PLATFORM"] = "offscreen"                  # no window; the control port is the way in (docs/monitor-gui.md)
+    if "--monitor" in sys.argv and "--headless" not in sys.argv:
+        print(f"awto GUI window starting (output: {os.readlink('/proc/self/fd/1') if os.path.exists('/proc/self/fd/1') else 'stdout'})", flush=True)
     os.execv(str(PY), [str(PY), str(HERE / "app.py"), *sys.argv[1:]])
 
 

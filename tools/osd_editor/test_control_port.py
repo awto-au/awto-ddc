@@ -646,7 +646,7 @@ def gui_jobs_command():
     t.start()
     pump(lambda: "rc" in box, "gui jobs")
     assert box["rc"] == 0 and lines == ["no flash jobs tracked by the app"], lines
-    r.call("flash", {"unit": "3", "args": ["--sectors", "3", "--step", "0.1"]})
+    r.call("flash", {"unit": "3", "args": ["--sectors", "3", "--step", "0.5"]})
     lines.clear()
     box.clear()
     t = threading.Thread(target=lambda: box.update(rc=GC.run_gui(["jobs"], "1", r.path, say=lines.append)))
@@ -660,11 +660,90 @@ def gui_jobs_command():
     print("ok dev.py gui jobs: empty message, then unit / job / pid / alive / age / rc / disk record / log per tracked job")
 
 
+def ping_pumped(path):
+    box = {}
+
+    def go():
+        with GC.Client(path) as c:
+            box["rep"] = c.call("ping", {})
+    th = threading.Thread(target=go)
+    th.start()
+    pump(lambda: "rep" in box, "ping reply")
+    th.join()
+    return box["rep"]["ok"]
+
+
+def handover_and_late_unlink():
+    d = WORK / "handover"
+    d.mkdir(parents=True, exist_ok=True)
+    path = d / "awto-gui.sock"
+    path.unlink(missing_ok=True)
+
+    def page(n):
+        ini = d / f"{n}.ini"
+        ini.unlink(missing_ok=True)
+        pg = MON.MonitorPage(StatefulBackend(), d / f"{n}.log", QSettings(str(ini), QSettings.IniFormat), detect=lambda: set())
+        return pg
+    quit_called = []
+    old_pg = page("old")
+    old = CP.ControlPort(old_pg, path, headless=True, on_quit=lambda: quit_called.append(1))
+    assert old.start()
+    new_pg = page("new")
+    new = CP.ControlPort(new_pg, path, headless=False)
+    box = {}
+    t = threading.Thread(target=lambda: box.update(ok=new.start()))
+    t.start()
+    pump(lambda: quit_called, "old app asked to quit")
+    old.stop()                                                                   # the old app goes away: closes and unlinks its own socket
+    t.join()                                                                     # (start() ran on a thread only to let the UI thread serve quit)
+    assert box["ok"], new.why
+    assert path.exists() and (path.stat().st_mode & 0o777) == 0o600
+    assert ping_pumped(path)
+    # race: the old app unlinks LATE, after the new window bound the same path
+    old.stop()
+    old.ident = (new.ident[0], new.ident[1] + 1)
+    old.stop()
+    assert path.exists(), "a foreign stop() deleted the new socket"
+    assert ping_pumped(path)
+    assert not list(d.glob("*.tmp")), "temp socket left behind"
+    new.stop()
+    assert not path.exists()
+    for pg in (old_pg, new_pg):
+        pg.flash_timer.stop()
+    print("ok handover: old app quits, new port renamed in (0600), late / foreign unlink leaves the new socket, no temp left")
+
+
+def window_without_port():
+    d = WORK / "noport"
+    d.mkdir(parents=True, exist_ok=True)
+    ini = d / "x.ini"
+    ini.unlink(missing_ok=True)
+    pg = MON.MonitorPage(StatefulBackend(), d / "gui.log", QSettings(str(ini), QSettings.IniFormat), detect=lambda: set())
+    port = CP.ControlPort(pg, d / "missing-dir" / "x" / "awto-gui.sock")
+    port.path.parent.parent.mkdir(exist_ok=True)
+    os.chmod(port.path.parent.parent, 0o500)                                     # makes the bind fail: the window must still come up
+    try:
+        import app as APP
+        try:
+            ok = port.start()
+        except Exception as e:  # noqa: BLE001
+            ok, port.why = False, f"{type(e).__name__}: {e}"
+        assert not ok and port.why
+        w = APP.Window(False)
+        w.monitor.banner.setText(f"control port unavailable: {port.why}")
+        w.monitor.banner.show()
+        assert "control port unavailable" in w.monitor.banner.text() and not w.monitor.banner.isHidden()
+    finally:
+        os.chmod(port.path.parent.parent, 0o700)
+    pg.flash_timer.stop()
+    print("ok window without port: start failure gives a reason, window and banner still there")
+
+
 def main():
     app = QApplication([])
     for fn in (commands_change_model_and_view, risky_and_actions, save_and_kvm, failed_call_keeps_view, parallel_and_serial, events_stream,
                security, autostart_and_no_app, cli_end_to_end, raw_i2c_parsing, flash_async_progress_and_guards, flash_client_and_rc,
-               flash_survives_app_and_reattaches, startup_wait_polls_and_fails_with_log, stale_job_state_is_rederived, gui_jobs_command):
+               flash_survives_app_and_reattaches, startup_wait_polls_and_fails_with_log, stale_job_state_is_rederived, gui_jobs_command, handover_and_late_unlink, window_without_port):
         fn()
     app.processEvents()
     print("PASS")
