@@ -26,7 +26,7 @@ Measured 2026-11-19 on unit 2 (AWT26110002), Intel iGPU `card1-DP-1`, i2c bus 15
 ## What changed
 - ISP slave 0x4B = same registers as 0x4A with address auto-increment (probed per session, `Rtd.enable_aux_fast`): 0x64..0x66 and 0x72..0x74 are one message (erase, CRC).
 - Page = two transfers: `[0x4B: 64 hi mid][0x4A: 70 + 256 B]`, then `[0x6F <- v|start]`, then polls until 6F.5 clear and 6F.4 set. 22.3 -> 13.3 ms/page.
-- Flash-screen text redraws at most once per second on every bus (`flash_screen.THROTTLE_S`); the DP-only duty cap (`DUTY_MAX` / `SCREEN_DUTY_AUX`) is gone. Measured cost: `docs/flash-screen.md` "Screen cost".
+- Flash-screen text redraws at most once per `THROTTLE_S` (5 s) on every bus (`flash_screen.THROTTLE_S`); the DP-only duty cap (`DUTY_MAX` / `SCREEN_DUTY_AUX`) is gone. Measured cost: `docs/flash-screen.md` "Screen cost".
 - Failure: any bus error flushes the page, redoes that sector on the 0x4A burst path (not byte mode), counts as a burst failure.
 - `dev.py flash --aux-fast auto|off` (auto = on for `AUX` adapters only; i915 gmbus, NVIDIA unchanged).
 

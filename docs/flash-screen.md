@@ -17,7 +17,7 @@ Status 2026-11-18. Seen on unit 3 (Dan: "looked great").
 ## How it works
 
 - Firmware: `fw/test/flash_screen.c` draws the screen (window 0 red, 30 x 11 tiles scaled 64 / 6 = 10.67, 1-bit glyphs); `fw/test/saver.c` serves VCP 0xEB in the main loop; sound: `fw/test/snd.c` track `alert`.
-- The OSD circuit keeps drawing while the MCU is held in ISP. The flasher (`scripts/rtd_flash_image.py`) calls `flash_screen.tick(isp, k, info)` per sector: it rewrites only changed char commands over the ISP F4 / F5 window (`rtd_osd.Osd`): text rows only, at most once per second (`THROTTLE_S`, monotonic deadline, all buses); a change of the burst-failure / recovery counts and the last sector draw at once.
+- The OSD circuit keeps drawing while the MCU is held in ISP. The flasher (`scripts/rtd_flash_image.py`) calls `flash_screen.tick(isp, k, info)` per sector: it rewrites only changed char commands over the ISP F4 / F5 window (`rtd_osd.Osd`): text rows only, at most once per `THROTTLE_S` = 5 s (monotonic deadline, all buses); a change of the burst-failure / recovery counts and the last sector draw at once.
 - Layout source `scripts/gen_flash_screen.py` (-> `fw/test/flash_screen_data.inc`); host `scripts/flash_screen.py`; `tests/test_flash_screen.py` keeps them equal.
 - Rotate 180: the firmware turns map and glyphs, the host writes the mirrored cell (`docs/osd/rotation.md`); the marker file `tmp/flash_screen.<bus>.shown` (per bus: flashes of several units run in parallel) carries the rotate flag from `show` to the flasher process.
 - Picture of old vs new, upright and Rotate 180, in the sim: `python scripts/flash_screen_pic.py OLD.bin NEW.bin` (`tmp/flash_screen_pic.png`). Rotate 180: text and Pac-Man turned, mouth to the left, as the panel is mounted.
@@ -34,6 +34,7 @@ Status 2026-11-18. Seen on unit 3 (Dan: "looked great").
 | DP AUX (unit 2) | 68.5 (1.9) | 69.7 (7.1) | 60.8, 60.6 | +9.0 s (+15 %) | +7.8 s (+13 %) |
 | HDMI, Intel DDC, 1 MHz (unit 3, Rotate 180) | 27.6 (3.8) | 24.1 (0.4) | 23.7 | +0.4 s (+2 %) | +3.9 s (+16 %) |
 
+- Text period 5 s (`THROTTLE_S` = 5.0, Dan 2026-11-20; the table above is the 1 s version). Same method, one run each, new 5 s image: unit 1 126.0 (screen 2.5) vs off 117.0 mean = +9.0 s; unit 3 23.7 (screen 0.3) vs off 23.7 = +0.0 s. Unit 1's 126.0 is within the spread of the 1 s runs (121.9 - 124.8): the 5 s period does not show a gain on that bus. DP AUX (unit 2) not re-measured: its lock was held by a `synclog` stream.
 - DP AUX: a second `new` run did not show the screen (firmware not yet answering VCP 0xEB after the previous flash), so it is not counted; its 60.1 s equals the off runs.
 - The bucket under-reports on DP AUX: old was +7.8 s over off with 1.9 s in the bucket (OSD writes slow the ISP traffic around them as well).
 - Rotate 180 (unit 3): disp_rotate stayed 180 after every flash.

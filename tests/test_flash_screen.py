@@ -83,16 +83,17 @@ def test_host_never_writes_pacman_cells(rig):
     assert puts and not pm & {c for c, _ in puts} and all(g < L.PM_OPEN for _, g in puts)
 
 
-def test_text_throttled_to_once_a_second(rig):
+def test_text_throttled_to_THROTTLE_S(rig):
     clock, puts = rig
     FS.tick(None, 0, INFO)
     first = len(puts)
     assert first > 0
-    for k in range(1, 6):                                   # sectors 0.1 s apart: nothing drawn
+    for k in range(1, 6):                                   # sectors 0.1 s apart (first draw at t = 0): nothing drawn
         clock[0] += 0.1
         FS.tick(None, k, {**INFO, "sec": k + 1, "pct": 20, "t": 2.0})
     assert len(puts) == first
-    clock[0] += 0.6                                         # 1.1 s since the draw
+    assert FS.THROTTLE_S == 5.0
+    clock[0] += FS.THROTTLE_S                               # deadline reached
     FS.tick(None, 6, {**INFO, "sec": 7, "pct": 70})
     assert len(puts) > first
 

@@ -6,7 +6,7 @@ usage: flash_screen.py show --bus N          start the screen in the running fir
   Library (rtd_flash_image.py): show(bus), tick(isp, n, info) per sector, clear(isp) before the exit reset. Every call is best effort:
   a failure is logged and never fails the flash.
   The firmware (fw/test/flash_screen.c) draws the screen; the OSD circuit keeps it while the MCU is held in ISP; this module rewrites map words
-  (char commands) over the ISP F4/F5 window (rtd_osd.Osd): the text rows only, the cells that changed, at most once a second (THROTTLE_S);
+  (char commands) over the ISP F4/F5 window (rtd_osd.Osd): the text rows only, the cells that changed, at most once per THROTTLE_S (5 s);
   a change of the error counts and the last sector draw at once. The Pac-Man is never rewritten.
   Layout = scripts/gen_flash_screen.py. Text rows: 1 bank / sector / percent, 2 interface (env AWTO_FLASH_IFACE, set by dev.py), 3 errors.
   Display Rotate 180 (marker file): logical cell c is written at cells - 1 - c; the firmware already turned the glyphs.
@@ -35,7 +35,7 @@ VCP_FLASH_SCREEN = 5            # screensaver_now value "Flash warning" (registr
 VCP_PAGED_ID, VCP_PAGED_VAL = 0xE0, 0xE1
 ROW_DISP_ROTATE = 32            # registry row id of disp_rotate
 DRAW_WAIT_S = 0.6               # firmware draws in one main-loop pass: ~330 cells + 90 glyphs of data port writes (~0.1 s) after the DDC write; 6 x
-THROTTLE_S = 1.0                # text rows redraw at most once per second on every bus (Dan 2026-11-20); the row text itself changes at ~1 s anyway
+THROTTLE_S = 5.0                # text rows redraw at most once per 5 s on every bus (Dan 2026-11-20); errors and the last sector draw at once
 ENV_IFACE = "AWTO_FLASH_IFACE"
 ENV_OFF = "AWTO_FLASH_SCREEN_OFF"   # =1: never show (a flash from an image whose screen layout differs from this script)
 # Values mirrored from fw/test/flash_screen.c (tests/test_flash_screen.py checks them)
@@ -139,7 +139,7 @@ def _put(o, cell: int, gid: int) -> None:
 
 
 def due(info: dict, now: float) -> bool:
-    """Redraw when the 1 s deadline passed, the error counts changed, or this is the last sector (100 %)."""
+    """Redraw when the THROTTLE_S deadline passed, the error counts changed, or this is the last sector (100 %)."""
     return now >= _next_at or (info["bad"], info["recov"]) != _errs or info["sec"] >= info["nsec"]
 
 
