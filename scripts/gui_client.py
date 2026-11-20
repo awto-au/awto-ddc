@@ -22,7 +22,7 @@ ROUTED = ("ddc", "settings", "synclog", "note", "kvm", "i2c", "flash")
 SERVER_LIMIT_S = 45
 CLIENT_LIMIT_S = SERVER_LIMIT_S + 5      # the server always answers within its limit; +5 s = a reply in flight
 PING_S = 2                               # a ping is answered on the UI thread's next turn (ms); 2 s = the UI thread is stuck
-START_WAIT_S = float(os.environ.get("AWTO_GUI_START_WAIT_S", "5"))   # env: tests only. Headless start measured 0.3 s warm (2026-11-20); 5 s covers a cold PySide6 import
+START_WAIT_S = float(os.environ.get("AWTO_GUI_START_WAIT_S", "0.5"))   # env: tests only. 1.25 x slowest of 5 starts (0.4 s, page cache warm, 2026-11-20)
 START_POLL_S = 0.1                       # poll pace of the socket while the app starts
 FLASH_SILENCE_S = 60                     # flash client: no event for this long = a WARN line (the flash is never stopped by the client)
 FLASH_STATUS_S = 5                       # flash client: cross-check the job state when no event arrived (events may be missed)
@@ -153,7 +153,7 @@ def ensure_app(path: Path | None = None, launcher=default_launcher, wait_s: floa
         time.sleep(START_POLL_S)
     raise GuiUnavailable(
         f"gui: the app did not answer on {path} within {wait:g} s (log: tmp/logs/gui-headless.log). Nothing was run on the unit. "
-        f"Start it by hand: python3 tools/osd_editor/run.py --headless (or without --headless for the window), then repeat.")
+        f"The app keeps starting in the background: repeat in a few seconds, or start it by hand: python3 tools/osd_editor/run.py --headless (or without --headless for the window), then repeat.")
 
 
 # --- legacy dev.py commands -> requests

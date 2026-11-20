@@ -194,6 +194,8 @@ def test_flasher_refuses_wrong_unit_before_isp(monkeypatch, tmp_path):
 
 
 def test_flasher_passes_identity_to_guard(monkeypatch, tmp_path):
+    import unit_lock
+    monkeypatch.setattr(unit_lock, "LOCKS", tmp_path / "locks")     # never a real unit lock (another stream may hold it)
     seen = []
 
     def require(bus, serial, identity=None):

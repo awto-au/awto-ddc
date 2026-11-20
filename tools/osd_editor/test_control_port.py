@@ -360,7 +360,7 @@ def autostart_and_no_app():
         GC.run_legacy("ddc", ["get", "0x62"], "1", path, launcher=lambda p: None, say=lines.append) if False else GC.ensure_app(path, lambda p: None, wait_s=0.3, say=lines.append)
         raise AssertionError("no app, but no error")
     except GC.GuiUnavailable as e:
-        assert "Start it by hand" in str(e) and "Nothing was run" in str(e)
+        assert "start it by hand" in str(e) and "Nothing was run" in str(e)
     assert len(fb.calls) == n
     pg.flash_timer.stop()
     print("ok no app: dev.py auto-starts it headless and uses the port; app not answering = error with how to start it, nothing run")
@@ -391,7 +391,7 @@ def cli_end_to_end():
     assert rc == 2 and "refused" in out
     r.close()
     rc, out = dev("ddc", "get", "0x62", "--unit", "1", extra_env={"AWTO_GUI_LAUNCHER": "true", "AWTO_GUI_START_WAIT_S": "0.5"})
-    assert rc == 2 and "did not answer" in out and "Start it by hand" in out, (rc, out)
+    assert rc == 2 and "did not answer" in out and "start it by hand" in out, (rc, out)
     rc, out = dev("flash", "--unit", "1", extra_env={"AWTO_GUI_LAUNCHER": "true", "AWTO_GUI_START_WAIT_S": "0.5"})
     assert rc == 2 and "did not answer" in out, (rc, out)
     print("ok dev.py ddc / settings / kvm / i2c are thin port clients; --direct while the app runs is refused; no app = error (no direct run)")

@@ -7,16 +7,42 @@ import signal
 import sys
 from pathlib import Path
 
-import numpy as np
-from PySide6.QtCore import QProcess, QSize, Qt, QTimer, Signal
-from PySide6.QtGui import QAction, QColor, QFont, QIcon, QImage, QKeySequence, QPainter, QPixmap
-from PySide6.QtWidgets import (QApplication, QComboBox, QFileDialog, QFrame, QHBoxLayout, QInputDialog, QLabel,
-                               QListWidget, QListWidgetItem, QMainWindow, QMessageBox, QPushButton, QScrollArea,
-                               QSizePolicy, QSpinBox, QStackedWidget, QToolBar, QVBoxLayout, QWidget)
-
 import model as M
+import numpy as np
 from control_port import ControlPort
 from monitor import MonitorPage
+from PySide6.QtCore import QProcess, QSettings, QSize, Qt, QTimer, Signal
+from PySide6.QtGui import (
+    QAction,
+    QColor,
+    QFont,
+    QIcon,
+    QImage,
+    QKeySequence,
+    QPainter,
+    QPixmap,
+)
+from PySide6.QtWidgets import (
+    QApplication,
+    QComboBox,
+    QFileDialog,
+    QFrame,
+    QHBoxLayout,
+    QInputDialog,
+    QLabel,
+    QListWidget,
+    QListWidgetItem,
+    QMainWindow,
+    QMessageBox,
+    QPushButton,
+    QScrollArea,
+    QSizePolicy,
+    QSpinBox,
+    QStackedWidget,
+    QToolBar,
+    QVBoxLayout,
+    QWidget,
+)
 
 ROOT = Path(__file__).resolve().parents[2]
 CSS = """
@@ -297,7 +323,7 @@ class Window(QMainWindow):
             return
         super().closeEvent(e)
 
-    def __init__(self):
+    def __init__(self, headless: bool = False):
         super().__init__()
         self.setWindowTitle("awto OSD editor")
         self.resize(1280, 760)
@@ -306,7 +332,7 @@ class Window(QMainWindow):
         self.glyphs, self.screens = GlyphPage(), ScreensPage()
         self.stack.addWidget(self.glyphs)
         self.stack.addWidget(self.screens)
-        self.monitor = MonitorPage()
+        self.monitor = MonitorPage(settings=QSettings("awto", "osd_editor_headless") if headless else None)   # the port must not move the window's remembered unit
         self.stack.addWidget(self.monitor)
         root = QWidget()
         root.setObjectName("root")
@@ -423,7 +449,7 @@ def main(argv=None):
         os.environ["QT_QPA_PLATFORM"] = "offscreen"                    # no window, same app: the control port is the only way in
     app = QApplication(argv)
     app.setFont(QFont("monospace", 9))
-    w = Window()
+    w = Window(headless)
     if "--monitor" in argv or headless:
         w.go(2)                                                        # open straight on the monitor tab
     port = ControlPort(w.monitor, headless=headless, on_quit=app.quit)
