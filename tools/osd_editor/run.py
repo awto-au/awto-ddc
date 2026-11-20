@@ -18,6 +18,8 @@ def main() -> int:
     # Qt-Wayland text-input focus warnings and GIO volume-monitor lookups (masked units) are harmless noise
     os.environ.setdefault("QT_LOGGING_RULES", "qt.qpa.wayland.textinput=false")
     os.environ.setdefault("GIO_USE_VOLUME_MONITOR", "unix")
+    if "--headless" in sys.argv:
+        os.environ["QT_QPA_PLATFORM"] = "offscreen"                  # no window; the control port is the way in (docs/monitor-gui.md)
     os.execv(str(PY), [str(PY), str(HERE / "app.py"), *sys.argv[1:]])
 
 

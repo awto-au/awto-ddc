@@ -13,20 +13,22 @@ from pathlib import Path
 from PySide6.QtCore import QSettings, QTimer, Qt, Signal
 from PySide6.QtGui import QBrush, QColor, QIcon, QKeySequence, QPainter, QPixmap, QShortcut
 from PySide6.QtWidgets import (QAbstractSpinBox, QApplication, QCheckBox, QComboBox, QFrame, QHBoxLayout, QLabel, QLineEdit,
-                               QMessageBox, QPlainTextEdit, QPushButton, QScrollArea, QSlider, QSplitter, QStackedWidget,
+                               QMessageBox, QPlainTextEdit, QProgressBar, QPushButton, QScrollArea, QSlider, QSplitter, QStackedWidget,
                                QTableWidget, QTableWidgetItem, QTreeWidget, QTreeWidgetItem, QVBoxLayout, QWidget)
 
 from unit_jobs import ROOT, SubprocessBackend, UnitQueues
 
 sys.path.insert(0, str(ROOT / "scripts"))
+import flash_job  # noqa: E402
 import isostamp  # noqa: E402
+import unit_lock  # noqa: E402
 import settings_table as T  # noqa: E402
 
 PYTHON = "python3"
 LOG = ROOT / "tmp" / "logs" / "osd_editor.log"
 # Per-call limits = 3x the slowest unit-3 call measured 2026-11-18 (docs/osd-editor-spec.md section 7).
 # Expiry: TERM (dev.py's finally switches the debug link off), kill after TERM_GRACE_S, log line + banner.
-LIMIT_S = {"list": 20, "one": 4, "health": 13, "synclog": 4, "host_time": 5, "kvm": 10, "ddc": 5, "ddcmany": 10}
+LIMIT_S = {"list": 20, "one": 4, "health": 13, "synclog": 4, "host_time": 5, "kvm": 10, "ddc": 5, "ddcmany": 10, "i2c": 5}
 REFRESH_S = 15                                           # live refresh and status probe pace: one "list" takes ~6.4 s
 STALE_S = 60                                             # a unit view older than this is re-read when selected (Dan 2026-11-20)
 NO_ANSWER_RE = re.compile(r"no bus with (?:that )?EDID serial|DDC communication failed|no monitors detected")
@@ -35,6 +37,8 @@ SLOW_BRUSH = QBrush(QColor("#ff5050"))
 INPUTS = ("D1", "D2", "D3")                              # scripts/kvm.py port names
 VCP_VOLUME, VCP_MUTE, VCP_SAVER = "0x62", "0x8D", "0xEB"
 PROBE_FAILS_DOWN = 2
+FLASH_POLL_S = 1                                         # flash progress poll: the log gains a line every few sectors (SAVE_EVERY), 1 s keeps the bar live
+ROUTED = ("ddc", "settings", "synclog", "note", "kvm", "i2c", "flash")   # dev.py commands that are thin port clients: workers add --direct
 PROBE_VCP = VCP_VOLUME                                   # status dot: cheapest read-only call, dev.py ddc get (EDID guard inside)
 # VCP 0xEB start / stop values; the registry row screensaver_now lists 0..4, 5 = flash warning
 SAVER_NOW = (("Stop", 0), ("Selected", 1), ("Pac-Man", 2), ("Scope 2", 4), ("Flash warning", 5), ("Boot splash", 7), ("Asteroids", 8))
@@ -44,7 +48,7 @@ QUICK_VCP = ("volume", "mute", "brightness", "input", "screensaver_now")   # reg
 VALUE_RE = re.compile(r"(?:^|\s)(\w+) = .* \(raw (-?\d+)\)\s*$")
 VCP_GET_RE = re.compile(r"VCP\s+([0-9A-Fa-f]{2})\s+(C|SNC|CNC)\s+((?:x?[0-9A-Fa-f]+\s*){1,4})")   # dev.py ddc get (ddcutil --brief)
 STEP_RE = re.compile(r"(?:^|\s)(\d{1,5}):(?!\d)")        # sync_log line: "<ms since episode start>:text"
-DOT = {"ok": "#3fb950", "busy": "#d29922", "down": "#ff5050", "unknown": "#808080"}
+DOT = {"ok": "#3fb950", "busy": "#d29922", "down": "#ff5050", "unknown": "#808080", "flash": "#a371f7"}
 PAGE_ROLE = Qt.UserRole
 ROW_ROLE = Qt.UserRole + 1
 EDID_GLOB = "/sys/class/drm/*/edid"                      # kernel's copy of each connected monitor's EDID: no I2C from the GUI
@@ -68,6 +72,14 @@ def detect_serials() -> set[str]:
         if s:
             out.add(s)
     return out
+
+
+def flash_state(serial: str) -> str:
+    """"owner tool" while a live flash holds the unit lock (flashing keeps its own ISP path; the GUI only shows it), else ''"""
+    cur = unit_lock.read(serial)
+    if not cur or "flash" not in cur.get("tool", "") or not unit_lock.alive(int(cur.get("pid", "0") or 0)):
+        return ""
+    return f"{cur.get('owner')} {cur.get('tool')}"
 
 
 def sync_rows(text: str) -> list[tuple[str, str, bool]]:
@@ -142,19 +154,38 @@ class UnitState:
     out: str = ""
     banner: str = ""
     pending: int = 0                                     # queued + running jobs (not probes)
+    track: object = None                                 # FlashTrack of this unit's latest flash job
+    shown_dot: str = ""                                  # last dot sent to the event stream
+    flash: str = ""                                      # unit_lock holder while a flash runs (read-only, jobs refused)
 
     @property
     def writable(self) -> bool:
         return bool(self.info.get("test")) and not self.unknown
+
+    def flash_pct(self) -> str:
+        t = self.track
+        return f"FLASHING {t.progress.percent():.0f} %" if t is not None and t.progress.rc is None else "FLASHING" if self.flash else ""
 
     def dot(self) -> str:
         if self.unknown:
             return "unknown"
         if not self.writable:
             return "unknown"
+        if self.flash:
+            return "flash"
         if self.detected is False:
             return "down"
         return "busy" if self.pending else self.status
+
+
+class FlashTrack:
+    """one flash job as the GUI follows it: parsed progress, log read offset, the job file's identity"""
+
+    def __init__(self, job: dict):
+        self.job, self.offset, self.rest = job, 0, ""
+        self.progress = flash_job.Progress(job.get("started_mono_wall", time.time()))
+        self.sent = None                                  # last snapshot sent to the event stream (without clock fields)
+        self.finished_sent = False
 
 
 def dot_icon(colour: str) -> QIcon:
@@ -334,6 +365,11 @@ class SettingRow(QWidget):
         self.cur.setText(f"unit: {v}{self.label_of(v)}")
         self._move(v)
 
+    def set_value(self, v: int):
+        """what a click or drag does to the widget (control port): the value is touched, not yet set"""
+        self.dirty = True
+        self._move(v)
+
 
 class ActionRow(QWidget):
     """An action row of the registry: one Run button (the page asks before it runs)"""
@@ -367,6 +403,9 @@ class ActionRow(QWidget):
     def set_ok(self, v):
         pass
 
+    def set_value(self, v):
+        pass
+
     def set_writable(self, w: bool):
         self.btn.setEnabled(w)
 
@@ -389,6 +428,8 @@ class MonitorPage(QWidget):
         self.page_items: dict[int, QTreeWidgetItem] = {}
         self.page_scroll: dict[int, QScrollArea] = {}
         self.jobs: dict[int, tuple] = {}
+        self.listeners: list = []                        # callables(event dict): control port event stream
+        self.refused = ""                                # why the last run() was refused (the port reports it)
         self.buttons: list[QPushButton] = []
         self.unit_btns: dict[str, QPushButton] = {}
         self.highlight: QWidget | None = None
@@ -400,6 +441,7 @@ class MonitorPage(QWidget):
         self.banner.setStyleSheet("color: #ff5050; font-weight: bold;")
         self.banner.hide()
         lay.addWidget(self.banner)
+        lay.addWidget(self._flash_panel())
         lay.addWidget(self._quick_panel())
         split = QSplitter(Qt.Horizontal)
         split.addWidget(self._tree_panel())
@@ -416,11 +458,17 @@ class MonitorPage(QWidget):
         self.probe_timer = QTimer(self)                  # unit scan + status dots while the page is visible
         self.probe_timer.setInterval(REFRESH_S * 1000)
         self.probe_timer.timeout.connect(self.probe_tick)
+        self.flash_cmd = default_flash_cmd                # (unit, args) -> argv of the detached flash worker; tests swap in a fake
+        self.flash_timer = QTimer(self)                   # follows the detached flash jobs (progress panel, strip, events)
+        self.flash_timer.setInterval(FLASH_POLL_S * 1000)
+        self.flash_timer.timeout.connect(self.flash_tick)
+        self.flash_timer.start()
         self._hotkeys()
         self.apply_filters()
         last = str(self.settings.value("monitor/last_unit", ""))
         self.scan()
         self.select_unit(last if last in self.units else next((n for n, u in self.units.items() if u.get("test")), self.cur), read=False)
+        self.adopt_flash_jobs()
 
     # --- layout
     def _btn(self, text, fn) -> QPushButton:
@@ -459,13 +507,36 @@ class MonitorPage(QWidget):
         if st.unknown:
             b.setText(f"{i}  unknown  (ro)\n{st.info['serial'][-6:]}")
         else:
-            b.setText(f"{i}  unit {n}  {'' if st.writable else '(ro) '}\n{st.info['serial'][-4:]}  {st.info['input']}")
+            b.setText(f"{i}  unit {n}  {'' if st.writable else '(ro) '}\n{st.flash_pct() or st.info['serial'][-4:] + '  ' + st.info['input']}")
         b.setIcon(dot_icon(DOT[st.dot()]))
-        why = {"ok": "answers", "busy": "job running", "down": "no answer / not detected", "unknown": "not probed"}[st.dot()]
+        if st.shown_dot != st.dot():
+            st.shown_dot = st.dot()
+            self.emit("status", unit=n, dot=st.dot(), pending=st.pending)
+        why = {"ok": "answers", "busy": "job running", "down": "no answer / not detected", "unknown": "not probed",
+               "flash": f"flashing ({st.flash}), jobs refused"}[st.dot()]
         if st.unknown:
             why = "monitor seen by EDID, not in devices.json: read-only, not probed"
         b.setToolTip(f"unit {n} {st.info['serial']}: {why}; hotkey {i}\n"
                      + (f"last read {st.last_read_iso}" if st.last_read_iso else "not read yet"))
+
+    def _flash_panel(self) -> QWidget:
+        f = self.flash_box = QFrame()
+        f.setObjectName("panel")
+        lay = QVBoxLayout(f)
+        top = QHBoxLayout()
+        self.flash_title = QLabel()
+        top.addWidget(self.flash_title, 1)
+        self.flash_bar = QProgressBar()
+        self.flash_bar.setRange(0, 1000)
+        top.addWidget(self.flash_bar, 2)
+        lay.addLayout(top)
+        self.flash_info = QLabel()
+        lay.addWidget(self.flash_info)
+        self.flash_log = QPlainTextEdit(readOnly=True)
+        self.flash_log.setMaximumHeight(90)
+        lay.addWidget(self.flash_log)
+        f.hide()
+        return f
 
     def _quick_panel(self) -> QWidget:
         f = QFrame()
@@ -653,6 +724,9 @@ class MonitorPage(QWidget):
         except Exception as e:                           # a failed scan leaves the list as devices.json gives it
             self.say(f"monitor scan failed: {e!r}")
             return
+        for st in self.states.values():
+            running = st.track is not None and st.track.progress.rc is None
+            st.flash = flash_state(st.info["serial"]) or (st.flash if running else "")
         known = any(st.info["serial"] in seen for n, st in self.states.items() if n in self.units)
         for n in self.units:
             st = self.states[n]
@@ -716,7 +790,9 @@ class MonitorPage(QWidget):
         self.banner.setVisible(bool(st.banner))
         node = st.node or str(self.settings.value(f"monitor/node/{n}", "") or "") or "page:0"
         self._select_node(node)
+        self.show_flash(n)
         self.say(f"unit {n} selected ({'test, writable' if w else 'read-only'})")
+        self.emit("select", unit=n)
         if read:
             self.maybe_read(n)
 
@@ -820,21 +896,33 @@ class MonitorPage(QWidget):
             self.actions.appendPlainText(f"{isostamp.now()} log file not written: {e}")
 
     # --- jobs
-    def run(self, label: str, argv: list, done, limit: str = "one", unit: str | None = None, probe: bool = False):
+    def emit(self, kind: str, **kw):
+        for f in list(self.listeners):
+            f({"event": kind, **kw})
+
+    def run(self, label: str, argv: list, done, limit: str = "one", unit: str | None = None, probe: bool = False, after=None):
+        """queue a job on the unit's worker; returns the job id, or None when refused (reason in self.refused).
+        after(rc, out, secs) runs on the UI thread once the job's own handler has updated the view."""
         n = unit or self.cur
         st = self.states[n]
+        self.refused = ""
         if not st.writable:                              # same guard as the disabled buttons; dev.py refuses it too
-            self.say(f"unit {n} {label}: refused, read-only unit")
-            return
+            self.refused = f"unit {n} is read-only (not a test unit in devices.json)"
+        elif st.flash:
+            self.refused = f"unit {n} is flashing ({st.flash}): jobs refused until the unit lock is released"
+        if self.refused:
+            self.say(f"unit {n} {label}: refused, {self.refused}")
+            return None
         jid = self.queues.submit(n, argv, LIMIT_S[limit])
-        self.jobs[jid] = (label, done, n, LIMIT_S[limit], probe)
+        self.jobs[jid] = (label, done, n, LIMIT_S[limit], probe, after)
         if not probe:
             st.pending += 1
             self._strip_text(n)
             self.say(f"unit {n} {label}: started (limit {LIMIT_S[limit]} s)")
+        return jid
 
     def _finish(self, jid, rc, out, secs):
-        label, done, unit, limit, probe = self.jobs.pop(jid)
+        label, done, unit, limit, probe, after = self.jobs.pop(jid)
         st = self.states[unit]
         if probe:
             old = st.dot()
@@ -870,6 +958,9 @@ class MonitorPage(QWidget):
             self.banner.setVisible(bool(st.banner))
         self._strip_text(unit)
         self.say(f"unit {unit} {label}: {verdict}{extra} ({secs:.1f} s)")
+        self.emit("job", unit=unit, label=label, rc=rc, secs=round(secs, 3))
+        if after:
+            after(rc, out, secs)
 
     def show_banner(self, text: str):
         self.banner.setText(text)
@@ -882,7 +973,8 @@ class MonitorPage(QWidget):
         return self.states[n or self.cur].pending > 0
 
     def dev(self, *args, unit: str | None = None):
-        return [PYTHON, ROOT / "dev.py", *args, "--unit", unit or self.cur]
+        """argv of a worker call: the routed dev.py commands are thin port clients, the app's workers run them --direct"""
+        return [PYTHON, ROOT / "dev.py", *args, "--unit", unit or self.cur, *(["--direct"] if args and args[0] in ROUTED else [])]
 
     def confirm(self, text: str) -> bool:
         return QMessageBox.question(self, "Confirm", text) == QMessageBox.Yes
@@ -892,7 +984,7 @@ class MonitorPage(QWidget):
         """rescan the connected monitors; probe each idle, detected test unit (read-only) for its status dot"""
         self.scan()
         for n, st in self.states.items():
-            if st.writable and st.detected is not False and not st.pending:
+            if st.writable and st.detected is not False and not st.pending and not st.flash:
                 self.run(f"probe VCP {PROBE_VCP}", self.dev("ddc", "get", PROBE_VCP, unit=n), None, "ddc", unit=n, probe=True)
 
     def refresh_toggled(self, on: bool):
@@ -904,9 +996,10 @@ class MonitorPage(QWidget):
             self.get_all()
 
     # --- actions
-    def get_all(self, unit: str | None = None):
+    def get_all(self, unit: str | None = None, after=None):
         n = unit or self.cur
-        self.run("settings get all", self.dev("settings", "list", unit=n), lambda rc, out: self._got(n, rc, out, full=True), "list", unit=n)
+        return self.run("settings get all", self.dev("settings", "list", unit=n), lambda rc, out: self._got(n, rc, out, full=True), "list",
+                        unit=n, after=after)
 
     def _put(self, n: str, name: str, v: int):
         self.states[n].values[name] = v
@@ -928,49 +1021,59 @@ class MonitorPage(QWidget):
                 self.states[n].last_read = time.monotonic()
         return f", {k} rows"
 
-    def set_row(self, sr):
+    def set_row(self, sr, confirmed: bool | None = None, after=None, readback: bool | None = None) -> int | None:
+        """write the widget's value on the current unit. confirmed None = ask (dialog), True / False = the port's answer
+        (no dialog). readback None = what the row does itself (one-click rows read back); after(rc, out, secs) = job done."""
         n, v, r = self.cur, sr.raw(), sr.r
         name = r["name"]
         if r["type"] == "action" or "risky" in r["flags"]:
             what = "run" if r["type"] == "action" else f"set {v} on"
-            if not self.confirm(f"Unit {n}: {what} {r['label']} ({name})?" + ("\nNeeds a reboot." if "reboot" in r["flags"] else "")):
-                self.say(f"unit {n} {name}: cancelled at the confirm dialog")
+            ok_ask = confirmed if confirmed is not None else self.confirm(
+                f"Unit {n}: {what} {r['label']} ({name})?" + ("\nNeeds a reboot." if "reboot" in r["flags"] else ""))
+            if not ok_ask:
+                self.say(f"unit {n} {name}: cancelled at the confirm dialog" if confirmed is None else
+                         f"unit {n} {name}: not confirmed, nothing sent")
                 self._revert(n, sr)
-                return
+                return None
         peers = [d[name] for d in (self.rows, self.quick) if name in d]
+        read_after = sr.instant if readback is None else readback
 
         def ok(rc, out):
             if rc != 0:
-                self._revert(n, sr)
+                self._revert(n, sr, force=after is not None)
                 return ", unit kept its value"
             self.states[n].values[name] = v
             self.states[n].dirty.pop(name, None)
             if n == self.cur:
                 for p in peers:
                     p.set_ok(v)
-            if sr.instant:
+            if read_after:
                 self._readback(n, name, r)               # a flip shows what the unit now reports, not what was sent
             return ""
 
         if name in VCP_ROW and sr in self.quick.values():       # volume / mute: DDC/CI like a host would
             vv = r["option_vcp"][v - r["min"]] if r["option_vcp"] else v
-            self.run(f"set {name} = {v} (VCP {VCP_ROW[name]} = {vv})", self.dev("ddc", "set", VCP_ROW[name], vv), ok, "ddc")
-        else:
-            self.run(f"{'run' if r['type'] == 'action' else 'set'} {name} = {v}", self.dev("settings", "set", name, v), ok)
+            return self.run(f"set {name} = {v} (VCP {VCP_ROW[name]} = {vv})", self.dev("ddc", "set", VCP_ROW[name], vv), ok, "ddc", after=after)
+        return self.run(f"{'run' if r['type'] == 'action' else 'set'} {name} = {v}", self.dev("settings", "set", name, v), ok, after=after)
 
-    def _revert(self, n: str, sr):
-        """a cancelled or failed one-click flip puts the widget back to the unit's last known value"""
-        if sr.instant and n == self.cur:
-            self.states[n].dirty.pop(sr.r["name"], None)
-            for d in (self.rows, self.quick):
-                if sr.r["name"] in d:
-                    d[sr.r["name"]].load(self.states[n].values.get(sr.r["name"]), None)
+    def _revert(self, n: str, sr, force: bool = False):
+        """a cancelled or failed one-click flip (any failed port write: force) puts the widget back to the unit's last known value"""
+        if sr.instant or force:
+            name = sr.r["name"]
+            self.states[n].dirty.pop(name, None)
+            if n == self.cur:
+                for d in (self.rows, self.quick):
+                    if name in d:
+                        d[name].load(self.states[n].values.get(name), None)
 
-    def _readback(self, n: str, name: str, r: dict):
-        if name in VCP_ROW:
-            self.run(f"readback {name}", self.dev("ddc", "get", VCP_ROW[name], unit=n), lambda rc, out: self._vcp_got(n, out), "ddc", unit=n)
-        else:
-            self.run(f"readback {name}", self.dev("settings", "get", name, unit=n), lambda rc, out: self._got(n, rc, out), unit=n)
+    def read_via_vcp(self, name: str) -> bool:
+        return name in VCP_ROW or name in ("input", "screensaver_now")
+
+    def _readback(self, n: str, name: str, r: dict, after=None):
+        if self.read_via_vcp(name):
+            code = VCP_ROW.get(name) or f"0x{r['vcp']:02X}"
+            return self.run(f"readback {name}", self.dev("ddc", "get", code, unit=n), lambda rc, out: self._vcp_got(n, out), "ddc", unit=n, after=after)
+        return self.run(f"readback {name}", self.dev("settings", "get", name, unit=n), lambda rc, out: self._got(n, rc, out), unit=n, after=after)
 
     def saver_start(self):
         self._saver(self.saver.currentData(), self.saver.currentText())
@@ -978,15 +1081,16 @@ class MonitorPage(QWidget):
     def saver_stop(self):
         self._saver(0, "Stop")
 
-    def _saver(self, v: int, label: str):
-        self.run(f"screensaver now = {label} (VCP {VCP_SAVER} = {v})", self.dev("ddc", "set", VCP_SAVER, v), None, "ddc")
+    def _saver(self, v: int, label: str, unit: str | None = None, after=None):
+        return self.run(f"screensaver now = {label} (VCP {VCP_SAVER} = {v})", self.dev("ddc", "set", VCP_SAVER, v, unit=unit), None, "ddc",
+                        unit=unit, after=after)
 
-    def quick_get(self, unit: str | None = None):
+    def quick_get(self, unit: str | None = None, after=None):
         """volume, mute, brightness, input select, screensaver: DDC/CI reads of their VCP codes, one call each (no mailbox)"""
         n = unit or self.cur
         codes = [f"0x{row_of(name)['vcp']:02X}" for name in QUICK_VCP]
-        self.run(f"get quick values (VCP {' '.join(codes)})", self.dev("ddc", "get", *codes, unit=n),
-                 lambda rc, out, n=n: self._vcp_got(n, out), "ddcmany", unit=n)
+        return self.run(f"get quick values (VCP {' '.join(codes)})", self.dev("ddc", "get", *codes, unit=n),
+                 lambda rc, out, n=n: self._vcp_got(n, out), "ddcmany", unit=n, after=after)
 
     def _vcp_got(self, n: str, out: str) -> str:
         """every `VCP xx ...` reply line in out (one per code); returns the log suffix"""
@@ -1024,26 +1128,34 @@ class MonitorPage(QWidget):
         self.now_state.setText(f"unit shows: input {row_of('input')['options'][inp] if inp is not None else '?'}, "
                                f"screensaver {row_of('screensaver_now')['options'][sav] if sav is not None else '?'}")
 
-    def save(self):
-        self.run("settings save", self.dev("settings", "save"), None)
+    def save(self, unit: str | None = None, after=None):
+        return self.run("settings save", self.dev("settings", "save", unit=unit), None, unit=unit, after=after)
 
     def _input_picked(self, *_):
         self.inp_touched = True
         self.input_select()
 
-    def input_select(self):
-        p = self.inp.currentText()
-        self.run(f"input select {p}", [PYTHON, ROOT / "scripts" / "kvm.py", p, "--units", self.cur], None, "kvm")
+    def input_select(self, port: str | None = None, unit: str | None = None, after=None):
+        p, n = port or self.inp.currentText(), unit or self.cur
+        return self.run(f"input select {p}", [PYTHON, ROOT / "scripts" / "kvm.py", p, "--units", n], None, "kvm", unit=n, after=after)
 
-    def host_time(self):
-        self.run("host time send now", [PYTHON, ROOT / "scripts" / "host_time.py", "--unit", self.cur, "--once"], None, "host_time")
+    def note(self, text: str, unit: str | None = None, open_console: bool = False, after=None):
+        return self.run("host note", self.dev("note", *(["--open-console"] if open_console else []), text, unit=unit), None, "synclog",
+                        unit=unit, after=after)
 
-    def health(self):
-        self.run("health", self.dev("health"), lambda rc, out: ", " + next(
-            (ln.strip() for ln in reversed(out.splitlines()) if "PASS" in ln or "FAIL" in ln), "no verdict line"), "health")
+    def host_time(self, unit: str | None = None, after=None):
+        n = unit or self.cur
+        return self.run("host time send now", [PYTHON, ROOT / "scripts" / "host_time.py", "--unit", n, "--once"], None, "host_time",
+                        unit=n, after=after)
 
-    def sync_log(self):
-        self.run("sync log", self.dev("synclog", *(["--whole"] if self.whole.isChecked() else [])), self._synced, "synclog")
+    def health(self, unit: str | None = None, after=None):
+        return self.run("health", self.dev("health", unit=unit), lambda rc, out: ", " + next(
+            (ln.strip() for ln in reversed(out.splitlines()) if "PASS" in ln or "FAIL" in ln), "no verdict line"), "health",
+            unit=unit, after=after)
+
+    def sync_log(self, unit: str | None = None, whole: bool | None = None, after=None):
+        w = self.whole.isChecked() if whole is None else whole
+        return self.run("sync log", self.dev("synclog", *(["--whole"] if w else []), unit=unit), self._synced, "synclog", unit=unit, after=after)
 
     def _synced(self, rc, out) -> str:
         rows = sync_rows(out)
@@ -1057,3 +1169,112 @@ class MonitorPage(QWidget):
                 self.sync.setItem(i, c, it)
         self.sync_info.setText(sync_summary(rows))
         return f", {sync_summary(rows)}"
+
+    # --- flash: a detached job (scripts/flash_job.py), tracked here; the app never signals it
+    def flash_running(self) -> list[str]:
+        return [n for n, st in self.states.items() if st.track is not None and st.track.progress.rc is None]
+
+    def flash_start(self, n: str, args: list[str]) -> dict:
+        """start `dev.py flash ARGS --unit n --direct` as a detached job; refusals raise ValueError with the reason"""
+        st = self.states[n]
+        if not st.writable:
+            raise ValueError(f"unit {n} is read-only (not a test unit in devices.json)")
+        if st.flash or n in self.flash_running():
+            raise ValueError(f"unit {n} is already flashing ({st.flash or 'job running'})")
+        if st.pending:
+            raise ValueError(f"unit {n} has {st.pending} job(s) running; wait for them, a flash holds the MCU in ISP")
+        try:
+            job = flash_job.start(st.info["serial"], n, [str(a) for a in self.flash_cmd(n, args)])
+        except SystemExit as e:
+            raise ValueError(str(e)) from None
+        st.track = FlashTrack(job)
+        st.flash = f"gui-flash-{st.info['serial']}-{job['id']} flash"
+        self.say(f"unit {n} flash started: job {job['id']} pid {job['pid']}, log {job['log']}")
+        self._strip_text(n)
+        self._flash_event(n, st.track, [])
+        self.show_flash(n)
+        return job
+
+    def adopt_flash_jobs(self):
+        """after a restart: follow jobs the previous app run started (still running, or finished and not yet reported)"""
+        for n, st in self.states.items():
+            if st.unknown or st.track is not None:
+                continue
+            job = flash_job.load(st.info["serial"])
+            if job and (flash_job.running(job) or flash_job.lost(job) or ("rc" in job and not job.get("reported"))):
+                st.track = FlashTrack(job)
+                self.say(f"unit {n}: re-attached to flash job {job['id']} (pid {job.get('pid')})")
+
+    def flash_tick(self):
+        for n, st in list(self.states.items()):
+            if st.track is not None and not st.track.finished_sent:
+                self._flash_update(n, st, st.track)
+
+    def _flash_update(self, n: str, st: UnitState, t: FlashTrack):
+        lines: list[str] = []
+        try:
+            with open(t.job["log"], "rb") as f:
+                f.seek(t.offset)
+                data = f.read()
+            t.offset += len(data)
+            text = t.rest + data.decode("utf-8", "replace")
+            *whole, t.rest = text.split("\n")
+            lines = [ln for ln in whole if ln.strip()]
+        except FileNotFoundError:
+            pass
+        for ln in lines:
+            t.progress.feed(ln)
+        job = flash_job.load(st.info["serial"])
+        if job and job.get("id") == t.job["id"]:
+            if "rc" in job and t.progress.rc is None:
+                t.progress.rc = int(job["rc"])
+            elif flash_job.lost(job) and t.progress.rc is None:
+                t.progress.rc = 255
+                t.progress.feed("ERROR: flash worker is gone without a result (killed from outside?); the unit may hold a partial image, see the log")
+        snap = t.progress.snapshot()
+        key = {k: v for k, v in snap.items() if k not in ("elapsed_s", "eta_s", "last")}
+        if lines or key != t.sent:
+            t.sent = key
+            self._flash_event(n, t, lines)
+        if t.progress.rc is not None and not t.finished_sent:
+            t.finished_sent = True
+            if st.track is t:
+                st.flash = ""
+            self.say(f"unit {n} flash finished rc {t.progress.rc} in {snap['elapsed_s']:.0f} s")
+            self.emit("flash_done", unit=n, job=t.job["id"], rc=t.progress.rc, elapsed_s=snap["elapsed_s"], lines=snap["last"])
+            if job and job.get("id") == t.job["id"] and "rc" in job:
+                flash_job.save({**job, "reported": True})
+        self._strip_text(n)
+        if n == self.cur:
+            self.show_flash(n)
+
+    def _flash_event(self, n: str, t: FlashTrack, lines: list[str]):
+        snap = t.progress.snapshot()
+        self.emit("flash", unit=n, job=t.job["id"], lines=lines, **{k: v for k, v in snap.items() if k != "last"})
+
+    def flash_status(self, n: str) -> dict | None:
+        t = self.states[n].track
+        if t is None:
+            return None
+        self._flash_update(n, self.states[n], t) if not t.finished_sent else None
+        snap = t.progress.snapshot()
+        return {"job": t.job["id"], "pid": t.job.get("pid"), "done": t.progress.rc is not None, "log": t.job["log"], **snap}
+
+    def show_flash(self, n: str):
+        t = self.states[n].track
+        self.flash_box.setVisible(t is not None)
+        if t is None:
+            return
+        sn = t.progress.snapshot()
+        self.flash_bar.setValue(int(sn["percent"] * 10))
+        self.flash_title.setText(f"<b>unit {n}: {'FLASHING' if t.progress.rc is None else 'flash ' + ('done' if t.progress.rc == 0 else 'FAILED')}</b>"
+                                 f"  {sn['phase']}  {sn['percent']:.0f} %")
+        eta = f"{sn['eta_s']:.0f} s" if sn["eta_s"] else "-"
+        self.flash_info.setText(f"sectors written {sn['written']}/{sn['total']} (erased {sn['erased']}), errors {sn['errors']}, ISP recoveries "
+                                f"{sn['recoveries']}, burst redone {sn['redo']}, elapsed {sn['elapsed_s']:.0f} s, ETA {eta}"
+                                + (f", rc {sn['rc']}" if sn["rc"] is not None else "; the unit's other operations are refused"))
+        self.flash_log.setPlainText("\n".join(sn["last"][-6:]))
+
+
+def default_flash_cmd(unit: str, args: list[str]) -> list:
+    return [PYTHON, ROOT / "dev.py", "flash", *args, "--unit", unit, "--direct"]

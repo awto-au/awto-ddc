@@ -2,17 +2,20 @@
 from __future__ import annotations
 
 import csv
+import os
+import signal
 import sys
 from pathlib import Path
 
 import numpy as np
-from PySide6.QtCore import QProcess, QSize, Qt, Signal
+from PySide6.QtCore import QProcess, QSize, Qt, QTimer, Signal
 from PySide6.QtGui import QAction, QColor, QFont, QIcon, QImage, QKeySequence, QPainter, QPixmap
 from PySide6.QtWidgets import (QApplication, QComboBox, QFileDialog, QFrame, QHBoxLayout, QInputDialog, QLabel,
                                QListWidget, QListWidgetItem, QMainWindow, QMessageBox, QPushButton, QScrollArea,
                                QSizePolicy, QSpinBox, QStackedWidget, QToolBar, QVBoxLayout, QWidget)
 
 import model as M
+from control_port import ControlPort
 from monitor import MonitorPage
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -273,6 +276,27 @@ class ScreensPage(QWidget):
 
 
 class Window(QMainWindow):
+    stop_asked = False
+
+    def stop_check(self, app, port):
+        """headless SIGINT / SIGTERM: quit unless a flash is followed (it keeps running detached either way)"""
+        if not self.stop_asked:
+            return
+        self.stop_asked = False
+        fl = self.monitor.flash_running()
+        if fl:
+            self.monitor.say(f"stop signal ignored: a flash is running on unit(s) {', '.join(fl)}")
+            return
+        port._quit()
+
+    def closeEvent(self, e):
+        fl = self.monitor.flash_running()
+        if fl and QMessageBox.question(self, "Flash running", f"A flash is running on unit(s) {', '.join(fl)}. It continues detached "
+                                       "(its job file is re-attached when the app starts again). Close anyway?") != QMessageBox.Yes:
+            e.ignore()
+            return
+        super().closeEvent(e)
+
     def __init__(self):
         super().__init__()
         self.setWindowTitle("awto OSD editor")
@@ -393,13 +417,30 @@ class Window(QMainWindow):
 
 
 def main(argv=None):
-    app = QApplication(argv or sys.argv)
+    argv = list(argv or sys.argv)
+    headless = "--headless" in argv
+    if headless:
+        os.environ["QT_QPA_PLATFORM"] = "offscreen"                    # no window, same app: the control port is the only way in
+    app = QApplication(argv)
     app.setFont(QFont("monospace", 9))
     w = Window()
-    if "--monitor" in (argv or sys.argv):
+    if "--monitor" in argv or headless:
         w.go(2)                                                        # open straight on the monitor tab
-    w.show()
-    return app.exec()
+    port = ControlPort(w.monitor, headless=headless, on_quit=app.quit)
+    if not port.start():
+        w.monitor.say(f"control port not served: {port.why}")
+    if headless:
+        for sig in (signal.SIGINT, signal.SIGTERM):                    # polled below: Python handlers need the interpreter to run
+            signal.signal(sig, lambda *_: setattr(w, "stop_asked", True))
+        tick = QTimer()
+        tick.setInterval(500)                                          # signal poll pace; a stop is honoured within 0.5 s
+        tick.timeout.connect(lambda: w.stop_check(app, port))
+        tick.start()
+    else:
+        w.show()
+    rc = app.exec()
+    port.stop()
+    return rc
 
 
 if __name__ == "__main__":

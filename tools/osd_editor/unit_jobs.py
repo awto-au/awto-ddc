@@ -2,6 +2,7 @@
 Units sit on different buses, so their jobs run in parallel; one unit's jobs run one at a time (one bus)."""
 from __future__ import annotations
 
+import os
 import subprocess
 import threading
 import time
@@ -17,7 +18,7 @@ class SubprocessBackend:
     """run(argv, limit_s) -> (rc, output); rc 124 = limit expired, process stopped."""
 
     def run(self, argv: list[str], limit_s: float) -> tuple[int, str]:
-        p = subprocess.Popen(argv, cwd=ROOT, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True)
+        p = subprocess.Popen(argv, cwd=ROOT, env={**os.environ, "AWTO_GUI_WORKER": "1"}, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True)
         try:
             out, _ = p.communicate(timeout=limit_s)
         except subprocess.TimeoutExpired:
