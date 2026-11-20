@@ -53,7 +53,7 @@ class FailUnit3(FakeBackend):
     fail_unit3 = False
 
     def run(self, argv, limit_s):
-        if self.fail_unit3 and "3" == str(argv[-1]) and "ddc" in argv:
+        if self.fail_unit3 and "3" == str(argv[list(map(str, argv)).index("--unit") + 1]) and "ddc" in argv:
             return 1, "AWT26110003: no bus with that EDID serial\n"
         return super().run(argv, limit_s)
 
@@ -65,6 +65,7 @@ class ReadbackBackend(FakeBackend):
     def run(self, argv, limit_s):
         a = [str(x) for x in argv]
         if "settings" in a and "get" in a and a[a.index("get") + 1] in self.readback:
+            a = [x for x in a if x != "--direct"]
             self.calls.append(a)
             n = a[a.index("get") + 1]
             return 0, f"{n} = x (raw {self.readback[n]})\n"

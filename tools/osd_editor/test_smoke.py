@@ -47,10 +47,13 @@ class FakeBackend:
     """canned script output; records every argv (no hardware, no subprocess)"""
 
     def __init__(self):
-        self.calls, self.limits, self.fail = [], [], None
+        self.calls, self.limits, self.fail, self.direct = [], [], None, 0
 
     def run(self, argv, limit_s):
         a = [str(x) for x in argv]
+        if "--direct" in a:                              # the app's workers run dev.py --direct; recorded without it (own test checks it)
+            a.remove("--direct")
+            self.direct += 1
         self.calls.append(a)
         self.limits.append(limit_s)
         if self.fail:

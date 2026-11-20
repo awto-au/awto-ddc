@@ -1,7 +1,7 @@
 # PC monitor menu: GUI (monitor tab of the OSD editor)
 
 Dated 2026-11-20. Design chosen by Dan: "Tree + unit strip". Code: `tools/osd_editor/monitor.py`, `unit_jobs.py`.
-Launch: `python3 tools/osd_editor/run.py --monitor` (opens on the monitor tab) or toolbar "monitor".
+Launch: `python3 tools/osd_editor/run.py --monitor` (opens on the monitor tab) or toolbar "monitor"; `run.py --headless` = no window (offscreen), control port only.
 
 ## Registry
 - `scripts/settings_table.py`: 118 rows, 15 pages (picture 4, colour 11, sixaxis 12, display 6, input 10, kvm 3, signal 11, power 10, osd 13, panel 7, debug 7, audio 5, system 3, service 6, info 10).
@@ -40,6 +40,7 @@ Launch: `python3 tools/osd_editor/run.py --monitor` (opens on the monitor tab) o
 ## Tests
 - `tools/osd_editor/test_monitor_gui.py` (fake backend, offscreen; strip, hotkeys, tree counts, search, confirm, read-only, parallel vs serial queues, remembered unit, detect + probe, screenshot).
 - `tools/osd_editor/test_smoke.py` (editor tabs, monitor page get / set / quick / banner).
+- `tools/osd_editor/test_control_port.py` (port: commands change model and view, save read back, failed call, parallel / serial queues, events, socket perms, auto-start, thin CLI, no-app error, `--direct` refusal, raw i2c, async flash, rc and gate refusal, detached survival + re-attach; fake backend and `fake_flasher.py`). `tests/test_gui_client.py`: client translation, flash progress parsing (no Qt).
 - Run: `QT_QPA_PLATFORM=offscreen tools/osd_editor/.venv/bin/python tools/osd_editor/test_monitor_gui.py`.
 
 ## Live pass 2026-11-20 (units 1, 2, 3 read-only, locks held, GUI on Dan's desktop)
@@ -64,6 +65,38 @@ Launch: `python3 tools/osd_editor/run.py --monitor` (opens on the monitor tab) o
 - "show advanced (debug, service)" under the tree: pages hidden by default (tree, form, search), remembered in QSettings `monitor/advanced`.
 - Monitors seen by EDID and not in devices.json: strip button "unknown (ro)", grey dot, read-only, never probed; removed when unplugged.
 - Strip tooltip: last successful read (any kind) as ISO time, or "not read yet".
+
+## Control port (#276, 2026-11-20)
+- The GUI app is the only owner of the unit buses; scripts, agents and the human use its port. Code: `tools/osd_editor/control_port.py` (server), `scripts/gui_client.py` (client), `scripts/unit_ops.py` (the device ops), `scripts/flash_job.py` (detached flash).
+- One implementation: `scripts/unit_ops.py` (ddc, settings, synclog, note, kvm, i2c) + `dev.py _flash_direct`. The app's workers run `dev.py <cmd> --direct` (env `AWTO_GUI_WORKER=1`). `dev.py ddc / settings / kvm / synclog / note / i2c / flash` are thin port clients.
+- No fallback: no app answering = dev.py auto-starts `run.py --headless` (detached, log `tmp/logs/gui-headless.log`), waits `START_WAIT_S` = 5 s (headless start measured 0.3 s warm 2026-11-20; 5 s covers a cold PySide6 import), then FAILS with how to start it by hand. Nothing runs on the unit.
+- `--direct` = for the app's workers and for recovery by a human with the app stopped. While the app answers, `--direct` writes from anything but a worker are refused (message: use the port without `--direct`). Never chosen automatically.
+- Socket: `$XDG_RUNTIME_DIR/awto-gui.sock` (fallback `tmp/run/`), mode 0600; server checks `SO_PEERCRED` uid (other user = refused); client refuses a socket not owned by it or open to others. Env `AWTO_GUI_SOCKET` overrides the path.
+- Wire: one JSON object per line. Request `{"id", "method", "params"}`; reply `{"id", "ok", "result" | "error", "elapsed_ms"}`; job-based replies carry `rc` + `output`. `subscribe` turns the connection into an event stream (`select`, `status`, `job`, `flash`, `flash_done`).
+- Threads: connection threads parse and wait; every request runs on the UI thread; device calls go through the per-unit queues (parallel across units, serial per unit, ddc calls serialised app-wide). Request limit 45 s (write + read back + save, each <= 5 s, plus queueing behind two other units' ddc calls, x1.8): expiry = error reply, jobs still finish. Idle headless app exits after 900 s without a request (no lingering daemon), never while a job or flash runs.
+- The window follows the port: a command with a unit selects it; `state` dumps what the window shows.
+- Writes only for `test=true` units (the page refuses others, with the reason in the reply). Reads of other units are refused too (dev.py needs `--force` there).
+
+### Commands (`./dev.py gui [--serial S | --unit N] [--hdmi | --dp] [--confirm] [--json] CMD ...`)
+- `ping`, `list` (serial, status, pending, flashing %), `state` (unit, page, node, banner, quick widgets, every row's widget / unit value / dirty), `select [--page P] [--row NAME]`.
+- `get NAME... | --all | --quick`: value + label read from the unit. `set NAME VALUE`: value or option label (`on`, `2.2`), range checked, read back, `verified`. `run NAME --confirm` (action rows). Risky / action rows need `--confirm` (replaces the dialog).
+- `save [NAME...]`: `settings save`, then reads the named rows back. `kvm TARGET` (`hdmi-1`, `D2`, `dp`, `next`, `here`): kvm.py, then VCP 0x60 read back vs expected. `saver NAME | stop`. `health`, `synclog [--whole]`, `host-time`, `note TEXT`.
+- Raw: `vcp get CODE...`, `vcp set CODE VALUE` (read back), `i2c ADDR [BYTES...] [--read N]` (7-bit; write, repeated start, read; `scripts/i2c_raw.py` via `dev.py i2c`, EDID-proven bus), `ddc ARGS` (list / sleep / wake / brightness).
+- `events`: print the event stream. `flash-status`, `quit` (refused while a flash runs).
+- Flag form, run in order, a failed step stops the rest: `--kvm T`, `--set NAME=VALUE`, `--volume N`, `--mute on`, `--brightness N`, `--saver NAME`, `--get NAME`, `--save` (verifies everything set before it), `--i2c ADDR BYTES... [--read N]`.
+- Examples:
+  - `./dev.py gui --serial AWT26110002 --kvm hdmi-1 --save` (view changes, input switches, setting saved, read back)
+  - `./dev.py gui --serial AWT26110002 --hdmi --i2c 0x34 0x22`
+  - `./dev.py gui --unit 1 get volume mute` / `set gamma 2.2` / `state --json`
+  - `./dev.py ddc get 0x62 --unit 1` (same reply as before, through the app)
+
+### Flash (async)
+- `./dev.py flash [IMAGE] [--unit N] [--full] [--write-mode ..] [--aux-fast ..] [--verify ..] [--force-ungated ...]` sends the job; the app starts `dev.py flash ... --direct` as a DETACHED worker (`scripts/flash_job.py`: own session, holds `unit_lock` for the whole flash, `AWTO_UNIT_OWNER` set for the child). Gate check (`check_gated`, `.gates.json`, `--force-ungated`) runs inside that worker exactly as before; a refusal = the worker's rc + message.
+- The port replies at once with the job; `flash` events stream parsed log progress (phase, sectors n/N, percent, ETA, errors, ISP recoveries, burst redone) and `flash_done` (rc). The client prints them and exits with the flash's rc; Ctrl-C only detaches. `FLASH_SILENCE_S` = 60 s without events prints a WARN; the client never stops a flash.
+- Job file `tmp/flash_jobs/<serial>.json` (shared by worktrees; pid, unit, argv, log, rc). The app re-attaches on restart (running, or finished and not yet reported). A dead worker without rc = rc 255 and an ERROR line.
+- Nothing signals a flash. The app refuses `quit` (port, headless SIGINT / SIGTERM) while one is followed; the window asks before closing. The flash runs on either way.
+- GUI: strip dot violet "FLASHING 47 %", progress panel (bar, sectors, errors, recoveries, ETA, last log lines). The unit's other operations and probes are refused with "flashing" until the lock is released.
+- Not routed through the port: `deploy`, `recover` (they call the flash code in-process).
 
 ## Not done
 - Search flattens by hiding tree items, not a separate result list.
