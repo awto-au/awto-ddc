@@ -21,6 +21,8 @@ Code: `fw/sdk/Kernel/User Common Function/Code/UserCommonInterface.c` (panel mac
 - Existing registry row 118 `bl_on_delay` delays the pin from "wanted" (step 3), not from video ready. Default 0.
 - Datasheet T8 (video valid -> LED on, >= 200 ms): not followed (Dan); `docs/delays.md`, `docs/monitors/panel-innolux-m280dca-e3b.md`.
 
+Measured 2026-11-20, unit 3, warm reset (ISP 0xEE), image 50fd217, sync log ms from the reset (knob 150 ms run): boot reason 113, GPIO 129, M2PLL 133, VDD kept on / backlight on by boot 133 (default image), PHY on 209, HPD 300, link trained + stream on 375, ACTIVE 1423 (DISPLAY SETTING 519 ms), backlight on with knob 150: 1575 (= 152 ms after ACTIVE). Default: backlight on at 133, 1.3 s before video is ready. Details in the issue.
+
 ## Test knob
 
 - 4 B no-init XDATA at `AWTO_BLK_ADDR` (`RL6449_Project.h` `AWTO_BLK_*`, 0xF698): magic, ms lo, ms hi, check byte. Outside the linker XDATA range like the watchdog record, so it survives an ISP warm reset. RAM only, no NVRAM, no registry row.
@@ -37,5 +39,7 @@ Code: `fw/sdk/Kernel/User Common Function/Code/UserCommonInterface.c` (panel mac
 - Order: values sorted, taken with a stride coprime to n (7 values: 0 200 50 300 100 400 150), the round repeated `--runs` times.
 - Per run: knob write + read back, ISP reset, no bus traffic for 2.1 s, sync log read until ACTIVE + E1/E2 rows are in (5 s from the reset), verdict, host note `run k/n delay D ms` on the unit's console, gap.
 - Verdict OK = E2 knob equals the planned value and E1 is present; KNOB-MISMATCH / NO-KNOB-ROW / NO-BL-ROW otherwise. 3 broken runs in a row abort the sweep.
+- 21 runs at gap 8 s: about 5 min (14.5 s per run, dry run 2026-11-20).
+- `--camera`: hook for `scripts/cam_frames.py` (branch cam-lcd-frames); TODO stub until it is on main. Match a recording by `reset_at` + `planned_ms` in the TSV.
 - Output: START banner (host clock), RUN lines (reset time with ms, ACTIVE ms, backlight ms after boot / after video ready, estimated host time of the pin edge), summary table, DONE banner; `./tmp/logs/bl_sweep.tsv`, `./tmp/logs/bl_sweep.log`.
 - Offline proof: `scripts/bl_knob_sim.py BIN MAP` (cold boot in fw_sim with the knob pre-seeded).

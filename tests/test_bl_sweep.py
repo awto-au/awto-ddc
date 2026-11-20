@@ -28,7 +28,7 @@ def test_parse_and_verdict():
     out = (
         "  1500:panel:test knob backlight on delay 150ms, counts from video ready\n"
         "  1700:panel:backlight on, 1702ms after MCU boot, 152ms after video ready (test knob)\n"
-        "  1550:system:in DISPLAY SETTING for 111ms->ACTIVE:display set, panel video ready; picture on screen\n"
+        "2026-11-20T21:49:15+11:00   1550:system:in DISPLAY SETTING for 111ms->ACTIVE:display set, panel video ready; picture on screen\n"
     )
     m = B.parse(out)
     assert (m["knob"], m["boot"], m["ref"], m["active"]) == (150, 1702, 152, 1550)

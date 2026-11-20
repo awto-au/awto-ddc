@@ -35,6 +35,7 @@ QUIET_S = 2.1
 # Whole run wait (reset to the lines read) = the brief's 5 s; expiry: run marked NO-ACTIVE / NO-BL, sweep goes on.
 ACTIVE_WAIT_S = 5.0
 STOP_AFTER_FAILS = 3                                     # consecutive runs with a wrong / missing knob row: the knob path is broken
+RUN_S = 6.5                                              # one run without the gap: knob write 2.2 + reset + quiet 2.1 + sync read + note (dry run 2026-11-20)
 BROKEN = ("KNOB", "NO-KNOB", "NO-BL", "RESET")             # verdict prefixes: the knob path / reset does not work
 COLS = ("run", "of", "kind", "planned_ms", "knob_seen_ms", "reset_at", "active_ms", "bl_boot_ms", "bl_after_video_ms", "bl_at_est",
         "late", "verdict")
@@ -98,8 +99,8 @@ def set_knob(unit: str, ms: int | None) -> bool:
         say(f"knob write failed rc={rc}: {out.strip()[-200:]}")
         return False
     rc, out = dev("dbg-read", "--unit", unit, f"{d['ADDR']:X}:4")
-    got = re.findall(r"\b([0-9A-Fa-f]{2})\b", out.split("\n")[-2] if out.strip() else "")
-    ok = rc == 0 and bytes(int(x, 16) for x in got[-4:]) == want
+    m = re.search(rf"@{d['ADDR']:#x}: ((?:[0-9A-Fa-f]{{2}} ?){{4}})", out)
+    ok = rc == 0 and m is not None and bytes.fromhex(m.group(1)) == want
     if not ok:
         say(f"knob read back differs: want {want.hex(' ')}, dbg-read says: {out.strip()[-200:]}")
     return ok
@@ -108,7 +109,7 @@ def set_knob(unit: str, ms: int | None) -> bool:
 RE_E1 = re.compile(r"backlight on, (\d+)ms after MCU boot, (\d+)ms after video ready \(test knob\)")
 RE_E2 = re.compile(r"test knob backlight on delay (\d+) ?ms")
 RE_E3 = re.compile(r"test knob: no video ready in (\d+) ?ms")
-RE_ACTIVE = re.compile(r"^\s*(\d+):system:in DISPLAY SETTING for \d+ms->ACTIVE:display set, panel video ready")
+RE_ACTIVE = re.compile(r"(\d+):system:in DISPLAY SETTING for \d+ms->ACTIVE:display set, panel video ready")
 
 
 def parse(out: str) -> dict:
@@ -189,6 +190,19 @@ def write_tsv(rows: list[dict]) -> None:
             f.write("\t".join("" if r.get(c) is None else str(r.get(c)) for c in COLS) + "\n")
 
 
+def camera_hook(enabled: bool) -> bool:
+    """--camera: record the whole sweep and analyse each run via scripts/cam_frames.py (branch cam-lcd-frames, not on main yet).
+    TODO: when cam_frames.py is on main, start the recording (-c copy) before run 1, and per run call its analysis with the
+    TSV's reset_at + planned_ms (first-light frame, flash frames, picture frame) and add its columns to COLS. No camera code here."""
+    if not enabled:
+        return False
+    if not (ROOT / "scripts/cam_frames.py").is_file():
+        say("--camera: scripts/cam_frames.py not on this branch yet (TODO stub): no recording; match the video by the TSV reset_at times")
+        return False
+    say("--camera: scripts/cam_frames.py exists but the hook is a TODO stub: no recording yet")
+    return False
+
+
 def banner(text: str) -> None:
     bar = "#" * 78
     say(bar)
@@ -203,6 +217,7 @@ def main() -> int:
     ap.add_argument("--values", default=",".join(map(str, DEFAULT_VALUES)))
     ap.add_argument("--runs", type=int, default=3)
     ap.add_argument("--gap-s", type=float, default=8.0)
+    ap.add_argument("--camera", action="store_true", help="record the bench camera for the whole sweep and analyse each run (needs scripts/cam_frames.py)")
     a = ap.parse_args()
     values = [int(x) for x in a.values.split(",")]
     d = knob_defs()
@@ -210,7 +225,8 @@ def main() -> int:
         raise SystemExit(f"values 0..{d['MAX_MS']} ms, runs >= 1; nothing done")
     serial = json.loads((ROOT / "scripts/devices.json").read_text())["units"][a.unit]["serial"]
     seq = order(values, a.runs)
-    est_s = len(seq) * (QUIET_S + 2.0 + a.gap_s + 6.0)           # + knob write / read-back, sync read, note (measured in the dry run)
+    camera_hook(a.camera)
+    est_s = len(seq) * (a.gap_s + RUN_S)                          # RUN_S measured in the dry run
     rows: list[dict] = []
     with unit_lock.held(serial, "bl_sweep"):
         banner(f"START bl-sweep unit {a.unit}: {len(seq)} runs, order {seq[:len(values)]} x {a.runs}\n"
