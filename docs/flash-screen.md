@@ -7,7 +7,7 @@ Status 2026-11-18. Seen on unit 3 (Dan: "looked great").
 - 1 s alert tone first, so the host never starts while the generator is on: `scripts/alert.py --wait`, DDC/CI VCP 0xEB = 6.
   - Rising beep, beep, long beep (880 / 1175 / 1568 Hz, 150 + 50 + 150 + 50 + 600 ms), monitor speaker at the monitor's own volume (VCP 0x62).
   - Same call for "an agent needs Dan": `./dev.py alert --unit 3`.
-- Red full-panel screen with a 72 x 72 px Pac-Man (mouth open / shut) and text rows, from the running firmware (VCP 0xEB = 5), then updated over ISP:
+- Red full-panel screen with a static 36 x 36 px Pac-Man (3 x 2 tiles, mouth open, drawn once, never redrawn) and text rows, from the running firmware (VCP 0xEB = 5), then updated over ISP:
   - title: FLASHING - DO NOT POWER OFF
   - row 1: phase + bank (BANKED / BANK0 / COMMON / BOOT, `boot_last` order) + `SKIP n/N` (image sectors already matching, no need to flash / image sectors; erased = the `SEC n/N` of row 2; totals + on-device manifest: `docs/flash-registry.md`), row 2: address, sector n/N, %
   - row 3: interface (bus kind, ISP kHz, write mode), row 4: burst failures + ISP recoveries, row 5: elapsed + ETA
@@ -17,10 +17,26 @@ Status 2026-11-18. Seen on unit 3 (Dan: "looked great").
 ## How it works
 
 - Firmware: `fw/test/flash_screen.c` draws the screen (window 0 red, 30 x 11 tiles scaled 64 / 6 = 10.67, 1-bit glyphs); `fw/test/saver.c` serves VCP 0xEB in the main loop; sound: `fw/test/snd.c` track `alert`.
-- The OSD circuit keeps drawing while the MCU is held in ISP. The flasher (`scripts/rtd_flash_image.py`) calls `flash_screen.tick(isp, k, info)` per sector: it rewrites only changed char commands over the ISP F4 / F5 window (`rtd_osd.Osd`), the mouth every 2 sectors.
+- The OSD circuit keeps drawing while the MCU is held in ISP. The flasher (`scripts/rtd_flash_image.py`) calls `flash_screen.tick(isp, k, info)` per sector: it rewrites only changed char commands over the ISP F4 / F5 window (`rtd_osd.Osd`): text rows only, at most once per second (`THROTTLE_S`, monotonic deadline, all buses); a change of the burst-failure / recovery counts and the last sector draw at once.
 - Layout source `scripts/gen_flash_screen.py` (-> `fw/test/flash_screen_data.inc`); host `scripts/flash_screen.py`; `tests/test_flash_screen.py` keeps them equal.
-- Rotate 180: the firmware turns map and glyphs, the host writes the mirrored cell (`docs/osd/rotation.md`); the marker file `tmp/flash_screen.shown` carries the rotate flag from `show` to the flasher process.
+- Rotate 180: the firmware turns map and glyphs, the host writes the mirrored cell (`docs/osd/rotation.md`); the marker file `tmp/flash_screen.<bus>.shown` (per bus: flashes of several units run in parallel) carries the rotate flag from `show` to the flasher process.
+- Picture of old vs new, upright and Rotate 180, in the sim: `python scripts/flash_screen_pic.py OLD.bin NEW.bin` (`tmp/flash_screen_pic.png`). Rotate 180: text and Pac-Man turned, mouth to the left, as the panel is mounted.
 - Dry run of the screen without a flash: `python scripts/flash_screen.py test --bus 11`.
+
+## Screen cost (2026-11-20, `dev.py flash --full`, 224 sectors, gated images, main 505a3fd)
+
+- Old = origin/main (72 x 72 px Pac-Man, mouth every 2 sectors, text per sector, DP duty cap 10 %), new = static 36 x 36 px Pac-Man + text at most 1 x / s, off = new image with `AWTO_FLASH_SCREEN_OFF=1`.
+- Seconds of `rtd_flash_image` total (`DONE:` line); in brackets the `screen` bucket of its time split. One run per variant, units flashed in parallel; repeats where listed.
+
+| bus | old | new | off | new vs off | old vs off |
+|---|---|---|---|---|---|
+| HDMI, NVIDIA, 100 kHz (unit 1) | 125.0 (4.4) | 124.8 (4.6), 121.9 (4.3) | 117.2, 116.8 | +6.3 s mean (+5 %) | +7.9 s (+7 %) |
+| DP AUX (unit 2) | 68.5 (1.9) | 69.7 (7.1) | 60.8, 60.6 | +9.0 s (+15 %) | +7.8 s (+13 %) |
+| HDMI, Intel DDC, 1 MHz (unit 3, Rotate 180) | 27.6 (3.8) | 24.1 (0.4) | 23.7 | +0.4 s (+2 %) | +3.9 s (+16 %) |
+
+- DP AUX: a second `new` run did not show the screen (firmware not yet answering VCP 0xEB after the previous flash), so it is not counted; its 60.1 s equals the off runs.
+- The bucket under-reports on DP AUX: old was +7.8 s over off with 1.9 s in the bucket (OSD writes slow the ISP traffic around them as well).
+- Rotate 180 (unit 3): disp_rotate stayed 180 after every flash.
 
 ## 1 MHz ISP
 
@@ -34,7 +50,7 @@ Status 2026-11-18, sim only (no hardware run).
 
 - Cold power-up only (Dan, 2026-11-18): `AwtoBootReason() == AWTO_BOOT_COLD`. Warm resets (host ISP 0xEE, watchdog bite, probe / hardware watchdog reset, any warm start) show nothing.
 - Registry `boot_splash` (id 122, bool, group osd, default On, no VCP code; menu OSD page / DDC paged pair 0xE0 / 0xE1). Off = no splash.
-- Drawing: the flash screen's (red window, 72 x 72 px Pac-Man mouth open, rotate 180 turned) with the title row "AWTO" (second row of `g_aucFsTitle`, `gen_flash_screen.py` `TITLE_SPLASH`). `AwtoFlashDraw(ucSplash, ucStep)` = one step; `AwtoFlashScreen(1 | 2)` runs all steps (flash / preview).
+- Drawing: the flash screen's (red window, 36 x 36 px Pac-Man mouth open, rotate 180 turned) with the title row "AWTO" (second row of `g_aucFsTitle`, `gen_flash_screen.py` `TITLE_SPLASH`). `AwtoFlashDraw(ucSplash, ucStep)` = one step; `AwtoFlashScreen(1 | 2)` runs all steps (flash / preview).
 - Preview: DDC/CI VCP 0xEB = 7 ("Boot splash"); stays until VCP 0xEB = 0.
 - Start: first main pass (`AwtoSaverPoll`, `fw/test/saver.c`) arms it (run SPLASH / why BOOT, sync line E9 79); all draw steps run in the first pass in mode INITIAL.
   - Earlier passes are mode POWER_OFF: the SDK's INITIAL OSD init wipes anything drawn there (white fill seen in the sim).

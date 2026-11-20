@@ -21,7 +21,7 @@ def c_define(name: str, text: str | None = None) -> int:
 def test_layout_matches_generated_header():
     inc = (ROOT / "fw/test/flash_screen_data.inc").read_text()
     for name, val in (("COLS", L.COLS), ("ROWS", L.ROWS), ("PM_COLS", L.PM_COLS), ("PM_ROWS", L.PM_ROWS), ("PM_COL0", L.PM_COL0),
-                      ("PM_ROW0", L.PM_ROW0), ("PM_OPEN", L.PM_OPEN), ("PM_CLOSED", L.PM_CLOSED), ("GLYPHS", L.GLYPHS)):
+                      ("PM_ROW0", L.PM_ROW0), ("PM_OPEN", L.PM_OPEN), ("GLYPHS", L.GLYPHS)):
         assert c_define(f"AWTO_FS_{name}", inc) == val, name
 
 
@@ -50,30 +50,66 @@ def test_text_rows_fit():
         assert len(t) <= L.COLS and all(ch in L.FONT_CHARS for ch in t.upper()), t
 
 
-def test_duty_cap_skips_ticks_while_holding(monkeypatch, tmp_path):
-    """DUTY_MAX holds the next redraw for (1/duty - 1) x the last redraw's time (DP AUX, #254)."""
-    clock = [0.0]
+INFO = {"phase": "BANKED", "bank": 0, "nbank": 15, "addr": 0, "sec": 1, "nsec": 10, "pct": 10, "bad": 0, "recov": 0, "t": 1.0}
+
+
+@pytest.fixture
+def rig(monkeypatch, tmp_path):
+    clock = [100.0]
     monkeypatch.setattr(FS.time, "monotonic", lambda: clock[0])
     marker = tmp_path / "shown"
     marker.write_text('{"rot": 0}')
-    monkeypatch.setattr(FS, "MARKER", marker)
-    monkeypatch.setattr(FS, "DUTY_MAX", 0.10)
-    monkeypatch.setattr(FS, "_hold_until", 0.0)
+    monkeypatch.setattr(FS, "_marker", lambda: marker)
     monkeypatch.setattr(FS, "_prev", {})
+    monkeypatch.setattr(FS, "_next_at", 0.0)
+    monkeypatch.setattr(FS, "_errs", ())
     puts = []
-
-    def put(o, cell, gid):
-        puts.append(cell)
-        clock[0] += 0.01                                   # 10 ms per cell
-    monkeypatch.setattr(FS, "_put", put)
+    monkeypatch.setattr(FS, "_put", lambda o, cell, gid: puts.append((cell, gid)))
     monkeypatch.setattr(FS, "_osd", lambda isp: type("O", (), {"set_opt": lambda self, x: None})())
-    info = {"phase": "BANKED", "bank": 0, "nbank": 15, "addr": 0, "sec": 1, "nsec": 10, "pct": 10, "bad": 0, "recov": 0, "t": 1.0}
-    FS.tick(None, 0, info)
+    return clock, puts
+
+
+def test_pacman_static_and_smaller():
+    assert (L.PM_DISC, L.PM_DISC) == (3 * L.TILE_W, 2 * L.TILE_H)       # 36 x 36 px = 3 x 2 tiles
+    assert L.GLYPHS == L.PM_OPEN + L.PM_COLS * L.PM_ROWS               # one frame, no closed-mouth tiles
+
+
+def test_host_never_writes_pacman_cells(rig):
+    clock, puts = rig
+    pm = {(L.PM_ROW0 + r) * L.COLS + L.PM_COL0 + c for r in range(L.PM_ROWS) for c in range(L.PM_COLS)}
+    for k in range(5):
+        FS.tick(None, k, {**INFO, "sec": k + 1, "pct": k})
+        clock[0] += 1.1
+    assert puts and not pm & {c for c, _ in puts} and all(g < L.PM_OPEN for _, g in puts)
+
+
+def test_text_throttled_to_once_a_second(rig):
+    clock, puts = rig
+    FS.tick(None, 0, INFO)
     first = len(puts)
-    cost = clock[0]
-    assert first > 0 and FS._hold_until == pytest.approx(cost + cost * 9)
-    FS.tick(None, 1, {**info, "sec": 2})                   # inside the hold: nothing drawn
+    assert first > 0
+    for k in range(1, 6):                                   # sectors 0.1 s apart: nothing drawn
+        clock[0] += 0.1
+        FS.tick(None, k, {**INFO, "sec": k + 1, "pct": 20, "t": 2.0})
     assert len(puts) == first
-    clock[0] = FS._hold_until + 0.001
-    FS.tick(None, 2, {**info, "sec": 3})
+    clock[0] += 0.6                                         # 1.1 s since the draw
+    FS.tick(None, 6, {**INFO, "sec": 7, "pct": 70})
     assert len(puts) > first
+
+
+def test_errors_draw_immediately(rig):
+    clock, puts = rig
+    FS.tick(None, 0, INFO)
+    n = len(puts)
+    clock[0] += 0.1
+    FS.tick(None, 1, {**INFO, "sec": 2, "bad": 1})
+    assert len(puts) > n
+
+
+def test_last_sector_draws_immediately(rig):
+    clock, puts = rig
+    FS.tick(None, 0, INFO)
+    n = len(puts)
+    clock[0] += 0.1
+    FS.tick(None, 9, {**INFO, "sec": 10, "pct": 100})
+    assert len(puts) > n

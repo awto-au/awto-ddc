@@ -1,12 +1,13 @@
 #!/usr/bin/env python3
-"""Flash warning screen (#232): red screen, a 72 x 72 px Pac-Man whose mouth opens / shuts, progress text, while the host flashes.
+"""Flash warning screen (#232): red screen, a static 36 x 36 px Pac-Man (drawn once by the firmware), progress text, while the host flashes.
 
 usage: flash_screen.py show --bus N          start the screen in the running firmware (DDC/CI VCP 0xEB = 5)
        flash_screen.py test --bus N [--ticks K]   show, enter ISP, K updates with fake progress, OSD off, reset (a flash dry run for the screen)
   Library (rtd_flash_image.py): show(bus), tick(isp, n, info) per sector, clear(isp) before the exit reset. Every call is best effort:
   a failure is logged and never fails the flash.
   The firmware (fw/test/flash_screen.c) draws the screen; the OSD circuit keeps it while the MCU is held in ISP; this module rewrites map words
-  (char commands) over the ISP F4/F5 window (rtd_osd.Osd): the mouth frame (24 tiles) and three text rows, only the cells that changed.
+  (char commands) over the ISP F4/F5 window (rtd_osd.Osd): the text rows only, the cells that changed, at most once a second (THROTTLE_S);
+  a change of the error counts and the last sector draw at once. The Pac-Man is never rewritten.
   Layout = scripts/gen_flash_screen.py. Text rows: 1 bank / sector / percent, 2 interface (env AWTO_FLASH_IFACE, set by dev.py), 3 errors.
   Display Rotate 180 (marker file): logical cell c is written at cells - 1 - c; the firmware already turned the glyphs.
 Log: ./tmp/logs/flash_screen.log
@@ -27,15 +28,14 @@ import gen_flash_screen as L
 
 ROOT = Path(os.environ.get("AWTO_DDC_REPO") or Path(__file__).resolve().parent.parent)
 LOG = ROOT / "tmp/logs/flash_screen.log"
-MARKER = ROOT / "tmp/flash_screen.shown"      # written by show() (JSON: rot), read by tick / clear in the flasher process, removed by clear
+BUS = None                      # set by show() / the flasher: one marker per bus so flashes of several units can run in parallel
+# marker: written by show() (JSON: rot), read by tick / clear in the flasher process, removed by clear
 VCP_SAVER = 0xEB
 VCP_FLASH_SCREEN = 5            # screensaver_now value "Flash warning" (registry row 121)
 VCP_PAGED_ID, VCP_PAGED_VAL = 0xE0, 0xE1
 ROW_DISP_ROTATE = 32            # registry row id of disp_rotate
 DRAW_WAIT_S = 0.6               # firmware draws in one main-loop pass: ~330 cells + 90 glyphs of data port writes (~0.1 s) after the DDC write; 6 x
-MOUTH_EVERY = 2                 # sectors per mouth toggle (24 cell writes each)
-DUTY_MAX = 0.0                  # >0: cap on the share of flash time spent drawing (DP AUX, #254); 0 = redraw every sector
-_hold_until = 0.0
+THROTTLE_S = 1.0                # text rows redraw at most once per second on every bus (Dan 2026-11-20); the row text itself changes at ~1 s anyway
 ENV_IFACE = "AWTO_FLASH_IFACE"
 ENV_OFF = "AWTO_FLASH_SCREEN_OFF"   # =1: never show (a flash from an image whose screen layout differs from this script)
 # Values mirrored from fw/test/flash_screen.c (tests/test_flash_screen.py checks them)
@@ -46,7 +46,13 @@ CHAR_WORD = L.ROWS + 1          # first char command word (row commands 0..ROWS-
 CELLS = L.COLS * L.ROWS
 
 _prev: dict[int, int] = {}      # logical cell -> glyph id last written (this process)
+_next_at = 0.0                  # monotonic time of the next allowed redraw
+_errs: tuple = ()               # (bad, recov) at the last redraw
 _rot = 0
+
+
+def _marker() -> Path:
+    return ROOT / f"tmp/flash_screen.{BUS}.shown"
 
 
 def say(s: str) -> None:
@@ -75,7 +81,9 @@ def _rotated(bus: int) -> int:
 
 def show(bus: int) -> bool:
     """Ask the running firmware for the screen. False = not shown (old firmware, DDC busy): the flash goes on without it."""
-    MARKER.unlink(missing_ok=True)
+    global BUS
+    BUS = bus
+    _marker().unlink(missing_ok=True)
     if os.environ.get(ENV_OFF) == "1":
         say(f"show: {ENV_OFF}=1: no flash screen")
         return False
@@ -87,8 +95,8 @@ def show(bus: int) -> bool:
     ok = _ddc(bus, "setvcp", f"{VCP_SAVER:02X}", str(VCP_FLASH_SCREEN)) is not None
     say(f"show: setvcp {VCP_SAVER:02X} {VCP_FLASH_SCREEN} on bus {bus} (rotate 180: {rot}): {'ok' if ok else 'FAILED'}")
     if ok:
-        MARKER.parent.mkdir(parents=True, exist_ok=True)
-        MARKER.write_text(json.dumps({"rot": rot, "at": isostamp.now()}))
+        _marker().parent.mkdir(parents=True, exist_ok=True)
+        _marker().write_text(json.dumps({"rot": rot, "at": isostamp.now()}))
         time.sleep(DRAW_WAIT_S)
     return ok
 
@@ -116,47 +124,45 @@ def rows_text(info: dict) -> list[str]:
             f"TIME {_mmss(info['t'])} ETA {_mmss(eta)}"]
 
 
-def _cells(info: dict, mouth_open: bool) -> dict[int, int]:
-    """Logical cell -> (glyph id) for everything the host owns: text rows and the Pac-Man frame."""
+def _cells(info: dict) -> dict[int, int]:
+    """Logical cell -> glyph id for everything the host owns: the text rows."""
     out = {}
     for row, txt in zip(L.ROW_LINES, rows_text(info)):
         for c, g in enumerate(L.ids(txt.upper().replace("_", "-"))):
             out[row * L.COLS + c] = g
-    base = L.PM_OPEN if mouth_open else L.PM_CLOSED
-    for r in range(L.PM_ROWS):
-        for c in range(L.PM_COLS):
-            out[(L.PM_ROW0 + r) * L.COLS + L.PM_COL0 + c] = base + r * L.PM_COLS + c
     return out
 
 
 def _put(o, cell: int, gid: int) -> None:
-    yellow = L.PM_OPEN <= gid
     phys = CELLS - 1 - cell if _rot else cell
-    o.write_word(CHAR_WORD + phys, CHAR_B0, gid, ((YELLOW if yellow else WHITE) << FG_SHIFT) | BG)
+    o.write_word(CHAR_WORD + phys, CHAR_B0, gid, (WHITE << FG_SHIFT) | BG)
+
+
+def due(info: dict, now: float) -> bool:
+    """Redraw when the 1 s deadline passed, the error counts changed, or this is the last sector (100 %)."""
+    return now >= _next_at or (info["bad"], info["recov"]) != _errs or info["sec"] >= info["nsec"]
 
 
 def tick(isp, n: int, info: dict) -> None:
-    """Update the screen for sector n: changed text cells always, the mouth every MOUTH_EVERY sectors."""
-    global _rot, _hold_until
-    if not MARKER.exists():
+    """Update the text rows for sector n (changed cells only), at most once per THROTTLE_S; errors and the last sector at once."""
+    global _rot, _next_at, _errs
+    if not _marker().exists():
         return
-    t0 = time.monotonic()
-    if DUTY_MAX and t0 < _hold_until:
+    now = time.monotonic()
+    if _prev and not due(info, now):
         return
     try:
         import rtd_osd as O
         if not _prev:
-            _rot = json.loads(MARKER.read_text()).get("rot", 0)
+            _rot = json.loads(_marker().read_text()).get("rot", 0)
         o = _osd(isp)
         o.set_opt(O.SRAM_FONT)
-        want = _cells(info, (n // MOUTH_EVERY) % 2 == 0)
-        for cell, gid in want.items():
+        for cell, gid in _cells(info).items():
             if _prev.get(cell) != gid:
                 _put(o, cell, gid)
                 _prev[cell] = gid
-        if DUTY_MAX:
-            t1 = time.monotonic()
-            _hold_until = t1 + (t1 - t0) * (1 / DUTY_MAX - 1)
+        _errs = (info["bad"], info["recov"])
+        _next_at = now + THROTTLE_S
     except Exception as e:                                  # noqa: BLE001 - best effort: never fail a flash for the picture
         import traceback
         say(f"tick {n}: {e!r}: " + " <- ".join(f"{f.name}:{f.lineno}" for f in reversed(traceback.extract_tb(e.__traceback__)[-5:])))
@@ -164,10 +170,12 @@ def tick(isp, n: int, info: dict) -> None:
 
 def clear(isp) -> None:
     """OSD circuit off before the exit reset: the new firmware starts with an empty OSD."""
-    if not MARKER.exists():
+    global _next_at, _errs
+    if not _marker().exists():
         return
-    MARKER.unlink(missing_ok=True)
+    _marker().unlink(missing_ok=True)
     _prev.clear()
+    _next_at, _errs = 0.0, ()
     try:
         _osd(isp).osd_enable(False)
         say("clear: OSD off")

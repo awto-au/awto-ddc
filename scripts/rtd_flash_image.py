@@ -67,7 +67,6 @@ from rtd_flash_sector import (
 )
 
 FLASH = 1 << 20
-SCREEN_DUTY_AUX = 0.10      # flash-screen time share on DP AUX (redraws are AUX-bound; docs/flash-dp-aux.md)
 DUMPS = Path.home() / "vendors/realtek/analysis/dumps"
 
 
@@ -608,7 +607,7 @@ def program(isp, img, diff, reprot, state, hashes, crc_ok, nudge, bk="the unit's
                 write_sector(isp, s, img[s:s + SECTOR], crc_ok, nudge)
             state.sectors[i] = hashes[i]
             RUN.written = k + 1
-            with phase("screen"):                       # #232: progress + mouth on the warning screen, best effort
+            with phase("screen"):                       # #232: progress text on the warning screen, best effort
                 FSCR.tick(isp, k, {"phase": _phase(i), "bank": s // BANK, "nbank": FLASH // BANK - 1, "addr": s, "sec": k + 1,
                                    "nsec": len(diff), "pct": (k + 1) * 100 // len(diff), "bad": getattr(isp, "burst_fails", 0),
                                    "recov": sum(RECOVERIES.values()), "t": time.monotonic() - t0, "skip": RUN.skipped,
@@ -888,8 +887,7 @@ def flash_main(a) -> int:
         f"no_backup={a.no_backup} full={a.full} verify={a.verify} write_mode={a.write_mode} burst_chunk={a.burst_chunk}")
     kind = i2cbus.bus_kind(a.bus) if a.bus_kind == "auto" else a.bus_kind
     log(f"bus kind: {kind} ({i2cbus.adapter_name(a.bus) or 'no adapter name'}{', given' if a.bus_kind != 'auto' else ''})")
-    if kind == "dp-aux":
-        FSCR.DUTY_MAX = SCREEN_DUTY_AUX
+    FSCR.BUS = a.bus                                    # the screen marker file is per bus
     if kind == "dp-aux" and a.write_mode == "byte":
         log("WARN: --write-mode byte on DP AUX (~90 s per sector, #177): using burst")
         a.write_mode = "burst"

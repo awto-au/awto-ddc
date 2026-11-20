@@ -3,9 +3,9 @@
 #include "flash_screen_data.inc"
 
 // Flash warning screen (#232): drawn by the running firmware just before the host flasher halts the MCU (DDC/CI VCP 0xEB = 5, `dev.py flash`).
-// Red over the whole panel (window 0), a 72 x 72 px Pac-Man (6 x 4 tiles, mouth open / shut) and text rows; the map is 30 x 11 tiles of 12 x 18 px
+// Red over the whole panel (window 0), a static 36 x 36 px Pac-Man (mouth open, drawn once) and text rows; the map is 30 x 11 tiles of 12 x 18 px
 // scaled 64 / 6 = 10.67 (3840 px wide). The OSD circuit keeps drawing while the MCU is held in ISP: scripts/flash_screen.py rewrites map words over ISP
-// (mouth frame, progress text). Layout constants come from scripts/gen_flash_screen.py (flash_screen_data.inc); the rest is mirrored in
+// (progress text, at most once a second). Layout constants come from scripts/gen_flash_screen.py (flash_screen_data.inc); the rest is mirrored in
 // scripts/flash_screen.py and checked by tests/test_flash_screen.py. Turned 180 when the display is (docs/osd/rotation.md): map cells mirrored, glyphs turned.
 extern void osd_tc_show(BYTE ucOn);
 extern void osd_tc_close(void);
