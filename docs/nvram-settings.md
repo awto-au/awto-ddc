@@ -338,3 +338,9 @@
 | 25 min of backlight | 0 (1 save deferred, rode along with the next flush) | 0 |
 | one changed VCP 0x10 set (gate) | 6 (3 items) | 4 (2 items) |
 | POWER off | 4 | 4 (power status; no panel-only write) |
+
+- Burst test, unit 1 (HDMI D3, bus 18), 2026-11-21, `scripts/nv_burst.py`: 20 x `gui set osd_transparency` (alternating 40 / 45, 3 s per call = 52-65 s, DDC/CI traffic throughout) then 75 s idle.
+  - main 6439f66b (gate 3 s / 500 ms / 30 s): 11-12 flush episodes (a write after almost every call).
+  - nv-policy fa57f59d (gate 10 s / 10 s / 60 s): 1 flush, 'forced at max wait (60s)', 2 programs (OSD data + used time), 5 ms.
+  - One set then idle: written 10 s after the last DDC/CI (gate open, 'OSD data, panel time'); value 55 survived an ISP MCU reset.
+  - Set then DDC/CI sleep 2 s later: flush at once (counter `why` 3), not after 10 s.
