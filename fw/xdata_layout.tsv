@@ -21,6 +21,8 @@ RTDFactoryFunction	0xd700	1817	63
 RL6449_Series_FRC	0xd700	1880	62
 diag	0xd700	1942	54
 RL6449_Series_TMDSRx2	0xd700	1996	57
+UserCommonInterface	0xd700	2053	26
+RL6449_Series_Measure	0xd700	2079	15
 awto_arith_arith	0xd700	2100	50
 ScalerSync	0xd700	2150	48
 text_layer	0xd700	2198	46
@@ -47,7 +49,6 @@ RL6449_Series_Memory	0xd700	2775	19
 ScalerCommonDPRx1	0xd700	2794	19
 awto_reg_reg	0xd700	2813	18
 osd_demo	0xd700	2831	18
-UserCommonInterface	0xd700	2849	17
 ScalerFRC	0xd700	2866	15
 settings_glue	0xd700	2881	15
 ScalerCommonNVRam	0xd700	2896	14
@@ -136,4 +137,3 @@ swlog	0xe780	2883	278
 inputs	0xe780	3161	232
 saver_canvas	0xe780	3393	229
 awto_settings_menu	0xe780	3622	135
-RL6449_Series_Measure	0xe780	3757	15
