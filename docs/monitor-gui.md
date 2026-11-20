@@ -19,7 +19,10 @@ Launch: `python3 tools/osd_editor/run.py --monitor` (opens on the monitor tab) o
 - Source: `scripts/devices.json` (names, serial, input, `test`). Button: hotkey number, unit, last 4 of serial, input, status dot.
 - Hotkeys: Ctrl+1..9 anywhere on the page, plain 1..9 when focus is not in a text field, Ctrl+Tab next unit, Ctrl+F search.
 - Dot: green = probe answered, amber = a job queued or running, red = no answer or monitor not detected, grey = read-only unit (not probed).
-- Probe = `dev.py ddc get 0x62 --unit N` (read-only, EDID guard inside dev.py), per idle unit every 15 s while the tab is visible; the reply also refreshes the volume value.
+- Probe policy per unit (`monitor.probe_policy`): `ddc` (HDMI / DVI) = `dev.py ddc get 0x62 --unit N` (read-only, EDID guard inside dev.py), per idle unit every 15 s while the tab is visible; the reply also refreshes the volume value.
+  - `light` (connector `card*-DP-*`, I2C over DP AUX) = no DDC/CI at all: dot green when the sysfs scan sees the unit's EDID; Get all / quick read / sets stay on demand.
+  - `dev.py ddc` / `ddc_ctl.py --bus N` no longer runs a full `ddcutil detect` (all buses incl. AUX, ~1 s): the connector comes from the DRM sysfs `ddc` link, one `ddcutil --bus N getvcp`.
+  - 2026-11-20 unit 2 'picture black' report: probes at the 15 s rate gave no DRM / link event; cause found = repeated `set brightness = 0` jobs (see the issue draft), not the probe.
 - Auto-detect: EDID serials from `/sys/class/drm/*/edid` (kernel copy, no I2C from the GUI), rescanned every 15 s (hotplug). A unit whose serial is not seen is red and not probed or read. No known serial seen at all = no scan result, devices.json stands.
 - Per-unit state in memory (values, touched-not-set values, last read, tree node, output, banner): a switch is a view swap, no read.
 - "Get all" runs only on the button, the live-refresh checkbox, or when a selected unit's view is older than 60 s (or never read).

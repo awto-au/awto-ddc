@@ -294,10 +294,14 @@ def detect_and_probe():
     settle(pg)
     assert pg.states["3"].dot() == "ok"
     seen.add(units["2"]["serial"])                                     # hotplug: the next scan finds it
+    n0 = len(fb.calls)
     pg.probe_tick()
     settle(pg)
     assert pg.states["2"].detected is True
-    print("ok scan marks absent units (no probe), probes set green / red dots, hotplug is picked up")
+    assert MON.probe_policy(units["2"]) == "light" and MON.probe_policy(units["1"]) == "ddc"
+    assert pg.states["2"].dot() == "ok"                                # DP AUX unit: dot from the scan, never a DDC call
+    assert sorted(c[-1] for c in fb.calls[n0:] if "ddc" in c) == ["1", "3"], fb.calls[n0:]
+    print("ok scan marks absent units (no probe), probes set green / red dots, hotplug is picked up, DP AUX unit gets the light probe")
 
 
 def advanced_pages():

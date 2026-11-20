@@ -63,6 +63,18 @@ def detect():
     return sorted(mons, key=lambda m: m["connector"])
 
 
+def bus_monitor(bus: int, drm_root: Path = Path("/sys/class/drm")):
+    """[{connector, bus, model}] for one i2c bus from the DRM sysfs `ddc` links: no `ddcutil detect`, no EDID / DDC traffic on the other buses
+    (a full detect probes every bus incl. DP AUX; dev.py has already proven this bus by EDID serial). [] = no connector owns the bus"""
+    for d in sorted(drm_root.glob("card*-*")):
+        try:
+            if (d / "ddc").resolve().name == f"i2c-{bus}":
+                return [{"connector": d.name, "bus": bus, "model": "?"}]
+        except OSError:
+            continue
+    return []
+
+
 def select(mons, sel):
     if sel == "all":
         return mons
@@ -123,7 +135,7 @@ def main():
 
     i2cbus.dev_hint("ddc", "ddc_ctl.py")
     setup_logging()
-    mons = [m for m in detect() if a.bus is None or m["bus"] == a.bus]
+    mons = bus_monitor(a.bus) if a.bus is not None else detect()
     if not mons:
         log.error("no monitors detected")
         return 2

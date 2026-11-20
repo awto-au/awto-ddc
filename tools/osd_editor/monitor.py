@@ -74,6 +74,12 @@ def detect_serials() -> set[str]:
     return out
 
 
+def probe_policy(info: dict) -> str:
+    """"light" = a unit on DP AUX (connector card*-DP-*): the dot comes from the sysfs scan, no periodic DDC/CI traffic (#unit2-blank);
+    "ddc" = HDMI / DVI: a read-only VCP 0x62 get on the unit's own bus"""
+    return "light" if "-DP-" in str(info.get("connector", "")) else "ddc"
+
+
 def flash_state(serial: str) -> str:
     """"owner tool" while a live flash holds the unit lock (flashing keeps its own ISP path; the GUI only shows it), else ''"""
     cur = unit_lock.read(serial)
@@ -1007,7 +1013,19 @@ class MonitorPage(QWidget):
         self.scan()
         for n, st in self.states.items():
             if st.writable and st.detected is not False and not st.pending and not st.flash:
+                if probe_policy(st.info) == "light":
+                    self._probe_light(n, st)
+                    continue
                 self.run(f"probe VCP {PROBE_VCP}", self.dev("ddc", "get", PROBE_VCP, unit=n), None, "ddc", unit=n, probe=True)
+
+    def _probe_light(self, n: str, st: UnitState):
+        """no DDC/CI: the scan (sysfs EDID present = cable and sink answered the kernel) is the whole probe"""
+        old = st.dot()
+        if st.detected:
+            st.probe_fails, st.status = 0, "ok"
+        if st.dot() != old:
+            self.say(f"unit {n} status {old} -> {st.dot()} (light probe: sysfs scan, no DDC)")
+        self._strip_text(n)
 
     def refresh_toggled(self, on: bool):
         self.timer.start() if on else self.timer.stop()
