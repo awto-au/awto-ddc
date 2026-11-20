@@ -389,11 +389,11 @@ def gen_doc(rows, pages, tree, sch):
            "`0xE4` = menu command (op << 8 | arg) / state, `0xE5` = cursor item (read).",
            f"- DDC/CI capabilities (generated): `{caps_string(rows)}`",
            "- Recovery (all defaults): VCP 0x04 or debug test command 0x40 (no key recovery, awto-ddc#132).",
-           "- Stored width: ints within 0..255 are 1 B raw; ints on a step grid of <= 255 steps are 1 B as (value - min) / step, "
+           ("- Stored width: ints within 0..255 are 1 B raw; ints on a step grid of <= 255 steps are 1 B as (value - min) / step, "
            "so a value set off the grid rounds to the nearest step when saved (RAM keeps the exact value until reboot); "
            "other ints 2 B. The schema change that introduced this resets the stored rows without an SDK field to defaults "
            "once (the aux block fails its layout check): search_*, nocable_*, pwr_*, panel_t*, bl_pwm_ms, screensaver*, "
-           "backlight_on_delay, input enables, etc.; SDK-field rows (brightness ...) keep their values.",
+           "backlight_on_delay, input enables, etc.; SDK-field rows (brightness ...) keep their values."),
            "- Risky rows (`risky`): applied, then reverted after 15 s unless confirmed (Menu, or VCP 0xE3 = 1).",
            "- Flags: `nv` stored, `live` applied while adjusting, `risky` auto-revert, `reboot` after restart, "
            "`ro` status, `inert` stored only: dimmed with `*` after the label, not changed from the menu (DDC/CI still "
