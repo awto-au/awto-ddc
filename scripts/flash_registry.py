@@ -205,7 +205,8 @@ def main(argv: list[str]) -> int:
         img = Path(argv[2])
         if not img.is_file() or not img.with_suffix(".map").is_file():
             raise SystemExit(f"adopt: {img} and its .map beside it are needed; nothing done")
-        rec = record(argv[1], img, source="adopt")
+        wt = _git(img.parent, "rev-parse", "--show-toplevel")      # provenance = the tree the image was built in
+        rec = record(argv[1], img, source="adopt (not flashed by this run)", **({"worktree": wt, "commit": _git(Path(wt), "rev-parse", "--short", "HEAD")} if wt else {}))
         print(f"{argv[1]}: recorded {rec['tag']} ({rec['sha256'][:12]})")
         return 0
     if argv[:1] == ["list"]:
