@@ -114,7 +114,7 @@ def main() -> int:
         check("schema", sch == T.SCHEMA, f"fw 0x{sch:04X} table 0x{T.SCHEMA:04X}")
         b = T.BY_NAME
         check("boot defaults", r.box.get_row(b["brightness"]) == b["brightness"]["default"] and
-              r.box.get_row(b["panel_t3"]) == b["panel_t3"]["default"])
+              r.box.get_row(b["panel_t4"]) == b["panel_t4"]["default"])
         if not a.no_pages:
             r.key("menu")
             rep["png"].append(r.shot("main"))
@@ -143,23 +143,23 @@ def main() -> int:
             # risky prompt: Panel timing > T3 +1 step, then Exit = undo
             r.key("right", tops.index(next(i for i, p in enumerate(T.PAGES) if p["group"] == "panel")))
             r.key("menu")
-            r.key("right", [T.ROWS[e]["name"] for e in T.PAGES[next(i for i, p in enumerate(T.PAGES) if p["group"] == "panel")]["entries"]].index("panel_t3"))
+            r.key("right", [T.ROWS[e]["name"] for e in T.PAGES[next(i for i, p in enumerate(T.PAGES) if p["group"] == "panel")]["entries"]].index("panel_t4"))
             r.key("menu"); r.key("right"); r.key("menu")
             rep["png"].append(r.shot("risky"))
-            v = r.box.get_row(b["panel_t3"])
-            check("risky pending value", v == b["panel_t3"]["default"] + b["panel_t3"]["step"], f"got {v}")
+            v = r.box.get_row(b["panel_t4"])
+            check("risky pending value", v == b["panel_t4"]["default"] + b["panel_t4"]["step"], f"got {v}")
             r.key("exit")
-            v = r.box.get_row(b["panel_t3"])
-            check("risky undo (Exit)", v == b["panel_t3"]["default"], f"got {v}")
+            v = r.box.get_row(b["panel_t4"])
+            check("risky undo (Exit)", v == b["panel_t4"]["default"], f"got {v}")
             r.key("exit"); r.key("exit")
         # host mailbox: plain, enum, risky (confirmed), MCCS code
         r.box.set_row(b["contrast"], 33)
         r.box.set_row(b["gamma"], 3)
-        r.box.set_row(b["panel_t3"], 900)
+        r.box.set_row(b["panel_t4"], 900)
         cur, mx, _ = r.box.call(1, 0x10)
         check("VCP 0x10 = brightness row", cur == r.box.get_row(b["brightness"]) and mx == 100, f"{cur}/{mx}")
         r.box.call(2, 0xE3, 2)                             # save now
-        want = {n: r.box.get_row(b[n]) for n in ("brightness", "contrast", "gamma", "panel_t3")}
+        want = {n: r.box.get_row(b[n]) for n in ("brightness", "contrast", "gamma", "panel_t4")}
         check("flash written", flash.ops["write"] > 0, str(flash.ops))
     finally:
         r.s.bus.close()

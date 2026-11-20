@@ -5,10 +5,10 @@
 
 #define SET_COUNT   118u
 #define SET_PAGES   15u
-#define SET_SCHEMA  0x38C0u    /* CRC-16 of the NV rows (id, type, min, max) */
+#define SET_SCHEMA  0x5EFFu    /* CRC-16 of the NV rows (id, type, min, max) */
 #define SET_NV_COUNT 96u
 #define SET_TEXT_LEN 2164u
-#define SET_AUX_MAX 60u    /* aux block: check byte + stored rows without an SDK field (awto-ddc#151) */
+#define SET_AUX_MAX 57u    /* aux block: check byte + stored rows without an SDK field (awto-ddc#151) */
 
 #define SET_ID_BRIGHTNESS           1u
 #define SET_ID_BLACK_LEVEL          5u

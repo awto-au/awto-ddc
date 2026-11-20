@@ -170,7 +170,8 @@ def aux_rows(rows):
 
 
 def aux_bytes(rows) -> int:
-    return 1 + sum(2 if r["type"] == "int" else 1 for r in aux_rows(rows))
+    """int rows within 0..255 are one byte (mirrors settings.c st_byte)"""
+    return 1 + sum(2 if r["type"] == "int" and not (r["min"] >= 0 and r["max"] <= 255) else 1 for r in aux_rows(rows))
 
 
 def cstr(s: str) -> str:

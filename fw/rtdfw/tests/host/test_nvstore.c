@@ -55,6 +55,7 @@ static int ap_calls;
 AP(aspect) AP(backlight) AP(black_level) AP(colour_temp) AP(contrast) AP(debug_msgs) AP(debug_popup)
 AP(dp_edid) AP(dp_version) AP(factory_menu) AP(gamma) AP(gpio_test) AP(input_mode) AP(input_select)
 AP(key_test) AP(msg_log) AP(osd_font) AP(osd_pos) AP(osd_scale) AP(osd_transparency) AP(overscan) AP(power)
+AP(rotate) AP(screensaver) AP(screensaver_now) AP(screensaver_s)
 AP(power_mode) AP(sdk_language) AP(sdk_sys) AP(search_time) AP(user_rgb) AP(mute) AP(volume) AP(port)
 static int veto_id;                                 /* set_veto refuses this id (0 = none) */
 uint8_t set_veto(uint8_t id, int16_t v) { (void)v; return id == veto_id; }
@@ -98,7 +99,7 @@ int main(void)
 
     /* 3. aux pack / unpack round trip; pending risky value packed as its old value */
     set_put(SET_ID_SEARCH_HDMI_MS, 4000, 0); set_confirm();
-    set_put(SET_ID_PANEL_T3, 900, 1);                    /* risky, pending */
+    set_put(SET_ID_PANEL_T4, 900, 1);                    /* risky, pending */
     len = set_aux_pack();
     CHECK(len == SET_AUX_MAX, "aux length %u of %u", len, SET_AUX_MAX);
     memcpy(save, set_aux_buf(), len);
@@ -109,7 +110,16 @@ int main(void)
     set_aux_unpack(len);
     CHECK(set_get(SET_ID_SEARCH_HDMI_MS) == 4000 && set_get(SET_ID_PANEL_T1) == 12, "aux round trip %d %d",
           set_get(SET_ID_SEARCH_HDMI_MS), set_get(SET_ID_PANEL_T1));
-    CHECK(set_get(SET_ID_PANEL_T3) == 550, "pending risky stored as the old value: %d", set_get(SET_ID_PANEL_T3));
+    CHECK(set_get(SET_ID_PANEL_T4) == 250, "pending risky stored as the old value: %d", set_get(SET_ID_PANEL_T4));
+
+    /* 3b. int rows within 0..255 are one byte: 100 ms is stored as 100, the old 2-byte layout fails the check */
+    set_put(SET_ID_BACKLIGHT_ON_DELAY, 255, 0);
+    len = set_aux_pack(); memcpy(save, set_aux_buf(), len);
+    set_load(); set_aux_unpack(len);
+    CHECK(set_get(SET_ID_BACKLIGHT_ON_DELAY) == 255, "255 ms round trip: %d", set_get(SET_ID_BACKLIGHT_ON_DELAY));
+    set_put(SET_ID_BACKLIGHT_ON_DELAY, 100, 0);
+    len = set_aux_pack(); memcpy(save, set_aux_buf(), len);
+
     save[0] ^= 1;
     memcpy(set_aux_buf(), save, len);
     set_load(); set_aux_unpack(len);

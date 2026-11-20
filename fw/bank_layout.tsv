@@ -1361,8 +1361,7 @@ fn	_vo_at	1	0x52c4	32
 fn	_set_action	1	0x52e4	48
 fn	_set_ap_colour_reset	1	0x5314	16
 fn	_set_apply_all	1	0x5324	32
-fn	_set_aux_pack	1	0x5344	148
-fn	_set_aux_unpack	1	0x53d8	200
+fn	_set_aux_pack	1	0x5344	176
 fn	_set_boot	1	0x54a0	140
 fn	_set_confirm	1	0x552c	20
 fn	_set_defaults	1	0x5540	16
@@ -1375,7 +1374,7 @@ fn	_set_service	1	0x5984	44
 fn	_set_track	1	0x59b0	76
 fn	_st_all_defaults	1	0x59fc	116
 fn	_st_apply	1	0x5a70	52
-fn	_st_aux_check	1	0x5aa4	64
+fn	_st_byte	1	0x5aa4	60
 fn	_st_clampv	1	0x5ae4	60
 fn	_st_cur	1	0x5b20	64
 fn	_st_inputs_ok	1	0x5b60	104
@@ -1471,6 +1470,8 @@ fn	_osd_tc_vlc_end	1	0xaab4	28
 fn	_osd_tc_vlc_put	1	0xaad0	44
 fn	_osd_tc_win_draw	1	0xaafc	348
 fn	_AwtoTextOpen	1	0xac58	568
+fn	_set_aux_unpack	1	0xae90	236
+fn	_st_aux_check	1	0xaf7c	84
 const	_g_stSystemDefaultData	2	0x0000	20
 fn	_ScalerAudioD1GetAudioDetected	2	0x0014	124
 fn	_ScalerAudioGetAudioDetected	2	0x0090	48

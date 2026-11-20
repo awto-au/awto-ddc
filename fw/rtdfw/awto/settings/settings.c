@@ -221,14 +221,19 @@ uint8_t __xdata *set_aux_buf(void)
     return rec;
 }
 
-static uint8_t st_aux_check(void)                  /* layout check: ids and types of the aux rows */
+static uint8_t st_byte(void)                       /* row loaded: an int row within 0..255 is stored as one byte */
+{
+    return row.type == STY_INT && row.min >= 0 && row.max <= 255;
+}
+
+static uint8_t st_aux_check(void)                  /* layout check: ids, types and widths of the aux rows */
 {
     uint8_t i, c = 0x5A;
 
     for (i = 0; i < SET_COUNT; i++) {
         set_row(i, &row);
         if ((row.flags & (SF_NV | SF_SDK)) == SF_NV)
-            c = (uint8_t)((c << 1 | c >> 7) ^ row.id ^ (row.type << 6));
+            c = (uint8_t)((c << 1 | c >> 7) ^ row.id ^ (row.type << 6) ^ (st_byte() ? 0x35 : 0));
     }
     return c;
 }
@@ -245,7 +250,7 @@ uint8_t set_aux_pack(void)
             continue;
         v = (pend_id != 0 && row.id == pend_id) ? pend_old : val[i];     /* a pending risky value is never stored */
         rec[n++] = (uint8_t)v;
-        if (row.type == STY_INT)
+        if (row.type == STY_INT && !st_byte())
             rec[n++] = (uint8_t)((uint16_t)v >> 8);
     }
     return n;
@@ -263,7 +268,7 @@ void set_aux_unpack(uint8_t len)
         if ((row.flags & (SF_NV | SF_SDK)) != SF_NV)
             continue;
         v = rec[n++];
-        if (row.type == STY_INT)
+        if (row.type == STY_INT && !st_byte())
             v |= (int16_t)((uint16_t)rec[n++] << 8);
         if (v >= row.min && v <= row.max)
             val[i] = v;

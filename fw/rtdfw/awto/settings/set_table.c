@@ -123,7 +123,7 @@ static const struct setting __code tab[SET_COUNT] = {
     {124, 0, 0, 10, 0x03, 0, 1, 1, 1, 0x00, 0, 1986u, 0xFFFFu},  /* monitor */
     {125, 0, 0,  6, 0x03, 0, 1, 1, 1, 0x00, 0, 2001u, 0xFFFFu},  /* cec_en */
     {126, 0, 0,  6, 0x03, 0, 1, 1, 0, 0x00, 0, 2005u, 0xFFFFu},  /* cec_ctl */
-    {127, 2, 2,  3, 0x01, 0, 2000, 10, 100, 0x00, 0, 2017u, 0xFFFFu},  /* backlight_on_delay */
+    {127, 2, 2,  3, 0x01, 0, 255, 5, 100, 0x00, 0, 2017u, 0xFFFFu},  /* backlight_on_delay */
 };
 
 static const uint8_t __code id2idx[128] = {
