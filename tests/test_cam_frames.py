@@ -8,7 +8,6 @@ import pytest
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "scripts"))
 import cam_frames as cf
 
-
 TEXT = ",drawbox=x=20:y=80:w=120:h=60:color=0x00ff00:t=fill,drawbox=x=200:y=20:w=100:h=200:color=0x202040:t=fill"
 
 

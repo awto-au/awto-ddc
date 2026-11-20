@@ -115,7 +115,7 @@ def set_knob(unit: str, ms: int | None, ref: str = "active") -> bool:
 
 
 RE_E1 = re.compile(r"backlight on, (\d+)ms after MCU boot, (\d+)ms after the knob's reference \(test knob\)")
-RE_E2 = re.compile(r"test knob backlight on delay (\d+) ?ms, counts from ([a-z ]+)")
+RE_E2 = re.compile(r"test knob backlight on delay (\d+) ?ms, counts from ([a-z -]+)")
 RE_E3 = re.compile(r"test knob: no reference event in (\d+) ?ms")
 REF_TEXT = {"active": "video ready", "stream": "stream on", "powerup": "power-up"}
 RE_ACTIVE = re.compile(r"(\d+):system:in DISPLAY SETTING for \d+ms->ACTIVE:display set, panel video ready")
@@ -211,9 +211,9 @@ def summary(rows: list[dict]) -> str:
     return "\n".join(out)
 
 
-def write_tsv(rows: list[dict]) -> None:
-    TSV.parent.mkdir(parents=True, exist_ok=True)
-    with TSV.open("w") as f:
+def write_tsv(rows: list[dict], path: Path = TSV) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    with path.open("w") as f:
         f.write("\t".join(COLS) + "\n")
         for r in rows:
             f.write("\t".join("" if r.get(c) is None else str(r.get(c)) for c in COLS) + "\n")
@@ -236,18 +236,24 @@ class Camera:
     def stop_and_analyse(self, rows: list[dict]) -> None:
         pause(self.cf.POST_ROLL_S, "camera: last boot settles")
         self.cf.stop_recording(self.proc)
-        sheets = ROOT / "tmp" / "scratch" / "cam" / ("sweep-" + self.clip.stem[:15])
-        res = self.cf.analyse_sweep(self.clip, sheet_dir=sheets, expect=len(rows))
-        if len(res) != len(rows):
-            say(f"camera: {len(res)} restarts in the video, {len(rows)} runs: video not matched to runs (clip kept)")
-            return
-        for n, (r, (_a, ev)) in enumerate(zip(rows, res, strict=True), 1):
-            def ms(a, b, ev=ev):
-                sp = ev.span(getattr(ev, a), getattr(ev, b))
-                return None if sp is None else round(sp[1])
-            r.update(cam_dark_light_ms=ms("dark", "first_light"), cam_flash_frames=len(ev.flash),
-                     cam_light_picture_ms=ms("first_light", "stable"), cam_dark_picture_ms=ms("dark", "stable"),
-                     cam_sheet=str(sheets / f"run-{n:02d}.png"))
+        add_camera_columns(rows, self.clip)
+
+
+def add_camera_columns(rows: list[dict], clip: Path) -> None:
+    """frames counted inside the clip, one restart per row (split at the dark onsets); also re-run offline: --reanalyse"""
+    import cam_frames as cf
+    sheets = ROOT / "tmp" / "scratch" / "cam" / ("sweep-" + clip.stem[:15])
+    res = cf.analyse_sweep(clip, sheet_dir=sheets, expect=len(rows))
+    if len(res) != len(rows):
+        say(f"camera: {len(res)} restarts in the video, {len(rows)} runs: video not matched to runs (clip kept)")
+        return
+    for n, (r, (_a, ev)) in enumerate(zip(rows, res, strict=True), 1):
+        def ms(a, b, ev=ev):
+            sp = ev.span(getattr(ev, a), getattr(ev, b))
+            return None if sp is None else round(sp[1])
+        r.update(cam_dark_light_ms=ms("dark", "first_light"), cam_flash_frames=len(ev.flash),
+                 cam_light_picture_ms=ms("first_light", "stable"), cam_dark_picture_ms=ms("dark", "stable"),
+                 cam_sheet=str(sheets / f"run-{n:02d}.png"))
 
 
 def banner(text: str) -> None:
@@ -267,8 +273,18 @@ def main() -> int:
     ap.add_argument("--camera", action="store_true", help="record the bench camera for the whole sweep and count frames per run (scripts/cam_frames.py)")
     ap.add_argument("--ref", default="active", choices=sorted(REFS), help="what the delay counts from: ACTIVE (video ready), eDP stream on, panel power-up")
     ap.add_argument("--app-live-ok", action="store_true", help="run although a (shared, idle) GUI app is live: direct access to this unit only")
+    ap.add_argument("--reanalyse", nargs=2, metavar=("CLIP", "TSV"), help="re-count the frames of a recorded sweep clip into its TSV (no hardware)")
     ap.add_argument("--kind", default="reset", choices=("reset", "wake"), help="restart path: ISP warm reset or DDC/CI sleep + wake")
     a = ap.parse_args()
+    if a.reanalyse:
+        rows = [dict(zip(COLS, ln.split("\t"), strict=False)) for ln in Path(a.reanalyse[1]).read_text().splitlines()[1:]]
+        for r in rows:
+            for c in ("planned_ms", "bl_after_video_ms"):
+                r[c] = int(r[c]) if r.get(c) not in (None, "") else None
+        add_camera_columns(rows, Path(a.reanalyse[0]))
+        write_tsv(rows, Path(a.reanalyse[1]).with_suffix(".reanalysed.tsv"))
+        say(summary(rows))
+        return 0
     values = [int(x) for x in a.values.split(",")]
     d = knob_defs()
     if any(not 0 <= v <= d["MAX_MS"] for v in values) or a.runs < 1:

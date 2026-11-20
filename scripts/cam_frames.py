@@ -32,12 +32,14 @@ TILE_W, TILE_H = 352, 264        # analysis size for both streams (ROIs are frac
 ROI_BG = (0.62, 0.56, 0.96, 0.78)    # flat desktop area right of the console, clear of the VLC window and the head
 ROI_TXT = (0.04, 0.24, 0.58, 0.73)   # diag console text area
 ROI_SCR = (0.03, 0.12, 0.97, 0.9)    # whole screen: structure (std of luminance) tells a picture from a uniform flash
-SD_FLAT = 0.5            # std below this x the pre-reset std = uniform field (white flash)
-SD_PIC = 0.5             # std above this x the pre-reset std = a picture with detail
+TINT_MIN = 0.05          # (B-G)/Y of the desktop picture, even overexposed; a white flash is neutral (|.| < 0.03)
+TINT_PRE = 0.15          # the desktop must be at least this tinted before the reset, else the std of the screen decides
+SD_FLAT = 0.5            # fallback (neutral desktop): std below this x the pre-reset std = uniform field
 PIC_STEP = 1.8           # picture appears as a brightness step of at least this over the preceding 8 frames
 PIC_KEEP = 0.8           # and stays above this fraction of that level for the hold (auto exposure ramps down slowly)
 DARK_FRAC = 0.6          # Y below this fraction of the pre-reset level = screen dark
 GLOW_FRAC = 0.1          # first light = Y step over 2 frames above this fraction of (pre-reset level - dark floor)
+FLASH_MIN_Y = 140.0      # a white flash saturates the sensor (Y 180-225 measured); a dark screen lifted by auto exposure stays below (Y ~ 95)
 FLASH_RATIO = 1.25       # Y above this x pre-reset level, with no picture colour = flash (white / garbage)
 GOOD_TOL = 0.12          # |Y - pre| / pre below this = the pre-reset picture level
 GLOW_MIN = 8.0           # Y steps below this above the dark floor are sensor noise (8-bit units)
@@ -186,14 +188,16 @@ def _first_hold(ok: np.ndarray, start: int, hold: int) -> int | None:
 
 def find_events(m: dict[str, np.ndarray], pts_ms: list[float]) -> Events:
     """Camera auto exposure drifts for seconds after a dark phase, so levels are compared inside one restart only:
-    first light = a brightness step; flash = bright AND uniform (low std); picture = a step to a field with detail
-    (high std) that keeps its level."""
+    first light = a brightness step; flash = bright and neutral (white; the desktop stays tinted even when
+    overexposed); picture = a step to the tinted desktop that keeps its level."""
     y, sd, n = m["Y"], m["sd"], len(m["Y"])
     ev = Events(n_frames=n, pts_ms=pts_ms)
     if n < 30:
         ev.note = "clip too short"
         return ev
     pre, pre_sd = float(np.median(y[:10])), float(np.median(sd[:10]))
+    chroma = (m["B"] - m["G"]) / np.maximum(y, 1.0)
+    tinted = chroma >= TINT_MIN if float(np.median(chroma[:10])) >= TINT_PRE else sd >= SD_FLAT * pre_sd
     ev.level_pre = pre
     dark_idx = np.nonzero(y < DARK_FRAC * pre)[0]
     if not len(dark_idx):
@@ -215,12 +219,14 @@ def find_events(m: dict[str, np.ndarray], pts_ms: list[float]) -> Events:
         ev.first_light -= 1
     pic = np.zeros(n, bool)
     for i in range(8, n - STABLE_HOLD):
-        pic[i] = (sd[i] >= SD_PIC * pre_sd and y[i] >= PIC_STEP * float(np.min(y[i - 8:i]))
+        pic[i] = (bool(np.median(tinted[i:i + STABLE_HOLD])) and y[i] >= PIC_STEP * float(np.min(y[i - 8:i]))
                   and bool((y[i + 1:i + STABLE_HOLD] >= PIC_KEEP * y[i]).all()))
     cand = np.nonzero(pic[ev.first_light:])[0]
     ev.stable = ev.first_light + int(cand[0]) if len(cand) else None
     end = ev.stable if ev.stable is not None else n
-    ev.flash = [i for i in range(ev.first_light, end) if y[i] > FLASH_RATIO * pre and sd[i] < SD_FLAT * pre_sd]
+    ev.flash = [i for i in range(ev.first_light, end) if y[i] > max(FLASH_RATIO * pre, FLASH_MIN_Y) and not tinted[i]]
+    if ev.flash and ev.flash[0] == ev.first_light + 1:       # the wipe frame (rolling shutter) that starts the flash
+        ev.flash.insert(0, ev.first_light)
     txt = np.convolve(m["txt"], np.ones(3) / 3, mode="same")
     txt_final = float(np.median(m["txt"][-15:]))
     if txt_final > 0.002:
@@ -247,7 +253,7 @@ def table(ev: Events) -> list[str]:
         d = f"{i - prev:>9}{ev.pts_ms[i] - ev.pts_ms[prev]:>8.0f}" if prev is not None else ""
         out.append(f"{name:<26}{i:>6}{ev.pts_ms[i]:>9.0f}{d}")
         prev = i
-    out.append(f"flash frames (first light to stable, Y > {FLASH_RATIO} x pre, uniform): {len(ev.flash)}  {ev.flash}")
+    out.append(f"flash frames (first light to stable, Y > {FLASH_RATIO} x pre, neutral): {len(ev.flash)}  {ev.flash}")
     return out
 
 
