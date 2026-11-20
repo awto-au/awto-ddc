@@ -402,6 +402,8 @@ void ScalerTMDSRx2InterruptInitial(void)
 //--------------------------------------------------
 void ScalerTMDSRx2SetDFEInitial_EXINT0(void)
 {
+    WORD usPixClk = isr_g_usInputPixelClk;   // one read: EX0 is masked / we are in EXINT0, nothing else writes it here
+
     // [6] Enable Timer Control DFE Loop
     // [5:4] Reduce Gain to 1/4
     // [3] Disable Running Length Detection
@@ -412,7 +414,7 @@ void ScalerTMDSRx2SetDFEInitial_EXINT0(void)
 
     if(ScalerGetBit_EXINT(P7B_1B_CMU_01, _BIT0) == _BIT0) // DCDR
     {
-        if(GET_INPUT_PIXEL_CLK() <= 1000)
+        if(usPixClk <= 1000)
         {
             // [7:6] adapt_mode[1:0] = 2'b10 --> Amplitude-based Adaptation with Independent LE Loop
             ScalerSetBit_EXINT(P7B_E0_MODE_TIMER, ~(_BIT7 | _BIT6), _BIT7);
@@ -459,7 +461,7 @@ void ScalerTMDSRx2SetDFEInitial_EXINT0(void)
     if(ScalerGetBit_EXINT(P7B_1B_CMU_01, _BIT0) == _BIT0) // DCDR
     {
         // LE = 0~24
-        if(GET_INPUT_PIXEL_CLK() <= 1000)
+        if(usPixClk <= 1000)
         {
             // Tap1 = 0~31 in Mode2
             ScalerSetBit_EXINT(P7B_E7_LIMIT_2, ~(_BIT5 | _BIT4 | _BIT3 | _BIT2 | _BIT1 | _BIT0), (_BIT4 | _BIT3 | _BIT2 | _BIT1 | _BIT0));
@@ -512,7 +514,7 @@ void ScalerTMDSRx2SetDFEInitial_EXINT0(void)
     ScalerSetBit_EXINT(P7B_E3_GAIN_2, ~_BIT0, 0x00);
 
     // over 3.4Gbps, __data has scramble, use Run length = 4
-    if(GET_INPUT_PIXEL_CLK() >= 3400)
+    if(usPixClk >= 3400)
     {
         // [1:0] trans_rlength = 2'b10 --> Tap0 Run Length = 4
         ScalerSetBit_EXINT(P7B_E4_GAIN_3, ~(_BIT1 | _BIT0), _BIT1);
@@ -540,7 +542,7 @@ void ScalerTMDSRx2SetDFEInitial_EXINT0(void)
     // Initial DFE Code
     if(ScalerGetBit_EXINT(P7B_1B_CMU_01, _BIT0) == _BIT0) // DCDR
     {
-        if(GET_INPUT_PIXEL_CLK() <= 375)
+        if(usPixClk <= 375)
         {
             // LE Max = 24, Initial = 4
             ScalerSetByte_EXINT(P7B_A2_L0_LIMIT_INIT, 0x84);
@@ -552,7 +554,7 @@ void ScalerTMDSRx2SetDFEInitial_EXINT0(void)
             ScalerSetByte_EXINT(P7B_B5_L1_INIT_3, 0x00);
             ScalerSetByte_EXINT(P7B_C5_L2_INIT_3, 0x00);
         }
-        else if(GET_INPUT_PIXEL_CLK() <= 700)
+        else if(usPixClk <= 700)
         {
             // LE Max = 24, Initial = 6
             ScalerSetByte_EXINT(P7B_A2_L0_LIMIT_INIT, 0x86);
@@ -564,7 +566,7 @@ void ScalerTMDSRx2SetDFEInitial_EXINT0(void)
             ScalerSetByte_EXINT(P7B_B5_L1_INIT_3, 0x00);
             ScalerSetByte_EXINT(P7B_C5_L2_INIT_3, 0x00);
         }
-        else if(GET_INPUT_PIXEL_CLK() <= 1000)
+        else if(usPixClk <= 1000)
         {
             // LE Max = 24, Initial = 10
             ScalerSetByte_EXINT(P7B_A2_L0_LIMIT_INIT, 0x8A);
@@ -751,13 +753,15 @@ void ScalerTMDSRx2FLDBandFineTune_EXINT0(void)
 //--------------------------------------------------
 void ScalerTMDSRx2SetPhy_EXINT0(void)
 {
+    WORD usPixClk = isr_g_usInputPixelClk;   // one read: EX0 is masked / we are in EXINT0, nothing else writes it here
+
     BYTE ucIcp = 0;
 
     //////////////
     // CDR Mode //
     //////////////
 
-    if(GET_INPUT_PIXEL_CLK() <= 2000)  // DCDR
+    if(usPixClk <= 2000)  // DCDR
     {
         // [3:0] reg_en_ana_cdr = 4'b0000 --> Disable Analog CDR
         ScalerSetBit_EXINT(P7B_2A_ANA_CDR_00, ~(_BIT3 | _BIT2 | _BIT1 | _BIT0), 0x00);
@@ -765,7 +769,7 @@ void ScalerTMDSRx2SetPhy_EXINT0(void)
         // [0] En_APLL_Lane2 = 1'b1 --> Enable Lane2 VCO as CMU
         ScalerSetBit_EXINT(P7B_1B_CMU_01, ~_BIT0, _BIT0);
 
-        if((GET_INPUT_PIXEL_CLK() <= 1000) && (ScalerGetBit_EXINT(P7B_17_BANDGAP_03, _BIT1) == _BIT1))  // MHL mode
+        if((usPixClk <= 1000) && (ScalerGetBit_EXINT(P7B_17_BANDGAP_03, _BIT1) == _BIT1))  // MHL mode
         {
             // [6:5] CMU_REFCK_SEL = 2'b10 --> Ref. TMDS Clock w/ Hysteresis OP
             ScalerSetBit_EXINT(P7B_1B_CMU_01, ~(_BIT6 | _BIT5), _BIT6);
@@ -933,7 +937,7 @@ void ScalerTMDSRx2SetPhy_EXINT0(void)
         // [3] reg_en_largers_forcmu = 1'b0 --> Analog CDR Rs Increase 0K
         ScalerSetBit_EXINT(P7B_1E_CMU_04, ~(_BIT5 | _BIT4 | _BIT3), 0x00);
 
-        if(GET_INPUT_PIXEL_CLK() <= 3000)
+        if(usPixClk <= 3000)
         {
             // [6:4] reg_sel_cdr_res = 3'b101 --> Analog CDR Rs = 6K
             // [3:0] reg_cdr_cp_in = 4'b0101 --> Analog CDR Icp = 16.5uA
@@ -958,7 +962,7 @@ void ScalerTMDSRx2SetPhy_EXINT0(void)
         // KI = 3'b001 --> KI = 1/16
         ScalerSetBit_EXINT(P7B_50_KI_L0, ~(_BIT2 | _BIT1 | _BIT0), _BIT0);
 
-        if(GET_INPUT_PIXEL_CLK() <= 1000)
+        if(usPixClk <= 1000)
         {
             // KP = 0x23 --> KP = 8.75
             ScalerSetByte_EXINT(P7B_53_KP_L0, 0x23);
@@ -977,7 +981,7 @@ void ScalerTMDSRx2SetPhy_EXINT0(void)
         ScalerSetBit_EXINT(P7B_51_KI_L1, ~(_BIT2 | _BIT1 | _BIT0), 0x00);
         ScalerSetBit_EXINT(P7B_52_KI_L2, ~(_BIT2 | _BIT1 | _BIT0), 0x00);
 
-        if(GET_INPUT_PIXEL_CLK() < 1500)
+        if(usPixClk < 1500)
         {
             // KP = 0x20 --> KP = 8
             ScalerSetByte_EXINT(P7B_53_KP_L0, 0x20);
@@ -999,7 +1003,7 @@ void ScalerTMDSRx2SetPhy_EXINT0(void)
         // Check if Packed Pixel Mode
         if(GET_TMDS_RX2_CLK_MODE() == _TMDS_MHL_PPMODE_PHY_SETTING)
         {
-            if(GET_INPUT_PIXEL_CLK() <= 1500)
+            if(usPixClk <= 1500)
             {
                 // Analog CDR Auto FLD Counter
                 // ref_conuter = 30
@@ -1046,7 +1050,7 @@ void ScalerTMDSRx2SetPhy_EXINT0(void)
         }
         else  // MHL 24bit Mode
         {
-            if(GET_INPUT_PIXEL_CLK() <= 750)
+            if(usPixClk <= 750)
             {
                 // Analog CDR Auto FLD Counter
                 // ref_conuter = 20
@@ -1068,7 +1072,7 @@ void ScalerTMDSRx2SetPhy_EXINT0(void)
                 // [6:4] rate_sel = 3'b011 --> 375MHz ~ 750MHz
                 ScalerSetBit_EXINT(P7B_3E_EN_01, ~(_BIT6 | _BIT5 | _BIT4), (_BIT5 | _BIT4));
             }
-            else if(GET_INPUT_PIXEL_CLK() <= 1500)
+            else if(usPixClk <= 1500)
             {
                 // Analog CDR Auto FLD Counter
                 // ref_conuter = 40
@@ -1090,7 +1094,7 @@ void ScalerTMDSRx2SetPhy_EXINT0(void)
                 // [6:4] rate_sel = 3'b010 --> 750MHz ~ 1500MHz
                 ScalerSetBit_EXINT(P7B_3E_EN_01, ~(_BIT6 | _BIT5 | _BIT4), _BIT5);
             }
-            else if(GET_INPUT_PIXEL_CLK() <= 3000)
+            else if(usPixClk <= 3000)
             {
                 // Analog CDR Auto FLD Counter
                 // ref_conuter = 80
@@ -1143,7 +1147,7 @@ void ScalerTMDSRx2SetPhy_EXINT0(void)
         if(GET_TMDS_RX2_HIGH_SPEED_MODE() == _FALSE)  // 1:10
 #endif
         {
-            if(GET_INPUT_PIXEL_CLK() <= 375)
+            if(usPixClk <= 375)
             {
                 // Analog CDR Auto FLD Counter
                 // ref_conuter = 30
@@ -1165,7 +1169,7 @@ void ScalerTMDSRx2SetPhy_EXINT0(void)
                 // [6:4] rate_sel = 3'b100 --> 187.5MHz ~ 375MHz
                 ScalerSetBit_EXINT(P7B_3E_EN_01, ~(_BIT6 | _BIT5 | _BIT4), _BIT6);
             }
-            else if(GET_INPUT_PIXEL_CLK() <= 750)
+            else if(usPixClk <= 750)
             {
                 // Analog CDR Auto FLD Counter
                 // ref_conuter = 50
@@ -1187,7 +1191,7 @@ void ScalerTMDSRx2SetPhy_EXINT0(void)
                 // [6:4] rate_sel = 3'b011 --> 375MHz ~ 750MHz
                 ScalerSetBit_EXINT(P7B_3E_EN_01, ~(_BIT6 | _BIT5 | _BIT4), (_BIT5 | _BIT4));
             }
-            else if(GET_INPUT_PIXEL_CLK() <= 1500)
+            else if(usPixClk <= 1500)
             {
                 // Analog CDR Auto FLD Counter
                 // ref_conuter = 125
@@ -1209,7 +1213,7 @@ void ScalerTMDSRx2SetPhy_EXINT0(void)
                 // [6:4] rate_sel = 3'b010 --> 750MHz ~ 1500MHz
                 ScalerSetBit_EXINT(P7B_3E_EN_01, ~(_BIT6 | _BIT5 | _BIT4), _BIT5);
             }
-            else if(GET_INPUT_PIXEL_CLK() <= 3000)
+            else if(usPixClk <= 3000)
             {
                 // Analog CDR Auto FLD Counter
                 // ref_conuter = 250
@@ -1305,7 +1309,7 @@ void ScalerTMDSRx2SetPhy_EXINT0(void)
     // Enable Tap0~4
     ScalerSetBit_EXINT(P7B_21_CMU_07, ~(_BIT7 | _BIT6 | _BIT5 | _BIT4 | _BIT3), (_BIT7 | _BIT6 | _BIT5 | _BIT4 | _BIT3));
 
-    if(GET_INPUT_PIXEL_CLK() <= 2500)
+    if(usPixClk <= 2500)
     {
         // [3:1] LE_lowgain_highboost = 111 --> LE HighBoost Mode
         ScalerSetBit_EXINT(P7B_22_CMU_08, ~(_BIT3 | _BIT2 | _BIT1), (_BIT3 | _BIT2 | _BIT1));
@@ -1316,7 +1320,7 @@ void ScalerTMDSRx2SetPhy_EXINT0(void)
         ScalerSetBit_EXINT(P7B_22_CMU_08, ~(_BIT3 | _BIT2 | _BIT1), _BIT3);
     }
 
-    if(GET_INPUT_PIXEL_CLK() <= 2000)
+    if(usPixClk <= 2000)
     {
         // [7] SEL_DFE_DELAY = 1'b1 --> Increase DFE Delay
         ScalerSetBit_EXINT(P7B_22_CMU_08, ~_BIT7, _BIT7);
@@ -1327,13 +1331,13 @@ void ScalerTMDSRx2SetPhy_EXINT0(void)
         ScalerSetBit_EXINT(P7B_22_CMU_08, ~_BIT7, 0x00);
     }
 
-    if(GET_INPUT_PIXEL_CLK() <= 2500)
+    if(usPixClk <= 2500)
     {
         // [7:5] LE_RLSEL = 3'b011
         // [4:2] LE_ISEL = 3'b000
         ScalerSetBit_EXINT(P7B_23_CMU_09, ~(_BIT7 | _BIT6 | _BIT5 | _BIT4 | _BIT3 | _BIT2), (_BIT6 | _BIT5));
     }
-    else if(GET_INPUT_PIXEL_CLK() <= 3400)
+    else if(usPixClk <= 3400)
     {
         // [7:5] LE_RLSEL = 3'b001
         // [4:2] LE_ISEL = 3'b010
@@ -1408,14 +1412,14 @@ void ScalerTMDSRx2SetPhy_EXINT0(void)
         // [0] en_eqen_manual = 1 --> Enable Adaptation
         ScalerSetBit_EXINT(P7B_10_EQEN_TIMER, ~_BIT0, _BIT0);
 
-        if(GET_INPUT_PIXEL_CLK() <= 375) // TMDS Clock < 375
+        if(usPixClk <= 375) // TMDS Clock < 375
         {
             // Disable Adaptation Loop  0x000
             ScalerSetByte_EXINT(P7B_A1_L0_DFE_EN_2, 0x00);
             ScalerSetByte_EXINT(P7B_B1_L1_DFE_EN_2, 0x00);
             ScalerSetByte_EXINT(P7B_C1_L2_DFE_EN_2, 0x00);
         }
-        else if(GET_INPUT_PIXEL_CLK() <= 1000)// 375~1000
+        else if(usPixClk <= 1000)// 375~1000
         {
             // Enable the Vth, Tap0~1 Adaptation Loop 0x043
             ScalerSetByte_EXINT(P7B_A1_L0_DFE_EN_2, 0x43);
@@ -1433,7 +1437,7 @@ void ScalerTMDSRx2SetPhy_EXINT0(void)
         // Waiting for the Adaptation
         DELAY_XUS_EXINT(290);
     }
-    else if(GET_INPUT_PIXEL_CLK() <= 3400) // 2000~3400 Analog CDR
+    else if(usPixClk <= 3400) // 2000~3400 Analog CDR
     {
         // [7] cmu_en = 1'b1 --> Enable CMU PLL
         ScalerSetBit_EXINT(P7B_1B_CMU_01, ~_BIT7, _BIT7);
@@ -1457,7 +1461,7 @@ void ScalerTMDSRx2SetPhy_EXINT0(void)
 #if(_D2_INPUT_PORT_TYPE == _D2_MHL_PORT)
         if(ScalerGetBit_EXINT(P7B_17_BANDGAP_03, _BIT1) == _BIT1)  // MHL Mode
         {
-            if(GET_INPUT_PIXEL_CLK() > 2500) // for 2500~3000 MHL PP Mode
+            if(usPixClk > 2500) // for 2500~3000 MHL PP Mode
             {
                 // Start to Record LE Max/Min
                 ScalerSetBit_EXINT(P7B_F2_COEF_3, ~_BIT0, _BIT0);
@@ -1489,7 +1493,7 @@ void ScalerTMDSRx2SetPhy_EXINT0(void)
         else // HDMI Mode
 #endif
         {
-            if(GET_INPUT_PIXEL_CLK() > 2900) // for 2900~3400 10M Cable Case
+            if(usPixClk > 2900) // for 2900~3400 10M Cable Case
             {
                 // Start to Record LE Max/Min
                 ScalerSetBit_EXINT(P7B_F2_COEF_3, ~_BIT0, _BIT0);
@@ -2150,6 +2154,7 @@ void ScalerTMDSRx2IntHandler_EXINT0(void)
     BYTE pucBackUp[2];
 #endif
 
+    WORD usPixClk;
     WORD usCount = 0;
 
     pucBackUp[0] = ScalerGetByte_EXINT(P71_C9_HDMI_AP);
@@ -2201,12 +2206,13 @@ void ScalerTMDSRx2IntHandler_EXINT0(void)
         usCount = (WORD)(((ScalerGetByte_EXINT(P71_ED_HDMI_FREQDET_RESULT_M) & 0x7F) << 8) | ScalerGetByte_EXINT(P71_EE_HDMI_FREQDET_RESULT_L));
 
         // TMDS_FREQ(MHz) = GDI_CLK(MHz) * CLK_COUNT * _TMDS_MEASURE_CLOCK_DIVIDER / _TMDS_MEASURE_CLOCK_COUNTER
-        SET_INPUT_PIXEL_CLK((((DWORD)_GDI_CLK_KHZ * usCount + 50000) / 100000));
+        usPixClk = (((DWORD)_GDI_CLK_KHZ * usCount + 50000) / 100000);   // snapshot: the handlers run one at a time
+        SET_INPUT_PIXEL_CLK(usPixClk);
 
 #if(_D2_HDMI_2_0_SUPPORT == _ON)
 
         // If SCDC tell 1:40 then set High speed flag
-        if((GET_INPUT_PIXEL_CLK() >= 850) && (GET_INPUT_PIXEL_CLK() <= 1500))
+        if((usPixClk >= 850) && (usPixClk <= 1500))
         {
             ScalerSetByte_EXINT(P71_39_HDMI_CTRL_39, _P71_3A_PT_20_PORT_PAGE71_HDMI_SCDC_20);
 
@@ -2218,11 +2224,12 @@ void ScalerTMDSRx2IntHandler_EXINT0(void)
 
         if(GET_TMDS_RX2_HIGH_SPEED_MODE() == _TRUE)
         {
-            SET_INPUT_PIXEL_CLK((GET_INPUT_PIXEL_CLK() * 4));
+            usPixClk *= 4;
+            SET_INPUT_PIXEL_CLK(usPixClk);
         }
 #endif
 
-        if(GET_INPUT_PIXEL_CLK() > 3000)
+        if(usPixClk > 3000)
         {
             // Set Input Clock Measure Divider = /2
             ScalerSetByte_EXINT(P71_C9_HDMI_AP, _P71_CA_PT_28_PORT_PAGE71_HDMI_NTX1024TR0);
@@ -2237,7 +2244,7 @@ void ScalerTMDSRx2IntHandler_EXINT0(void)
 
         // Deferred to ScalerTMDSRx2PhySetDeferred(): the 5.5 ms PHY set-up runs from the main loop
         isr_g_usTMDSRx2PhyCount = usCount;
-        isr_g_usTMDSRx2PhyClk = GET_INPUT_PIXEL_CLK();
+        isr_g_usTMDSRx2PhyClk = usPixClk;
         isr_g_ucTMDSRx2PhyPend = _TRUE;
     }
 
@@ -2248,8 +2255,9 @@ void ScalerTMDSRx2IntHandler_EXINT0(void)
         ScalerSetBit_EXINT(P71_E6_HDMI_FREQDET_CTRL, ~_BIT2, _BIT2);
 
         // Ensure Freq really unstable
+        usPixClk = isr_g_usInputPixelClk;
         if((abs(isr_g_usTMDSRx2ClkCount - ScalerTMDSRx2MeasureClk_EXINT0(_CLK_SOURCE_TMDS)) > (isr_g_usTMDSRx2ClkCount >> 6)) ||
-           (abs(GET_INPUT_PIXEL_CLK() - ((GET_TMDS_OFFLINE_MEASURE_CLK() << 3) / GET_COLOR_DEPTH())) > (GET_INPUT_PIXEL_CLK() >> 6)))
+           (abs(usPixClk - ((GET_TMDS_OFFLINE_MEASURE_CLK() << 3) / GET_COLOR_DEPTH())) > (usPixClk >> 6)))
         {
             // Set Display M1 output force to background color and free run mode
             ScalerSetBit_EXINT(P0_28_VIDEO_DISPLAY_CONTROL_REG, ~_BIT5, _BIT5);
