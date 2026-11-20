@@ -12,7 +12,9 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 import settings_table as T
 
 DDC_ROWS = ("volume", "mute", "brightness", "contrast", "power_mode", "input")      # registry rows read by their own VCP code
-INFO_ROWS = ("info_hres", "info_vres", "info_vfreq", "info_loop")                   # no VCP code: paged read; vfreq in 0.1 Hz
+INFO_ROWS = ("info_hres", "info_vres", "info_vfreq", "info_loop", "info_cpu", "info_pll", "info_spi", "info_pwm",
+             "info_tag_hi", "info_tag_lo")                                           # no VCP code: paged read; vfreq in 0.1 Hz, clocks in 0.1 MHz (awto-ddc#279)
+TAG_HEX_HALF = 3                                                                    # hex digits per info_tag_hi / _lo (12 bit)
 DIAG_BASE, DIAG_LEN = 0xF6D0, 48                                                    # docs/diag-block.md
 DIAG_LOOP_OFS, DIAG_STAGE_OFS = 0x2A, 0x03                                          # main-loop passes in the last ~1 s (u16), stage
 XTAL_KHZ = 14318                                                                    # _EXT_XTAL (_XTAL14318K), fw/osd/console.c title clocks
@@ -43,6 +45,20 @@ def clocks(e0: int, e1: int, e7: int, ffe9: int, ffed: int, ffee: int) -> dict:
     pll = XTAL_KHZ * (m + CODE) / ((n + CODE) * o)
     f = _div(ffed >> DIV_SHIFT)
     return {"cpu": pll / f / _div(ffee >> DIV_SHIFT) / 1000, "pll": pll / 1000, "spi": pll / f / _div(ffe9) / 1000}
+
+
+def clocks_from_rows(i: dict) -> dict | None:
+    """MHz of CPU / PLL / SPI from the info rows (0.1 MHz; 0 = not running on the crystal clock); None when the firmware has no such rows"""
+    if "info_cpu" not in i:
+        return None
+    return {k: (i[f"info_{k}"] / 10 or None) if f"info_{k}" in i else None for k in ("cpu", "pll", "spi")}
+
+
+def tag_from_rows(i: dict) -> str | None:
+    """first 6 hex digits of the commit in the firmware's build tag; None = rows missing or the tag has no hash"""
+    if "info_tag_hi" not in i or "info_tag_lo" not in i or not (i["info_tag_hi"] or i["info_tag_lo"]):
+        return None
+    return f"{i['info_tag_hi']:0{TAG_HEX_HALF}x}{i['info_tag_lo']:0{TAG_HEX_HALF}x}"
 
 
 def backlight_pct(duty: int) -> int:
@@ -77,9 +93,9 @@ def fmt_mhz(x) -> str:
 def format_line(st: dict) -> str:
     """one status line: 'CPU 350.8 PLL 350.8 SPI 116.9  1920x1080 60.000Hz  ...'; a missing source shows n/a, never a stale value"""
     d, g = st.get("ddc", {}), st.get("dbg") or {}
-    clk = g.get("clk")
-    parts = [f"CPU {fmt_mhz(clk['cpu'])} PLL {fmt_mhz(clk['pll'])} SPI {fmt_mhz(clk['spi'])}" if clk else "CPU n/a PLL n/a SPI n/a"]
     t, i = g.get("timing"), st.get("info", {})
+    clk = clocks_from_rows(i) or g.get("clk")                                       # info rows answer while DDC/CI owns the bus; 0x35 as fallback
+    parts = [f"CPU {fmt_mhz(clk['cpu'])} PLL {fmt_mhz(clk['pll'])} SPI {fmt_mhz(clk['spi'])}" if clk else "CPU n/a PLL n/a SPI n/a"]
     parts.append(f"{t['w']}x{t['h']} {t['hz']:.3f}Hz" if t else
                  (f"{i['info_hres']}x{i['info_vres']} {i['info_vfreq'] / 10:.1f}Hz" if i.get("info_hres") else "NO INPUT")
                  if "info_hres" in i else "timing n/a")
@@ -90,9 +106,10 @@ def format_line(st: dict) -> str:
     parts.append(f"sound {'muted' if d['mute'] else 'on'} vol {d['volume']}" if "mute" in d and "volume" in d else "sound n/a")
     parts.append(f"bright {d['brightness']}" if "brightness" in d else "bright n/a")
     parts.append(f"contrast {d['contrast']}" if "contrast" in d else "contrast n/a")
-    pwm = g.get("pwm")
+    pwm = i.get("info_pwm", g.get("pwm"))
     parts.append(f"PWM {pwm} ({backlight_pct(pwm)} %)" if pwm is not None else "PWM n/a")
     loop = g.get("loop", i.get("info_loop"))
     parts.append(f"loop {loop}/s" if loop is not None else "loop n/a")
-    parts.append(f"fw {st['tag']}" if st.get("tag") else "fw n/a")
+    hx, reg = tag_from_rows(i), st.get("tag")
+    parts.append(f"fw {reg if reg and hx and hx in reg else (hx or reg)}" if hx or reg else "fw n/a")
     return "  ".join(parts)

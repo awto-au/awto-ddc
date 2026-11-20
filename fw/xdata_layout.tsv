@@ -129,11 +129,11 @@ keytest	0xe580	77	154
 sync	0xe780	37	676
 asteroids	0xe780	713	515
 ScalerCommonDebug	0xe780	1228	363
-awto_settings_settings	0xe780	1591	325
+console	0xe780	1591	318
 awto_settings_menu	0xe780	1916	135
 fastsw	0xe780	2051	169
 ScalerRotation	0xe780	2220	2
 swlog	0xe780	2232	278
 inputs	0xe780	2510	232
-console	0xe780	2742	317
+awto_settings_settings	0xe780	2742	326
 ScalerDisplay	0xe780	3106	7

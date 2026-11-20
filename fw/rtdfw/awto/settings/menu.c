@@ -147,7 +147,16 @@ static void mn_value_text(char __xdata *buf, int16_t v)
         set_text(set_opt(row.opts, (uint8_t)(v - row.min)), buf, VALUE_W + 1);
         return;
     }
-    if (row.id == SET_ID_INFO_HFREQ || row.id == SET_ID_INFO_PCLK) {   /* 0.1 kHz / 0.1 MHz */
+    if (row.id == SET_ID_INFO_TAG_HI || row.id == SET_ID_INFO_TAG_LO) {   /* 12 bit half of the commit hash: 3 hex digits */
+        for (n = 0; n < 3; n++) {
+            uint8_t d = (uint8_t)((v >> (8 - 4 * n)) & 0x0F);
+            buf[n] = (char)(d < 10 ? '0' + d : 'a' - 10 + d);
+        }
+        buf[3] = 0;
+        return;
+    }
+    if (row.id == SET_ID_INFO_HFREQ || row.id == SET_ID_INFO_PCLK || row.id == SET_ID_INFO_CPU ||
+        row.id == SET_ID_INFO_PLL || row.id == SET_ID_INFO_SPI) {   /* 0.1 kHz / 0.1 MHz */
         n = mn_num(buf, v, 1);
         buf[n++] = ' ';
         buf[n++] = row.id == SET_ID_INFO_HFREQ ? 'k' : 'M';
@@ -528,7 +537,7 @@ uint8_t menu_cmd(uint8_t op, uint16_t arg)
         n = mn_n_entries();
         for (k = 0; k < n && !ok; k++) {
             uint8_t e = mn_entry(k);
-            if (arg & 0x80) {
+            if (arg & MO_SELECT_PAGE) {
                 ok = (e == (uint8_t)arg);
             } else if (!(e & 0x80)) {
                 set_row(e, &row);

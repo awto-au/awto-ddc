@@ -42,3 +42,9 @@ def test_generated_files_current():
     r = subprocess.run([sys.executable, str(ROOT / "scripts/settings_gen.py"), "--rtdfw", str(RTDFW), "--check"],
                        capture_output=True, text=True, timeout=60, check=False)
     assert r.returncode == 0, r.stdout + r.stderr
+
+
+def test_fw_tag_hex_halves():
+    import msg_tokenise as M
+    assert M.tag_hex12("63263505") == (0x632, 0x635) and M.tag_hex12("63263505+-freeze") == (0x632, 0x635)
+    assert M.tag_hex12("v1-3-g63263505") == (0x632, 0x635) and M.tag_hex12("var-3") == (0, 0) and M.tag_hex12("base") == (0, 0)

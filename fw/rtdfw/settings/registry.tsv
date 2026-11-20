@@ -121,6 +121,12 @@
 107	info_hfreq	int	none	info	ro	0	30000	1	0	-	-	-	H freq	-	measured horizontal frequency, 0.1 kHz (shown as kHz); was on the Realtek menu Information page (awto-ddc#120)
 108	info_pclk	int	none	info	ro	0	30000	1	0	-	-	-	Pixel clock	-	input pixel clock, 0.1 MHz (shown as MHz); was on the Realtek menu Information page (awto-ddc#120)
 109	info_hdcp	enum	none	info	ro	0	1	1	0	-	-	-	HDCP	Off|On	HDCP active on the current input; was on the Realtek menu Information page (awto-ddc#120)
+128	info_cpu	int	none	info	ro	0	30000	1	0	-	-	-	CPU clock	-	MCU clock, 0.1 MHz (shown as MHz); live from the M2PLL and divider registers (awto-ddc#279)
+129	info_pll	int	none	info	ro	0	30000	1	0	-	-	-	PLL clock	-	M2PLL, 0.1 MHz (shown as MHz); 0 on the crystal clock (awto-ddc#279)
+130	info_spi	int	none	info	ro	0	30000	1	0	-	-	-	SPI clock	-	flash SPI clock, 0.1 MHz (shown as MHz); 0 on the crystal clock (awto-ddc#279)
+131	info_pwm	int	none	info	ro	0	255	1	0	-	-	-	Backlight PWM4	-	PWM4 high duty byte (0xFF50); the backlight is inverse: lit = 255 - value (awto-ddc#279)
+132	info_tag_hi	int	none	info	ro	0	4095	1	0	-	-	-	FW tag hash 1	-	first 3 hex digits of the commit hash in the build tag (shown as hex; awto-ddc#279)
+133	info_tag_lo	int	none	info	ro	0	4095	1	0	-	-	-	FW tag hash 2	-	hex digits 4..6 of the commit hash in the build tag (shown as hex; awto-ddc#279)
 110	console_mode	enum	none	osd	nv,live	0	2	1	1	auto	-	-	Diagnostic console	Off|Until signal|Always	the diagnostic console (sync log) opens by itself after a power-on / input switch / wake (awto-ddc#139): Off = never; Until signal = closes 3 s after the picture is on (any key closes it at once; no signal keeps it open); Always = stays open (awto-ddc#218). Was bool sync_console: stored 0 / 1 keep their meaning
 111	power_on	bool	none	service	nv,sdk	0	1	1	1	auto	-	sdk_sys	Power on	-	power key state over a power cut; was Realtek SDK system data (awto-ddc#151)
 112	dp_lanes	int	none	service	nv,reboot,sdk	1	4	1	4	auto	-	sdk_sys	DP lanes	-	D1 main-link lanes [sdk-value]

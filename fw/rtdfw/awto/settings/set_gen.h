@@ -3,11 +3,11 @@
 #define AWTO_SET_GEN_H
 #include <stdint.h>
 
-#define SET_COUNT   118u
+#define SET_COUNT   124u
 #define SET_PAGES   15u
 #define SET_SCHEMA  0x5EFFu    /* CRC-16 of the NV rows (id, type, min, max) */
 #define SET_NV_COUNT 96u
-#define SET_TEXT_LEN 2164u
+#define SET_TEXT_LEN 2237u
 #define SET_AUX_MAX 48u    /* aux block: check byte + stored rows without an SDK field (awto-ddc#151) */
 
 #define SET_ID_BRIGHTNESS           1u
@@ -112,6 +112,12 @@
 #define SET_ID_INFO_HFREQ           107u
 #define SET_ID_INFO_PCLK            108u
 #define SET_ID_INFO_HDCP            109u
+#define SET_ID_INFO_CPU             128u
+#define SET_ID_INFO_PLL             129u
+#define SET_ID_INFO_SPI             130u
+#define SET_ID_INFO_PWM             131u
+#define SET_ID_INFO_TAG_HI          132u
+#define SET_ID_INFO_TAG_LO          133u
 #define SET_ID_CONSOLE_MODE         110u
 #define SET_ID_POWER_ON             111u
 #define SET_ID_DP_LANES             112u

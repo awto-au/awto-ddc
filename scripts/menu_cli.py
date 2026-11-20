@@ -34,6 +34,7 @@ import settings_table as T
 ROOT = Path(__file__).resolve().parents[1]
 LOG = ROOT / "tmp/logs/menu_cli.log"
 MAIN = 0xFE
+SELECT_PAGE = 0x100                                  # MO_SELECT_PAGE (fw/rtdfw/awto/include/menu.h): arg bit 8 = page entry; row ids reach 255
 OPS = dict(key=1, open=2, select=3, set=4, back=5, close=6, enter=7, hold=8)
 KEYS = dict(menu=0, right=1, left=2, exit=3)
 MASK = dict(power=0x01, menu=0x02, right=0x04, left=0x08, exit=0x10)
@@ -212,7 +213,7 @@ class Menu:
 
 def item_arg(name: str) -> int:
     if name.startswith("page:"):
-        return 0x80 | page_of(name[5:])
+        return SELECT_PAGE | 0x80 | page_of(name[5:])
     return C.row_of(name)["id"]
 
 
@@ -246,7 +247,7 @@ def walk(m: Menu, png: Path | None, render, quick: bool = False) -> int:
             render(png / f"walk_{'main' if p == MAIN else T.PAGES[p]['group']}.png")
         for k, e in (sample(ent) if quick else enumerate(ent)):
             r0 = s["redraws"]
-            m.cmd("select", e if e & 0x80 else T.ROWS[e]["id"])
+            m.cmd("select", SELECT_PAGE | e if e & 0x80 else T.ROWS[e]["id"])
             s = m.state()
             if e & 0x80:
                 ok = s["cursor"] == k and s["item_page"] == e & 0x7F and s["item_id"] == 0

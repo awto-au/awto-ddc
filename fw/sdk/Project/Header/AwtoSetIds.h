@@ -104,6 +104,12 @@
 #define AWTO_SET_INFO_HFREQ           107
 #define AWTO_SET_INFO_PCLK            108
 #define AWTO_SET_INFO_HDCP            109
+#define AWTO_SET_INFO_CPU             128
+#define AWTO_SET_INFO_PLL             129
+#define AWTO_SET_INFO_SPI             130
+#define AWTO_SET_INFO_PWM             131
+#define AWTO_SET_INFO_TAG_HI          132
+#define AWTO_SET_INFO_TAG_LO          133
 #define AWTO_SET_CONSOLE_MODE         110
 #define AWTO_SET_POWER_ON             111
 #define AWTO_SET_DP_LANES             112

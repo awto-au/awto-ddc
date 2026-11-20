@@ -210,7 +210,9 @@ def test_status_is_read_only_and_decodes(monkeypatch):
     import settings_table as T
     vals = {0x62: 50, 0x8D: 1, 0x10: 51, 0x12: 75, 0xD6: 1, 0x60: 17, U.VCP_VAL: 0}
     paged = {T.BY_NAME["info_hres"]["id"]: 1920, T.BY_NAME["info_vres"]["id"]: 1080, T.BY_NAME["info_vfreq"]["id"]: 600,
-             T.BY_NAME["info_loop"]["id"]: 4100}
+             T.BY_NAME["info_loop"]["id"]: 4100, T.BY_NAME["info_cpu"]["id"]: 3508, T.BY_NAME["info_pll"]["id"]: 3508,
+             T.BY_NAME["info_spi"]["id"]: 1169, T.BY_NAME["info_pwm"]["id"]: 130, T.BY_NAME["info_tag_hi"]["id"]: 0x632,
+             T.BY_NAME["info_tag_lo"]["id"]: 0x635}
     code = {"c": 0}
     orig_send = s._send
 
@@ -230,14 +232,22 @@ def test_status_is_read_only_and_decodes(monkeypatch):
     monkeypatch.setattr("flash_registry.current", lambda serial: {"tag": "wb-x"})
     st = U.status(None, {"serial": "AWT1", "be": True})
     assert st["ddc"] == {"volume": 50, "mute": 1, "brightness": 51, "contrast": 75, "power_mode": 0, "input": 1}, st
-    assert st["info"] == {"info_hres": 1920, "info_vres": 1080, "info_vfreq": 600, "info_loop": 4100}, st
+    assert st["info"] == {"info_hres": 1920, "info_vres": 1080, "info_vfreq": 600, "info_loop": 4100, "info_cpu": 3508,
+                          "info_pll": 3508, "info_spi": 1169, "info_pwm": 130, "info_tag_hi": 0x632, "info_tag_lo": 0x635}, st
     assert st["dbg"]["loop"] == 4100 and st["dbg"]["stage"] == 8 and st["dbg"]["pwm"] == 125 and st["tag"] == "wb-x", st
     assert st["dbg"]["clk"]["pll"] > st["dbg"]["clk"]["cpu"] > 0 and st["dbg"]["timing"] is None and "no map" in st["dbg"]["timing_why"]
     sets = [w[1] for w in bus.writes if w[1][2] == U.OP_SET]                                         # [51 len op code ...]
     assert sets and all(f[3] == U.VCP_SEL for f in sets), "the only Set frames are the RAM-only row selector 0xE0"
     assert io.allow_write is False and all(sub in (0x01, 0x3A, 0x3C) for sub, _ in io.log), io.log   # staging + read commands only
     assert S.format_line({**st, "dbg": None}).count("1920x1080 60.0Hz") == 1 and "loop 4100/s" in S.format_line({**st, "dbg": None})
-    assert "CPU" in S.format_line(st) and "PWM 125 (51 %)" in S.format_line(st)
+    assert "CPU" in S.format_line(st) and "PWM 130 (49 %)" in S.format_line(st)
+    no_dbg = S.format_line({**st, "dbg": None})                                                      # the rows alone answer: no 0x35 needed
+    assert "CPU 350.8 PLL 350.8 SPI 116.9" in no_dbg and "PWM 130 (49 %)" in no_dbg and "fw 632635" in no_dbg, no_dbg
+    old = {k: v for k, v in st["info"].items() if k in ("info_hres", "info_vres", "info_vfreq", "info_loop")}   # firmware without the rows
+    assert "CPU" in S.format_line({**st, "info": old}) and "PWM 125 (51 %)" in S.format_line({**st, "info": old})
+    assert "CPU n/a PLL n/a SPI n/a" in S.format_line({**st, "info": old, "dbg": None}) and "fw wb-x" in S.format_line({**st, "info": old})
+    assert S.clocks_from_rows({"info_cpu": 143}) == {"cpu": 14.3, "pll": None, "spi": None}             # crystal clock: PLL / SPI 0
+    assert S.tag_from_rows({"info_tag_hi": 0, "info_tag_lo": 0}) is None
 
 
 def test_status_without_debug_link_names_it(monkeypatch):

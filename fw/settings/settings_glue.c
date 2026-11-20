@@ -60,6 +60,8 @@ void set_wait_ms(WORD usMs)
     ScalerTimerDelayXms(usMs);
 }
 
+extern WORD AwtoClkMhz10(BYTE ucWhich);          // osd/console.c
+
 int set_status(BYTE ucId)
 {
     switch(ucId)
@@ -84,6 +86,18 @@ int set_status(BYTE ucId)
             return isr_g_stAwtoDiag.usLoopRate;
         case AWTO_SET_INFO_SCHEMA:
             return AWTO_SET_SCHEMA;
+        case AWTO_SET_INFO_CPU:
+            return AwtoClkMhz10(AWTO_CLK_CPU);              // 0.1 MHz
+        case AWTO_SET_INFO_PLL:
+            return AwtoClkMhz10(AWTO_CLK_PLL);
+        case AWTO_SET_INFO_SPI:
+            return AwtoClkMhz10(AWTO_CLK_SPI);
+        case AWTO_SET_INFO_PWM:
+            return MCU_FF50_PWM4H_DUT;                      // backlight PWM4 duty, inverse
+        case AWTO_SET_INFO_TAG_HI:
+            return AWTO_FW_TAG_HI;
+        case AWTO_SET_INFO_TAG_LO:
+            return AWTO_FW_TAG_LO;
         default:
             return 0;
     }

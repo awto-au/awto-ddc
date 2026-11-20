@@ -454,11 +454,41 @@ static BYTE AwtoClkField(BYTE ucV)              // divider field -> divider
     return (ucV == 0) ? 1 : ucV;
 }
 
-static void AwtoPutClocks(void)                 // "CPU 350.8 PLL 350.8 SPI 116.9"; on the crystal clock "CPU 14.3 PLL off"
+static WORD AwtoPllUnits(void)                  // M2PLL in 10 kHz units from the live registers (not on the crystal clock)
 {
     BYTE ucN = ScalerGetByte(P1_E1_M2PLL_N);
     BYTE ucMsb = ScalerGetByte(P1_E7_M2PLL_M_N_MSB);
     BYTE ucO = ((ucN >> AWTO_CLK_PLL_O_SHIFT) & AWTO_CLK_PLL_O_MASK) * 2;
+
+    return (WORD)(((DWORD)_EXT_XTAL * (((WORD)ScalerGetByte(P1_E0_M2PLL_M) | ((WORD)(ucMsb & AWTO_CLK_PLL_MSB_M) << 4)) + AWTO_CLK_PLL_CODE)) /
+           ((((WORD)(ucMsb & AWTO_CLK_PLL_MSB_N) << 4) + (ucN & AWTO_CLK_PLL_MSB_N) + AWTO_CLK_PLL_CODE) * (ucO == 0 ? 1 : ucO)) / AWTO_PLL_UNIT_KHZ);
+}
+
+WORD AwtoClkMhz10(BYTE ucWhich)                 // 0.1 MHz of AWTO_CLK_CPU / _PLL / _SPI (info rows); crystal clock: CPU = crystal, PLL / SPI 0
+{
+    BYTE ucF = AwtoClkField(MCU_FFED_MCU_CONTROL >> AWTO_CLK_DIV_SHIFT);
+
+    if((MCU_FFED_MCU_CONTROL & AWTO_F_MCU_CONTROL_MCU_CLK_SEL) == 0)
+    {
+        return (ucWhich == AWTO_CLK_CPU) ? ((_EXT_XTAL / AWTO_PLL_UNIT_KHZ + AWTO_UNITS_PER_TENTH / 2) / AWTO_UNITS_PER_TENTH) : 0;
+    }
+    if(ucWhich == AWTO_CLK_CPU)
+    {
+        ucF *= AwtoClkField(MCU_FFEE_MCU_CLOCK_CONTROL >> AWTO_CLK_DIV_SHIFT);
+    }
+    else if(ucWhich == AWTO_CLK_SPI)
+    {
+        ucF *= AwtoClkField(MCU_FFE9_MCU_CLK_CONTROL_1);
+    }
+    else
+    {
+        ucF = 1;
+    }
+    return (AwtoPllUnits() / ucF + AWTO_UNITS_PER_TENTH / 2) / AWTO_UNITS_PER_TENTH;
+}
+
+static void AwtoPutClocks(void)                 // "CPU 350.8 PLL 350.8 SPI 116.9"; on the crystal clock "CPU 14.3 PLL off"
+{
     BYTE ucF = AwtoClkField(MCU_FFED_MCU_CONTROL >> AWTO_CLK_DIV_SHIFT);
 
     if((MCU_FFED_MCU_CONTROL & AWTO_F_MCU_CONTROL_MCU_CLK_SEL) == 0)
@@ -469,8 +499,7 @@ static void AwtoPutClocks(void)                 // "CPU 350.8 PLL 350.8 SPI 116.
         AwtoPutStr(" PLL off");
         return;
     }
-    s_usAwtoPll = (WORD)(((DWORD)_EXT_XTAL * (((WORD)ScalerGetByte(P1_E0_M2PLL_M) | ((WORD)(ucMsb & AWTO_CLK_PLL_MSB_M) << 4)) + AWTO_CLK_PLL_CODE)) /
-                  ((((WORD)(ucMsb & AWTO_CLK_PLL_MSB_N) << 4) + (ucN & AWTO_CLK_PLL_MSB_N) + AWTO_CLK_PLL_CODE) * (ucO == 0 ? 1 : ucO)) / AWTO_PLL_UNIT_KHZ);
+    s_usAwtoPll = AwtoPllUnits();
     AwtoPutStr("CPU ");
     AwtoPutMhz(ucF * AwtoClkField(MCU_FFEE_MCU_CLOCK_CONTROL >> AWTO_CLK_DIV_SHIFT));
     AwtoPutStr(" PLL ");

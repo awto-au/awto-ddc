@@ -511,6 +511,11 @@ extern bit AwtoHoldBlocksDisable(void);
 extern void AwtoOsdDebugLines(void);
 extern void AwtoOsdOfsInit(void);
 #define AWTO_FW_TAG                                             "@FW_TAG@"      // build tag: msg_tokenise substitutes it in fw/sdk only (console title)
+#define AWTO_FW_TAG_HI                                          @FW_TAG_HI@     // first 6 hex digits of the commit in the tag: 12 bit halves (info_tag_hi / _lo rows), 0 = no hash in the tag
+#define AWTO_FW_TAG_LO                                          @FW_TAG_LO@
+#define AWTO_CLK_CPU                                            0               // AwtoClkMhz10 (osd/console.c) selectors: info_cpu / info_pll / info_spi
+#define AWTO_CLK_PLL                                            1
+#define AWTO_CLK_SPI                                            2
 extern unsigned char __code tFONT1_ICON_INFORMATION[];          // awto mark main-menu icon: fw/osd/mark_icon.c (osd_icon_encode.py)
 // #39 key test screen + press log (fw/keys/keytest.c, fw/osd/console.c): read over debug slave 0x35 at map symbol _g_stAwtoKey
 // (host: scripts/rtd_keywatch.py --log). Bytes only, so the layout is the same in LE and BE images.

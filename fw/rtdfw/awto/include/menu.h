@@ -46,8 +46,9 @@ struct menu_diag {
 extern struct menu_diag __xdata menu_diag;
 
 /* direct commands (host mailbox / VCP 0xE4). 1 = done */
+#define MO_SELECT_PAGE 0x100u   /* MO_SELECT arg: bit 8 = a page entry (0x100 | 0x80 | page); else a row id 0..255 */
 enum menu_op { MO_KEY = 1, MO_OPEN = 2, MO_SELECT = 3, MO_SET = 4, MO_BACK = 5, MO_CLOSE = 6, MO_ENTER = 7, MO_HOLD = 8 };
-/* KEY k (MK_*); OPEN page (MENU_MAIN = top); SELECT registry id, or 0x80 | page for a sub-page entry; SET value of
+/* KEY k (MK_*); OPEN page (MENU_MAIN = top); SELECT registry id, or MO_SELECT_PAGE | 0x80 | page for a sub-page entry; SET value of
  * the cursor row (applied, risky rows pending as from the keys); BACK; CLOSE; ENTER (= Menu on the cursor);
  * HOLD: arg = (ms / 50) << 5 | key mask (firmware key bits: 0x01 power, 0x02 menu, 0x04 right, 0x08 left, 0x10 exit) */
 uint8_t menu_cmd(uint8_t op, uint16_t arg);

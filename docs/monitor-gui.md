@@ -140,13 +140,15 @@ Launch: `python3 tools/osd_editor/run.py --monitor` (opens on the monitor tab) o
 - Read-only. `unit_ops.status` (`scripts/unit_ops.py`, decode / format in `scripts/unit_status.py`) runs on the unit's queue (`UnitQueues.submit_fn`); port command `./dev.py gui --unit N status` = one fresh pass, same code.
 - Sources, in order:
   - DDC/CI Get VCP: volume 0x62, mute 0x8D, brightness 0x10, contrast 0x12, power 0xD6, input 0x60.
-  - Info rows `info_hres / vres / vfreq / loop` by the paged read: its only Set frame is the RAM-only row selector 0xE0 (no setting changes; same path as the live sliders).
-  - Debug slave 0x35, only when it ALREADY answers (no DDC <-> debug swap: that is a Set of a unit mode): diag block (stage, loop rate 0x2A), M2PLL / MCU divider registers -> CPU / PLL / SPI (formula of the console title, `fw/osd/console.c`), PWM4 duty `0xFF50` (backlight % = (255 - duty) / 255, inverse), exact timing when the flashed image's map exists.
-  - Firmware tag: flash record (`flash_registry.current`), no read.
-- A missing source shows `n/a` and its reason in brackets (`dbg_err` / `ddc_err`); a stale value is never kept for a failed source. Debug-link readings win over the info rows for timing and loop.
-- Pace: timer `STATUS_S` 2 s, single shot, re-armed after each tick; no pass while the unit flashes ("status reads paused"), has a queued / running job, a slider drag is active, a pass is already in flight, or it is a DP AUX (`light`) / read-only / undetected unit. Pass = 6 Gets + 4 paged reads.
+  - Info rows by the paged read: its only Set frame is the RAM-only row selector 0xE0 (no setting changes; same path as the live sliders).
+    - `info_hres / vres / vfreq / loop`.
+    - `info_cpu / pll / spi` (0.1 MHz; PLL / SPI 0 on the crystal clock; `AwtoClkMhz10` in `fw/osd/console.c`, same formula as the console title), `info_pwm` (PWM4 duty `0xFF50`, backlight % = (255 - duty) / 255, inverse), `info_tag_hi / lo` (first 6 hex digits of the commit in the build tag, 12 bit each; `scripts/msg_tokenise.py` `tag_hex12`) (awto-ddc#279).
+  - Debug slave 0x35, only when it ALREADY answers (no DDC <-> debug swap: that is a Set of a unit mode): diag block (stage, loop rate 0x2A), exact timing when the flashed image's map exists; clocks and PWM from the registers as fallback for firmware without the rows.
+  - Firmware tag: the rows' hash; the flash record (`flash_registry.current`) is shown instead when it contains that hash, and is the only source on firmware without the rows.
+- A missing source shows `n/a` and its reason in brackets (`dbg_err` / `ddc_err`); a stale value is never kept for a failed source. Debug-link readings win over the info rows for timing and loop; the info rows win for clocks and PWM.
+- Pace: timer `STATUS_S` 2 s, single shot, re-armed after each tick; no pass while the unit flashes ("status reads paused"), has a queued / running job, a slider drag is active, a pass is already in flight, or it is a DP AUX (`light`) / read-only / undetected unit. Pass = 6 Gets + 10 paged reads (each a selector Set + Get).
 - Measured 2026-11-21, unit 3 (`lk2` image, HDMI DDC): pass 0.69 s (5 passes via the port, 691-1045 ms). A slider drag that starts while a pass runs waits at most that long for its first write.
-- Unit 3's 0x35 did not answer in that run (`dbg_link.py state`: 0x35 NAK, 0x37 ACK: DDC/CI owns the bus by default, #79), so CPU / PLL / SPI / PWM show `n/a` until a firmware row exposes them over VCP (issue draft in the PR notes).
+- Unit 3's 0x35 did not answer in that run (`dbg_link.py state`: 0x35 NAK, 0x37 ACK: DDC/CI owns the bus by default, #79), so CPU / PLL / SPI / PWM showed `n/a` until the firmware rows of awto-ddc#279 (image with `info_cpu`..`info_tag_lo` flashed).
 - Tests: `test_monitor_gui.py` `status_line` / `status_clocks` (selected unit only, no write, paused while flashing / dragging, one at a time, failed source named), `tests/test_unit_ops_ddc.py` (Get frames + selector only, debug part over a fake 0x35, no link).
 
 ## Not done

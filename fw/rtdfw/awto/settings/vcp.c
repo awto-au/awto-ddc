@@ -111,7 +111,8 @@ uint8_t vcp_set(uint8_t code, uint16_t v)
             set_defaults();
         return 1;
     case VCP_MENU:
-        return menu_cmd((uint8_t)(v >> 8), v & 0xFF);
+        /* 8 bit arg: a select with bit 7 is a page entry (row ids 128.. only through the mailbox) */
+        return menu_cmd((uint8_t)(v >> 8), ((v >> 8) == MO_SELECT && (v & 0x80)) ? (v & 0xFF) | MO_SELECT_PAGE : v & 0xFF);
     case VCP_ITEM:
         return 1;
     case VCP_VAL:

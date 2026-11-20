@@ -50,6 +50,13 @@ def fw_tag(root) -> str:
         ["git", "describe", "--always", "--abbrev=7"], cwd=root, capture_output=True, text=True, check=False).stdout.strip() or "nogit"
 
 
+def tag_hex12(tag: str) -> tuple[int, int]:
+    """first 6 hex digits of the commit hash in a build tag ('63263505+-freeze', 'v1-3-g63263505') as two 12-bit halves; (0, 0) = none"""
+    m = re.search(r"(?:^|-g)([0-9a-f]{7,})", tag)
+    v = int(m.group(1)[:6], 16) if m else 0
+    return v >> 12, v & 0xFFF
+
+
 MSG_TSV = ROOT / "fw" / "msgids.tsv"
 MSG_ENABLE = ROOT / "fw" / "msg_enable.txt"
 MSG_CATS = None                                # category -> Debug.h flag name, read from fw/sdk Debug.h
@@ -245,7 +252,7 @@ def cmd_port():
         dst = SRC / rel
         dst.parent.mkdir(parents=True, exist_ok=True)
         if p.suffix.lower() in SRC_EXT:
-            t = tokenise_messages(p.read_bytes().decode("latin-1"), stats, rel).replace("@FW_TAG@", tag)
+            t = tokenise_messages(p.read_bytes().decode("latin-1"), stats, rel).replace("@FW_TAG@", tag).replace("@FW_TAG_HI@", str(tag_hex12(tag)[0])).replace("@FW_TAG_LO@", str(tag_hex12(tag)[1]))
             dst.write_bytes(t.encode("latin-1"))
         else:
             shutil.copy2(p, dst)
