@@ -65,7 +65,10 @@ def alive(pid: int) -> bool:
         return False
     except PermissionError:
         return True
-    return True
+    try:                                    # a zombie (dead, not yet reaped by its parent) still answers signal 0: not alive
+        return Path(f"/proc/{pid}/stat").read_text().rsplit(")", 1)[1].split()[0] != "Z"
+    except (OSError, IndexError):
+        return True
 
 
 def session_pid() -> int:

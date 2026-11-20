@@ -40,7 +40,7 @@ Launch: `python3 tools/osd_editor/run.py --monitor` (opens on the monitor tab) o
 ## Tests
 - `tools/osd_editor/test_monitor_gui.py` (fake backend, offscreen; strip, hotkeys, tree counts, search, confirm, read-only, parallel vs serial queues, remembered unit, detect + probe, screenshot).
 - `tools/osd_editor/test_smoke.py` (editor tabs, monitor page get / set / quick / banner).
-- `tools/osd_editor/test_control_port.py` (port: commands change model and view, save read back, failed call, parallel / serial queues, events, socket perms, auto-start, thin CLI, no-app error, `--direct` refusal, raw i2c, async flash, rc and gate refusal, detached survival + re-attach; fake backend and `fake_flasher.py`). `tests/test_gui_client.py`: client translation, flash progress parsing (no Qt).
+- `tools/osd_editor/test_control_port.py` (port: commands change model and view, save read back, failed call, parallel / serial queues, events, socket perms, auto-start, thin CLI, no-app error, `--direct` refusal, raw i2c, async flash, rc and gate refusal, detached survival + re-attach; fake backend and `fake_flasher.py`). `tests/test_flash_job_stale.py`: stale records, zombie. `tests/test_gui_client.py`: client translation, flash progress parsing (no Qt).
 - Run: `QT_QPA_PLATFORM=offscreen tools/osd_editor/.venv/bin/python tools/osd_editor/test_monitor_gui.py`.
 
 ## Live pass 2026-11-20 (units 1, 2, 3 read-only, locks held, GUI on Dan's desktop)
@@ -69,13 +69,22 @@ Launch: `python3 tools/osd_editor/run.py --monitor` (opens on the monitor tab) o
 ## Control port (#276, 2026-11-20)
 - The GUI app is the only owner of the unit buses; scripts, agents and the human use its port. Code: `tools/osd_editor/control_port.py` (server), `scripts/gui_client.py` (client), `scripts/unit_ops.py` (the device ops), `scripts/flash_job.py` (detached flash).
 - One implementation: `scripts/unit_ops.py` (ddc, settings, synclog, note, kvm, i2c) + `dev.py _flash_direct`. The app's workers run `dev.py <cmd> --direct` (env `AWTO_GUI_WORKER=1`). `dev.py ddc / settings / kvm / synclog / note / i2c / flash` are thin port clients.
-- No fallback: no app answering = dev.py auto-starts `run.py --headless` (detached, log `tmp/logs/gui-headless.log`), waits `START_WAIT_S` = 0.5 s (1.25 x the slowest of 5 headless starts, 0.4 s with a warm page cache, 2026-11-20; a slower start fails with a repeat-in-a-moment message, the app keeps starting), then FAILS with how to start it by hand. Nothing runs on the unit.
+- No fallback: no app answering = dev.py auto-starts `run.py --headless` (detached, log `tmp/logs/gui-headless.log`), prints `gui: starting the GUI app headless ...` and polls the socket every 0.1 s up to `START_WAIT_S` = 3 s, then FAILS naming that log (no silent retry; an app process that exits while starting fails at once with its rc). Nothing runs on the unit.
+  - Bound: measured 2026-11-20, 5 starts each: warm 0.31 s max; cold (venv, Python and repo files evicted from the page cache with `posix_fadvise(DONTNEED)`, no root needed) 0.40 s max; cold with every core busy 1.11 s max. 1.25 x 1.11 = 1.4 s is under the 3 s floor, so the floor is the bound.
+  - A worktree without `tools/osd_editor/.venv` builds it on its first start (uv, network): far beyond the bound; run `python3 tools/osd_editor/run.py --headless` once by hand there.
 - `--direct` = for the app's workers and for recovery by a human with the app stopped. While the app answers, `--direct` writes from anything but a worker are refused (message: use the port without `--direct`). Never chosen automatically.
 - Socket: `$XDG_RUNTIME_DIR/awto-gui.sock` (fallback `tmp/run/`), mode 0600; server checks `SO_PEERCRED` uid (other user = refused); client refuses a socket not owned by it or open to others. Env `AWTO_GUI_SOCKET` overrides the path.
 - Wire: one JSON object per line. Request `{"id", "method", "params"}`; reply `{"id", "ok", "result" | "error", "elapsed_ms"}`; job-based replies carry `rc` + `output`. `subscribe` turns the connection into an event stream (`select`, `status`, `job`, `flash`, `flash_done`).
 - Threads: connection threads parse and wait; every request runs on the UI thread; device calls go through the per-unit queues (parallel across units, serial per unit, ddc calls serialised app-wide). Request limit 45 s (write + read back + save, each <= 5 s, plus queueing behind two other units' ddc calls, x1.8): expiry = error reply, jobs still finish. Idle headless app exits after 900 s without a request (no lingering daemon), never while a job or flash runs.
 - The window follows the port: a command with a unit selects it; `state` dumps what the window shows.
 - Writes only for `test=true` units (the page refuses others, with the reason in the reply). Reads of other units are refused too (dev.py needs `--force` there).
+
+### Flash state is derived, not remembered (#276 follow-up)
+- The app derives "flashing" on every query (quit, flash, job refusal, strip dot, `jobs`) from the unit lock + the job file (`tmp/flash_jobs/<serial>.json`) + a live check of the wrapper pid (a process that is `flash_job.py`, not a zombie, not a reused pid). No cached belief.
+- A tracked job the disk no longer backs (file gone, replaced by another job, wrapper dead without rc) is closed as rc 255 with a log line (`closed as stale`) and a `flash_done` event; `flash_job.load()` also writes rc 255 + error into a record whose wrapper pid is gone.
+- Cause of the divergence: the app cached `flash` per unit and kept a job "running" until the job file said otherwise; a deleted file never did, and an unreaped wrapper (zombie) still answered signal 0. Wrappers are now reaped and zombies count as dead.
+- Quit and the idle exit (900 s) use the same derived state, so a stale job cannot block them. A refusal names the job id, pid and age.
+- `./dev.py gui jobs`: per tracked job unit, job id, wrapper pid, alive, age, rc, the job id/rc currently on disk, log path; `--json` for the raw reply.
 
 ### Commands (`./dev.py gui [--serial S | --unit N] [--hdmi | --dp] [--confirm] [--json] CMD ...`)
 - `ping`, `list` (serial, status, pending, flashing %), `state` (unit, page, node, banner, quick widgets, every row's widget / unit value / dirty), `select [--page P] [--row NAME]`.

@@ -322,8 +322,9 @@ class ControlPort(QObject):
     def m_quit(self, p, done):
         fl = self.page.flash_running()
         if fl:
-            raise PortError(f"refusing to quit: a flash is running on unit(s) {', '.join(fl)} (it would continue detached, "
-                            f"but the app does not close while it is followed)")
+            why = "; ".join(f"unit {n}: {self.page.flash_why(n)}" for n in fl)
+            raise PortError(f"refusing to quit: a flash is running on unit(s) {', '.join(fl)} ({why}); it would continue detached, "
+                            f"but the app does not close while it is followed. `dev.py gui jobs` shows what the app believes")
         done({"quitting": True})
         QTimer.singleShot(0, self._quit)
 
@@ -577,6 +578,10 @@ class ControlPort(QObject):
             raise PortError(str(e)) from None
         self.focus(n)
         done({"job": {k: job[k] for k in ("id", "pid", "started", "log")}, "unit": n, "async": True})
+
+    def m_jobs(self, p, done):
+        """the app's belief about flash jobs, re-derived from the job files + wrapper pids at this call (stale ones are closed first)"""
+        done({"jobs": self.page.flash_jobs()})
 
     def m_flash_status(self, p, done):
         n = self.unit_of(p)

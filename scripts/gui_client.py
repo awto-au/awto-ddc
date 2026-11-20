@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Client of the monitor GUI's control port (awto-ddc#276, docs/monitor-gui.md "Control port"): connect, send, timeout, JSON.
 dev.py's ddc / settings / kvm / synclog / note / i2c / flash commands and `dev.py gui` are thin wrappers around this module:
-they never touch a bus themselves. No app answering = start it headless, wait START_WAIT_S, then fail with how to start it."""
+they never touch a bus themselves. No app answering = start it headless, poll its socket up to START_WAIT_S, then fail naming the app's log."""
 from __future__ import annotations
 
 import json
@@ -22,8 +22,13 @@ ROUTED = ("ddc", "settings", "synclog", "note", "kvm", "i2c", "flash")
 SERVER_LIMIT_S = 45
 CLIENT_LIMIT_S = SERVER_LIMIT_S + 5      # the server always answers within its limit; +5 s = a reply in flight
 PING_S = 2                               # a ping is answered on the UI thread's next turn (ms); 2 s = the UI thread is stuck
-START_WAIT_S = float(os.environ.get("AWTO_GUI_START_WAIT_S", "0.5"))   # env: tests only. 1.25 x slowest of 5 starts (0.4 s, page cache warm, 2026-11-20)
-START_POLL_S = 0.1                       # poll pace of the socket while the app starts
+# Wait for the headless app to answer its socket after the launch. What: run.py -> Qt import -> MonitorPage -> port listening.
+# Measured 2026-11-20, 5 starts each (awto-ddc#276 follow-up): warm 0.31 s max; cold (page cache of the venv, Python, repo evicted with
+# posix_fadvise DONTNEED) 0.40 s max; cold + all cores busy 1.11 s max. 1.25 x 1.11 = 1.4 s, below the 3 s floor: the floor wins
+# (a loaded dev box was ~11 load average at the time; the floor leaves 2.7x over the slowest). Expiry: error naming START_LOG.
+START_WAIT_S = float(os.environ.get("AWTO_GUI_START_WAIT_S", "3"))   # env: tests only
+START_POLL_S = 0.1                       # poll pace of the socket while the app starts (a ping costs ~1 ms)
+START_LOG = ROOT / "tmp" / "logs" / "gui-headless.log"
 FLASH_SILENCE_S = 60                     # flash client: no event for this long = a WARN line (the flash is never stopped by the client)
 QUIT_WAIT_S = 3                          # a quitting app closes its socket within ~1 s (Qt event loop exit); expiry: start anyway
 FLASH_STATUS_S = 5                       # flash client: cross-check the job state when no event arrived (events may be missed)
@@ -178,15 +183,14 @@ def app_live(path: Path | None = None) -> bool:
     return bool(r and r.get("ok"))
 
 
-def default_launcher(path: Path) -> None:
-    """start the app headless and detached: run.py --headless (QT_QPA_PLATFORM=offscreen), output to tmp/logs/gui-headless.log"""
+def default_launcher(path: Path):
+    """start the app headless and detached: run.py --headless (QT_QPA_PLATFORM=offscreen), output to START_LOG; returns the Popen"""
     hook = os.environ.get("AWTO_GUI_LAUNCHER")              # tests only: any command replaces the real app
     run_py = ROOT / "tools" / "osd_editor" / "run.py"
     cmd = hook.split() if hook else [sys.executable, str(run_py), "--headless"]
-    logp = ROOT / "tmp" / "logs" / "gui-headless.log"
-    logp.parent.mkdir(parents=True, exist_ok=True)
-    with logp.open("a") as lf:
-        subprocess.Popen(cmd, cwd=ROOT, stdin=subprocess.DEVNULL, stdout=lf, stderr=subprocess.STDOUT, start_new_session=True,
+    START_LOG.parent.mkdir(parents=True, exist_ok=True)
+    with START_LOG.open("a") as lf:
+        return subprocess.Popen(cmd, cwd=ROOT, stdin=subprocess.DEVNULL, stdout=lf, stderr=subprocess.STDOUT, start_new_session=True,
                          env={**os.environ, "QT_QPA_PLATFORM": "offscreen", "AWTO_GUI_SOCKET": str(path)})
 
 
@@ -197,17 +201,22 @@ def ensure_app(path: Path | None = None, launcher=default_launcher, wait_s: floa
         if app_live(path):
             return path                                # fine, or stale but kept (flash running)
     wait = START_WAIT_S if wait_s is None else wait_s
-    say(f"gui: no app answers on {path}; starting it headless (waiting up to {wait:g} s)")
-    launcher(path)
+    say(f"gui: starting the GUI app headless ... (no app on {path}; waiting up to {wait:g} s, log {START_LOG})")
+    proc = launcher(path)
     t0 = time.monotonic()
-    while time.monotonic() - t0 < wait:
+    while True:
         if app_live(path):
             say(f"gui: app up after {time.monotonic() - t0:.1f} s")
             return path
+        died = proc.poll() if hasattr(proc, "poll") else None
+        if died is not None and not app_live(path):              # the app process exited: no point waiting out the bound
+            raise GuiUnavailable(f"gui: the app exited with rc {died} while starting; see its log {START_LOG}. Nothing was run on the unit.")
+        if time.monotonic() - t0 >= wait:
+            break
         time.sleep(START_POLL_S)
     raise GuiUnavailable(
-        f"gui: the app did not answer on {path} within {wait:g} s (log: tmp/logs/gui-headless.log). Nothing was run on the unit. "
-        f"The app keeps starting in the background: repeat in a few seconds, or start it by hand: python3 tools/osd_editor/run.py --headless (or without --headless for the window), then repeat.")
+        f"gui: the app did not answer on {path} within {wait:g} s; see its log {START_LOG}. Nothing was run on the unit. "
+        f"Start it by hand to see why: python3 tools/osd_editor/run.py --headless (or without --headless for the window), then repeat.")
 
 
 # --- legacy dev.py commands -> requests
@@ -394,7 +403,7 @@ def _flash_end(ev: dict, say) -> int:
 
 # --- `dev.py gui`
 SUBCOMMANDS = ("ping", "list", "state", "select", "get", "set", "save", "kvm", "saver", "run", "health", "synclog", "note", "host-time",
-               "vcp", "i2c", "ddc", "flash-status", "events", "quit")
+               "vcp", "i2c", "ddc", "flash-status", "jobs", "events", "quit")
 
 
 def parse_gui(argv: list[str], default_unit: str | None = None) -> tuple[list[tuple[str, dict]], dict]:
@@ -412,7 +421,7 @@ def parse_gui(argv: list[str], default_unit: str | None = None) -> tuple[list[tu
         p["link"] = "dp"
     _flag(x, "--hdmi")
     confirm = _flag(x, "--confirm")
-    if default_unit and "serial" not in p and "unit" not in p and not (x and x[0] in ("ping", "list", "state", "quit", "events", "select")):
+    if default_unit and "serial" not in p and "unit" not in p and not (x and x[0] in ("ping", "list", "state", "quit", "events", "select", "jobs")):
         p["unit"] = default_unit                             # like every dev.py command: the first test unit, never a working screen
     if x and x[0] in SUBCOMMANDS:
         return [(*_command_form(x, p, confirm),)], opts
@@ -423,7 +432,7 @@ def _command_form(x: list[str], p: dict, confirm: bool) -> tuple[str, dict]:
     c, a = x[0], x[1:]
     m = c.replace("-", "_")
     try:
-        if c in ("ping", "list", "state", "quit", "health", "host-time", "events"):
+        if c in ("ping", "list", "state", "quit", "health", "host-time", "events", "jobs"):
             return ("subscribe" if c == "events" else m), p
         if c == "select":
             q = dict(p)
@@ -521,6 +530,16 @@ def _flag_form(x: list[str], p: dict, confirm: bool) -> list[tuple[str, dict]]:
     return reqs
 
 
+def format_jobs(jobs: list[dict]) -> str:
+    """`dev.py gui jobs`: one line per flash job the app tracks (what it believes, re-derived from disk at the call)"""
+    if not jobs:
+        return "no flash jobs tracked by the app"
+    head = f"{'unit':<5}{'job':<17}{'pid':<9}{'alive':<6}{'age s':<7}{'rc':<5}{'disk job':<17}{'disk rc':<8}log"
+    rows = [f"{j['unit']:<5}{j['job']:<17}{j['pid']:<9}{'yes' if j['alive'] else 'no':<6}{j['age_s']:<7}{'-' if j['rc'] is None else j['rc']:<5}"
+            f"{j['disk_job'] or '-':<17}{'-' if j['disk_rc'] is None else j['disk_rc']:<8}{j['log']}" for j in jobs]
+    return "\n".join([head, *rows])
+
+
 def run_gui(argv: list[str], default_unit: str | None = None, path: Path | None = None, launcher=default_launcher, say=print) -> int:
     reqs, opts = parse_gui(argv, default_unit)
     path = ensure_app(path, launcher, say=say)
@@ -537,6 +556,8 @@ def run_gui(argv: list[str], default_unit: str | None = None, path: Path | None 
             rep = c.call(method, params)
             if opts["json"]:
                 say(json.dumps(rep))
+            elif method == "jobs" and rep.get("ok"):
+                say(format_jobs(rep["result"]["jobs"]))
             else:
                 ms = rep.get("elapsed_ms")
                 if rep.get("ok"):

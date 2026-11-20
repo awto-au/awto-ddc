@@ -1,5 +1,6 @@
 """Offscreen test of the GUI control port (awto-ddc#276): fake backend and fake flasher, no hardware:
 QT_QPA_PLATFORM=offscreen tools/osd_editor/.venv/bin/python tools/osd_editor/test_control_port.py"""
+import json
 import os
 import socket
 import subprocess
@@ -352,7 +353,7 @@ def autostart_and_no_app():
     assert not path.exists()                                                  # nothing listened before the launcher ran
     port.start()                                                              # the fake launcher "starts the app"
     pump(lambda: "rc" in box, "ddc through the port")
-    assert box["rc"] == 0 and any("VCP 62" in ln for ln in lines) and any("starting it headless" in ln for ln in lines), lines
+    assert box["rc"] == 0 and any("VCP 62" in ln for ln in lines) and any("starting the GUI app headless" in ln for ln in lines), lines
     assert fb.direct == 1 and fb.calls[-1][-1] == "1"
     n = len(fb.calls)
     port.stop()
@@ -360,7 +361,7 @@ def autostart_and_no_app():
         GC.run_legacy("ddc", ["get", "0x62"], "1", path, launcher=lambda p: None, say=lines.append) if False else GC.ensure_app(path, lambda p: None, wait_s=0.3, say=lines.append)
         raise AssertionError("no app, but no error")
     except GC.GuiUnavailable as e:
-        assert "start it by hand" in str(e) and "Nothing was run" in str(e)
+        assert "Start it by hand" in str(e) and "Nothing was run" in str(e)
     assert len(fb.calls) == n
     pg.flash_timer.stop()
     print("ok no app: dev.py auto-starts it headless and uses the port; app not answering = error with how to start it, nothing run")
@@ -391,9 +392,9 @@ def cli_end_to_end():
     assert rc == 2 and "refused" in out
     r.close()
     rc, out = dev("ddc", "get", "0x62", "--unit", "1", extra_env={"AWTO_GUI_LAUNCHER": "true", "AWTO_GUI_START_WAIT_S": "0.5"})
-    assert rc == 2 and "did not answer" in out and "start it by hand" in out, (rc, out)
+    assert rc == 2 and "exited with rc 0 while starting" in out and "gui-headless.log" in out, (rc, out)        # launcher `true` exits at once
     rc, out = dev("flash", "--unit", "1", extra_env={"AWTO_GUI_LAUNCHER": "true", "AWTO_GUI_START_WAIT_S": "0.5"})
-    assert rc == 2 and "did not answer" in out, (rc, out)
+    assert rc == 2 and "exited with rc 0" in out, (rc, out)
     print("ok dev.py ddc / settings / kvm / i2c are thin port clients; --direct while the app runs is refused; no app = error (no direct run)")
 
 
@@ -532,11 +533,138 @@ def flash_survives_app_and_reattaches():
     print("ok the detached flash survives the app going away and is re-attached from its job file")
 
 
+def startup_wait_polls_and_fails_with_log():
+    assert GC.START_WAIT_S >= 3, "the start bound is never below 3 s (measured cold + loaded max 1.11 s x 1.25 = 1.4 s)"
+    path = WORK / "wait" / "awto-gui.sock"
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.unlink(missing_ok=True)
+    fb = StatefulBackend()
+    ini = WORK / "wait" / "x.ini"
+    ini.unlink(missing_ok=True)
+    pg = MON.MonitorPage(fb, WORK / "wait" / "gui.log", QSettings(str(ini), QSettings.IniFormat), detect=lambda: set())
+    port = CP.ControlPort(pg, path, headless=True)
+    lines, box = [], {}
+    t0 = time.monotonic()
+
+    def go():
+        try:
+            box["path"] = GC.ensure_app(path, lambda p: None, wait_s=GC.START_WAIT_S, say=lines.append)    # the "app" comes up after 2 s
+        except Exception as e:  # noqa: BLE001  the failure is the test's result
+            box["err"] = e
+    t = threading.Thread(target=go)
+    t.start()
+    pump(lambda: time.monotonic() - t0 > 2.0, "fake app start delay")
+    assert "path" not in box and "err" not in box, box                           # still polling, no early failure
+    port.start()
+    pump(lambda: "path" in box or "err" in box, "client sees the app")
+    assert box.get("path") == path and any("starting the GUI app headless" in ln for ln in lines) and any("app up after 2" in ln for ln in lines), (box, lines)
+    port.stop()
+    pg.flash_timer.stop()
+    t1 = time.monotonic()                                                         # nothing ever answers: fails after the bound, naming the log
+    try:
+        GC.ensure_app(path, lambda p: None, wait_s=0.6, say=lines.append)
+        raise AssertionError("no error")
+    except GC.GuiUnavailable as e:
+        assert 0.6 <= time.monotonic() - t1 < 1.5 and str(GC.START_LOG) in str(e) and "within 0.6 s" in str(e), str(e)
+    p = subprocess.Popen([PY, "-c", "import sys; sys.exit(7)"])                 # the app process dies at once: fail early, with its rc and log
+    t1 = time.monotonic()
+    try:
+        GC.ensure_app(path, lambda p_: p, wait_s=5, say=lines.append)
+        raise AssertionError("no error")
+    except GC.GuiUnavailable as e:
+        assert time.monotonic() - t1 < 2 and "rc 7" in str(e) and str(GC.START_LOG) in str(e), str(e)
+    print("ok first call: client polls the socket until a 2 s-late app answers; bound fails naming the app log; a dead app process fails early")
+
+
+def kill_job(pid):
+    try:
+        os.killpg(pid, 9)                                       # the wrapper is its own session leader: this takes its flasher too
+    except ProcessLookupError:
+        pass
+
+
+def stale_job_state_is_rederived():
+    r = flash_rig("stale")
+    serial = SERIAL["2"]
+    # a) the job file vanishes (another agent's `flash_job.py clean`, a deleted tree): the app must not keep believing
+    rep = r.call("flash", {"unit": "2", "args": ["--sectors", "100", "--step", "0.2"]})
+    pid = rep["result"]["job"]["pid"]
+    assert r.call("quit")["error"].count("pid") >= 1 and "gui jobs" in r.call("quit")["error"]
+    jobs = r.call("jobs")["result"]["jobs"]
+    assert [(j["unit"], j["pid"], j["alive"], j["rc"]) for j in jobs] == [("2", pid, True, None)], jobs
+    out = GC.format_jobs(jobs)
+    assert "alive" in out and str(pid) in out and jobs[0]["log"] in out and "disk job" in out, out
+    kill_job(pid)                                                                 # worker dies without writing an rc (killed from outside)
+    pump(lambda: not flash_job.unit_lock.alive(pid), "wrapper gone")
+    flash_job.job_path(serial).unlink()                                           # ... and its record is gone too
+    assert r.pg.states["2"].flash == "" and r.pg.states["2"].dot() != "flash"      # derived, not remembered
+    assert r.pg.flash_running() == []
+    st = r.call("flash_status", {"unit": "2"})["result"]
+    assert st["done"] and st["rc"] == 255 and any("stale flash job" in ln for ln in st["last"]), st
+    jobs = r.call("jobs")["result"]["jobs"]
+    assert jobs[0]["rc"] == 255 and not jobs[0]["alive"] and jobs[0]["disk_job"] is None, jobs
+    assert "closed as stale (rc 255)" in (WORK / "stale" / "gui.log").read_text()
+    assert r.call("quit")["ok"]
+    # b) the wrapper pid is gone, the record still says running (no rc): closed on disk too, quit works
+    r2 = flash_rig("stale2")
+    rep = r2.call("flash", {"unit": "2", "args": ["--sectors", "100", "--step", "0.2"]})
+    pid = rep["result"]["job"]["pid"]
+    kill_job(pid)
+    pump(lambda: not flash_job.unit_lock.alive(pid), "wrapper gone")
+    assert "rc" not in json.loads(flash_job.job_path(serial).read_text())          # the record on disk still claims it runs
+    assert r2.pg.flash_running() == []
+    rec = json.loads(flash_job.job_path(serial).read_text())
+    assert rec["rc"] == 255 and "stale" in rec["error"] and str(pid) in rec["error"], rec
+    assert r2.call("flash_status", {"unit": "2"})["result"]["rc"] == 255
+    # c) the idle exit is not held back by a stale job
+    rep = r2.call("flash", {"unit": "2", "args": ["--sectors", "100", "--step", "0.2"]})
+    pid = rep["result"]["job"]["pid"]
+    gone = []
+    r2.port.on_quit = lambda: gone.append(1)
+    r2.port.idle_exit_s = 0.05
+    r2.port.last_request = time.monotonic() - 5
+    r2.port._idle_tick()
+    assert not gone, "a live flash must hold the idle exit"
+    kill_job(pid)
+    flash_job.job_path(serial).unlink()
+    pump(lambda: not flash_job.unit_lock.alive(pid), "wrapper gone")
+    r2.port.last_request = time.monotonic() - 5
+    r2.port._idle_tick()
+    assert gone, "a stale job must not block the idle exit"
+    flash_job.job_path(serial).unlink(missing_ok=True)
+    r.close()
+    r2.close()
+    print("ok stale flash state: job file gone / wrapper dead = closed as rc 255 with a log line, flash derived from disk, quit and idle exit work; `gui jobs` lists it")
+
+
+def gui_jobs_command():
+    assert GC.parse_gui(["jobs"], "1")[0] == [("jobs", {})]
+    r = flash_rig("jobs")
+    lines = []
+    box = {}
+    t = threading.Thread(target=lambda: box.update(rc=GC.run_gui(["jobs"], "1", r.path, say=lines.append)))
+    t.start()
+    pump(lambda: "rc" in box, "gui jobs")
+    assert box["rc"] == 0 and lines == ["no flash jobs tracked by the app"], lines
+    r.call("flash", {"unit": "3", "args": ["--sectors", "3", "--step", "0.1"]})
+    lines.clear()
+    box.clear()
+    t = threading.Thread(target=lambda: box.update(rc=GC.run_gui(["jobs"], "1", r.path, say=lines.append)))
+    t.start()
+    pump(lambda: "rc" in box, "gui jobs")
+    rows = "\n".join(lines).splitlines()
+    assert box["rc"] == 0 and rows[0].startswith("unit") and rows[1].startswith("3 ") and " yes " in rows[1], lines
+    pump(lambda: r.pg.states["3"].track.finished_sent, "flash done", 20)
+    flash_job.job_path(SERIAL["3"]).unlink(missing_ok=True)
+    r.close()
+    print("ok dev.py gui jobs: empty message, then unit / job / pid / alive / age / rc / disk record / log per tracked job")
+
+
 def main():
     app = QApplication([])
     for fn in (commands_change_model_and_view, risky_and_actions, save_and_kvm, failed_call_keeps_view, parallel_and_serial, events_stream,
                security, autostart_and_no_app, cli_end_to_end, raw_i2c_parsing, flash_async_progress_and_guards, flash_client_and_rc,
-               flash_survives_app_and_reattaches):
+               flash_survives_app_and_reattaches, startup_wait_polls_and_fails_with_log, stale_job_state_is_rederived, gui_jobs_command):
         fn()
     app.processEvents()
     print("PASS")

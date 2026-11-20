@@ -10,6 +10,7 @@ import re
 import signal
 import subprocess
 import sys
+import threading
 import time
 from pathlib import Path
 
@@ -34,16 +35,36 @@ def job_path(serial: str) -> Path:
     return JOBS / f"{serial}.json"
 
 
+def wrapper_alive(pid: int) -> bool:
+    """the wrapper pid exists AND is a flash_job.py process (a reused pid of some other program is not our wrapper)"""
+    if not unit_lock.alive(pid):
+        return False
+    try:
+        return b"flash_job.py" in Path(f"/proc/{pid}/cmdline").read_bytes()
+    except OSError:
+        return True                                   # no /proc entry to judge by: trust the signal-0 answer
+
+
 def load(serial: str) -> dict | None:
-    """the job record; one that never got a pid (wrapper spawn died) is closed here as rc 255, logged, never left 'running'"""
+    """the job record. A record that is not finished but has no live wrapper (never got a pid, or its pid is gone) is closed here
+    as rc 255 with an error and a log line: nothing is ever left 'running' on disk without a process behind it"""
     try:
         job = json.loads(job_path(serial).read_text())
     except (FileNotFoundError, ValueError):
         return None
-    if "rc" not in job and not job.get("pid") and time.time() - job.get("started_mono_wall", 0) > 2 * SPAWN_WAIT_S:
-        job = {**job, "rc": 255, "finished": isostamp.now(), "error": "stale: the wrapper never started (no pid)"}
+    if "rc" in job:
+        return job
+    pid = int(job.get("pid") or 0)
+    why = None
+    if not pid:
+        if time.time() - job.get("started_mono_wall", 0) > 2 * SPAWN_WAIT_S:
+            why = "the wrapper never started (no pid)"
+    elif not wrapper_alive(pid):
+        why = f"the wrapper pid {pid} is gone without a result"
+    if why:
+        job = {**job, "rc": 255, "finished": isostamp.now(), "error": f"stale: {why}"}
         save(job)
-        unit_lock.log(f"flash job {serial} {job.get('id')}: stale record without a pid closed as rc 255")
+        unit_lock.log(f"flash job {serial} {job.get('id')}: stale record closed as rc 255 ({why})")
     return job
 
 
@@ -70,11 +91,11 @@ def save(job: dict) -> None:
 
 def running(job: dict | None) -> bool:
     """started and not finished: the wrapper pid is alive and no rc recorded (a dead wrapper without rc = lost, reported by the app)"""
-    return bool(job) and "rc" not in job and unit_lock.alive(int(job.get("pid") or 0))
+    return bool(job) and "rc" not in job and wrapper_alive(int(job.get("pid") or 0))
 
 
 def lost(job: dict | None) -> bool:
-    return bool(job) and "rc" not in job and not unit_lock.alive(int(job.get("pid") or 0))
+    return bool(job) and "rc" not in job and not wrapper_alive(int(job.get("pid") or 0))
 
 
 def start(serial: str, unit: str, argv: list[str], python: str = sys.executable) -> dict:
@@ -91,8 +112,9 @@ def start(serial: str, unit: str, argv: list[str], python: str = sys.executable)
            "started_mono_wall": time.time(), "log": str(JOBS / f"{serial}.{jid}.log")}
     save(job)
     try:
-        subprocess.Popen([python, str(Path(__file__).resolve()), "run", str(job_path(serial))], stdin=subprocess.DEVNULL,
-                         stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, start_new_session=True, cwd=unit_lock.ROOT)
+        proc = subprocess.Popen([python, str(Path(__file__).resolve()), "run", str(job_path(serial))], stdin=subprocess.DEVNULL,
+                                stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, start_new_session=True, cwd=unit_lock.ROOT)
+        threading.Thread(target=proc.wait, daemon=True).start()      # reap the wrapper when it ends: no zombie left looking alive
     except OSError as e:
         save({**job, "rc": 255, "finished": isostamp.now(), "error": repr(e)})      # no stuck job file
         raise SystemExit(f"flash job for {serial}: could not start the wrapper ({python}): {e!r}") from None

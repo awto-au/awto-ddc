@@ -156,7 +156,16 @@ class UnitState:
     pending: int = 0                                     # queued + running jobs (not probes)
     track: object = None                                 # FlashTrack of this unit's latest flash job
     shown_dot: str = ""                                  # last dot sent to the event stream
-    flash: str = ""                                      # unit_lock holder while a flash runs (read-only, jobs refused)
+
+    @property
+    def flash(self) -> str:
+        """"owner tool" while a flash runs on this unit (jobs refused), else "". Derived on every read from the unit lock and the
+        job file + wrapper pid of the tracked job: no cached belief (a stale one blocked quit, #276 follow-up)"""
+        held = flash_state(self.info["serial"])
+        if held:
+            return held
+        t = self.track
+        return f"gui-flash-{self.info['serial']}-{t.job['id']} flash" if t is not None and t.live(self.info["serial"])[0] else ""
 
     @property
     def writable(self) -> bool:
@@ -186,6 +195,22 @@ class FlashTrack:
         self.progress = flash_job.Progress(job.get("started_mono_wall", time.time()))
         self.sent = None                                  # last snapshot sent to the event stream (without clock fields)
         self.finished_sent = False
+
+    def live(self, serial: str) -> tuple[bool, str]:
+        """(still flashing, why): not finished here, and the job file still holds THIS job without rc and with its wrapper alive"""
+        if self.progress.rc is not None:
+            return False, "finished"
+        job = flash_job.load(serial)
+        if job is None:
+            return False, "no job file on disk"
+        if job.get("id") != self.job["id"]:
+            return False, f"job file now holds job {job.get('id')}"
+        if "rc" in job:
+            return False, f"job file has rc {job['rc']}"
+        pid = int(job.get("pid") or 0)
+        if not flash_job.wrapper_alive(pid):
+            return False, f"wrapper pid {pid} is not alive"
+        return True, f"job {job['id']} pid {pid} alive, age {time.time() - job.get('started_mono_wall', time.time()):.0f} s"
 
 
 def dot_icon(colour: str) -> QIcon:
@@ -724,9 +749,6 @@ class MonitorPage(QWidget):
         except Exception as e:                           # a failed scan leaves the list as devices.json gives it
             self.say(f"monitor scan failed: {e!r}")
             return
-        for st in self.states.values():
-            running = st.track is not None and st.track.progress.rc is None
-            st.flash = flash_state(st.info["serial"]) or (st.flash if running else "")
         known = any(st.info["serial"] in seen for n, st in self.states.items() if n in self.units)
         for n in self.units:
             st = self.states[n]
@@ -1172,15 +1194,56 @@ class MonitorPage(QWidget):
 
     # --- flash: a detached job (scripts/flash_job.py), tracked here; the app never signals it
     def flash_running(self) -> list[str]:
-        return [n for n, st in self.states.items() if st.track is not None and st.track.progress.rc is None]
+        """units with a flash running, from the job files + wrapper pids on every call. A tracked job the disk no longer backs
+        (file gone, replaced, wrapper dead) is closed here as rc 255 with a log line, so it can never block quit or the idle exit."""
+        out = []
+        for n, st in self.states.items():
+            t = st.track
+            if t is None or t.progress.rc is not None:
+                continue
+            if t.live(st.info["serial"])[0]:
+                out.append(n)
+            else:
+                self._flash_update(n, st, t)                 # closes the stale job (rc 255 + log) or picks up the real rc
+        return out
+
+    def flash_why(self, n: str) -> str:
+        """why unit n counts as flashing: unit lock holder or the tracked job (id, pid, age); logged when it refuses something"""
+        st = self.states[n]
+        parts = []
+        if held := flash_state(st.info["serial"]):
+            lk = unit_lock.read(st.info["serial"]) or {}
+            parts.append(f"unit lock held by {held} pid {lk.get('pid')}")
+        if st.track is not None and st.track.progress.rc is None:
+            parts.append(st.track.live(st.info["serial"])[1])
+        why = "; ".join(parts) or "not flashing"
+        self.say(f"unit {n} counts as flashing: {why}")
+        return why
+
+    def flash_jobs(self) -> list[dict]:
+        """the app's view of its flash jobs, re-derived from disk: one row per unit with a tracked job"""
+        self.flash_running()
+        rows = []
+        for n, st in self.states.items():
+            t = st.track
+            if t is None:
+                continue
+            serial = st.info["serial"]
+            disk = flash_job.load(serial) or {}
+            pid = int(t.job.get("pid") or 0)
+            rows.append({"unit": n, "job": t.job["id"], "pid": pid, "alive": flash_job.wrapper_alive(pid),
+                         "age_s": round(time.time() - t.job.get("started_mono_wall", time.time())), "rc": t.progress.rc,
+                         "reported": t.finished_sent, "disk_job": disk.get("id"), "disk_rc": disk.get("rc"), "log": t.job["log"],
+                         "lock": flash_state(serial) or None})
+        return rows
 
     def flash_start(self, n: str, args: list[str]) -> dict:
         """start `dev.py flash ARGS --unit n --direct` as a detached job; refusals raise ValueError with the reason"""
         st = self.states[n]
         if not st.writable:
             raise ValueError(f"unit {n} is read-only (not a test unit in devices.json)")
-        if st.flash or n in self.flash_running():
-            raise ValueError(f"unit {n} is already flashing ({st.flash or 'job running'})")
+        if n in self.flash_running() or st.flash:
+            raise ValueError(f"unit {n} is already flashing ({self.flash_why(n)})")
         if st.pending:
             raise ValueError(f"unit {n} has {st.pending} job(s) running; wait for them, a flash holds the MCU in ISP")
         try:
@@ -1188,7 +1251,6 @@ class MonitorPage(QWidget):
         except SystemExit as e:
             raise ValueError(str(e)) from None
         st.track = FlashTrack(job)
-        st.flash = f"gui-flash-{st.info['serial']}-{job['id']} flash"
         self.say(f"unit {n} flash started: job {job['id']} pid {job['pid']}, log {job['log']}")
         self._strip_text(n)
         self._flash_event(n, st.track, [])
@@ -1231,6 +1293,13 @@ class MonitorPage(QWidget):
             elif flash_job.lost(job) and t.progress.rc is None:
                 t.progress.rc = 255
                 t.progress.feed("ERROR: flash worker is gone without a result (killed from outside?); the unit may hold a partial image, see the log")
+            if "rc" in job and t.progress.rc == 255 and job.get("error") and not any("stale" in ln for ln in t.progress.last):
+                t.progress.feed(f"ERROR: {job['error']}; the unit may hold a partial image, see the log")
+        elif t.progress.rc is None:
+            why = "its job file is gone" if job is None else f"its job file now holds job {job.get('id')}"
+            t.progress.rc = 255
+            t.progress.feed(f"ERROR: stale flash job {t.job['id']} (pid {t.job.get('pid')}): {why}; closed as rc 255")
+            self.say(f"unit {n}: tracked flash job {t.job['id']} pid {t.job.get('pid')} closed as stale (rc 255): {why}")
         snap = t.progress.snapshot()
         key = {k: v for k, v in snap.items() if k not in ("elapsed_s", "eta_s", "last")}
         if lines or key != t.sent:
@@ -1238,8 +1307,6 @@ class MonitorPage(QWidget):
             self._flash_event(n, t, lines)
         if t.progress.rc is not None and not t.finished_sent:
             t.finished_sent = True
-            if st.track is t:
-                st.flash = ""
             self.say(f"unit {n} flash finished rc {t.progress.rc} in {snap['elapsed_s']:.0f} s")
             self.emit("flash_done", unit=n, job=t.job["id"], rc=t.progress.rc, elapsed_s=snap["elapsed_s"], lines=snap["last"])
             if job and job.get("id") == t.job["id"] and "rc" in job:
