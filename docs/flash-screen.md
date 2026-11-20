@@ -34,7 +34,15 @@ Status 2026-11-18. Seen on unit 3 (Dan: "looked great").
 | DP AUX (unit 2) | 68.5 (1.9) | 69.7 (7.1) | 60.8, 60.6 | +9.0 s (+15 %) | +7.8 s (+13 %) |
 | HDMI, Intel DDC, 1 MHz (unit 3, Rotate 180) | 27.6 (3.8) | 24.1 (0.4) | 23.7 | +0.4 s (+2 %) | +3.9 s (+16 %) |
 
-- Text period 5 s (`THROTTLE_S` = 5.0, Dan 2026-11-20; the table above is the 1 s version). Same method, one run each, new 5 s image: unit 1 126.0 (screen 2.5) vs off 117.0 mean = +9.0 s; unit 3 23.7 (screen 0.3) vs off 23.7 = +0.0 s. Unit 1's 126.0 is within the spread of the 1 s runs (121.9 - 124.8): the 5 s period does not show a gain on that bus. DP AUX (unit 2) not re-measured: its lock was held by a `synclog` stream.
+- Text period 5 s (`THROTTLE_S` = 5.0, Dan 2026-11-20; the table above is the 1 s version). Same method, gated new image, `rtd_flash_image` total in s (screen bucket):
+
+| bus | new 5 s | off | new vs off |
+|---|---|---|---|
+| HDMI NVIDIA (unit 1), 1 run | 126.0 (2.5) | 117.0 mean (2 runs) | +9.0 s (+8 %) |
+| DP AUX (unit 2), 2 runs | 63.0 (3.0), 63.7 (3.2) | 60.1, 61.1 | +2.8 s (+4.6 %) |
+| HDMI Intel 1 MHz (unit 3), 1 run | 23.7 (0.3) | 23.7 | +0.0 s |
+
+- DP AUX at 1 s was +9.0 s (+15 %): the 5 s period cuts that to +2.8 s. Unit 1 is within the spread of its 1 s runs (121.9 - 124.8).
 - DP AUX: a second `new` run did not show the screen (firmware not yet answering VCP 0xEB after the previous flash), so it is not counted; its 60.1 s equals the off runs.
 - The bucket under-reports on DP AUX: old was +7.8 s over off with 1.9 s in the bucket (OSD writes slow the ISP traffic around them as well).
 - Rotate 180 (unit 3): disp_rotate stayed 180 after every flash.
