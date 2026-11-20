@@ -4,7 +4,7 @@
 // power-on / input switch / wake. Texts: fw/awto/sync.tsv (scripts/gen_awto_sync.py); host decoder: scripts/sync_log.py.
 // Also the port getters the selector rows read (stage, DDC activity, idle TMDS clock).
 extern WORD isr_g_usTmdsOffLineMeasureClk;              // ScalerCommonSync.c: SDK TMDS clock at freq-stable, 0.1 MHz
-__xdata StAwtoSync g_stAwtoSync;
+__xdata __at(AWTO_SYNC_ADDR) StAwtoSync g_stAwtoSync;
 static __xdata BYTE s_pucAwtoSyncDet[3];          // D1..D3: last predetect (bit0) | source type << 1 seen by the port detect
 __xdata BYTE g_ucAwtoScanStage;                     // input-sync timeline: step a scan stopped at (AWTO_SCAN_STAGE sites in the SDK)
 __xdata WORD g_usAwtoScanT0;
@@ -292,7 +292,12 @@ void AwtoSyncPush(BYTE ucId, BYTE ucArg, DWORD ulVal)
     AwtoSyncPut(ucId, ucArg, ulVal);
     if(ucId == AWTO_SYNC_EV_BOOT)
     {
-        g_stAwtoSyncPin = g_stAwtoSync.stEv[AWTO_SYNC_IDX(AWTO_SYNC_BACK(g_stAwtoSync.ucSeq, 1))];
+        BYTE ucP;
+
+        for(ucP = 0; ucP < sizeof(StAwtoSyncEv); ucP++)
+        {
+            ((BYTE __xdata *)&g_stAwtoSyncPin)[ucP] = ((BYTE __xdata *)&g_stAwtoSync.stEv[AWTO_SYNC_IDX(AWTO_SYNC_BACK(g_stAwtoSync.ucSeq, 1))])[ucP];
+        }
     }
 }
 
@@ -438,14 +443,30 @@ void AwtoSyncBegin(BYTE ucKind, BYTE ucPort)
     AwtoSyncPush(AWTO_SYNC_EV_BEGIN, ucKind, ((AwtoMs() >> 16) << 8) | ucPort);   // #157 anchor: fw ms bits 31..16 above the port
 }
 
+static __xdata BYTE s_ucAwtoSyncRan;                // 0 until this boot's first AwtoSyncInit (the main loop may re-enter it)
+
 void AwtoSyncInit(void)                             // boot (before SysMainSystemInitial): the power-on episode
 {
+    BYTE __xdata *puc = (BYTE __xdata *)&g_stAwtoSync;
+    WORD usI;
+
+    if(((s_ucAwtoSyncRan == 0) && (AwtoBootReason() == AWTO_BOOT_COLD)) || (g_stAwtoSync.ucMagic0 != 'S') || (g_stAwtoSync.ucMagic1 != 'Y') || (g_stAwtoSync.ucVersion != 3) ||
+       (g_stAwtoSync.ucN != AWTO_SYNC_N) || (g_stAwtoSync.ucWrap != AWTO_SYNC_WRAP) || (g_stAwtoSync.ucSeq >= AWTO_SYNC_WRAP) || (g_stAwtoSync.ucEpSeq >= AWTO_SYNC_WRAP))
+    {
+        for(usI = 0; usI < sizeof(StAwtoSync); usI++)
+        {
+            puc[usI] = 0;                           // cold power-up (RAM not ours) or a ring that fails its header: an empty ring
+        }
+    }
     g_stAwtoSync.ucMagic0 = 'S';
     g_stAwtoSync.ucMagic1 = 'Y';
     g_stAwtoSync.ucVersion = 3;
     g_stAwtoSync.ucN = AWTO_SYNC_N;
     g_stAwtoSync.ucWrap = AWTO_SYNC_WRAP;
     g_stAwtoSync.ucKind = 0;
+    g_stAwtoSync.ucSpare = 0;
+    g_stAwtoSync.ucOpenReq = 0;
+    s_ucAwtoSyncRan = 1;
     g_ucAwtoSyncPwr = _POWER_STATUS_AC_ON;
     s_usAwtoT2Base = 0xFFFF;
     AwtoSyncBegin(AWTO_SYNC_K_POWER_ON, 0xFF);

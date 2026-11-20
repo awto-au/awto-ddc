@@ -33,7 +33,7 @@ MODES = ["INITIAL", "SEARCH", "DISPLAY_SETTING", "ACTIVE", "NOSUPPORT", "NOSIGNA
 
 
 def mapsym(mp: str, name: str) -> int | None:
-    m = re.search(rf"^D:\s+([0-9A-F]{{8}})\s+_{name}\b", mp, re.MULTILINE)
+    m = re.search(rf"^(?:D:\s+|\s+)([0-9A-Fa-f]{{8}})\s+_{name}\b", mp, re.MULTILINE)
     return int(m.group(1), 16) & 0xFFFF if m else None
 
 

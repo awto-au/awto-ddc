@@ -1151,7 +1151,11 @@ typedef struct
     unsigned char ucWrap;                       // AWTO_SYNC_WRAP
     StAwtoSyncEv stEv[AWTO_SYNC_N];
 } StAwtoSync;
-extern __xdata StAwtoSync g_stAwtoSync;
+// The ring is no-init XDATA at the top of the linker pool (fw/rl6449_memory.toml pool end = AWTO_SYNC_ADDR): the crt RAM clear stops
+// below it, so a warm reset / watchdog bite keeps the previous boot's lines (AwtoSyncInit validates it, a cold power-up clears it).
+#define AWTO_SYNC_ADDR                                          0xF409
+typedef char tAwtoSyncEnd[(AWTO_SYNC_ADDR + sizeof(StAwtoSync) == 0xF697) ? 1 : -1];     // ends where the backlight knob starts
+extern __xdata __at(AWTO_SYNC_ADDR) StAwtoSync g_stAwtoSync;
 extern __xdata StAwtoSyncEv g_stAwtoSyncPin;  // #150: this boot's reason line, kept out of the ring
 #define AWTO_SYNC_K_POWER_ON                                    1
 #define AWTO_SYNC_K_SWITCH                                      2

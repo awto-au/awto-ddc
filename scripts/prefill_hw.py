@@ -41,7 +41,7 @@ def log(s: str) -> None:
 
 
 def sym(mp: str, name: str) -> int:
-    m = re.search(rf"^D:\s+([0-9A-F]{{8}})\s+_{name}\b", mp, re.MULTILINE)
+    m = re.search(rf"^(?:D:\s+|\s+)([0-9A-Fa-f]{{8}})\s+_{name}\b", mp, re.MULTILINE)
     if not m:
         sys.exit(f"{name} not in the map: image without #83 pre-fill")
     return int(m.group(1), 16) & 0xFFFF

@@ -7,6 +7,7 @@ usage: fw_gates.py IMAGE_STEM [--tier normal|extensive] [--tree WORKTREE] [--spe
   keys: key_sim_test (#129). crash: crash_sim_test --header TREE/... (#131, #138). wdt: wdt_test --sim, all cases.
   htime: host_time_sim (#157: DDC/CI host time, console title row, ring lines).
   conmode: console_mode_sim (#218: console Off / Until signal closes 3 s after ACTIVE or on a key / Always).
+  conkeep: con_keep_sim (awto-ddc log-keep: console close / reopen / new episode / flood keep the ring lines on screen; a watchdog reset keeps the previous boot's lines).
   conwrap: con_wrap_sim (#162: console lines whole, a wide line on two rows; widest lines + map end, no watchdog bite).
   nvlog: nv_test --sim flushlog (#151: NVRAM flush line per close / power off, "wrote N B ..." vs "nothing changed").
   sync: sync_sim (#139). bootsim: boot_sim (#144, #29, #216: Until signal = console after the picture; bootsim_always: console at power-on; `boot` is the fw_sim --boot-check). wake: wake_sim (#144 task 4). pokes: poke_loops TREE (static, #138).
@@ -86,6 +87,7 @@ EXTENSIVE = {
     "crash": "stall variant, ~10 s CPU",
     "conwrap": "inject variant, ~9 s CPU (boot + NVRAM flush wait + console redraws)",
     "conmode": "~9 s CPU (3 s console timers x 3 modes)",
+    "conkeep": "~6 s CPU (marks in the ring: console close / reopen keeps them, flood, watchdog reset keeps the previous boot)",
     "sysm": "~10 s CPU (power / mode machine chain)",
     "sync": "~11 s CPU (sync-log sim boots)",
 }
@@ -103,6 +105,7 @@ SKIP_IF_MISSING = {      # gate -> map symbols the image must define, else SKIP 
     "htime": ("_isr_g_stAwtoHt",),
     "conmode": ("_g_ucAwtoConAuto",),
     "conwrap": ("_AwtoConWrapLine",),
+    "conkeep": ("_g_stAwtoSync", "_AwtoConWrapLine"),
     "deadport": ("_AwtoDeadPortPoll",),
     "portcfg": ("_isr_g_ucAwtoPortOff",),
     "inputrate": ("_g_pucAwtoInCnt", "_AwtoInRow"),
@@ -202,6 +205,7 @@ def gates(b: Path, m: Path, ref, tree):
     g["conmode"] = [*PY, f"{s}/console_mode_sim.py", b, m]    # #218: Off / Until signal (3 s close, key dismiss) / Always
     if " _g_ucAwtoStackFatal" in mt:                       # #203 stack canary: quiet at ACTIVE, fatal + halt on 0x3F
         g["canary"] = [*PY, f"{s}/stack_canary_sim.py", b, m]
+    g["conkeep"] = [*PY, f"{s}/con_keep_sim.py", b, "--map", m]       # log keeping: the console is a view of the ring, a warm reset keeps it
     g["conwrap_full"] = [*PY, f"{s}/con_wrap_sim.py", b, "--map", m, "--out", out / "conwrap_full", *(["--tree", tree] if tree else [])]   # no line clipped, real events
     g["conwrap"] = [*PY, f"{s}/con_wrap_sim.py", b, "--map", m, "--out", out / "conwrap", "--scope", "inject", *(["--tree", tree] if tree else [])]    # NORMAL: injected widest lines
     if header(tree):

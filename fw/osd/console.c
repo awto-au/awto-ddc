@@ -68,6 +68,7 @@ static __xdata BYTE s_ucLogI;                   // GPIO page backfill: change-ri
 #define AWTO_LOG_HDR        2                   // heading row, then lines to the bottom of the view
 #define AWTO_LOG_ROW0       (AWTO_LOG_HDR + 1)
 #define AWTO_LOG_LINES      (AWTO_VIEW_ROWS - AWTO_LOG_ROW0)
+#define AWTO_LOG_FILL_N     (AWTO_CON_ROWS - AWTO_LOG_ROW0)   // lines a console open backfills: one map row each
 #define AWTO_LOG_REDRAW_N   ((AWTO_CON_ROWS - AWTO_LOG_ROW0) / 2)   // lines a map-full redraw backfills (2 rows each at most)
 static __xdata BYTE s_ucConOpen;                // 0 closed, else the page: AWTO_CON_MAIN / AWTO_CON_GPIO
 static BYTE s_ucPanelCol;
@@ -1281,6 +1282,10 @@ static void AwtoPutCec(void);                  // fmt cec (docs/cec.md): CEC fra
 static void AwtoPutMon(BYTE ucArg);            // fmt mon: health monitor rows (last in this file)
 #define ulV s_ulAwtoLnV
 #define usMs s_usAwtoLnMs
+// Lines of an older episode (the console is a view of the whole ring, awto-ddc log-keep): ms since their own episode start, never
+// wall time (their anchors are not chained). Base = the BEGIN line drawn last (power-on: 0), else the first line drawn.
+static __xdata WORD s_usConT0;
+static __xdata BYTE s_ucConT0Ok;
 // #157 (Dan 2026-11-15): the main console shows host wall time "HH:MM:SS.mmm" once a host sync is known. Ring times are 16 bit:
 // the lines are chained forward from the anchors (episode start, host-sync fw ms) like scripts/sync_log.py unwrap(); a line
 // drawn out of order with no anchor in reach is taken from now (age < 65 s assumed) and marked '~'. Statics in XDATA: this sits
@@ -1375,14 +1380,29 @@ static void AwtoSyncLine(BYTE ucSeq)
     BYTE ucFmt;
 
     ulV = ((DWORD)puc[4] << 24) | ((DWORD)puc[5] << 16) | ((WORD)puc[6] << 8) | puc[7];
-    usMs = (((WORD)puc[2] << 8) | puc[3]) - (((WORD)g_stAwtoSync.ucT0Hi << 8) | g_stAwtoSync.ucT0Lo);
+    usMs = (((WORD)puc[2] << 8) | puc[3]);
+    if(AWTO_SYNC_BACK(g_stAwtoSync.ucSeq, ucSeq) > AWTO_SYNC_BACK(g_stAwtoSync.ucSeq, g_stAwtoSync.ucEpSeq))
+    {
+        if((puc[0] == AWTO_SYNC_EV_BEGIN) || (s_ucConT0Ok == 0))
+        {
+            s_usConT0 = ((puc[0] == AWTO_SYNC_EV_BEGIN) && (puc[1] == AWTO_SYNC_K_POWER_ON)) ? 0 : usMs;
+            s_ucConT0Ok = 1;
+        }
+        usMs -= s_usConT0;
+        ucFmt = 0;                              // narrow time form below
+    }
+    else
+    {
+        usMs -= (((WORD)g_stAwtoSync.ucT0Hi << 8) | g_stAwtoSync.ucT0Lo);
+        ucFmt = 1;
+    }
 
-    if(s_ucLnWide != 0)
+    if((s_ucLnWide != 0) && (ucFmt != 0))
     {
         s_ucLnCur = ucSeq;
         AwtoLnAbs();
     }
-    if((s_ucLnWide != 0) && (isr_g_stAwtoHt.ucSyncs != 0))
+    if((s_ucLnWide != 0) && (ucFmt != 0) && (isr_g_stAwtoHt.ucSyncs != 0))
     {
         AwtoPutWall();
         AwtoPutChar((s_ucLnSure != 0) ? ':' : '~');
@@ -2801,11 +2821,18 @@ void AwtoConLogInit(void)
     }
     AwtoTxt(AWTO_TXT_LOGHDR);
     AwtoTextLine(0, AWTO_T_STYLE_ACCENT);
-    s_ucConSyncSeq = (AWTO_SYNC_BACK(g_stAwtoSync.ucSeq, g_stAwtoSync.ucEpSeq) <= AWTO_SYNC_N) ? g_stAwtoSync.ucEpSeq :
-                     AWTO_SYNC_BACK(g_stAwtoSync.ucSeq, AWTO_SYNC_N);   // backfill the current episode (what the ring still has)
-    if((s_ucConRedraw != 0) && (AWTO_SYNC_BACK(g_stAwtoSync.ucSeq, s_ucConSyncSeq) > AWTO_LOG_REDRAW_N))
+    // The console is a view of the ring (never a clear): the newest lines that fit the map, older episodes included.
+    // One-row lines fill the map (AWTO_LOG_FILL_N); a map-full redraw takes AWTO_LOG_REDRAW_N (fits even if every line wraps).
+    s_ucConSyncSeq = AWTO_SYNC_BACK(g_stAwtoSync.ucSeq, (s_ucConRedraw != 0) ? AWTO_LOG_REDRAW_N : AWTO_LOG_FILL_N);
+    s_ucConT0Ok = 0;
+    if(AWTO_SYNC_BACK(g_stAwtoSync.ucSeq, s_ucConSyncSeq) < AWTO_SYNC_BACK(g_stAwtoSync.ucSeq, g_stAwtoSync.ucEpSeq))
     {
-        s_ucConSyncSeq = AWTO_SYNC_BACK(g_stAwtoSync.ucSeq, AWTO_LOG_REDRAW_N);   // map-full redraw: fits even if every line wraps
+        s_ucLnOk = 0;                           // the view starts inside the current episode: chain its wall times from the episode start
+        for(s_ucLogI = g_stAwtoSync.ucEpSeq; s_ucLogI != s_ucConSyncSeq; s_ucLogI = AWTO_SYNC_NEXT(s_ucLogI))
+        {
+            s_ucLnCur = s_ucLogI;
+            AwtoLnAbs();
+        }
     }
     AwtoConLogSync();
 }
@@ -2947,6 +2974,10 @@ void AwtoConLogSync(void)                       // #139: new sync ring lines, on
     if(AWTO_CON_LIVE() == _FALSE)
     {
         return;                                 // #162 s3: a fast switch's frame checks first; the OSD poll draws the lines after
+    }
+    while((s_ucConSyncSeq != g_stAwtoSync.ucSeq) && (AWTO_LOG_EV(s_ucConSyncSeq) == 0))
+    {
+        s_ucConSyncSeq = AWTO_SYNC_NEXT(s_ucConSyncSeq);    // slots a young ring never wrote
     }
     if(s_ucConSyncSeq != g_stAwtoSync.ucSeq)    // one line per main-loop pass (Dan): the backlog of an open catches up over the next passes, no 100+ ms draw
     {

@@ -51,7 +51,7 @@ MARKS = {0: "DDC/CI + colour + ScalerDebug (pass tail)", 1: "key+diag+testcmd", 
 
 def sym(map_path: Path, name: str) -> int:
     import re
-    m = re.search(rf"^D:\s+([0-9A-F]{{8}})\s+_{name}\b", map_path.read_text(errors="replace"), re.MULTILINE)
+    m = re.search(rf"^(?:D:\s+|\s+)([0-9A-Fa-f]{{8}})\s+_{name}\b", map_path.read_text(errors="replace"), re.MULTILINE)
     if not m:
         sys.exit(f"{name} not in {map_path}: image without the #60 switch log")
     return int(m.group(1), 16) & 0xFFFF

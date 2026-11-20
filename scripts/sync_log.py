@@ -356,18 +356,32 @@ def decode(raw: bytes, rows: list[dict], whole: bool = False, note: bytes | None
     n_, wrap = raw[12], raw[13]
     n = n_ if whole else (h["seq"] - h["ep_seq"]) % wrap
     lost = max(0, n - n_)
-    evs = []
+    evs, seqs, raws = [], [], []
     for k in range(min(n, n_)):
         s = (h["seq"] - min(n, n_) + k) % wrap
         e = raw[HDR + EV * (s % n_):HDR + EV * (s % n_) + EV]
         if whole and e[0] == 0:
             continue                                     # never written (a young ring)
+        seqs.append(s)                                   # ring seq + raw bytes per decoded line: the unit log saver (unit_log.py) dedupes on them
+        raws.append(bytes(e))
         v = int.from_bytes(e[4:8], "big")
         evs.append((e[0], e[1], e[2] << 8 | e[3], note_text(note, e[1], v) if e[0] == NOTE_EV else v))   # #273: text via the slot
     h["lost"] = lost
     h["n"], h["wrap"] = n_, wrap
-    h["events"] = evs
+    h["events"], h["seqs"], h["raws"] = evs, seqs, raws
     return h, [line(rows, ev, h["t0"]) for ev in evs]
+
+
+def snapshot(h: dict, lines: list[str], ht: dict | None, t2: int | None, serial: str | None = None) -> dict:
+    """machine form of one ring read (decode(..., whole=True)): per entry ring seq, raw bytes, decoded line, host time when synced"""
+    evs = h.get("events", [])
+    ts = unwrap(evs, fw_now(ht, t2)) if ht and ht["syncs"] and t2 is not None else [(None, False)] * len(evs)
+    ents = []
+    for s, r, ln, ev, (t, sure) in zip(h["seqs"], h["raws"], lines, evs, ts):
+        ents.append({"seq": s, "raw": r.hex(), "text": ln, "id": ev[0],
+                     "val": int.from_bytes(r[4:8], "big"), "wall": None if t is None else host_time(ht, t), "sure": bool(sure)})
+    return {"serial": serial, "read": dt.datetime.now().astimezone().isoformat(timespec="milliseconds"), "seq": h["seq"], "n": h["n"],
+            "wrap": h["wrap"], "ep_seq": h["ep_seq"], "kind": KINDS.get(h["kind"], h["kind"]), "lost": h.get("lost", 0), "entries": ents}
 
 
 def stamp(h: dict, lines: list[str], ht: dict | None, t2: int | None) -> list[str]:
@@ -418,7 +432,7 @@ def pin_line(raw8: bytes, rows: list[dict]) -> str | None:
 
 
 def sym(map_path: Path, name: str) -> int:
-    m = re.search(rf"^D:\s+([0-9A-F]{{8}})\s+_{name}\b", map_path.read_text(errors="replace"), re.MULTILINE)
+    m = re.search(rf"^(?:D:\s+|\s+)([0-9A-Fa-f]{{8}})\s+_{name}\b", map_path.read_text(errors="replace"), re.MULTILINE)
     if not m:
         raise SystemExit(f"{name} not in {map_path}: image without the #139 sync log")
     return int(m.group(1), 16) & 0xFFFF
@@ -431,6 +445,7 @@ def main() -> int:
     ap.add_argument("--tsv", type=Path)
     ap.add_argument("--serial", help="EDID serial the bus must belong to (i2cbus.require_unit)")
     ap.add_argument("--whole", action="store_true", help="every entry still in the ring (all episodes), times vs the current episode")
+    ap.add_argument("--json", action="store_true", help="one 'SYNCJSON {...}' line with every entry (ring seq, raw bytes, text, host time) for scripts/unit_log.py")
     ap.add_argument("--delta", action="store_true", help="add a +ms column: time since the previous line (#216 boot timing)")
     a = ap.parse_args()
     sys.path.insert(0, str(Path(__file__).resolve().parent))
@@ -455,6 +470,9 @@ def main() -> int:
         log(f"sync: header {bytes(raw[:HDR]).hex(' ')} has no 'SY' magic at {a.map.name}'s g_stAwtoSync: the map is not the "
             f"running image's? flash-state image {img}")
         return 2
+    if a.json:
+        print("SYNCJSON " + json.dumps(snapshot(h, lines, ht, t2, a.serial)), flush=True)
+        return 0
     log(ht_line(ht, t2))
     lines = stamp(h, lines, ht, t2)
     log(f"sync episode: {KINDS.get(h['kind'], h['kind'])}, {len(lines)} lines" + (f", {h['lost']} older lines overwritten" if h.get("lost") else ""))
