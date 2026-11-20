@@ -183,9 +183,17 @@ def contexts(fns, g):
 
 
 # ---------------------------------------------------------------- macros / constants
+def cache_fresh(cache: Path, src: Path) -> bool:
+    """the macro cache is valid only while no file of the build's port tree is newer (every build rewrites tmp/sdcc-port/src)"""
+    if not cache.exists():
+        return False
+    newest = max((p.stat().st_mtime_ns for p in src.rglob("*") if p.is_file()), default=0)
+    return cache.stat().st_mtime_ns >= newest
+
+
 def macro_dump(build: Path, cache: Path) -> dict[str, str]:
     """#define table of the project target (sdcc -E -dM over a few translation units, union)."""
-    if not cache.exists():
+    if not cache_fresh(cache, build / "tmp/sdcc-port/src"):
         os.environ["AWTO_DDC_REPO"] = str(build)
         import importlib
         k = importlib.import_module("fw_compile")

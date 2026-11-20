@@ -37,3 +37,18 @@ def test_expand_matches_the_plain_loop():
     ev = DI.Eval(DEFS)
     for e in ("SEC(2)", "_LONG", "ABC(A)", "MS(AB)", "TWICE(1,2) + SEC(3)", "no macro here", "ABC(ABC(1))", "_PANEL_T3 - 10"):
         assert ev.expand(e) == reference(ev, e), e
+
+
+def test_macro_cache_is_rebuilt_when_the_port_tree_is_newer(tmp_path):
+    """a cache older than the last build's tmp/sdcc-port/src gave stale panel constants and failed the delays gate (2026-11-20)"""
+    import os
+    src = tmp_path / "src"
+    src.mkdir()
+    (src / "a.h").write_text("x")
+    cache = tmp_path / "macros.txt"
+    assert not DI.cache_fresh(cache, src)
+    cache.write_text("#define A 1")
+    os.utime(src / "a.h", ns=(1, 1))
+    assert DI.cache_fresh(cache, src)
+    os.utime(src / "a.h", ns=(cache.stat().st_mtime_ns + 10**9,) * 2)
+    assert not DI.cache_fresh(cache, src)

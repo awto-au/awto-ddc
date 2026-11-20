@@ -4,6 +4,7 @@
 - Rule (Dan 2026-11-13): delay = datasheet / spec value minus 10 %, never a margin. Timeouts: global timeout rule (what, expected + source, multiplier, expiry).
 - Evidence tags: [hw] unit 3, [emu] sim with the clock model (`scripts/sim_clock.py`), [databook], [spec], [sdk-hypothesis], [?].
 - Inventory (typed): `docs/delay-audit.tsv` = sites of the default image + our `..._MS` constants; `docs/delay-audit-hwtest.tsv` = the sites only the `-D _AWTO_OSD_HWTEST` image links (test ops; same columns and verdict rule; `delay_audit.py --check --variant hwtest`, chosen by gate `delays` from the image's build defines). Sources and value rationale of the SDK constants: `docs/delays.md`. Generated from the post-link listing (`scripts/delay_inventory.py`).
+- Merge checklist: a change to a delay site (SDK or our code) -> build default, `delay_audit.py --write`, commit `docs/delay-audit.tsv`; `fw_gates.py` `delays` gate must pass on that build. Macro table cache `tmp/delay_inventory/macros.txt` is rebuilt whenever `tmp/sdcc-port/src` is newer (test `test_macro_cache_is_rebuilt_when_the_port_tree_is_newer`).
 
 ## One clock switch: `AWTO_CLOCK_MHZ`
 - `fw/sdk/Kernel/Common/Project_Option.h`: `350` (default) | `175` | `87` (stock). Build: `./dev.py build -D AWTO_CLOCK_MHZ=87 --tag <tag>-clk87`.
