@@ -1201,6 +1201,12 @@ def cmd_syncbench(extra: list[str]) -> int:
     return _py("sync_bench.py", "--unit", str(_n), "--map", _fwmap(u, given), "--runs", runs or "5", "--label", label or "run", *(["--switch", sw] if sw else []))
 
 
+@command("bench camera: frames from a unit restart to a good LCD picture; capture | runs | analyse (scripts/cam_frames.py; login in AWTO_CAM_USER / AWTO_CAM_PASS)",
+         args="capture|runs --unit N [--action reset|sleepwake] [--n 5] [--main] | analyse CLIP [--sheet PNG]", kind="action")
+def cmd_camframes(extra: list[str]) -> int:
+    return _py("cam_frames.py", *extra)
+
+
 @command("add a free-text line to the unit's diag log (host note, #273) through the GUI app's control port (#276); "
          "--open-console opens the console first and leaves it open",
          args="[--unit N] [--map F] [--open-console] [--direct] TEXT", kind="action")
