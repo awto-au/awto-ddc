@@ -16,7 +16,7 @@ addr = 0xDA000
 size = 0x6000
 
 [xdata]
-pool = [0xD700, 0xF69C]    # SDK XDATA end 0xF700 less the 48 B diag block, 32 B watchdog record, 20 B reset snapshot (RL6449_Project.h)
+pool = [0xD700, 0xF698]    # SDK XDATA end 0xF700 less the 48 B diag block, 32 B watchdog record, 20 B reset snapshot, 4 B backlight test knob (RL6449_Project.h)
 # DDC RAM per port (Mcu.c MCU_DDCRAM_D1..D3, 256 B each), hardware-owned; D0 (0xE080) has no port: XDATA (#165)
 ddc_ram = [[0xE280, 0xE380], [0xE480, 0xE580], [0xE680, 0xE780]]
 

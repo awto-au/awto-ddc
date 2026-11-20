@@ -1806,6 +1806,23 @@ def cmd_sweep(extra: list[str]) -> int:
     return _py("mode_sweep.py", "--unit", n, *opts)
 
 
+@command("backlight on-delay sweep for a filmed video test (docs/bl-delay-sweep.md): per run the TEST knob, ISP reset, sync-log check, "
+         "host note; unattended after the START banner; ./tmp/logs/bl_sweep.tsv",
+         args="[--unit N] [--values 0,50,100,150,200,300,400] [--runs 3] [--gap-s 8]", kind="action")
+def cmd_bl_sweep(extra: list[str]) -> int:
+    _layout_watch()
+    n, _u = _unit(extra)
+    opts: list[str] = []
+    for flag in ("--values", "--runs", "--gap-s"):
+        v = _opt(extra, flag)
+        if v is True:
+            raise SystemExit(f"bl-sweep: {flag} needs a value; nothing done")
+        if v is not None:
+            opts += [flag, v]
+    _done(extra, "bl-sweep")
+    return _py("bl_sweep.py", "--unit", n, *opts, shield=True)
+
+
 def _register_steps() -> None:
     """Expose each STEPS entry as a first-class command."""
     for name, (summary, _argv, takes_extra) in STEPS.items():

@@ -593,6 +593,7 @@ static void SysMachineJudge(void)
                 if(SysMachineFlagsClear() == _TRUE)
                 {
                     SysMachineGo(AWTO_SYS_ACTIVE, AWTO_SYS_WHY_READY, _TRUE);
+                    UserCommonInterfacePanelVideoReady();
                     CLR_MODE_ACTIVE_READY();
                 }
             }

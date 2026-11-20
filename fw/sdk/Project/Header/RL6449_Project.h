@@ -285,6 +285,18 @@ volatile __xdata __at(0xF69C) unsigned char g_stAwtoSnap[20];
 #else
 extern volatile __xdata __at(0xF69C) unsigned char g_stAwtoSnap[20];
 #endif
+// TEST knob "backlight on delay" (docs/bl-delay-sweep.md): 4 B no-init XDATA at 0xF698, kept over a warm reset, RAM only (never NVRAM).
+// Valid = magic + check; else off (default behaviour). Host writes it over debug slave 0x35 (scripts/bl_sweep.py).
+#define AWTO_BLK_ADDR                                           0xF698
+#define AWTO_BLK_MAGIC                                          0x4C
+#define AWTO_BLK_SEED                                           0xB5    // check byte = seed ^ magic ^ ms lo ^ ms hi
+#define AWTO_BLK_MAX_MS                                         2000    // larger = invalid (garbage in cold RAM)
+#define AWTO_BLK_REF_MAX_MS                                     5000    // no video-ready event within this from wanted: pin on anyway (E3 row)
+#ifdef _AWTO_DIAG_DEFINER
+volatile __xdata __at(0xF698) unsigned char g_aucAwtoBlKnob[4];     // magic, ms lo, ms hi, check
+#else
+extern volatile __xdata __at(0xF698) unsigned char g_aucAwtoBlKnob[4];
+#endif
 #define AWTO_WDT_REC_N                                          25      // bytes under ucCheck
 #define AWTO_WDT_SEED                                           0xA5
 #define AWTO_WDT_C_STALL                                        1       // pokes stopped: no main-loop pass and no bounded loop
@@ -1649,6 +1661,9 @@ extern unsigned char g_pucSourceSearchPriority[];
 #define AWTO_BL_ON_DELAY_MS                                     0
 #define AWTO_BL_TO_PWM_MS                                       0
 #endif
+#define AWTO_PNL_X_BLK                                          0xE1    // line 11 args of the backlight test knob: E1 pin on (value = ms2 since boot / since video ready)
+#define AWTO_PNL_X_BLK_SET                                      0xE2    // knob in effect (value = ms)
+#define AWTO_PNL_X_BLK_LATE                                     0xE3    // no video ready event in time (value = ms from wanted)
 // #162 panel machine (UserCommonInterface.c): the one driver of panel VDD, eDP-1 PHY / link / stream, backlight pin and PWM.
 // Callers request (UserCommonInterfacePanelPowerAction); UserCommonInterfacePanelPowerTick() steps it, never waits. docs/design-162.md.
 #define AWTO_PNL_OFF                                            0       // VDD off, T6 done
@@ -1719,6 +1734,7 @@ extern void AwtoPanelForeign(unsigned char ucWhat);
 #define AWTO_OSD_SDK_CELL_W_ROT90                               18      // the same font turned 90 / 270
 extern void UserCommonInterfacePanelBoot(void);
 extern void UserCommonInterfacePanelBootDuty(void);
+extern void UserCommonInterfacePanelVideoReady(void);
 // #162 step 3 system machine (SysJudge.c): one state for power status + mode, one request entry (SysMachineRequest), one driver.
 // The SDK views (power status / target, mode state / reset target) are written there only (gate sysm). docs/design-162.md.
 #define AWTO_SYS_AC_ON                                          0       // boot: power AC_ON, mode POWER OFF
