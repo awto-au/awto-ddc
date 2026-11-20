@@ -146,6 +146,9 @@ CA	*	-	console opened (sync log)	boot
 CB	*	port	cable plugged in:wake
 CC	*	port	EDID read by source:wake
 E7	*	port	EDID read by source:awake, no wake needed
+FA	00	vport	% HPD low	timing
+FA	01	vport	% HPD high	timing
+FA	02	n	EDID channels on:HPD pin mask % (bit0 = D1)	timing
 E8	01	n	OSD SRAM probe done:% addresses written and read back from M1 / M2 on the MCU, results in g_stAwtoOsdProbe
 E8	03	-	OSD SRAM probe refused:the OSD is on	warning
 EA	*	mon	monitor: %
@@ -294,6 +297,7 @@ F1	02	ms	stage:display setting took % (M-domain, DCLK, scaling)	timing
 F1	03	ms	stage:colour set-up took %	timing
 F1	04	ms	stage:first-active work took %	timing
 F2	01	pms	scan ok:%	timing
+F2	02	pms	scan:tried the remembered mode 1:40 first (%)	timing
 F2	10	pms	scan wait:HPD event running (%)	warning
 F2	11	pms	scan wait:PHY not set, freq detect not stable yet (%)	warning
 F2	12	pms	scan fail:CDR not locked at 1:10, retry 1:40 (%)	error

@@ -2041,7 +2041,7 @@ void ScalerTMDSRx3IntHandler_EXINT0(void)
         {
             ScalerSetByte_EXINT(P72_39_HDMI_CTRL_39, _P72_3A_PT_20_PORT_PAGE72_HDMI_SCDC_20);
 
-            if(ScalerGetBit_EXINT(P72_3A_HDMI_CTRL_3A, _BIT1) == _BIT1)
+            if((ScalerGetBit_EXINT(P72_3A_HDMI_CTRL_3A, _BIT1) == _BIT1) || AWTO_TMDS_MEM_USE(AWTO_TMDS_MEM_D3))
             {
                 SET_TMDS_RX3_HIGH_SPEED_MODE();
             }
@@ -3697,7 +3697,7 @@ BYTE ScalerTMDSRx3TMDSScanInputPort(BYTE ucInputType)
                 CLR_TMDS_RX3_HIGH_SPEED_MODE();
             }
 #endif
-            CLR_TMDS_RX3_PHY_SET();
+            CLR_TMDS_RX3_PHY_SET(); AWTO_TMDS_MEM_CLR(AWTO_TMDS_MEM_D3);     // a failed try drops the remembered mode
 
             // Disable Freq. Unstable IRQ
             ScalerSetBit(P72_E6_HDMI_FREQDET_CTRL, ~_BIT1, 0x00);

@@ -959,6 +959,21 @@ extern void AwtoDpFrameClear(void);
 #define AWTO_DP_FRAME_SET(n)
 #define AWTO_DP_FRAME_CLEAR()
 #endif
+#ifndef _AWTO_TMDS_MODE_MEM
+#define _AWTO_TMDS_MODE_MEM                                     _ON     // #78: per port RAM bit "worked at 1:40 last": the PHY set-up tries it first (RL6449_Series_TMDSRx2/3.c)
+#endif
+#define AWTO_TMDS_MEM_D2                                        _BIT0   // isr_g_ucAwtoTmdsMem bit n = port worked at 1:40; bit n + 4 = this try came from the memory (logged by AwtoSyncScan)
+#define AWTO_TMDS_MEM_D3                                        _BIT1
+#if(_AWTO_TMDS_MODE_MEM == _ON)
+extern __xdata BYTE isr_g_ucAwtoTmdsMem;
+#define AWTO_TMDS_MEM_USE(b)                                    (((isr_g_ucAwtoTmdsMem & (b)) != 0) ? ((isr_g_ucAwtoTmdsMem |= ((b) << 4)), _TRUE) : _FALSE)
+#define AWTO_TMDS_MEM_CLR(b)                                    (isr_g_ucAwtoTmdsMem &= ~(b))
+#define AWTO_TMDS_MEM_NOTE(b, r, hs)                            { if((r) != _SOURCE_NONE) { isr_g_ucAwtoTmdsMem = ((hs) != 0) ? (isr_g_ucAwtoTmdsMem | (b)) : (isr_g_ucAwtoTmdsMem & ~(b)); } }
+#else
+#define AWTO_TMDS_MEM_USE(b)                                    _FALSE
+#define AWTO_TMDS_MEM_CLR(b)
+#define AWTO_TMDS_MEM_NOTE(b, r, hs)
+#endif
 #ifndef _AWTO_LOOP_SPLIT
 #define _AWTO_LOOP_SPLIT                                        _ON     // #75: slow checks every AWTO_SLOW_MS, not every pass (fw/diag/loopsplit.c)
 #endif
@@ -1290,6 +1305,7 @@ extern void osd_tc_show(unsigned char ucOn);
 extern void osd_tc_close(void);
 extern void osd_tc_bar(unsigned char ucWin, unsigned int usX0, unsigned int usY0, unsigned int usX1, unsigned int usY1, unsigned char ucColour);
 #define AWTO_SYNC_EV_EDID                                       0xE7    // arg = port: the source read the EDID (awake; the power saving reads are the wake lines)
+#define AWTO_SYNC_EV_HPD                                        0xFA    // arg 0 / 1 = HPD pin low / high (value = port); arg 2 = EDID channel enabled (value = HPD pin mask, bit n = D(n+1))
 #define AWTO_SYNC_EV_PS_DDC                                     0xDD    // arg = port: SDK DDC handshake in power saving, gated (once per sleep)
 #define AWTO_SYNC_EV_PS_AUX                                     0xDA    // arg = port: SDK DP AUX toggle in power saving, gated (once per sleep)
 #define AWTO_SYNC_EV_PS_AUXCMD                                  0xDB    // arg = port: AUX command in power saving, no wake
@@ -1413,6 +1429,7 @@ extern void AwtoSyncFreq(void);
 #define AWTO_STG_COLOUR                                         3       // 15 -> 16
 #define AWTO_STG_ACTIVE                                         4       // 11 -> 12
 #define AWTO_SCAN_OK                                            0x01
+#define AWTO_SCAN_MEM                                           0x02    // TMDS: the PHY set-up took 1:40 from the per-port memory (_AWTO_TMDS_MODE_MEM)
 #define AWTO_SCAN_TMDS_PHY                                      0x11    // TMDS: PHY not set, waiting for the clock stable IRQ
 #define AWTO_SCAN_TMDS_LOCK                                     0x11    // + 1 CDR / 2 DFE / 3 video detect; + 3 when the 1:40 try failed (retry 1:10)
 #define AWTO_SCAN_TMDS_HPD                                      0x10
@@ -1464,6 +1481,8 @@ extern void AwtoPsAuxSeen(unsigned char ucPort);              // SDK DP PS prede
 // #162 step 3: power status changes are logged by the system machine (AwtoSyncPoll at the transition); per pass only the wake poll
 #define AWTO_SYNC_POLL()                                        { if(g_ucAwtoSyncPwr == _POWER_STATUS_SAVING) { AwtoPsWakePoll(); } }
 extern void AwtoEdidPoll(void);
+extern void AwtoSyncEdidOn(void);
+#define AWTO_SYNC_EDID_ON()                                     AwtoSyncEdidOn()
 #define AWTO_EDID_POLL()                                        AwtoEdidPoll()
 // between main-loop handlers (keil2sdcc): armed (AwtoSyncPoll saw SAVING) and still SAVING; the poll returns unless due
 // one call per site, the compares in AwtoPsPollSite: 14 sites in main, which is in the full common area (#157 merge)
@@ -1472,6 +1491,7 @@ extern void AwtoPsPollSite(void);
 #else
 #define AWTO_SYNC_POLL()
 #define AWTO_EDID_POLL()
+#define AWTO_SYNC_EDID_ON()
 #define AWTO_PS_POLL_SITE()
 #endif
 extern __xdata unsigned char g_ucAwtoConAuto;  // the open console opened itself: SOURCE closes it for the selector (#132)

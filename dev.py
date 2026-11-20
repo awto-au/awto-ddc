@@ -1172,11 +1172,11 @@ def cmd_synclog(extra: list[str]) -> int:
 
 
 @command("n warm resets of a unit, one timeline row each (picture time, EDID read, scan call, stages), median at the end (scripts/sync_bench.py)",
-         args="[--unit N] [--map F] [--runs 5] [--label NAME]", kind="action")
+         args="[--unit N] [--map F] [--runs 5] [--label NAME] [--switch AWAY,BACK]", kind="action")
 def cmd_syncbench(extra: list[str]) -> int:
-    given, runs, label = _opt(extra, "--map"), _opt(extra, "--runs"), _opt(extra, "--label")
+    given, runs, label, sw = _opt(extra, "--map"), _opt(extra, "--runs"), _opt(extra, "--label"), _opt(extra, "--switch")
     _n, u = _unit(extra)
-    return _py("sync_bench.py", "--unit", str(_n), "--map", _fwmap(u, given), "--runs", runs or "5", "--label", label or "run")
+    return _py("sync_bench.py", "--unit", str(_n), "--map", _fwmap(u, given), "--runs", runs or "5", "--label", label or "run", *(["--switch", sw] if sw else []))
 
 
 @command("add a free-text line to the unit's diag log (host note, #273): tests show what they do on the unit's console; "

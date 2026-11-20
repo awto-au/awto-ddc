@@ -4187,7 +4187,7 @@ void SysSourceCableDetection(void)
 
                         SET_SOURCE_SEARCH_PORT_INITIAL();
                         SET_CABLE_DETECT(ucI, GET_D2_CABLE_STATUS());
-                        SET_CABLE_STATUS_CHANGE(ucI, _TRUE);
+                        SET_CABLE_STATUS_CHANGE(ucI, _TRUE); AWTO_TMDS_MEM_CLR(AWTO_TMDS_MEM_D2);
 
                         DebugMessageSystem("0. Cable Status Changed D2", ucI);
 #if(_DP_RX_MI_DONGLE_SUPPORT == _ON)
@@ -4297,7 +4297,7 @@ void SysSourceCableDetection(void)
 
                         SET_SOURCE_SEARCH_PORT_INITIAL();
                         SET_CABLE_DETECT(ucI, GET_D3_CABLE_STATUS());
-                        SET_CABLE_STATUS_CHANGE(ucI, _TRUE);
+                        SET_CABLE_STATUS_CHANGE(ucI, _TRUE); AWTO_TMDS_MEM_CLR(AWTO_TMDS_MEM_D3);
 
                         DebugMessageSystem("0. Cable Status Changed D3", ucI);
                     }

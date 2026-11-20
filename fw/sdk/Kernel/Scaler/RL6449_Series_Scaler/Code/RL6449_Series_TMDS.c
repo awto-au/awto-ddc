@@ -536,7 +536,13 @@ BYTE ScalerTMDSScanInputPort(BYTE ucInputPort, BYTE ucInputType)
         case _D2_INPUT_PORT:
 
 #if((_D2_TMDS_SUPPORT == _ON) && (_D2_INPUT_PORT_TYPE != _D2_DUAL_DVI_PORT))
-            return ScalerTMDSRx2TMDSScanInputPort(ucInputType);
+            {
+                BYTE ucScan = ScalerTMDSRx2TMDSScanInputPort(ucInputType);
+
+                AWTO_TMDS_MEM_NOTE(AWTO_TMDS_MEM_D2, ucScan, GET_TMDS_RX2_HIGH_SPEED_MODE());
+
+                return ucScan;
+            }
 #endif
 
             break;
@@ -546,7 +552,13 @@ BYTE ScalerTMDSScanInputPort(BYTE ucInputPort, BYTE ucInputType)
 #if((_D3_TMDS_SUPPORT == _ON) &&\
     (_D3_INPUT_PORT_TYPE != _D3_DUAL_DVI_PORT) &&\
     (_D3_INPUT_PORT_TYPE != _D3_NO_PORT))
-            return ScalerTMDSRx3TMDSScanInputPort(ucInputType);
+            {
+                BYTE ucScan = ScalerTMDSRx3TMDSScanInputPort(ucInputType);
+
+                AWTO_TMDS_MEM_NOTE(AWTO_TMDS_MEM_D3, ucScan, GET_TMDS_RX3_HIGH_SPEED_MODE());
+
+                return ucScan;
+            }
 #endif
 
             break;

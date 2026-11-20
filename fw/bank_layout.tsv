@@ -1483,7 +1483,6 @@ fn	_ScalerDpRx1PhyCtsTp2SetPhy	2	0x18e8	3308
 fn	_ScalerDpRx1RebuildPhy	2	0x25d4	4952
 fn	_ScalerTMDSHdcp1p4AksvClear	2	0x392c	20
 fn	_ScalerTMDSNormalPreDetect	2	0x3940	28
-fn	_ScalerTMDSScanInputPort	2	0x395c	32
 fn	_ScalerTMDSStableDetect	2	0x397c	44
 fn	_ScalerTMDSRx2CheckCDRStable	2	0x39a8	528
 fn	_ScalerDpRx1SetDpcdBitValue	2	0x3bb8	56
@@ -1559,6 +1558,7 @@ fn	_SysSourceCheckTargetTimes	2	0x8990	44
 fn	_SysSourceConvertSearchPort	2	0x89bc	48
 fn	_SysSourceGetCableStatusChange	2	0x8cac	32
 fn	_SysSourceGetInputPortType	2	0x8ccc	24
+fn	_ScalerTMDSScanInputPort	2	0x8ce4	108
 fn	_SysSourceInitial	2	0x8dbc	328
 fn	_SysSourceJudge	2	0x8f04	216
 fn	_SysSourceKeepDetectingCheck	2	0x8fdc	44
@@ -1710,6 +1710,7 @@ fn	_SysMachineReset	3	0x3e9c	308
 fn	_ScalerDpRx1ScanInputPort	3	0x3fd0	264
 fn	_AwtoSyncBegin	3	0x40d8	372
 fn	_AwtoSyncPutRaw	3	0x424c	204
+fn	_AwtoHpdPins	3	0x4318	40
 fn	_SysMainSystemInitial	3	0x4340	112
 fn	_SysModeDisplayTimingInitial	3	0x43b0	112
 fn	_SysModeResetState	3	0x4420	348
@@ -1801,7 +1802,7 @@ fn	_AwtoSwEvent	3	0x7fb8	24
 fn	_AwtoSwMode	3	0x7fd0	36
 fn	_AwtoSwRec	3	0x7ff4	160
 fn	_AwtoSysLog	3	0x8094	132
-fn	_AwtoEdidPoll	3	0x8118	180
+fn	_AwtoSyncEdidOn	3	0x8118	36
 fn	_AwtoPsTmdsLive	3	0x81cc	40
 fn	_AwtoPsTmdsStart	3	0x81f4	76
 fn	_AwtoPsWakeArm	3	0x8240	176
@@ -1810,7 +1811,6 @@ fn	_AwtoPsWakeFire	3	0x8324	372
 fn	_AwtoPsWakePoll	3	0x8498	576
 fn	_AwtoPsWakeState	3	0x86d8	252
 fn	_AwtoSyncDetect	3	0x87d4	744
-fn	_AwtoSyncVisit	3	0x8abc	120
 fn	_AwtoDpFrameClear	3	0x8b34	12
 fn	_AwtoDpOneFrameMs	3	0x8b40	8
 fn	_AwtoSyncFreq	3	0x8b58	120
@@ -1824,7 +1824,9 @@ fn	_AwtoPsTmdsHold	3	0x9d9c	764
 fn	_AwtoPsTmdsStable	3	0xa098	184
 fn	_AwtoTmdsIdleKhz	3	0xa150	544
 fn	_SysMachineWork	3	0xa370	920
-fn	_AwtoSyncScan	3	0xa708	180
+fn	_AwtoSyncVisit	3	0xa708	148
+fn	_AwtoEdidPoll	3	0xa7bc	324
+fn	_AwtoSyncScan	3	0xa900	352
 const	_tDDR2_PLL_PHASE	4	0x0000	16
 const	_tAwtoAudioTestAmp	4	0x0010	12
 const	_tAwtoAudioTestGain	4	0x001c	16
@@ -2209,7 +2211,7 @@ const	_tLUTGAMMA_18_TABLE	6	0x0164	6352
 const	_tLUTGAMMA_20_TABLE	6	0x1a34	6352
 const	_tLUTGAMMA_22_TABLE	6	0x3304	6352
 const	_tLUTGAMMA_24_TABLE	6	0x4bd4	6352
-const	_UserInterfaceGetOverScanStatus_tusOverscanEnTable_10000_1350	6	0x64a4	92
+const	_UserInterfaceGetOverScanStatus_tusOverscanEnTable_10000_1351	6	0x64a4	92
 const	_OperationFactoryTable	6	0x6500	756
 const	_tCOLOR_CONV_RGB2YUV_ITU709	6	0x67f4	32
 const	_tCOLOR_CONV_YUV2RGB_ITU601	6	0x6814	32
@@ -2722,7 +2724,7 @@ const	_tDISPLAY_DPTX_DRV_HBR2_TABLE	9	0x0000	56
 const	_tEDID_TABLE_D1	9	0x0038	268
 const	_tEDID_TABLE_D2	9	0x0144	268
 const	_tEDID_TABLE_D3	9	0x0250	268
-const	_set_ap_rotate_tFlipToSdk_10000_1373	9	0x035c	8
+const	_set_ap_rotate_tFlipToSdk_10000_1374	9	0x035c	8
 fn	_ScalerColor420To422D2D3Enable	9	0x0364	60
 fn	_ScalerDpPowerSwitch	9	0x03a0	120
 fn	_ScalerDpRx1AuxIntInitial	9	0x0418	116
