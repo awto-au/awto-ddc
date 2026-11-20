@@ -8,14 +8,14 @@ usage: AWTO_SIM_CORE=fast nv_test.py --sim BIN [--map MAP] [--cases a,b]
   items programmed, flash halt ops, gate inputs (stable ms, DDC/CI idle ms), erases, bytes programmed (images before
   the flush line: 16 B, erases / bytes absent).
 - Cases: unchanged (no write), vcp (no write in the handler or while DDC/CI is busy; written after the gate opens),
-  forced (DDC/CI busy 30 s: written anyway), switch (KVM / search switches: no write), menu (close: card + write),
+  forced (DDC/CI busy 60 s: written anyway), switch (KVM / search switches: no write), menu (close: card + write),
   selector (cancel: nothing; a choice: stored at the gate with the card),
   power (POWER off: written at once), halt (6 x test cmd 0x3D: max poke gap), persist (unit: mains cycle, values back),
   flushlog (sync ring D4 flush lines: menu close with a change -> "wrote N B ..." matching the counter deltas; close without
   a change -> "nothing changed, no flash write"; POWER off -> a power-off flush line).
 - Sim DDC/CI: ddc_sim.DdcEngine (spare IIC engine). Unit: ddcutil on the unit's bus with the debug link off, then the
   link back on to read the counters; values through the VCP mailbox (settings_cli.Box) otherwise.
-- Deadlines: gate = debounce 2 s + stable 3 s, x1.25 -> 6.5 s; forced 30 s x1.25 -> 37.5 s; power flush < 1 main pass x2 -> 1 s.
+- Deadlines: gate = stable 10 s x1.25 -> 12.5 s; forced 60 s x1.25 -> 75 s; power flush < 1 main pass x2 -> 1 s.
 Log: tmp/logs/nv_test.log (one line per step), unit I2C bytes in tmp/logs/nv_test.raw.log
 """
 from __future__ import annotations
@@ -33,10 +33,10 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 ROOT = Path(__file__).resolve().parents[1]
 LOG = ROOT / "tmp/logs/nv_test.log"
-GATE_S = 6.5            # AWTO_NV_SAVE_MS 2 s + AWTO_NV_STABLE_MS 3 s (overlap: worst = sum) x 1.25
-FORCE_S = 37.5          # AWTO_NV_FORCE_MS 30 s x 1.25
+GATE_S = 12.5           # AWTO_NV_STABLE_MS 10 s (worst: ACTIVE just reached; SAVE 2 s overlaps) x 1.25
+FORCE_S = 75.0          # AWTO_NV_FORCE_MS 60 s x 1.25
 POWER_S = 1.0           # flush inside UserInterfacePowerSwitch: same main pass; one pass <= 0.5 s x 2
-DDC_POLL_S = 0.2        # a host polling DDC/CI (ddcutil getvcp loop) well under the 500 ms idle window
+DDC_POLL_S = 0.2        # a host polling DDC/CI (ddcutil getvcp loop) well under the 10 s idle window
 WHY = {0: "-", 1: "gate", 2: "forced", 3: "power", 4: "close", 5: "test", 6: "second BriCon/CT item"}
 MASK = ((0x01, "SYS"), (0x02, "OSD"), (0x04, "BRI"), (0x08, "CT"), (0x10, "SIX"), (0x20, "PANEL"), (0x40, "AUX"))
 

@@ -3,7 +3,7 @@
 
 usage: nv_policy_sim.py BIN MAP [--mode 1080p60] [--minutes 25]
   - 10 equal VCP 0x10 sets, menu open + close without a change, a selector input switch, N minutes of backlight, then
-    a changed VCP set (must write through the gate) and a POWER off (flush: panel time written here only).
+    a changed VCP set (must write through the gate) and a POWER off (flush of the power status only). 25 min of backlight alone = 0 flash writes; the used time rides along with a settings write.
   - ops = g_stAwtoNv.usOps (programs + erases), items = usItemWr; every scenario states its expected ops.
 Exit 1 on a failed check. Log: ./tmp/logs/nv_policy_sim.log
 """
@@ -23,6 +23,7 @@ import osd_render as R
 ROOT = R.ROOT
 LOG = ROOT / "tmp/logs/nv_policy_sim.log"
 VCP_BRIGHTNESS = 0x10
+NV_GATE_WAIT_MS = 13000   # AWTO_NV_STABLE_MS 10 s x 1.25 + tick (sim ms)
 NV_OFF = {"flush": 6, "items": 8, "ops": 10, "erase": 16, "bytes": 18, "defer": 4}   # StAwtoNv, big-endian words
 
 
@@ -56,7 +57,7 @@ class Run:
         fn()
         c1 = self.cnt()
         d = {n: c1[n] - c0[n] for n in c0}
-        ok = want_ops(d["ops"])
+        ok = want_ops(d)
         self.fails += 0 if ok else 1
         say(f"{'PASS' if ok else 'FAIL'} {name}: flash halt ops {d['ops']} (erases {d['erase']}), items {d['items']}, flushes {d['flush']}, "
             f"deferred saves {d['defer']}, bytes {d['bytes']}")
@@ -83,7 +84,7 @@ def main():
                 mc.set(VCP_BRIGHTNESS, cur["cur"])
                 k.wait(300)
             k.wait(6000)
-        r.scenario("10 equal VCP 0x10 sets", equal_sets, lambda o: o == 0)
+        r.scenario("10 equal VCP 0x10 sets", equal_sets, lambda o: o["ops"] == 0)
 
         def menu():
             k.tap("MENU")
@@ -93,34 +94,34 @@ def main():
                 if k.menu() == 0:
                     break
                 k.tap("MENU")
-            k.wait(6000)
-        r.scenario("menu open + close, nothing changed", menu, lambda o: o == 0)
+            k.wait(NV_GATE_WAIT_MS)
+        r.scenario("menu open + close, nothing changed", menu, lambda o: o["ops"] == 0)
 
         def switch():
             K.live_ports(k, ("D2", "D3"))
             k.ring0 = K.ring(k)
             k.wait(500)
             K.take(k, "D2", "D3", "idle")
-            k.wait(10000)
-        r.scenario("input switch D2 -> D3 (selector, idle commit)", switch, lambda o: 1 <= o <= 6)
+            k.wait(NV_GATE_WAIT_MS)
+        r.scenario("input switch D2 -> D3 (selector, idle commit)", switch, lambda o: 1 <= o["ops"] <= 8)   # 3 items + the used-time item riding along
 
         def backlight():
             m0 = r.panel()
             k.wait(a.minutes * 60 * 1000)
             say(f"  panel used time advanced {r.panel() - m0} min in {a.minutes} min")
-        r.scenario(f"{a.minutes} min of backlight", backlight, lambda o: o == 0)
+        r.scenario(f"{a.minutes} min of backlight", backlight, lambda o: o["ops"] == 0)
 
         def changed():
             mc.set(VCP_BRIGHTNESS, (cur["cur"] + 7) % 101)
-            k.wait(6000)
-        r.scenario("one changed VCP 0x10 set (through the gate)", changed, lambda o: 1 <= o <= 4)
+            k.wait(NV_GATE_WAIT_MS)
+        r.scenario("one changed VCP 0x10 set (through the gate)", changed, lambda o: 1 <= o["ops"] <= 6 and o["items"] == 3)   # OSD 2 items + the used-time item riding along
 
         def power():
             k.power(True)
             k.wait(150)
             k.power(False)
             k.wait(3000)
-        r.scenario("POWER off (flush, panel time written here)", power, lambda o: o >= 1)
+        r.scenario("POWER off (power status flush; used time already stored: no extra item)", power, lambda o: 1 <= o["items"] <= 2)
     finally:
         r.s.bus.close()
     say(f"{'PASS' if r.fails == 0 else 'FAIL'} nv_policy_sim: {r.fails} failed")

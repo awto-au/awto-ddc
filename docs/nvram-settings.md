@@ -15,7 +15,7 @@
 | AUX | SDK items 0x40-0x43 (same store) | aux block: check byte + 36 registry rows without an SDK field (bool / enum 1 B, int 2 B LE), 52 B | the flush gate only |
 | REG (retired) | flash 0xFD000-0xFEFFF | old registry record: read once at the first boot of the #151 layout, never written | - |
 
-- Gate (fw/nvram/nv_gate.c, RL6449_Project.h AWTO_NV_*): write when ACTIVE stable 3 s, no DDC/CI for 500 ms and 2 s since the last change (no debounce after a menu / selector close: 'Saving to memory' card), forced after 30 s dirty, at once at power off / power-saving entry. DDC/CI handlers only mark dirty. Counters: g_stAwtoNv (scripts/nv_test.py).
+- Gate (fw/nvram/nv_gate.c, RL6449_Project.h AWTO_NV_*): write when ACTIVE stable 10 s (`AWTO_NV_STABLE_MS`), no DDC/CI for 10 s (`AWTO_NV_DDC_IDLE_MS`) and 2 s since the last change (Dan 2026-11-20; menu / selector close skips the 2 s: 'Saving to memory' card), forced 60 s after the first dirty value (`AWTO_NV_FORCE_MS`, sync row D4 12 'forced at max wait', needs ACTIVE >= `AWTO_NV_FORCE_STABLE_MS` 3 s: never inside a switch / sync / training), at once at power off / power-saving entry. Why: a flash halt blocks DDC/CI, DP AUX, the TMDS ISR and the tick for 80-600 ms (#150). DDC/CI handlers only mark dirty. Counters: g_stAwtoNv (scripts/nv_test.py).
 
 ## SDK item ids (store SDK)
 
@@ -139,8 +139,8 @@
 | 17 | SIX.ucSixColorSaturationB | SixColor 9 (8 b) |  | 0..255; def 100 (0x64) | 100 (0x64) | gate: registry six-axis rows | sa_blue_sat |
 | 17 | SIX.ucSixColorHueM | SixColor 10 (8 b) |  | 0..255; def 50 (0x32) | 50 (0x32) | gate: registry six-axis rows | sa_magenta_hue |
 | 17 | SIX.ucSixColorSaturationM | SixColor 11 (8 b) |  | 0..255; def 100 (0x64) | 100 (0x64) | gate: registry six-axis rows | sa_magenta_sat |
-| 18 | TIME.usHour | TimeType 0 (16 b) | panel backlight used time, hours | 0..65535; def 0 | 34 (0x22) | written only at power off / power-saving entry (#151 I; was every 20 min) | panel_hours |
-| 18 | TIME.ucMin | TimeType 2 (8 b) | panel backlight used time, minutes | 0..255; def 0 | 29 (0x1D) | written only at power off / power-saving entry (#151 I; was every 20 min) | panel_min |
+| 18 | TIME.usHour | TimeType 0 (16 b) | panel backlight used time, hours | 0..65535; def 0 | 34 (0x22) | RAM only; stored inside a flush that writes something else (#151 I; was every 20 min) | panel_hours |
+| 18 | TIME.ucMin | TimeType 2 (8 b) | panel backlight used time, minutes | 0..255; def 0 | 29 (0x1D) | RAM only; stored inside a flush that writes something else (#151 I; was every 20 min) | panel_min |
 
 ## Registry rows with the nv flag (stored)
 
@@ -233,7 +233,7 @@
 | 112 | dp_lanes | Service | DP lanes - D1 main-link lanes [sdk-value] | 1..4; def 4 | 4 |  |  | SDK field | SYS.b3D1DpLanes |
 | 113 | dp_irq_10us | Service | DP IRQ HPD x10 us - DP IRQ HPD pulse width [sdk-value] | 0..95; def 75 | 75 |  |  | SDK field | SYS.ucDpIrqTime_10us |
 | 114 | ssc | Service | Spread spectrum - dot-clock spread range [sdk-value] | 0..15; def 0 | 0 |  |  | SDK field | SYS.ucSSC |
-| 115 | panel_hours | Service | Panel hours - backlight-on time; stored with the next save or at power-off / saving entry (awto-ddc#151) | 0..32767; def 0 | 34 |  |  | SDK field | TIME.usHour |
+| 115 | panel_hours | Service | Panel hours - backlight-on time; stored with the next other write, never alone (awto-ddc#151) | 0..32767; def 0 | 34 |  |  | SDK field | TIME.usHour |
 | 116 | panel_min | Service | Panel minutes | 0..59; def 0 | 29 |  |  | SDK field | TIME.ucMin |
 
 ## Registry rows without nv (not stored)
@@ -326,8 +326,8 @@
 ## Write policy (#151, Dan 2026-11-18)
 
 - No unchanged writes: registry equal value = no dirty (`set_put`); the SDK item compare skips equal items; menu close with nothing dirty = log line only; `nv_store` skips a payload equal to the newest slot (`fw/rtdfw/tests/host/test_nvequal.c`).
-- Input switch (selector choice) is written by the gate only: ACTIVE stable `AWTO_NV_STABLE_MS` (3 s), no DDC/CI for `AWTO_NV_DDC_IDLE_MS` (500 ms), forced after `AWTO_NV_FORCE_MS` (30 s), flushed at power-off / saving. KVM / auto search are never stored; the registry record is retired (no duplicate write).
-- Panel used time: written only at power-off / power-saving entry (`AwtoNvWrite` why POWER); the 20 min SDK timer only marks it pending.
+- Input switch (selector choice) is written by the gate only: ACTIVE stable `AWTO_NV_STABLE_MS` (10 s), no DDC/CI for `AWTO_NV_DDC_IDLE_MS` (10 s), forced after `AWTO_NV_FORCE_MS` (60 s), flushed at power-off / saving. KVM / auto search are never stored; the registry record is retired (no duplicate write).
+- Panel used time (Dan 2026-11-20): the RAM counter keeps counting; the 20 min SDK timer only marks it pending (no flash). It is stored only by a flush that writes another item (`AwtoNvWrite`, item compare skips an unchanged one), never alone, never on a timer, never at power-off by itself. A power cut loses the time since the last unrelated write (accepted).
 - Flash halts (`g_stAwtoNv.usOps` = page programs + erases), `scripts/nv_policy_sim.py`, fast core, 1080p60, 2026-11-18, image before = 9a0e583 tree e9a3c32, after = this commit:
 
 | scenario | before | after |
@@ -337,4 +337,4 @@
 | input switch D2 -> D3 (selector, idle commit) | 8 (4 items) | 6 (3 items) |
 | 25 min of backlight | 0 (1 save deferred, rode along with the next flush) | 0 |
 | one changed VCP 0x10 set (gate) | 6 (3 items) | 4 (2 items) |
-| POWER off | 4 | 4 (panel time written here) |
+| POWER off | 4 | 4 (power status; no panel-only write) |

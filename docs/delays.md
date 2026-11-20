@@ -190,10 +190,11 @@ Abbreviations in the table:
 | `fw/timer/t0ev.c:238-269` | Timer0 event test commands | `DelayXms(2)`, `ucMs/6`, `ucMs/3`, `ucMs*1.25`, 2..3 ms spin | code | test-only, host-triggered | n/a | n/a | test ends |
 | `fw/settings/settings_glue.c` `set_wait_ms`; `awto-rtdfw settings.c:271-273` | boot recovery hold | `DelayXms(10)` loop for up to 1000 ms | `settings.h:74` `SET_RECOVERY_MS` | derived: "longer than a key bounce, short enough to hold at power-on" | n/a | n/a | defaults restored if held |
 | **NVRAM GATE (`RL6449_Project.h:146-150`; `fw/nvram/nv_gate.c` `AwtoNvService`)** | | | | | | | |
-| `AWTO_NV_STABLE_MS` | ACTIVE with no switch / sync / training | 3000 ms | project header | Dan | n/a | n/a | write allowed |
-| `AWTO_NV_DDC_IDLE_MS` | since the last DDC/CI request | 500 ms | project header | Dan | n/a | n/a | write allowed |
+| `AWTO_NV_STABLE_MS` | ACTIVE with no switch / sync / training (source link events) | 10000 ms | project header | Dan 2026-11-20 (#151): flash halt 80-600 ms blocks DDC/CI, AUX, TMDS ISR, tick | n/a | n/a | write allowed |
+| `AWTO_NV_DDC_IDLE_MS` | since the last DDC/CI request (host polling windows) | 10000 ms | project header | Dan 2026-11-20 | n/a | n/a | write allowed |
 | `AWTO_NV_SAVE_MS` | after the last change | 2000 ms | project header | derived: one write per slider drag | n/a | n/a | write |
-| `AWTO_NV_FORCE_MS` | dirty -> written at the latest | 30000 ms | project header | Dan | n/a | n/a | forced write |
+| `AWTO_NV_FORCE_MS` | first dirty -> written at the latest | 60000 ms | project header | Dan 2026-11-20 | n/a | n/a | forced write, sync row D4 12 |
+| `AWTO_NV_FORCE_STABLE_MS` | ACTIVE before a forced write may fire | 3000 ms | project header | past link training / sync (the pre-2026-11-20 stable window) | n/a | n/a | forced write waits |
 | `AWTO_SAVE_CARD_MS` (`fw/osd/console.c`) | "Saving to memory" card | 1000 ms | project header | derived: "one glance" | n/a | n/a | card off |
 | **AWTO-RTDFW (settings / menu)** | | | | | | | |
 | `awto/include/settings.h:49` `SET_CONFIRM_MS`; `settings.c:259` | risky row auto-revert | 15000 ms | settings.h | derived: our UI choice | n/a | n/a | value reverts |

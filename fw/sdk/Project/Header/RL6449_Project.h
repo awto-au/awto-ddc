@@ -153,10 +153,12 @@ extern void AwtoNvCommitSel(void);                              // source select
 #define AWTO_NV_IN_DDC()                                        { if(g_ucAwtoNvInDdc != 0) { g_stAwtoNv.ucInDdc++; } }   // must stay 0
 #define AWTO_NV_AUX_ID                                          0x40    // SDK item ids of the aux block (registry rows without an SDK field)
 #define AWTO_NV_AUX_ITEMS                                       ((AWTO_SET_AUX_MAX + 13) / 14)
-// Gate (Dan, #151): a flash op halts the CPU (no DDC/CI, AUX, tick), so writes wait for a settled picture
-#define AWTO_NV_STABLE_MS                                       3000    // ACTIVE, no switch / sync / link training (Dan)
-#define AWTO_NV_DDC_IDLE_MS                                     500     // since the last DDC/CI request (Dan)
-#define AWTO_NV_FORCE_MS                                        30000   // dirty -> written at the latest (Dan)
+// Gate (Dan 2026-11-20, #151): a flash op halts the CPU 80-600 ms (no DDC/CI, AUX, TMDS ISR, tick), so a deferred write waits for quiet
+// Waits for: no DDC/CI request, no input switch, no link training / sync, no power transition (host DDC/CI polling windows, source link events)
+#define AWTO_NV_STABLE_MS                                       10000   // ACTIVE and unchanged this long (Dan); expiry: gate input satisfied
+#define AWTO_NV_DDC_IDLE_MS                                     10000   // since the last DDC/CI request (Dan); expiry: gate input satisfied
+#define AWTO_NV_FORCE_MS                                        60000   // first dirty -> written at the latest (Dan); expiry: forced write, sync row D4 12
+#define AWTO_NV_FORCE_STABLE_MS                                 3000    // forced write still needs ACTIVE this long (past link training / sync; the pre-#151 stable window)
 #define AWTO_NV_SAVE_MS                                         2000    // after the last change: one write per slider drag (derived)
 #define AWTO_NV_EL_MAX_MS                                       100     // gate ages per service call at most this (5 x AWTO_SET_LOOP_MS)
 #define AWTO_NV_WHY_GATE                                        1

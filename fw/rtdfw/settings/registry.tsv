@@ -126,7 +126,7 @@
 112	dp_lanes	int	none	service	nv,reboot,sdk	1	4	1	4	auto	-	sdk_sys	DP lanes	-	D1 main-link lanes [sdk-value]
 113	dp_irq_10us	int	none	service	nv,reboot,sdk	0	95	1	75	auto	-	sdk_sys	DP IRQ HPD x10 us	-	DP IRQ HPD pulse width [sdk-value]
 114	ssc	int	none	service	nv,reboot,sdk	0	15	1	0	auto	-	sdk_sys	Spread spectrum	-	dot-clock spread range [sdk-value]
-115	panel_hours	int	none	service	nv,sdk	0	32767	1	0	auto	-	sdk_sys	Panel hours	-	backlight-on time; stored with the next save or at power-off / saving entry (awto-ddc#151)
+115	panel_hours	int	none	service	nv,sdk	0	32767	1	0	auto	-	sdk_sys	Panel hours	-	backlight-on time; stored with the next other write, never alone (awto-ddc#151)
 116	panel_min	int	none	service	nv,sdk	0	59	1	0	auto	-	sdk_sys	Panel minutes	-
 119	screensaver	enum	none	osd	nv,live	0	5	1	0	auto	-	screensaver	Screensaver	Off|Pac-Man|(old) Scope 2|Scope 2|Alternate|Asteroids	which screensaver runs on no signal / idle (docs/screensaver.md); 2 = the retired Scope 1, runs Scope 2 (stored values stay valid); Alternate cycles Pac-Man / Scope 2 / Asteroids every AWTO_SAVER_ALT_S
 120	screensaver_s	int	s	osd	nv,live	0	3600	10	0	auto	-	screensaver_s	Screensaver idle	-	seconds without a key or DDC/CI command before the screensaver covers a live picture; 0 = no idle start (no-signal start stays)

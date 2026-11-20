@@ -55,7 +55,7 @@ D4	03	ms	flash erase start (since the last poke %)	flash
 D4	04	ms	flash erase done (since the last poke %)	flash
 D4	05	ms	NVRAM page move (since the last poke %)	flash
 D4	11	-	NVRAM flush (gate open)	flash
-D4	12	-	NVRAM flush (forced after {AWTO_NV_FORCE_MS/1000}s)	flash
+D4	12	-	NVRAM write forced at max wait ({AWTO_NV_FORCE_MS/1000}s)	flash
 D4	13	-	NVRAM flush (power off / saving entry)	flash
 D4	14	-	NVRAM flush (menu / selector close)	flash
 D4	15	-	NVRAM flush (test cmd 0x3D)	flash
