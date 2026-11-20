@@ -24,6 +24,7 @@ import unit_log  # noqa: E402
 import isostamp  # noqa: E402
 import unit_lock  # noqa: E402
 import settings_table as T  # noqa: E402
+import unit_status  # noqa: E402
 from live_writer import LiveWriter  # noqa: E402
 
 PYTHON = "python3"
@@ -39,6 +40,7 @@ SLOW_BRUSH = QBrush(QColor("#ff5050"))
 INPUTS = ("D1", "D2", "D3")                              # scripts/kvm.py port names
 VCP_VOLUME, VCP_MUTE, VCP_SAVER = "0x62", "0x8D", "0xEB"
 PROBE_FAILS_DOWN = 2
+STATUS_S = 2                                             # pause between status-line reads of the selected unit (a pass is ~0.5-1 s on the bus; 2 s = at most one pass in flight, 1-2 s asked in #277)
 FLASH_POLL_S = 1                                         # flash progress poll: the log gains a line every few sectors (SAVE_EVERY), 1 s keeps the bar live
 ROUTED = ("ddc", "settings", "synclog", "note", "kvm", "i2c", "flash")   # dev.py commands that are thin port clients: workers add --direct
 PROBE_VCP = VCP_VOLUME                                   # status dot: cheapest read-only call, dev.py ddc get (EDID guard inside)
@@ -169,6 +171,8 @@ class UnitState:
     pending: int = 0                                     # queued + running jobs (not probes)
     track: object = None                                 # FlashTrack of this unit's latest flash job
     shown_dot: str = ""                                  # last dot sent to the event stream
+    sline: dict = field(default_factory=dict)            # last status-line pass (unit_ops.status), {} = none yet
+    sline_busy: bool = False                             # a status pass is queued or running: never a second one
 
     @property
     def flash(self) -> str:
@@ -610,6 +614,15 @@ class MonitorPage(QWidget):
         split.setStretchFactor(2, 2)
         split.setSizes([240, 620, 420])
         lay.addWidget(split, 1)
+        self.status_label = QLabel("status: -")           # bottom status line of the selected unit (awto-ddc#277), read-only
+        self.status_label.setObjectName("statusline")
+        self.status_label.setTextInteractionFlags(Qt.TextSelectableByMouse)
+        self.status_label.setStyleSheet("font-family: monospace; padding: 3px 6px; background: #101820; color: #c8e6c8;")
+        lay.addWidget(self.status_label)
+        self.status_timer = QTimer(self)                 # single shot, re-armed when a pass ends: passes never overlap
+        self.status_timer.setSingleShot(True)
+        self.status_timer.setInterval(STATUS_S * 1000)
+        self.status_timer.timeout.connect(self.status_tick)
         self.timer = QTimer(self)                        # live refresh of the selected unit (checkbox)
         self.timer.setInterval(REFRESH_S * 1000)
         self.timer.timeout.connect(self.refresh_tick)
@@ -951,10 +964,12 @@ class MonitorPage(QWidget):
     def hideEvent(self, e):
         super().hideEvent(e)
         self.probe_timer.stop()
+        self.status_timer.stop()
 
     def start(self):
         self.probe_timer.start()
         self.probe_tick()
+        self.status_tick()
         self.maybe_read(self.cur)
 
     # --- state
@@ -1003,6 +1018,7 @@ class MonitorPage(QWidget):
         self._save_view()
         self.cur = n
         st = self.states[n]
+        self.status_show(n)
         self.settings.setValue("monitor/last_unit", n)
         for k, b in self.unit_btns.items():
             b.setChecked(k == n)
@@ -1333,6 +1349,66 @@ class MonitorPage(QWidget):
         if st.dot() != old:
             self.say(f"unit {n} status {old} -> {st.dot()} (light probe: sysfs scan, no DDC)")
         self._strip_text(n)
+
+    # --- status line (awto-ddc#277): read-only passes for the selected unit only, through its queue
+    def status_text(self, n: str) -> str:
+        st = self.states[n]
+        if st.unknown or not st.writable:
+            return f"unit {n}: read-only unit, not read"
+        if st.flash:
+            return f"unit {n}: {st.flash_pct() or 'FLASHING'}, status reads paused"
+        if st.detected is False:
+            return f"unit {n}: monitor not detected"
+        if probe_policy(st.info) == "light":
+            return f"unit {n}: DP AUX link, no DDC/CI: status line not read"
+        if not st.sline:
+            return f"unit {n}: reading ..."
+        s = st.sline
+        tail = "".join(f"  [{k}: {s[k]}]" for k in ("ddc_err", "dbg_err") if s.get(k))
+        return f"unit {n}  " + unit_status.format_line(s) + tail
+
+    def status_show(self, n: str):
+        if n == self.cur:
+            self.status_label.setText(self.status_text(n))
+
+    def status_tick(self):
+        """one status pass for the selected unit unless it is flashing, busy with a job or a drag, or already being read"""
+        self.status_timer.start()
+        n, st = self.cur, self.states[self.cur]
+        self.status_show(n)
+        if (not st.writable or st.flash or st.detected is False or st.sline_busy or st.pending
+                or probe_policy(st.info) == "light" or self.live_writer.any_busy(n)):
+            return
+        self.status_read(n)
+
+    def status_read(self, n: str, after=None):
+        """queue one status pass on unit n's worker; after(rc, st or None, secs) on the UI thread. Returns the job id or None (refused)"""
+        u = self.states[n].info
+        self.refused = ""
+        if not self.states[n].writable:
+            self.refused = f"unit {n} is read-only (not a test unit in devices.json)"
+        elif self.states[n].flash:
+            self.refused = f"unit {n} is flashing ({self.states[n].flash}): status reads paused"
+        if self.refused:
+            return None
+
+        def done(rc, out, secs):
+            st = self.states[n]
+            st.sline_busy = False
+            try:
+                st.sline = json.loads(out) if rc == 0 else {"ddc_err": reason_line(out) or f"rc {rc}", "ddc": st.sline.get("ddc", {}), "tag": st.sline.get("tag", "")}
+            except ValueError:
+                st.sline = {"ddc_err": f"reply not understood: {out[:80]}"}
+            if rc == 0:
+                st.last_read_iso = isostamp.now()
+            self.status_show(n)
+            self.emit("sline", unit=n, line=unit_status.format_line(st.sline), secs=round(secs, 3))
+            if after:
+                after(rc, st.sline, secs)
+        self.states[n].sline_busy = True
+        jid = self.queues.submit_fn(n, lambda: self.queues.backend.status_read(u))
+        self.live_jobs[jid] = done
+        return jid
 
     def refresh_toggled(self, on: bool):
         self.timer.start() if on else self.timer.stop()

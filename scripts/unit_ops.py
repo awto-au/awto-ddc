@@ -10,6 +10,9 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import i2cbus
+import isostamp
+import settings_table as T
+import unit_status as S
 
 DDC_SUBS = {"list": 0, "get": 1, "set": 2, "sleep": 0, "wake": 0, "brightness": 1}
 I2C_ADDR_MAX = 0x7F                                  # 7-bit address; an 8-bit 0x6E style address is refused, not shifted
@@ -159,6 +162,82 @@ def ddc(d, extra: list[str]) -> int:
         d.log(f"ddc set {code:#04x} = {val}: fast DDC/CI write ok ({(time.monotonic() - t0) * 1000:.0f} ms)")
         return 0
     return d._py("ddc_ctl.py", "--bus", d._bus(u), *extra)
+
+
+_MAPS: dict[str, dict] = {}                          # map path -> symbol table (unit_health.load_maps), parsed once
+
+
+def _debug_part(bus: int, serial: str, be: bool) -> tuple[dict | None, str]:
+    """reads over the debug slave 0x35 when it ALREADY answers: diag block, clocks, PWM4 duty, input timing (needs the flashed map).
+    Staging writes only (Real allow_write=False); never the DDC <-> debug swap (that is a Set VCP). (dict | None, why none)"""
+    import dbg_xdata as X
+    import flash_registry
+    import rtd_i2c_bridge as B
+    import rtd_proto as P
+    import unit_health as H
+    io = B.Real(bus, allow_write=False, regread=True)
+    try:
+        h = X.read_bytes(io, S.DIAG_BASE, 3)
+        if h is None or h[:2] != b"AD":
+            return None, "0x35 not answering (debug link is on the DDC side)"
+        blk = X.block_supported(h)
+        diag = X.read(io, S.DIAG_BASE, S.DIAG_LEN, blk)
+        pll, mcu, pwm = X.read(io, S.PLL_E0, S.PLL_E7 - S.PLL_E0 + 1, blk), X.read(io, S.MCU_FFE9, S.MCU_FFEE - S.MCU_FFE9 + 1, blk), \
+            X.read(io, S.FF_PWM4H_DUT, 1, blk)
+        if None in (diag, pll, mcu, pwm):
+            return None, "0x35 read failed"
+        g = S.decode_diag(diag, be)
+        g["clk"] = S.clocks(pll[0], pll[S.PLL_E1 - S.PLL_E0], pll[-1], mcu[0], mcu[S.MCU_FFED - S.MCU_FFE9], mcu[-1])
+        g["pwm"], g["timing"], g["timing_why"] = pwm[0], None, ""
+        mp = flash_registry.current(serial).get("map")
+        if not mp:
+            g["timing_why"] = "no map for the flashed image"
+            return g, ""
+        try:
+            maps = _MAPS.get(str(mp)) or _MAPS.setdefault(str(mp), H.load_maps(Path(mp).read_text(errors="replace")))
+
+            def rd(a, n):
+                b = X.read(io, a, n, blk)
+                if b is None:
+                    raise H.DbgError(f"read {a:#06x}+{n} failed")
+                return b
+            t, x, _note = P.read_timing(rd, maps)
+        except H.DbgError as e:
+            g["timing_why"] = str(e)
+            return g, ""
+        if t["hwidth"]:
+            g["timing"] = {"w": t["hwidth"], "h": t["vheight"], "hz": x["vfreq_mhz"] / 1000 if x else t["vfreq"] / 10}
+        return g, ""
+    finally:
+        io.close()
+
+
+def status(d, u: dict) -> dict:
+    """One read-only pass for the GUI status line (awto-ddc#277): Get VCP of the quick rows + the info rows (paged read) over the unit's DDC session, then the
+    debug-slave reads when 0x35 answers. A failed source is named in `ddc_err` / `dbg_err`; the rest still returns."""
+    import flash_registry
+    st = {"serial": u["serial"], "t": isostamp.now(), "ddc": {}, "ddc_err": "", "dbg": None, "dbg_err": "",
+          "tag": str(flash_registry.current(u["serial"]).get("tag") or "")}
+    s = session_for(d, u)
+    st["info"] = {}
+    reads = [(n, st["ddc"], lambda n=n: S.row_value(n, s.get_vcp(T.BY_NAME[n]["vcp"])[0])) for n in S.DDC_ROWS]
+    reads += [(n, st["info"], lambda n=n: s.get_vcp(0, row_id=T.BY_NAME[n]["id"])[0]) for n in S.INFO_ROWS]    # paged: row select + Get
+    for name, into, read in reads:
+        try:
+            v = read()
+        except OSError as e:
+            st["ddc_err"] = f"{name}: {e}"             # a bus error: the rest would fail the same way
+            break
+        except ValueError as e:                        # unsupported / garbled for this one row: keep going
+            st["ddc_err"] = f"{name}: {e}"
+            continue
+        if v is not None:
+            into[name] = v
+    try:
+        st["dbg"], st["dbg_err"] = _debug_part(s.bus_no, u["serial"], bool(u.get("be")))
+    except (OSError, SystemExit, ValueError) as e:
+        st["dbg_err"] = f"{type(e).__name__}: {e}"
+    return st
 
 
 def settings(d, extra: list[str]) -> int:

@@ -102,6 +102,9 @@ class LiveWriter(QObject):
             c.settle.timeout.connect(lambda c=c: self.release(c.unit, c.name, c.pending if c.pending is not None else c.last_sent))
         return c
 
+    def any_busy(self, unit: str) -> bool:
+        return any(c.active for (u, _n), c in self.ctls.items() if u == unit)
+
     def busy(self, unit: str, name: str) -> bool:
         c = self.ctls.get((unit, name))
         return bool(c and c.active)

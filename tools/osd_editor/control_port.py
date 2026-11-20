@@ -571,6 +571,13 @@ class ControlPort(QObject):
         self.focus(n)
         self._plain(done, self.page.health(n, after=self._out(done, "health")))
 
+    def m_status(self, p, done):
+        """one fresh read-only status pass (the status line's reads: Get VCP + debug-slave reads when 0x35 answers); never a write"""
+        n = self.unit_of(p)
+        self.focus(n)
+        self.started(self.page.status_read(n, after=lambda rc, st, secs: done(
+            {"status": st, "line": MON.unit_status.format_line(st)} if rc == 0 else None, None if rc == 0 else st.get("ddc_err", "status failed"))))
+
     def m_synclog(self, p, done):
         n = self.unit_of(p)
         self.focus(n)

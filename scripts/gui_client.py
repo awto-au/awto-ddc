@@ -406,7 +406,7 @@ def _flash_end(ev: dict, say) -> int:
 
 
 # --- `dev.py gui`
-SUBCOMMANDS = ("ping", "list", "state", "select", "get", "set", "save", "kvm", "saver", "run", "health", "synclog", "note", "host-time",
+SUBCOMMANDS = ("ping", "list", "state", "select", "get", "set", "save", "kvm", "saver", "run", "health", "status", "synclog", "note", "host-time",
                "vcp", "i2c", "ddc", "drag", "flash-status", "jobs", "events", "quit")
 
 
@@ -436,7 +436,7 @@ def _command_form(x: list[str], p: dict, confirm: bool) -> tuple[str, dict]:
     c, a = x[0], x[1:]
     m = c.replace("-", "_")
     try:
-        if c in ("ping", "list", "state", "quit", "health", "host-time", "events", "jobs"):
+        if c in ("ping", "list", "state", "quit", "health", "status", "host-time", "events", "jobs"):
             return ("subscribe" if c == "events" else m), p
         if c == "select":
             q = dict(p)

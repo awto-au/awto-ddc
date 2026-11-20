@@ -14,6 +14,7 @@ Launch: `python3 tools/osd_editor/run.py --monitor` (opens on the monitor tab) o
 - Left: tree page > setting (counts per page; `[risky]`, `[action]`, `[ro]` tags).
 - Middle: form of the selected page, one `SettingRow` per row; selecting a setting highlights its row and shows id, VCP code, range, default, flags, note.
 - Right: host time, health, action log, boot / sync log, last output.
+- Bottom: status line of the selected unit (see "Status line").
 
 ## Unit strip
 - Source: `scripts/devices.json` (names, serial, input, `test`). Button: hotkey number, unit, last 4 of serial, input, status dot.
@@ -41,7 +42,7 @@ Launch: `python3 tools/osd_editor/run.py --monitor` (opens on the monitor tab) o
 - Substring over name, label, id and VCP code (`0x10`, `10` or decimal); non-matching rows and empty pages are hidden, page counts show `matches/total`, Enter selects the first match.
 
 ## Tests
-- `tools/osd_editor/test_monitor_gui.py` (fake backend, offscreen; strip, hotkeys, tree counts, search, confirm, read-only, parallel vs serial queues, remembered unit, detect + probe, screenshot).
+- `tools/osd_editor/test_monitor_gui.py` (fake backend, offscreen; strip, hotkeys, tree counts, search, confirm, read-only, parallel vs serial queues, remembered unit, detect + probe, status line, screenshot).
 - `tools/osd_editor/test_smoke.py` (editor tabs, monitor page get / set / quick / banner).
 - `tools/osd_editor/test_control_port.py` (port: commands change model and view, save read back, failed call, parallel / serial queues, events, socket perms, auto-start, thin CLI, no-app error, `--direct` refusal, raw i2c, async flash, rc and gate refusal, detached survival + re-attach; fake backend and `fake_flasher.py`). `tests/test_flash_job_stale.py`: stale records, zombie. `tests/test_gui_client.py`: client translation, flash progress parsing (no Qt).
 - Run: `QT_QPA_PLATFORM=offscreen tools/osd_editor/.venv/bin/python tools/osd_editor/test_monitor_gui.py`.
@@ -133,6 +134,20 @@ Launch: `python3 tools/osd_editor/run.py --monitor` (opens on the monitor tab) o
 - A VCP set = `vcp_set` -> `set_put(.., apply_now 1)`: RAM store + apply; a changed stored value marks the record dirty (`set_sdk_put` / `set_nv_dirty`), an equal value stores nothing. No flash write in the handler.
 - The flush gate (`fw/nvram/nv_gate.c`, constants `AWTO_NV_*` in `RL6449_Project.h`): writes when stable >= 3000 ms, DDC/CI idle >= 500 ms (every DDC/CI request restarts it) and 2000 ms since the last change; or 30000 ms after the first dirty value regardless (`AWTO_NV_FORCE_MS`, the forced branch does not wait for DDC idle). MCCS save (0x0C) only sets a commit flag (no 2 s wait).
 - Consequences for a live drag: writes 30 ms apart keep DDC idle at 0, so no flush while moving. One flush ~2 s after the last change. A pause > 2 s mid-drag with the mouse held flushes once (and each later pause > 2 s again). A drag longer than 30 s from the first change is forced to flush once mid-drag. The live path never sends 0x0C; the row stays dirty until the firmware gate or the explicit Save.
+
+## Status line (#277, 2026-11-21)
+- One label at the bottom, selected unit only: `unit 3  CPU 350.8 PLL 350.8 SPI 116.9  3840x2160 60.1Hz  power On  input D2 HDMI  sound muted vol 50  bright 50  contrast 50  PWM 125 (51 %)  loop 300/s  fw <tag>`.
+- Read-only. `unit_ops.status` (`scripts/unit_ops.py`, decode / format in `scripts/unit_status.py`) runs on the unit's queue (`UnitQueues.submit_fn`); port command `./dev.py gui --unit N status` = one fresh pass, same code.
+- Sources, in order:
+  - DDC/CI Get VCP: volume 0x62, mute 0x8D, brightness 0x10, contrast 0x12, power 0xD6, input 0x60.
+  - Info rows `info_hres / vres / vfreq / loop` by the paged read: its only Set frame is the RAM-only row selector 0xE0 (no setting changes; same path as the live sliders).
+  - Debug slave 0x35, only when it ALREADY answers (no DDC <-> debug swap: that is a Set of a unit mode): diag block (stage, loop rate 0x2A), M2PLL / MCU divider registers -> CPU / PLL / SPI (formula of the console title, `fw/osd/console.c`), PWM4 duty `0xFF50` (backlight % = (255 - duty) / 255, inverse), exact timing when the flashed image's map exists.
+  - Firmware tag: flash record (`flash_registry.current`), no read.
+- A missing source shows `n/a` and its reason in brackets (`dbg_err` / `ddc_err`); a stale value is never kept for a failed source. Debug-link readings win over the info rows for timing and loop.
+- Pace: timer `STATUS_S` 2 s, single shot, re-armed after each tick; no pass while the unit flashes ("status reads paused"), has a queued / running job, a slider drag is active, a pass is already in flight, or it is a DP AUX (`light`) / read-only / undetected unit. Pass = 6 Gets + 4 paged reads.
+- Measured 2026-11-21, unit 3 (`lk2` image, HDMI DDC): pass 0.69 s (5 passes via the port, 691-1045 ms). A slider drag that starts while a pass runs waits at most that long for its first write.
+- Unit 3's 0x35 did not answer in that run (`dbg_link.py state`: 0x35 NAK, 0x37 ACK: DDC/CI owns the bus by default, #79), so CPU / PLL / SPI / PWM show `n/a` until a firmware row exposes them over VCP (issue draft in the PR notes).
+- Tests: `test_monitor_gui.py` `status_line` / `status_clocks` (selected unit only, no write, paused while flashing / dragging, one at a time, failed source named), `tests/test_unit_ops_ddc.py` (Get frames + selector only, debug part over a fake 0x35, no link).
 
 ## Not done
 - Search flattens by hiding tree items, not a separate result list.

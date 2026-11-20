@@ -521,6 +521,67 @@ def real_backend_limit():
     print(f"ok a hung call is stopped at its limit: rc 124 after {dt:.2f} s")
 
 
+def status_line():
+    """status line (#277): read-only passes for the selected unit only, paused while it flashes or a drag runs, one pass at a time"""
+    import unit_status as US
+    pg, fb, _ = make("gui_status")
+    for st in pg.states.values():
+        st.track = None
+    MON.flash_state = lambda serial: ""
+    pg.cur = "3"
+    pg.select_unit("3", read=False)
+    pg.status_tick()
+    until(lambda: pg.states["3"].sline, "first status pass")
+    txt = pg.status_label.text()
+    for want in ("CPU 350.8 PLL 350.8 SPI 116.9", "1920x1080 60.000Hz", "sound muted vol 50", "bright 51", "contrast 75", "PWM 125 (51 %)",
+                 "loop 4100/s", "fw wb-test", "power On", "input D2 HDMI"):
+        assert want in txt, (want, txt)
+    serials = {s for _, s in fb.status_calls}
+    assert serials == {pg.states["3"].info["serial"]}, serials              # selected unit only
+    assert not any(c[0] == "set" for c in fb.live_calls) and not writes(fb), "the status line never writes"
+    settle(pg)
+    n0 = len(fb.status_calls)                                                # flashing: no pass, the line says so
+    pg.states["3"].track = type("T", (), {"live": lambda s, ser: (True, ""), "job": {"id": "j1"},
+                                          "progress": type("P", (), {"percent": lambda s: 47.0, "rc": None})()})()
+    pg.status_tick()
+    settle(pg)
+    assert len(fb.status_calls) == n0 and "status reads paused" in pg.status_label.text(), pg.status_label.text()
+    pg.states["3"].track = None
+    pg.live_writer.begin("3", "brightness", 50)                              # a drag runs: no pass behind its writes
+    pg.status_tick()
+    settle(pg)
+    assert len(fb.status_calls) == n0
+    pg.live_writer.release("3", "brightness", 50)
+    until(lambda: not pg.live_writer.any_busy("3"), "drag release")
+    pg.states["3"].sline_busy = True                                         # a pass in flight: never a second one
+    pg.status_tick()
+    settle(pg)
+    assert len(fb.status_calls) == n0
+    pg.states["3"].sline_busy = False
+    pg.status_tick()                                                         # a failed source is named, the rest stays
+    fb.status_reply = {**fb.status_reply, "dbg": None, "dbg_err": "0x35 not answering (debug link is on the DDC side)"}
+    pg.states["3"].sline = {}
+    pg.status_tick()
+    until(lambda: pg.states["3"].sline.get("dbg_err"), "pass without debug link")
+    txt = pg.status_label.text()
+    assert "CPU n/a PLL n/a SPI n/a" in txt and "1920x1080 60.0Hz" in txt and "loop 4100/s" in txt and "sound muted vol 50" in txt and "0x35 not answering" in txt, txt
+    pg.select_unit("1", read=False)                                          # another unit: its own (empty) line, no read of unit 3
+    pg.states["1"].sline = {}
+    assert "reading" in pg.status_text("1") or "read-only" in pg.status_text("1")
+    print("ok status line: selected unit only, read-only, paused while flashing / dragging, one at a time, failed source named")
+
+
+def status_clocks():
+    """the clock decode matches the firmware title formula (fw/osd/console.c AwtoPutClocks): crystal = CPU only"""
+    import unit_status as US
+    assert US.clocks(0, 0, 0, 0, 0x00, 0) == {"cpu": 14.318, "pll": None, "spi": None}
+    c = US.clocks(0x5E, 0x0D | 0x10, 0x30, 0x03, 0x0A, 0x08)     # M = 0x5E + 0x300 + 2, N = 0x0D + 2, O = 2, FFED div 2
+    pll = 14.318 * (0x35E + 2) / ((0x0D + 2) * 2)
+    assert abs(c["pll"] - pll) < 1e-9 and abs(c["cpu"] - pll / 2 / 2) < 1e-9 and abs(c["spi"] - pll / 2 / 3) < 1e-9, c
+    assert US.backlight_pct(0) == 100 and US.backlight_pct(255) == 0 and US.backlight_pct(125) == 51
+    print("ok status clocks + PWM decode")
+
+
 def screenshot(app):
     units = MON.load_units()
     pg, fb, _ = make("gui_shot", detect=lambda: {u["serial"] for u in units.values()} | {"UK52307000611"})
@@ -552,6 +613,8 @@ def screenshot(app):
         pg.states[n].status = "ok"
         pg._strip_text(n)
     pg.select_unit("1", read=False)                                     # reload the stored values into the form
+    pg.states["1"].sline = {**FakeBackend.status_reply, "serial": pg.states["1"].info["serial"]}
+    pg.status_show("1")
     pg.tree.setCurrentItem(pg.items["d1_enable"])
     app.processEvents()
     SHOTS.mkdir(parents=True, exist_ok=True)
@@ -628,6 +691,8 @@ def main():
     banner_reason()
     real_backend_limit()
     unit_log_tab(app)
+    status_clocks()
+    status_line()
     screenshot(app)
     print("PASS")
 

@@ -1,4 +1,5 @@
 """Offscreen smoke test: QT_QPA_PLATFORM=offscreen tools/osd_editor/.venv/bin/python tools/osd_editor/test_smoke.py"""
+import json
 import os
 import re
 import sys
@@ -82,6 +83,17 @@ class FakeBackend:
         rc, out = self._live(("get", u["serial"], code, row_id))
         v = self.live_value.get((u["serial"], code, row_id), 0)
         return (0, f"value {v} max 100") if rc == 0 else (rc, out)
+
+    status_reply = {"ddc": {"volume": 50, "mute": 1, "brightness": 51, "contrast": 75, "power_mode": 0, "input": 1}, "ddc_err": "",
+                    "dbg": {"stage": 8, "loop": 4100, "clk": {"cpu": 350.8, "pll": 350.8, "spi": 116.9}, "pwm": 125,
+                            "timing": {"w": 1920, "h": 1080, "hz": 60.0}, "timing_why": ""}, "dbg_err": "", "tag": "wb-test",
+                    "info": {"info_hres": 1920, "info_vres": 1080, "info_vfreq": 600, "info_loop": 4100}}
+    status_calls: list = []
+
+    def status_read(self, u):
+        self.status_calls = [*self.status_calls, (time.monotonic(), u["serial"])]
+        time.sleep(self.live_latency_s)
+        return 0, json.dumps({**self.status_reply, "serial": u["serial"]})
 
     def run(self, argv, limit_s):
         a = [str(x) for x in argv]

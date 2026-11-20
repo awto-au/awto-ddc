@@ -2,6 +2,7 @@
 Units sit on different buses, so their jobs run in parallel; one unit's jobs run one at a time (one bus)."""
 from __future__ import annotations
 
+import json
 import os
 import subprocess
 import sys
@@ -53,6 +54,17 @@ class SubprocessBackend:
         except (OSError, ValueError, SystemExit) as e:
             return 1, f"live get {code:#04x}: {e!r}"
         return 0, f"value {cur} max {mx}"
+
+    def status_read(self, u: dict) -> tuple[int, str]:
+        """one read-only status pass of the unit (unit_ops.status: Get VCP + debug-slave reads), JSON text, on the unit's worker thread"""
+        try:
+            if str(ROOT) not in sys.path:
+                sys.path.insert(0, str(ROOT))
+            import dev
+            import unit_ops
+            return 0, json.dumps(unit_ops.status(dev, u))
+        except (OSError, ValueError, SystemExit) as e:
+            return 1, f"status read: {e!r}"
 
 
 DDC_LOCK = threading.Lock()   # every dev.py ddc call runs `ddcutil detect` over all buses: parallel calls slow each other (measured 3x) and time out
