@@ -22,24 +22,11 @@
 // COLOR TEMP DEFAULT DATA
 //****************************************************************************
 #if(_CTS_TYPE == _CTS_GEN_1_12BIT)
-#define _CT9300_RED                                 (0x80 << 4)
-#define _CT9300_GREEN                               (0x80 << 4)
-#define _CT9300_BLUE                                (0x80 << 4)
-#define _CT7500_RED                                 (0x80 << 4)
-#define _CT7500_GREEN                               (0x80 << 4)
-#define _CT7500_BLUE                                (0x80 << 4)
-#define _CT6500_RED                                 (0x80 << 4)
-#define _CT6500_GREEN                              (0x80 << 4)
-#define _CT6500_BLUE                               (0x80 << 4)
-#define _CT5800_RED                                (0x80 << 4)
-#define _CT5800_GREEN                              (0x80 << 4)
-#define _CT5800_BLUE                               (0x80 << 4)
-#define _CTSRGB_RED                                (0x80 << 4)
-#define _CTSRGB_GREEN                              (0x80 << 4)
-#define _CTSRGB_BLUE                               (0x80 << 4)
-#define _CTUSER_RED                                (0x80 << 4)
-#define _CTUSER_GREEN                              (0x80 << 4)
-#define _CTUSER_BLUE                               (0x80 << 4)
+// Per-preset gains: scripts/colour_temp_gains.py
+#include "ColorTempGains.h"
+#define _CTUSER_RED                                (_CT_GAIN_UNITY)
+#define _CTUSER_GREEN                              (_CT_GAIN_UNITY)
+#define _CTUSER_BLUE                               (_CT_GAIN_UNITY)
 #else
 #define _CT9300_RED                                 0x7e
 #define _CT9300_GREEN                               0x7e

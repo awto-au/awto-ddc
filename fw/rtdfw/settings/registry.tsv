@@ -24,7 +24,7 @@
 2	contrast	int	percent	picture	nv,live,sdk	0	100	1	50	auto	0x12	contrast	Contrast	-	[sdk-ui]
 6	sharpness	int	step	picture	nv,inert,sdk	0	4	1	2	auto	0x87	-	Sharpness	-	Realtek SDK item, scaler sharpness not built [sdk-ui]
 7	gamma	enum	none	colour	nv,live,sdk	0	4	1	0	auto	0xF2	gamma	Gamma	Off|1.8|2.0|2.2|2.4	[sdk-ui]
-8	colour_temp	enum	none	colour	nv,live,sdk	0	5	1	2	auto	0x14	colour_temp	Colour temp	9300K=0x08|7500K=0x06|6500K=0x05|5800K=0x04|sRGB=0x01|User=0x0B	MCCS 0x14 (5800K reported as 5000K); presets 9300K..sRGB give equal gains today [sdk-ui]
+8	colour_temp	enum	none	colour	nv,live,sdk	0	5	1	2	auto	0x14	colour_temp	Colour temp	9300K=0x08|7500K=0x06|6500K=0x05|5800K=0x04|sRGB=0x01|User=0x0B	MCCS 0x14 (5800K reported as 5000K); preset gains from scripts/colour_temp_gains.py [sdk-ui]
 9	user_red	int	step	colour	nv,live,sdk	0	255	1	128	auto	0x16	user_rgb	User red	-	used when Colour temp = User [sdk-ui]
 10	user_green	int	step	colour	nv,live,sdk	0	255	1	128	auto	0x18	user_rgb	User green	-	[sdk-ui]
 11	user_blue	int	step	colour	nv,live,sdk	0	255	1	128	auto	0x1A	user_rgb	User blue	-	[sdk-ui]
