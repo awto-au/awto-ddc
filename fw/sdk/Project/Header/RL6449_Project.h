@@ -41,6 +41,9 @@
 #define AWTO_PAL_DIAG_DIM                                       2
 #define AWTO_PAL_DIAG_BG                                        3
 #define AWTO_PAL_DIAG_ALERT                                     4
+#define AWTO_PAL_DIAG_WARN                                      13      // sync log classes (console only): 1-bit glyph fg is a 4 bit index, 0..15
+#define AWTO_PAL_DIAG_TIMING                                    14
+#define AWTO_PAL_DIAG_BOOT                                      15
 #define AWTO_RGB_REALTEK_BLUE                                   0, 68, 166
 #define AWTO_RGB_GREY_AA                                        170, 170, 170
 #define AWTO_RGB_WHITE                                          255, 255, 255
@@ -56,6 +59,8 @@
 #define AWTO_RGB_PHOSPHOR_GREEN                                 0, 255, 65
 #define AWTO_RGB_PHOSPHOR_DIM                                   0, 140, 40
 #define AWTO_RGB_ALERT_RED                                      255, 50, 50
+#define AWTO_RGB_WARN_YELLOW                                    255, 210, 0
+#define AWTO_RGB_TIMING_CYAN                                    0, 220, 255
 
 //--------------------------------------------------
 // awto two-colour power LED (bLED_ON = P3.5 on colour, bLED_STANDBY = P3.6 standby colour; awto-ddc#95)

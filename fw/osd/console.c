@@ -32,7 +32,10 @@ extern void osd_tc_cells(BYTE ucRow, BYTE ucCell, BYTE __xdata *pucTiles, BYTE u
 #define AWTO_T_STYLE_TEXT   0
 #define AWTO_T_STYLE_ONACC  2
 #define AWTO_T_STYLE_ACCENT 3
-#define AWTO_T_STYLE_ALERT  4                   // red: an input that is not in the I2C ring
+#define AWTO_T_STYLE_ALERT  4                   // red: an input that is not in the I2C ring; log class error
+#define AWTO_T_STYLE_WARN   5                   // sync log colour classes (fw/awto/sync_classes.tsv): warning, timing, boot / flash
+#define AWTO_T_STYLE_TIMING 6
+#define AWTO_T_STYLE_BOOT   7
 __xdata BYTE g_ucAwtoProbeCols;                  // limit probe columns = 4 * (test cmd 0xC0 + n); 0 = 36
 __xdata BYTE g_ucAwtoProbeLines;                 // limit probe line count (test cmd 0x80 + n); 0 = 24
 __xdata BYTE g_ucAwtoDiagFont;                  // 0 = default (console Spleen 8x16, probe 5x8); else 1 + osd_font_load index (cmd 0x60 + n)
@@ -44,6 +47,7 @@ static BYTE s_ucAwtoCols;
 static __xdata _Bool s_bAwtoWrap;                         // main-page log line: a full row sets s_bAwtoOver (AwtoConWrapLine draws two rows)
 static __xdata _Bool s_bAwtoOver;
 static __xdata _Bool s_bAwtoSkip;                         // second pass of a wrapped line: the first s_ucLogI characters are dropped
+static __xdata BYTE s_ucLnStyle;                // main-page log row: text style of its colour class (AwtoSyncLine sets it)
 static __xdata BYTE s_ucLogI;                   // GPIO page backfill: change-ring seq; host-time row: shift index; wrap: skip count
 
 // One diagnostic console (AwtoDiagConsole), #144: 136 x 50 shown, Spleen 8x16 at 2x (2176 x 1836 px on the 4K panel).
@@ -137,6 +141,9 @@ static void AwtoTextOpen(BYTE ucCols, BYTE ucLines, BYTE ucView, bit bTitleBar) 
     ScalerOsdSetColorPalette(AWTO_PAL_DIAG_DIM, AWTO_RGB_PHOSPHOR_DIM);
     ScalerOsdSetColorPalette(AWTO_PAL_DIAG_BG, AWTO_RGB_BLACK);
     ScalerOsdSetColorPalette(AWTO_PAL_DIAG_ALERT, AWTO_RGB_ALERT_RED);
+    ScalerOsdSetColorPalette(AWTO_PAL_DIAG_WARN, AWTO_RGB_WARN_YELLOW);
+    ScalerOsdSetColorPalette(AWTO_PAL_DIAG_TIMING, AWTO_RGB_TIMING_CYAN);
+    ScalerOsdSetColorPalette(AWTO_PAL_DIAG_BOOT, AWTO_RGB_WHITE);
     UserCommonInterfacePanelPowerTick();
     if(ucView != 0)
     {
@@ -1139,6 +1146,30 @@ static BYTE AwtoSyncTxt(WORD usRow, BYTE ucPart)   // text after ucPart (0..2) v
     }
     return tAwtoSyncFmt[usRow];
 }
+#pragma place bank(11)
+static const __code BYTE tAwtoSyncCls[269] = {
+    AWTO_T_STYLE_BOOT, AWTO_T_STYLE_ALERT, AWTO_T_STYLE_WARN, AWTO_T_STYLE_WARN, AWTO_T_STYLE_ALERT, AWTO_T_STYLE_BOOT, AWTO_T_STYLE_BOOT, AWTO_T_STYLE_BOOT, AWTO_T_STYLE_BOOT, AWTO_T_STYLE_BOOT, AWTO_T_STYLE_BOOT, AWTO_T_STYLE_BOOT, AWTO_T_STYLE_TIMING, AWTO_T_STYLE_BOOT, AWTO_T_STYLE_BOOT, AWTO_T_STYLE_BOOT,
+    AWTO_T_STYLE_BOOT, AWTO_T_STYLE_BOOT, AWTO_T_STYLE_BOOT, AWTO_T_STYLE_BOOT, AWTO_T_STYLE_BOOT, AWTO_T_STYLE_BOOT, AWTO_T_STYLE_BOOT, AWTO_T_STYLE_WARN, AWTO_T_STYLE_BOOT, AWTO_T_STYLE_BOOT, AWTO_T_STYLE_BOOT, AWTO_T_STYLE_BOOT, AWTO_T_STYLE_TEXT, AWTO_T_STYLE_TEXT, AWTO_T_STYLE_TEXT, AWTO_T_STYLE_TEXT,
+    AWTO_T_STYLE_TEXT, AWTO_T_STYLE_TIMING, AWTO_T_STYLE_BOOT, AWTO_T_STYLE_TEXT, AWTO_T_STYLE_TEXT, AWTO_T_STYLE_TEXT, AWTO_T_STYLE_TEXT, AWTO_T_STYLE_TEXT, AWTO_T_STYLE_TEXT, AWTO_T_STYLE_TEXT, AWTO_T_STYLE_TEXT, AWTO_T_STYLE_TEXT, AWTO_T_STYLE_TEXT, AWTO_T_STYLE_TEXT, AWTO_T_STYLE_WARN, AWTO_T_STYLE_WARN,
+    AWTO_T_STYLE_WARN, AWTO_T_STYLE_TIMING, AWTO_T_STYLE_TIMING, AWTO_T_STYLE_TIMING, AWTO_T_STYLE_TIMING, AWTO_T_STYLE_TIMING, AWTO_T_STYLE_TIMING, AWTO_T_STYLE_TIMING, AWTO_T_STYLE_TIMING, AWTO_T_STYLE_TIMING, AWTO_T_STYLE_TIMING, AWTO_T_STYLE_TIMING, AWTO_T_STYLE_TIMING, AWTO_T_STYLE_TIMING, AWTO_T_STYLE_TEXT, AWTO_T_STYLE_TEXT,
+    AWTO_T_STYLE_TIMING, AWTO_T_STYLE_TIMING, AWTO_T_STYLE_TIMING, AWTO_T_STYLE_TIMING, AWTO_T_STYLE_TIMING, AWTO_T_STYLE_TIMING, AWTO_T_STYLE_WARN, AWTO_T_STYLE_WARN, AWTO_T_STYLE_ALERT, AWTO_T_STYLE_WARN, AWTO_T_STYLE_WARN, AWTO_T_STYLE_WARN, AWTO_T_STYLE_WARN, AWTO_T_STYLE_WARN, AWTO_T_STYLE_WARN, AWTO_T_STYLE_WARN,
+    AWTO_T_STYLE_WARN, AWTO_T_STYLE_WARN, AWTO_T_STYLE_TEXT, AWTO_T_STYLE_TEXT, AWTO_T_STYLE_TEXT, AWTO_T_STYLE_TEXT, AWTO_T_STYLE_TEXT, AWTO_T_STYLE_TEXT, AWTO_T_STYLE_TEXT, AWTO_T_STYLE_TEXT, AWTO_T_STYLE_TEXT, AWTO_T_STYLE_WARN, AWTO_T_STYLE_WARN, AWTO_T_STYLE_WARN, AWTO_T_STYLE_WARN, AWTO_T_STYLE_TEXT,
+    AWTO_T_STYLE_TEXT, AWTO_T_STYLE_TEXT, AWTO_T_STYLE_TEXT, AWTO_T_STYLE_TIMING, AWTO_T_STYLE_TEXT, AWTO_T_STYLE_TEXT, AWTO_T_STYLE_ALERT, AWTO_T_STYLE_TIMING, AWTO_T_STYLE_TIMING, AWTO_T_STYLE_TIMING, AWTO_T_STYLE_BOOT, AWTO_T_STYLE_TEXT, AWTO_T_STYLE_TEXT, AWTO_T_STYLE_TEXT, AWTO_T_STYLE_TEXT, AWTO_T_STYLE_WARN,
+    AWTO_T_STYLE_TEXT, AWTO_T_STYLE_TEXT, AWTO_T_STYLE_TEXT, AWTO_T_STYLE_TEXT, AWTO_T_STYLE_TEXT, AWTO_T_STYLE_TEXT, AWTO_T_STYLE_TEXT, AWTO_T_STYLE_TEXT, AWTO_T_STYLE_TEXT, AWTO_T_STYLE_TEXT, AWTO_T_STYLE_TEXT, AWTO_T_STYLE_TEXT, AWTO_T_STYLE_TEXT, AWTO_T_STYLE_TEXT, AWTO_T_STYLE_TEXT, AWTO_T_STYLE_TEXT,
+    AWTO_T_STYLE_TEXT, AWTO_T_STYLE_TEXT, AWTO_T_STYLE_TEXT, AWTO_T_STYLE_TEXT, AWTO_T_STYLE_TEXT, AWTO_T_STYLE_TEXT, AWTO_T_STYLE_TEXT, AWTO_T_STYLE_TEXT, AWTO_T_STYLE_TEXT, AWTO_T_STYLE_TEXT, AWTO_T_STYLE_TEXT, AWTO_T_STYLE_TEXT, AWTO_T_STYLE_TEXT, AWTO_T_STYLE_TEXT, AWTO_T_STYLE_TEXT, AWTO_T_STYLE_TEXT,
+    AWTO_T_STYLE_TEXT, AWTO_T_STYLE_TEXT, AWTO_T_STYLE_TEXT, AWTO_T_STYLE_TEXT, AWTO_T_STYLE_TEXT, AWTO_T_STYLE_TEXT, AWTO_T_STYLE_TEXT, AWTO_T_STYLE_TEXT, AWTO_T_STYLE_TEXT, AWTO_T_STYLE_TEXT, AWTO_T_STYLE_TEXT, AWTO_T_STYLE_TIMING, AWTO_T_STYLE_TEXT, AWTO_T_STYLE_TEXT, AWTO_T_STYLE_TEXT, AWTO_T_STYLE_TIMING,
+    AWTO_T_STYLE_WARN, AWTO_T_STYLE_TEXT, AWTO_T_STYLE_TEXT, AWTO_T_STYLE_TEXT, AWTO_T_STYLE_TEXT, AWTO_T_STYLE_TEXT, AWTO_T_STYLE_TEXT, AWTO_T_STYLE_TEXT, AWTO_T_STYLE_TEXT, AWTO_T_STYLE_WARN, AWTO_T_STYLE_TEXT, AWTO_T_STYLE_BOOT, AWTO_T_STYLE_BOOT, AWTO_T_STYLE_BOOT, AWTO_T_STYLE_TEXT, AWTO_T_STYLE_TEXT,
+    AWTO_T_STYLE_TEXT, AWTO_T_STYLE_TEXT, AWTO_T_STYLE_TEXT, AWTO_T_STYLE_WARN, AWTO_T_STYLE_WARN, AWTO_T_STYLE_WARN, AWTO_T_STYLE_TEXT, AWTO_T_STYLE_TEXT, AWTO_T_STYLE_TEXT, AWTO_T_STYLE_TEXT, AWTO_T_STYLE_TEXT, AWTO_T_STYLE_TEXT, AWTO_T_STYLE_TEXT, AWTO_T_STYLE_ALERT, AWTO_T_STYLE_TEXT, AWTO_T_STYLE_TEXT,
+    AWTO_T_STYLE_TEXT, AWTO_T_STYLE_TEXT, AWTO_T_STYLE_TEXT, AWTO_T_STYLE_TEXT, AWTO_T_STYLE_TEXT, AWTO_T_STYLE_TEXT, AWTO_T_STYLE_TEXT, AWTO_T_STYLE_TEXT, AWTO_T_STYLE_TEXT, AWTO_T_STYLE_TEXT, AWTO_T_STYLE_TEXT, AWTO_T_STYLE_TEXT, AWTO_T_STYLE_TEXT, AWTO_T_STYLE_TEXT, AWTO_T_STYLE_TEXT, AWTO_T_STYLE_TEXT,
+    AWTO_T_STYLE_TEXT, AWTO_T_STYLE_TEXT, AWTO_T_STYLE_TEXT, AWTO_T_STYLE_TEXT, AWTO_T_STYLE_TEXT, AWTO_T_STYLE_ALERT, AWTO_T_STYLE_TEXT, AWTO_T_STYLE_TEXT, AWTO_T_STYLE_TEXT, AWTO_T_STYLE_TEXT, AWTO_T_STYLE_TEXT, AWTO_T_STYLE_WARN, AWTO_T_STYLE_TEXT, AWTO_T_STYLE_TEXT, AWTO_T_STYLE_TEXT, AWTO_T_STYLE_TEXT,
+    AWTO_T_STYLE_TEXT, AWTO_T_STYLE_TEXT, AWTO_T_STYLE_TEXT, AWTO_T_STYLE_TEXT, AWTO_T_STYLE_TEXT, AWTO_T_STYLE_TEXT, AWTO_T_STYLE_TEXT, AWTO_T_STYLE_TEXT, AWTO_T_STYLE_TEXT, AWTO_T_STYLE_TEXT, AWTO_T_STYLE_TEXT, AWTO_T_STYLE_TEXT, AWTO_T_STYLE_TEXT, AWTO_T_STYLE_WARN, AWTO_T_STYLE_WARN, AWTO_T_STYLE_WARN,
+    AWTO_T_STYLE_WARN, AWTO_T_STYLE_TEXT, AWTO_T_STYLE_TEXT, AWTO_T_STYLE_TEXT, AWTO_T_STYLE_TEXT, AWTO_T_STYLE_TEXT, AWTO_T_STYLE_TEXT, AWTO_T_STYLE_TEXT, AWTO_T_STYLE_TEXT, AWTO_T_STYLE_TEXT, AWTO_T_STYLE_TEXT, AWTO_T_STYLE_TEXT, AWTO_T_STYLE_TEXT, AWTO_T_STYLE_TEXT, AWTO_T_STYLE_TEXT, AWTO_T_STYLE_TEXT,
+    AWTO_T_STYLE_TEXT, AWTO_T_STYLE_TEXT, AWTO_T_STYLE_TEXT, AWTO_T_STYLE_TEXT, AWTO_T_STYLE_TEXT, AWTO_T_STYLE_TEXT, AWTO_T_STYLE_TEXT, AWTO_T_STYLE_TEXT, AWTO_T_STYLE_TEXT, AWTO_T_STYLE_TEXT, AWTO_T_STYLE_TEXT, AWTO_T_STYLE_TEXT, AWTO_T_STYLE_TEXT};
+#pragma place bank(11)
+static BYTE AwtoSyncClsOf(WORD usRow)             // console text style of a logged row (colour class, sync_classes.tsv)
+{
+    return tAwtoSyncCls[usRow];
+}
 #define AWTO_SYNC_NAME_FIRST 0x15
 #define AWTO_SYNC_NAME_ROW0 269                 // text row of name row 0 (= the logged rows)
 #define AWTO_SYNC_NAME_IDS 7
@@ -1365,6 +1396,7 @@ static void AwtoSyncLine(BYTE ucSeq)
         AwtoPutHex2(puc[1]);
         return;
     }
+    s_ucLnStyle = AwtoSyncClsOf(usRow - 1);
     ucFmt = AwtoSyncTxt(usRow - 1, 0xFF);        // 0xFF = nothing printed, the fmt only
     if((ucFmt & 0x80) != 0)
     {
@@ -2773,6 +2805,7 @@ static void AwtoConLogStart(void)               // next log row: compose with Aw
     s_ucPanelRow = AWTO_LOG_ROW0 + s_ucLogHead;
     s_pcAwtoRow[0] = ' ';
     s_ucAwtoLen = 1;
+    s_ucLnStyle = AWTO_T_STYLE_TEXT;
     s_bAwtoWrap = (s_ucConOpen == AWTO_CON_MAIN);
     s_bAwtoOver = 0;
 }
@@ -2816,12 +2849,12 @@ static void AwtoConWrapLine(void)
     }
     if(s_ucLogI <= AWTO_LOG_TXT0)
     {
-        AwtoTextAt(s_ucPanelRow, s_ucPanelCol, s_pcAwtoRow, s_ucAwtoLen, AWTO_T_STYLE_TEXT);    // no space: break at the edge
+        AwtoTextAt(s_ucPanelRow, s_ucPanelCol, s_pcAwtoRow, s_ucAwtoLen, s_ucLnStyle);    // no space: break at the edge
         s_ucLogI = s_ucAwtoLen - 1;
     }
     else
     {
-        AwtoTextAt(s_ucPanelRow, s_ucPanelCol, s_pcAwtoRow, s_ucLogI, AWTO_T_STYLE_TEXT);       // the space is dropped too
+        AwtoTextAt(s_ucPanelRow, s_ucPanelCol, s_pcAwtoRow, s_ucLogI, s_ucLnStyle);       // the space is dropped too
     }
     for(s_ucAwtoLen = 0; s_ucAwtoLen < AWTO_LOG_TXT0; s_ucAwtoLen++)
     {
@@ -2839,7 +2872,7 @@ static void AwtoConLogEnd(void)
     if(s_ucConOpen == AWTO_CON_MAIN)            // terminal: rows only go down; a long line takes two (AwtoConWrapLine)
     {
         s_bAwtoWrap = 0;
-        AwtoTextLine(0, AWTO_T_STYLE_TEXT);
+        AwtoTextLine(0, s_ucLnStyle);
         if(s_ucPanelRow != AWTO_LOG_ROW0 + s_ucLogHead)
         {
             s_ucLogHead++;

@@ -44,6 +44,11 @@ Never write bare "vendor": say which one.
   - Code: `fw/osd/console.c` (`AwtoDiagConsole`), `fw/keys/keytest.c`, `fw/input/inputs.c`.
   - Opened at power-on (mode INITIAL, `AwtoBootConsole`, #144: replaces the boot logo), by itself after a switch / wake (#139, registry `console_mode`, see below), by UP+DOWN, test cmd 0x20 / 0x26, 0x41 / 0x42: main page. Menu "GPIO inputs" / test cmd 0x43: GPIO page. Closed by UP+DOWN, 0x44. Host: `scripts/osd_test.py`.
   - Look: green on black (palette 1..4 set in `fw/osd/console.c`); font Spleen 8x16 (font 0, 8 x 18 cells) at 2x; 0x60+n picks a font, 0x4A / 0x4B = 1x / 2x.
+  - Log line colour classes: optional 5th column of `fw/awto/sync.tsv`, names in `fw/awto/sync_classes.tsv` (the one place; generator, host decoder, tests read it).
+    - normal (no column) green = palette 1 (the existing look); error red = 4; warning yellow = 13; timing cyan = 14; boot / flash white = 15 (`AWTO_PAL_DIAG_*`, `RL6449_Project.h`, set in `AwtoTextOpen`).
+    - Per row: `tAwtoSyncCls` (generated, bank 11) -> `AWTO_T_STYLE_*` -> `tAwtoStyle` (`text_layer.c`) -> the char command's fg nibble. No map memory.
+    - Glyph depth limit: the console font is 1 bpp, so one foreground per cell (4 bit index, 0..15; 12 are the text layer's menu entries, 13..15 are ours) and a cell cannot hold two colours. 2 bpp fonts give 4 colours per glyph but need 2 planes and a 256-id budget (`osd/tiles-fonts.md`).
+    - Host: `./dev.py synclog` / `rtd_diag.py --sync` colour the same class with ANSI on a terminal (`AWTO_TTY=1` set by dev.py, `NO_COLOR` off); files and pipes get plain text. Sim picture: `scripts/con_colours_sim.py`.
   - Grid 136 columns x 58 map rows (136 * 58 + 59 < 8192, #157); 50 rows shown (2176 x 1836 px on the 3840 x 2160 panel); the other 8 rows are roll-up room (a new log line scrolls one row; a full redraw when they run out). UP / DOWN scroll on the GPIO page (`AwtoConScroll`).
   - Registry `console_mode` (id 110, #218; was bool `sync_console`, stored 0 / 1 keep their meaning), menu OSD page:
     - Off: never opens by itself.

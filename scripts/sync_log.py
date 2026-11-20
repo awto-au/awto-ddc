@@ -24,6 +24,7 @@ import sys
 from pathlib import Path
 
 import isostamp
+import sync_classes
 
 ROOT = Path(os.environ.get("AWTO_DDC_REPO") or Path(__file__).resolve().parents[1])
 LOG = ROOT / "tmp/logs/sync_log.log"
@@ -44,10 +45,11 @@ def set_map(map_path: Path) -> None:
     SYMBOLIZE = lambda bank, pc: C.symbolize(syms, bank, pc)
 
 
-def log(s: str):
+def log(s: str, shown: str | None = None):
+    """s -> console + log file; shown = the console copy (class colour on a TTY), the file always gets the plain s"""
     LOG.parent.mkdir(parents=True, exist_ok=True)
     line = f"{isostamp.now()} {s}"
-    print(line, flush=True)
+    print(line if shown is None else f"{isostamp.now()} {shown}", flush=True)
     with LOG.open("a") as f:
         f.write(line + "\n")
 
@@ -57,9 +59,10 @@ def load_rows(tsv: Path) -> list[dict]:
     for ln in tsv.read_text().splitlines():
         if not ln.strip() or ln.startswith("#"):
             continue
-        i, a, f, t = ln.split("\t")
+        i, a, f, t, *c = ln.split("\t")                  # optional 5th column: colour class (fw/awto/sync_classes.tsv)
         port = f.startswith("port")
-        out.append(dict(id=int(i, 16), arg=None if a == "*" else int(a, 16), port=port, fmt=f[4:] if port else f, text=t))
+        out.append(dict(id=int(i, 16), arg=None if a == "*" else int(a, 16), port=port, fmt=f[4:] if port else f, text=t,
+                        cls=sync_classes.check(c[0] if c else "")))
     return out
 
 
@@ -309,6 +312,24 @@ def line(rows: list[dict], ev: tuple, t0: int) -> str:
     return head + pre + before + val + after
 
 
+use_colour = sync_classes.use_colour
+
+
+def row_class(rows: list[dict], ev: tuple) -> str:
+    """colour class of a ring entry (the row `line` picks; an unlisted event is normal)"""
+    row = next((r for r in rows if r["id"] == ev[0] and (r["arg"] is None or r["arg"] == ev[1])), None)
+    return row["cls"] if row else sync_classes.DEFAULT
+
+
+def paint_lines(h: dict, lines: list[str], rows: list[dict], tty: bool) -> list[str]:
+    """one output line per decoded line, same order; class colour only on a TTY (a file or pipe gets the plain text)"""
+    evs = h.get("events", [])
+    if not tty or len(evs) != len(lines):
+        return list(lines)
+    classes = sync_classes.load()
+    return [sync_classes.paint(ln, row_class(rows, ev), True, classes) for ev, ln in zip(evs, lines)]
+
+
 def read_ring(rd, addr: int):
     """the whole ring at addr: header first, then HDR + N x EV (N from the header). rd(addr, n) -> bytes or None"""
     h = rd(addr, HDR)
@@ -430,13 +451,15 @@ def main() -> int:
     lines = stamp(h, lines, ht, t2)
     log(f"sync episode: {KINDS.get(h['kind'], h['kind'])}, {len(lines)} lines" + (f", {h['lost']} older lines overwritten" if h.get("lost") else ""))
     prev = None
-    for ln in lines:
+    painted = paint_lines(h, lines, rows, sync_classes.use_colour())
+    for ln, pl in zip(lines, painted):
         m = re.match(r"^\s*(\d+):", ln) if a.delta else None
+        pre = ""
         if m:
             ms = int(m.group(1))
-            ln = f"{'+' + str(ms - prev) if prev is not None else '':>6} " + ln
+            pre = f"{'+' + str(ms - prev) if prev is not None else '':>6} "
             prev = ms
-        log("  " + ln)
+        log("  " + pre + ln, "  " + pre + pl)
     return 0
 
 

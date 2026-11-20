@@ -340,9 +340,10 @@ def _main() -> int:
             pin = S.pin_line(X.read_blocks(w, S.sym(Path(mp), "g_stAwtoSyncPin"), S.EV), S.load_rows(S.tsv_for(Path(mp))))
         except SystemExit:
             pass
-        txt = "\n".join(([f"boot reason (pinned): {pin}"] if pin else []) + [S.ht_line(ht, t2)] +
-                        [f"sync episode: {S.KINDS.get(h['kind'], h['kind'])}, {len(lines)} lines"] + ["  " + ln for ln in lines])
-        print(txt); log(txt)
+        rows = S.load_rows(S.tsv_for(Path(mp)))
+        head = ([f"boot reason (pinned): {pin}"] if pin else []) + [S.ht_line(ht, t2)] + [f"sync episode: {S.KINDS.get(h['kind'], h['kind'])}, {len(lines)} lines"]
+        txt = "\n".join(head + ["  " + ln for ln in lines])
+        print("\n".join(head + ["  " + ln for ln in S.paint_lines(h, lines, rows, S.use_colour())])); log(txt)    # class colour on a TTY only
         return 0
     io = IO = B.Real(a.bus, allow_write=False, regread=True)
     if a.release:

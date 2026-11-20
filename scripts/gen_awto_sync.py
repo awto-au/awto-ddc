@@ -22,6 +22,7 @@ import sys
 from pathlib import Path
 
 import isostamp
+import sync_classes
 
 
 def repo_root() -> Path:
@@ -72,15 +73,19 @@ def resolve(text: str, header: Path = HEADER) -> str:
     return TOKEN.sub(lambda m: str(define_value(m.group(1), header) // int(m.group(2) or 1)), text)
 
 
-def rows(path: Path = TSV):
+def rows(path: Path = TSV, classes: dict | None = None):
+    classes = classes or sync_classes.load()
     out = []
     for ln in path.read_text().splitlines():
         if not ln.strip() or ln.startswith("#"):
             continue
-        i, a, f, t = ln.split("\t")
-        out.append(dict(id=int(i, 16), arg=0xFF if a == "*" else int(a, 16), a=a, f=f, fmt=parse_fmt(f), text=resolve(t)))
+        i, a, f, t, *c = ln.split("\t")
+        assert len(c) <= 1, f"sync.tsv {i} {a}: more than 5 columns"
+        out.append(dict(id=int(i, 16), arg=0xFF if a == "*" else int(a, 16), a=a, f=f, fmt=parse_fmt(f), text=resolve(t),
+                        cls=sync_classes.check(c[0] if c else "", classes)))
     out = [x for x in out if x["id"] not in NAME_IDS] + [x for x in out if x["id"] in NAME_IDS]   # logged rows first, names after
     n = logged(out)
+    assert all(x["cls"] == sync_classes.DEFAULT for x in out[n:]), "name table rows (15..1B) are never logged: no colour class"
     assert n < ROW_MAX and len(out) - n < 255, "logged rows are a WORD index (0 = no row, cap ROW_MAX); name rows a byte index (cap 254)"
     for t in out:                                    # one value per line; ms2 has two
         n, two = t["text"].count("%"), (t["fmt"] & 0x7F) == FMTS["ms2"]
@@ -161,7 +166,21 @@ def names_block(r):
 
 
 
-def text_block(r):
+def cls_block(r, classes):
+    """per logged row the console text style (macro name from sync_classes.tsv), read by AwtoSyncClsOf in the text bank"""
+    n = logged(r)
+    pl = f"#pragma place bank({TXT_BANK})"
+    return "\n".join([
+        pl, arr("tAwtoSyncCls", [classes[x["cls"]]["style"] for x in r[:n]]),
+        pl,
+        "static BYTE AwtoSyncClsOf(WORD usRow)             // console text style of a logged row (colour class, sync_classes.tsv)",
+        "{",
+        "    return tAwtoSyncCls[usRow];",
+        "}"])
+
+
+def text_block(r, classes=None):
+    classes = classes or sync_classes.load()
     blob = ""
     for x in r:
         blob += x["text"].replace('"', '\\"').replace("%", '\\x01" "') + '\\0" "'   # literal splits end the escapes
@@ -231,6 +250,7 @@ def text_block(r):
         "    }",
         "    return tAwtoSyncFmt[usRow];",
         "}",
+        cls_block(r, classes),
         names_block(r)])
 
 

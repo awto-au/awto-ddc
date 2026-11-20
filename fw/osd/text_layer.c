@@ -12,7 +12,8 @@ static __code BYTE tAwtoPal[AWTO_PAL_N][3] = {
     {AWTO_RGB_REALTEK_BLUE}, {AWTO_RGB_GREY_AA}, {AWTO_RGB_WHITE}, {AWTO_RGB_GREY_49}, {AWTO_RGB_GREY_6E}, {AWTO_RGB_BLUE_PALE},
     {AWTO_RGB_BLUE_DEEP}, {AWTO_RGB_GREY_55}, {AWTO_RGB_GREY_25}, {AWTO_RGB_BLUE_STEEL}, {AWTO_RGB_BLUE_NAVY}, {AWTO_RGB_BLACK}};
 // 1 bit glyph foreground for each osd_style; background 0 is transparent and exposes the white/blue window.
-static __code BYTE tAwtoStyle[5] = {AWTO_PAL_ACCENT, AWTO_PAL_GREY, AWTO_PAL_SURFACE, AWTO_PAL_ACCENT, AWTO_PAL_ALERT};      // style 4 = palette 4: only the diagnostic console uses it (alert)
+static __code BYTE tAwtoStyle[8] = {AWTO_PAL_ACCENT, AWTO_PAL_GREY, AWTO_PAL_SURFACE, AWTO_PAL_ACCENT, AWTO_PAL_ALERT,
+                                    AWTO_PAL_DIAG_WARN, AWTO_PAL_DIAG_TIMING, AWTO_PAL_DIAG_BOOT};      // styles 4..7: diagnostic console only (alert, log classes)
 #define AWTO_BAR_SURFACE            AWTO_PAL_SURFACE
 #define AWTO_BAR_ACCENT             AWTO_PAL_ACCENT
 #define AWTO_OSD_WIN_MIN_PX         2           // narrowest window drawn as asked; end == start runs to the line end (photo 2026-11-15)

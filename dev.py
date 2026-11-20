@@ -575,12 +575,15 @@ def _tail_until_exit(p, spool: Path):
                 pass
 
 
+_ANSI = re.compile(r"\x1b\[[0-9;]*m")      # class colours of the sync log: never into a log file
+
+
 def _py(script: str, *args, env: dict | None = None, shield: bool = False) -> int:
     """shield: SIGINT/SIGTERM/SIGHUP are forwarded to the child once (it stops at a safe point) and dev.py keeps draining
     its output; otherwise dev.py would die first and its finally (fast_bus unload) would reload the bus mid-flash."""
     cmd = [sys.executable, str(REPO / "scripts" / script), *map(str, args)]
     log("run: " + " ".join(cmd[1:]))
-    full_env = {**os.environ, "AWTO_VIA_DEV": "1", **(env or {})}
+    full_env = {**os.environ, "AWTO_VIA_DEV": "1", **({"AWTO_TTY": "1"} if sys.stdout.isatty() else {}), **(env or {})}   # the child's stdout is a pipe: sync_classes.use_colour()
     sigs = (signal.SIGINT, signal.SIGTERM, signal.SIGHUP) if shield else ()
     old, p, fwd = {}, None, []
 
@@ -618,7 +621,7 @@ def _py(script: str, *args, env: dict | None = None, shield: bool = False) -> in
             with _UNIT_LOG.open("a", encoding="utf-8") as fh:
                 for line in lines:
                     out(line)
-                    fh.write(f"{_stamp()}  {script}: {line}")
+                    fh.write(f"{_stamp()}  {script}: {_ANSI.sub('', line)}")
                     fh.flush()
         rc = p.wait()
     finally:

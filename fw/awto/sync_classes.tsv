@@ -1,0 +1,12 @@
+# Sync log colour classes: the one place for the class names (awto-ddc: per-line text colour in the diagnostic console + host decoder).
+# Read by scripts/gen_awto_sync.py (console tables), scripts/sync_log.py (ANSI colour on a TTY), tests/test_sync_classes.py.
+# class: name used in the optional 5th column of fw/awto/sync.tsv; no column = normal.
+# style: console text style (AWTO_T_STYLE_*, fw/osd/console.c) -> palette entry via tAwtoStyle (fw/osd/text_layer.c).
+# ansi: SGR foreground code the host decoder prints on a TTY (0 = none).
+# class	style	ansi	colour
+normal	AWTO_T_STYLE_TEXT	0	green on the console (the existing look); host: terminal default, no escape
+error	AWTO_T_STYLE_ALERT	31	red
+warning	AWTO_T_STYLE_WARN	33	yellow
+timing	AWTO_T_STYLE_TIMING	36	cyan
+boot	AWTO_T_STYLE_BOOT	37	white
+flash	AWTO_T_STYLE_BOOT	37	white
