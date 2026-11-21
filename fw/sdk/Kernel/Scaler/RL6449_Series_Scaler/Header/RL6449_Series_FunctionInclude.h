@@ -56,6 +56,7 @@
 #include "RL6449_Series_QCInclude.h"
 #include "RL6449_Series_MHLRx2Include.h"
 #include "RL6449_Series_MHLRx3Include.h"
+#include "RL6449_Series_TMDSRxShareInclude.h"
 #include "RL6449_Series_TMDSRx2Include.h"
 #include "RL6449_Series_TMDSRx3Include.h"
 #include "RL6449_Series_DDR2Include.h"

@@ -884,9 +884,9 @@ extern void AwtoDdcciPoll(void);
 extern __xdata unsigned char g_ucAwtoDdcDef;
 extern void AwtoWaitPump(void);       // #216: Get-VCP / capabilities answered inside a blocking wait (fw/ddcci/ddcci.c)
 #define AWTO_PUMP_SP_MAX                                        0xB0    // pump runs only with SP at or below; its Get path peaked 0xED from 0xBE (47 B), so 0xB0 stays under the 0xDB the rest of the firmware reaches (waits seen up to 0xA5)
-extern volatile unsigned char isr_g_ucTMDSRx2PhyPend, isr_g_ucTMDSRx3PhyPend;
+extern volatile unsigned char isr_g_ucTMDSRxPhyPend[2];
 extern void ScalerTMDSPhySetDeferred(void);
-#define AWTO_TMDS_PHY_PUMP()                                    { if(((isr_g_ucTMDSRx2PhyPend | isr_g_ucTMDSRx3PhyPend) != 0) && (SP <= AWTO_PUMP_SP_MAX)) { ScalerTMDSPhySetDeferred(); } }
+#define AWTO_TMDS_PHY_PUMP()                                    { if(((isr_g_ucTMDSRxPhyPend[0] | isr_g_ucTMDSRxPhyPend[1]) != 0) && (SP <= AWTO_PUMP_SP_MAX)) { ScalerTMDSPhySetDeferred(); } }
 extern BYTE g_ucTMDSPhyLong;          // 1 = SetPhy runs the 2.9 ms unscrambled-source block (retry after a failed CDR check)
 #ifndef AWTO_TMDS_PHY_PROBE
 #define AWTO_TMDS_PHY_PROBE                                     0       // 1 = test image: per-lock PHY set-up timing to the sync ring (fw/diag/phyprobe.c)

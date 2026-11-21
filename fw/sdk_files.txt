@@ -249,6 +249,8 @@ Kernel/Scaler/RL6449_Series_Scaler/Header/RL6449_Series_TMDSRx2Interface.h
 Kernel/Scaler/RL6449_Series_Scaler/Header/RL6449_Series_TMDSRx3CommonInclude.h
 Kernel/Scaler/RL6449_Series_Scaler/Header/RL6449_Series_TMDSRx3Include.h
 Kernel/Scaler/RL6449_Series_Scaler/Header/RL6449_Series_TMDSRx3Interface.h
+Kernel/Scaler/RL6449_Series_Scaler/Header/RL6449_Series_TMDSRxCheck.h
+Kernel/Scaler/RL6449_Series_Scaler/Header/RL6449_Series_TMDSRxShareInclude.h
 Kernel/Scaler/RL6449_Series_Scaler/Header/RL6449_Series_VGATopCommonInclude.h
 Kernel/Scaler/RL6449_Series_Scaler/Header/RL6449_Series_VGATopInclude.h
 Kernel/Scaler/RL6449_Series_Scaler/Header/RL6449_Series_VGATopInterface.h

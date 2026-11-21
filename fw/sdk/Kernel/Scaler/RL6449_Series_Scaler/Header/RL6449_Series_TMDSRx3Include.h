@@ -125,10 +125,6 @@ extern volatile bit d_g_bTMDSRx3HDMI2RREnable;
 extern volatile bit d_isr_g_bTMDSRx3HDMI2HighSpeedMode;
 extern volatile bit d_isr_g_bTMDSRx3TMDSPhySet;
 extern volatile bit d_isr_g_bTMDSRx3TMDSDdcDetected;
-extern volatile WORD isr_g_usTMDSRx3ClkCount;
-extern volatile WORD isr_g_usTMDSRx3PhyCount;
-extern volatile WORD isr_g_usTMDSRx3PhyClk;
-extern volatile BYTE isr_g_ucTMDSRx3PhyPend;
 
 #if(_D3_INPUT_PORT_TYPE == _D3_MHL_PORT)
 extern BYTE g_ucTMDSRx3ClkMode;
