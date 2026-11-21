@@ -25,6 +25,6 @@
 "g_stDpMarginLink" = "class A: DP link-training state, EXINT0 only (no main user, nothing preempts EXINT0 in its own code)"
 "g_ucDpRx1AuxModeBackup_EXINT" = "class A: T2 HPD IRQ event only (T2 is the top priority, no other user)"
 "isr_g_stModeInfo" = "class A: read once by the watchdog ISR for the crash snapshot, reset follows; no wait loop"
-"isr_g_pstTimerEvent" = "class A: EXINT0 only clears an entry id (1 B store); main writes id + time in __critical; every access is one fresh read, volatile costs cycles per main pass"
+"isr_g_pstTimerEvent" = "class A: EXINT0 only clears an entry id (1 B store); main writes id + time in __critical; every access is one fresh read, volatile costs main-loop cycles (#281)"
 "isr_g_usTmdsOffLineMeasureClk" = "class A: main writes it only in ScalerTMDSRx{2,3}PhySetDeferred with EX0 masked; EXINT0 only reads (no torn read)"
-"isr_g_usDDCDebounceCnt" = "class A: EXINT1 reads it as the bound of a calibrated count loop (a snapshot or volatile changes the 100.5 clk per pass); main writes in __critical"
+"isr_g_usDDCDebounceCnt" = "class A: EXINT1 reads it as the bound of a calibrated count loop (snapshot / volatile would change its timing, #281); main writes in __critical"
