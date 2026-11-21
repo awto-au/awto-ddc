@@ -7,7 +7,7 @@ import pytest
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "scripts"))
-import sync_log as S  # noqa: E402
+import sync_log as S
 
 ROWS = S.load_rows(ROOT / "fw/awto/sync.tsv")
 SDONE, SFAIL, SLINK = 0xEF, 0xFE, 0xFF
