@@ -19,7 +19,6 @@ ScalerPLL	0xd700	1687	65
 awto_nvram_nvram	0xd700	1752	64
 RTDFactoryFunction	0xd700	1816	63
 RL6449_Series_FRC	0xd700	1879	62
-RL6449_Series_TMDSRx2	0xd700	1941	57
 RL6449_Series_TMDSRx3	0xd700	1998	57
 diag	0xd700	2055	54
 awto_arith_arith	0xd700	2109	50
@@ -129,6 +128,7 @@ __ovl	0xe580	82	1
 flash_screen	0xe580	83	1
 delay	0xe580	84	12
 monitor	0xe580	96	48
+RL6449_Series_TMDSRx2	0xe580	144	58
 sync	0xe780	37	678
 asteroids	0xe780	715	515
 ScalerCommonDebug	0xe780	1230	363
