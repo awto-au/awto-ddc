@@ -3,6 +3,7 @@
 
 usage: delay_audit.py --write [--tree DIR] [--map MAP] [--variant hwtest]   regenerate docs/delay-audit.tsv from the tree's last build (hand columns kept by key)
        delay_audit.py --check [--tree DIR] [--map MAP] [--variant hwtest]   FAIL on a linked site that is not in the TSV, a TSV verdict FIX / UNKNOWN, a stale count formula
+       delay_audit.py --check also judges the interrupt-masked sections (scripts/irq_masks.py: every one in docs/irq-masks.tsv, EX0 / EA masked <= 100 us unless a reasoned budget_us)
        delay_audit.py --check also judges the blocking budget (per function, per ISR handler tree; docs/delay-budget.tsv rows with a reason raise a cap); --write-budget adds rows
        delay_audit.py --counts                            the loop-count formula (AWTO_DELAY_CNT) at every clock state (350.8 default, 175.4, 87.7, XTAL, IOSC), from the header text
 Source of the sites: scripts/delay_inventory.py (post-link: the SDCC listing of the tree's build, so "linked" is exact).
@@ -380,7 +381,10 @@ def main():
         return write_budget(a.tree, mapp)
     if a.write:
         return write(a.tree, mapp, a.variant)
-    return check(a.tree, mapp, a.variant) | (0 if a.variant else check_budget(a.tree, mapp))      # test-op images (hwtest) block on purpose
+    if a.variant:                                                    # test-op images (hwtest) block on purpose
+        return check(a.tree, mapp, a.variant)
+    import irq_masks
+    return check(a.tree, mapp) | check_budget(a.tree, mapp) | irq_masks.check(a.tree, mapp)      # masked sections: docs/irq-masks.tsv
 
 
 if __name__ == "__main__":

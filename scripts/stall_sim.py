@@ -1,16 +1,18 @@
 #!/usr/bin/env python3
 """ISR and interrupt-masked stretches of an image in the simulator, longest per site at 0.1 ms (docs/delays.md, #281).
 
-usage: stall_sim.py BIN MAP [--mode 1080p60] [--top 12]
+usage: stall_sim.py BIN MAP [--mode 1080p60] [--top 12] [--scenario panel|sync|wake|wake-quick|wdt|all]
   Runs the panel_sim scenario on the DW8051 core with the clock model. PC hooks (no firmware change, nothing on hardware):
   - ISR: entry at each vector (0x03 + 8 n) -> the RETI that ends it (nested ISRs on a stack); keyed by vector.
   - masked: `clr EX0` / `clr EA` -> the next `setb` / `mov bit,c` of the same bit; keyed by bit and the function holding the clr.
-  The result is the sim's worst case for the scenario (paths the scenario does not reach are absent).
+  --scenario runs another sim script (sync_sim, wake_sim, wdt_sim events) with the same hooks on every SimBus it builds; `all` = every scenario, the max per site.
+  The result is the sim's worst case for the scenarios (paths they do not reach are absent; the flash erase halt is not modelled: docs/irq-masks.md).
 Log: tmp/logs/stall_sim.log; table tmp/logs/stall_sim.tsv
 """
 import argparse
 import collections
 import sys
+import types
 from pathlib import Path
 
 import isostamp
@@ -36,9 +38,8 @@ def say(s):
     print(s, flush=True)
 
 
-def attach(run, im):
+def attach(run, im, worst):
     m = run.m
-    worst = collections.defaultdict(float)
     stack, open_mask = [], {}
 
     def hook(bank, pc, fn):
@@ -81,7 +82,34 @@ def attach(run, im):
             elif bytes(ins.raw[:2]) in MASK_OPS:
                 bit, on = MASK_OPS[bytes(ins.raw[:2])]
                 hook(bank, ins.addr, mask(bit, on, site))
-    return worst
+
+
+SCENARIOS = {"sync": ("sync_sim", []), "wake": ("wake_sim", []), "wake-quick": ("wake_sim", ["--quick"]), "wdt": ("wdt_sim", ["events"])}
+
+
+def run_other(name, a, im, worst):
+    """run another sim script's main() with the hooks attached to every SimBus it creates"""
+    import runpy
+
+    import fw_sim as S
+    mod, extra = SCENARIOS[name]
+    orig = S.SimBus.__init__
+
+    def init(self, *args, **kw):
+        orig(self, *args, **kw)
+        attach(types.SimpleNamespace(m=self.m), im, worst)
+    S.SimBus.__init__ = init
+    argv = sys.argv
+    try:
+        sys.argv = [mod + ".py", *([extra[0]] if mod == "wdt_sim" else []), str(a.bin), str(a.map), *([e for e in extra if mod != "wdt_sim"])]
+        runpy.run_path(str(Path(__file__).resolve().parent / (mod + ".py")), run_name="__main__")
+    except SystemExit:
+        pass
+    except Exception as e:                 # the scenario's own end checks (crash block read) may fail under the hooks; the stretches seen so far count
+        say(f"scenario {name} ended with {type(e).__name__}: {e}")
+    finally:
+        sys.argv = argv
+        S.SimBus.__init__ = orig
 
 
 def main():
@@ -91,15 +119,23 @@ def main():
     ap.add_argument("--tree", default=str(ROOT))
     ap.add_argument("--mode", default="1080p60")
     ap.add_argument("--top", type=int, default=12)
+    ap.add_argument("--scenario", default="panel", choices=["panel", *SCENARIOS, "all"])
     a = ap.parse_args()
     P.panel_times(a.tree)
     im = L.Image(a.bin, a.map, str(Path(a.tree) / "fw/bank_layout.tsv"), 0x5000)
-    run = P.Run(argparse.Namespace(bin=a.bin, map=a.map, mode=a.mode, report=True, tree=a.tree))
-    try:
-        worst = attach(run, im)
-        run.scenario()
-    finally:
-        run.bus.close()
+    worst = collections.defaultdict(float)
+    todo = ["panel", *SCENARIOS] if a.scenario == "all" else [a.scenario]
+    for sc in todo:
+        say(f"scenario {sc}")
+        if sc == "panel":
+            run = P.Run(argparse.Namespace(bin=a.bin, map=a.map, mode=a.mode, report=True, tree=a.tree))
+            try:
+                attach(run, im, worst)
+                run.scenario()
+            finally:
+                run.bus.close()
+        else:
+            run_other(sc, a, im, worst)
     rows = sorted(worst.items(), key=lambda kv: -kv[1])
     TSV.parent.mkdir(parents=True, exist_ok=True)
     with TSV.open("w") as f:
