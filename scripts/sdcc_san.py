@@ -51,6 +51,13 @@ def read_marks(path: Path) -> dict[str, dict]:
     return out
 
 
+def iram_syms(map_text: str) -> tuple[list[int], list[str]]:
+    """Sorted direct-IRAM globals (placed ABS rows below 0x80, e.g. the overlay base __dovl0)."""
+    rows = sorted({(int(m.group(1), 16), m.group(2)) for m in re.finditer(r"^ +([0-9A-F]{8})  (\w+) +\S+$", map_text, re.MULTILINE)
+                   if 0x08 <= int(m.group(1), 16) < 0x80})
+    return [r[0] for r in rows], [r[1] for r in rows]
+
+
 def xdata_syms(map_text: str) -> tuple[list[int], list[str]]:
     """Sorted XDATA globals: map 'D:' lines + the placed (ABS) rows."""
     rows = {(int(m.group(1), 16), m.group(2)) for m in re.finditer(r"^D:\s+([0-9A-F]{8})\s+(\w+)", map_text, re.MULTILINE)}
@@ -67,6 +74,8 @@ class Namer:
         import bisect
         self.m, self.bisect = m, bisect
         self.av, self.an = xdata_syms(m.map_text)
+        self.iv, self.inm = iram_syms(m.map_text)
+        self.cend = getattr(m.where, "cend", 0)
         self.ctx = list(CTX)
         code = m.core.code
         for i in range(1, 8):
@@ -86,7 +95,9 @@ class Namer:
             exact = off < max(1, nxt - self.av[k])
             return a, f"{'' if exact else '~'}{self.an[k]}{f'+{off}' if off else ''}"
         if idx < NX + NIR:
-            return idx - NX, f"iram:0x{idx - NX:02x}"
+            a = idx - NX
+            k = self.bisect.bisect_right(self.iv, a) - 1
+            return a, f"iram:0x{a:02x}" + (f" (~{self.inm[k]}+{a - self.iv[k]})" if k >= 0 else "")
         return idx - NX - NIR, f"bit:0x{idx - NX - NIR:02x}"
 
     def sym(self, idx: int) -> tuple[str, int, int]:
@@ -99,6 +110,10 @@ class Namer:
             return f"xdata:0x{a:04x}", 0, 1
         nxt = self.av[k + 1] if k + 1 < len(self.av) else a + 1
         return self.an[k], a - self.av[k], nxt - self.av[k]
+
+    def norm(self, pc: int) -> int:
+        """Code in the common area is the same in every bank: drop the bank so one site is one pc."""
+        return pc & 0xFFFF if (pc & 0xFFFF) < self.cend else pc
 
     def func(self, pc: int) -> str:
         return self.m.where(pc >> 16, pc & 0xFFFF)
@@ -141,6 +156,7 @@ def finalise(m, marks: dict | None) -> list[dict]:
         if e.cls == 3 and (ext < 2 or nm.sym(j)[0] != sym):
             continue                       # adjacent bytes of two objects, not one multi-byte access
         a, an = nm.addr(i)
+        e.pc1, e.pc2 = nm.norm(e.pc1), nm.norm(e.pc2) if e.pc2 else 0
         rows.append({"level": "did" if did else "could", "cls": CLS[e.cls], "symbol": an, "addr": a if i < NX else an, "mark": mc,
                      "victim": nm.ctx[e.ctx], "could": names(could, nm.ctx), "did": names(did, nm.ctx), "rw": "W" if w else "R",
                      "func": nm.func(e.pc2 or e.pc1), "pc1": f"{e.pc1:#07x}", "func1": nm.func(e.pc1), "pc2": f"{e.pc2:#07x}" if e.pc2 else "",
