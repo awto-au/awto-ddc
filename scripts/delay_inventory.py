@@ -435,7 +435,7 @@ def extract_sites(fns, ctx, live, defs: Eval, build: Path):
                 else:
                     v = int(m.group(2))
                 rows.append(dict(base, kind="delay_us", addr=f"0x{ins[0][0]:x}" if ins else "", value=v if v is not None else "",
-                                 units="us", mode="blind", bound="", expiry="none: counted loop, nominal (d_isr_g_ucDelay5usN_Base calibrated)",
+                                 units="us", mode="blind", bound="", expiry="none: counted loop, nominal (d_g_ucDelay5usN_Base calibrated)",
                                  args=m.group(0), in_loop=("yes" if ins and in_loop(fn, ins[0][0]) else "no")))
             elif re.match(r"(?:while|for)\s*\(", text) or re.match(r"while\s*\(", text):
                 row = loop_row(fn, base, text, ins)

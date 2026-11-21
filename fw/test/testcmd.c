@@ -1016,7 +1016,7 @@ static BYTE AwtoClkDelayNext(BYTE ucC, BYTE ucPrevC, WORD usPct, WORD usPrevPct)
 static void AwtoClkDelayCal(void)                       // scaled stock counts, then secant steps until both are within AWTO_CLK_DELAY_BAND of AWTO_DELAY_TARGET_PCT
 {
     BYTE ucK;
-    BYTE ucP5 = d_isr_g_ucDelay5usN_Base;
+    BYTE ucP5 = d_g_ucDelay5usN_Base;
     BYTE ucPX = d_isr_g_ucDelayXusN_Base;
     WORD usP5 = 0;
     WORD usPX = 0;
@@ -1031,17 +1031,17 @@ static void AwtoClkDelayCal(void)                       // scaled stock counts, 
         {
             break;
         }
-        ucN5 = AwtoClkDelayNext(d_isr_g_ucDelay5usN_Base, ucP5, g_stAwtoClk.usD5Pct, usP5);
+        ucN5 = AwtoClkDelayNext(d_g_ucDelay5usN_Base, ucP5, g_stAwtoClk.usD5Pct, usP5);
         ucNX = AwtoClkDelayNext(d_isr_g_ucDelayXusN_Base, ucPX, g_stAwtoClk.usDXPct, usPX);
-        ucP5 = d_isr_g_ucDelay5usN_Base;
+        ucP5 = d_g_ucDelay5usN_Base;
         ucPX = d_isr_g_ucDelayXusN_Base;
         usP5 = g_stAwtoClk.usD5Pct;
         usPX = g_stAwtoClk.usDXPct;
-        d_isr_g_ucDelay5usN_Base = ucN5;
+        d_g_ucDelay5usN_Base = ucN5;
         d_isr_g_ucDelayXusN_Base = ucNX;
     }
     AwtoClkMeasDelay();                                 // the result of the counts that stay
-    g_stAwtoClk.ucD5 = d_isr_g_ucDelay5usN_Base;
+    g_stAwtoClk.ucD5 = d_g_ucDelay5usN_Base;
     g_stAwtoClk.ucDX = d_isr_g_ucDelayXusN_Base;
 }
 
@@ -1789,7 +1789,7 @@ static void AwtoClkApply(void)
         s_ucClkStock[8] = ScalerGetByte(P10_C2_PIN_DRIVING_CTRL02__TOPON);
         s_ucClkStock[9] = ScalerGetByte(P10_81_PIN_SLEW_RATE_CTRL1__TOPON);
         g_stAwtoClk.ucChip = ScalerGlobalGetIDCode();
-        s_ucClkStock[5] = d_isr_g_ucDelay5usN_Base;
+        s_ucClkStock[5] = d_g_ucDelay5usN_Base;
         s_ucClkStock[6] = d_isr_g_ucDelayXusN_Base;
         s_ucClkStock[7] = MCU_FDA1_CACHE_OPTION;
         s_ucClkStockPll[0] = ScalerGetByte(P1_E0_M2PLL_M);
@@ -1858,7 +1858,7 @@ static void AwtoClkApply(void)
         return;
     }
     AwtoClkTimers(AwtoClkReload(ucF, ucM));
-    d_isr_g_ucDelay5usN_Base = AwtoClkScaled(s_ucClkStock[5]);
+    d_g_ucDelay5usN_Base = AwtoClkScaled(s_ucClkStock[5]);
     d_isr_g_ucDelayXusN_Base = AwtoClkScaled(s_ucClkStock[6]);
     isr_g_usDDCDebounceCnt = (WORD)(((unsigned long)s_usClkStockDeb * s_ulClkNum + s_ulClkDen / 2) / s_ulClkDen);
     if(((g_stAwtoClk.ucFlags & AWTO_CLK_F_DUAL) != 0) || (((g_stAwtoClk.ucFlags & AWTO_CLK_F_TUNEFIRST) == 0) && (g_stAwtoClk.ucRdTune != 0xFF)))
@@ -1909,7 +1909,7 @@ static void AwtoClkRevert(BYTE ucState)
     }
     AwtoClkWrite(s_ucClkStock[0], s_ucClkStock[1], s_ucClkStock[2]);
     AwtoClkTimers(s_usClkStockRcap);
-    d_isr_g_ucDelay5usN_Base = s_ucClkStock[5];
+    d_g_ucDelay5usN_Base = s_ucClkStock[5];
     d_isr_g_ucDelayXusN_Base = s_ucClkStock[6];
     isr_g_usDDCDebounceCnt = s_usClkStockDeb;
     EA = 1;

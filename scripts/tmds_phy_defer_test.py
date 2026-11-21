@@ -24,6 +24,7 @@ import fw_sim as S
 LOG = ROOT / "tmp/logs/tmds_phy_defer_test.log"
 EF, E6, E8, E9, EA_, EB = 0x71EF, 0x71E6, 0x71E8, 0x71E9, 0x71EA, 0x71EB
 COUNT = 0x0A00
+ISR_STEP_INSTR, ISR_STEPS = 20, 500           # the EXINT0 handler is a few hundred instructions; stop at the first pend, not at a fixed time
 fails = 0
 
 
@@ -76,7 +77,10 @@ def main() -> int:
     m.wr(EF, bytes([0xC0]))
     m.wr(0x71ED, bytes([0x0A, 0x00]))            # popped counter: 0x0A00
     m.wr(0x88, bytes([m.rd(0x88, 1, "sfr")[0] | 0x02]), "sfr")      # TCON.IE0: EXINT0
-    bus.wait(0.0005)
+    for _ in range(ISR_STEPS):                   # step until the handler has returned (pend set): main must not have run the set-up yet
+        m.run(ISR_STEP_INSTR)
+        if m.rd(pend)[0] or ev["phy"]:
+            break
     b = ev["phy"]
     check("isr", m.rd(pend)[0] == 1 and not b and (m.rd(E6)[0] & 0x02) == 0,
           f"pend {m.rd(pend)[0]} (1), SetPhy calls {len(b)} (0), "

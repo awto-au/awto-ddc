@@ -1,15 +1,14 @@
 #include "ScalerCommonFunctionInclude.h"
 
-// The one routine every main-context micro-delay runs (DELAY_5US / DELAY_XUS in ScalerCommonMcuInclude.h), so the simulator hooks
-// one place and delay_sim / delay_audit see one function. Loop = `mov R7,base; djnz R7,$`, 12 clk per count (AWTO_DELAY_CLK_PER_CNT);
-// R7 (direct 0x07, bank 0) is saved (push / pop), the callers use an inline `lcall` so SDCC spills nothing. Pinned to common (fw_build --pin-common).
-// Not for ISRs: the EXINT macros stay inline (an ISR that calls a function pays SDCC's register-save prologue).
-// DELAY_5US loops d_g_ucDelay5usN_Call = Base - AWTO_DELAY_CALL_CNT (lcall + ret + push + pop = 48 clk = 4 counts): same wait as inline.
+// The routines every micro-delay runs, main and ISR (DELAY_5US / DELAY_XUS / AWTO_GAP_RUN in ScalerCommonMcuInclude.h): one djnz shape, 12 clk
+// per count (AWTO_DELAY_CLK_PER_CNT), so delay_sim / delay_audit see one place. R6 / R7 are bank 0 direct (push 0x07 here, the caller's
+// inline asm pushes R6 around the call): an ISR delay cannot corrupt an interrupted one, no shared counter. Pinned to common (fw_build --pin-common).
+// DELAY_5US loops d_isr_g_ucDelay5usN_Call = Base - AWTO_DELAY_CALL_CNT (lcall + ret + push + pop = 48 clk = 4 counts): same wait as an inline loop.
 void AwtoDelayLoops(void) __naked
 {
     __asm
         push    0x07
-        mov     r7, _d_g_ucDelay5usN_Call
+        mov     r7, _d_isr_g_ucDelay5usN_Call
     00001$:
         djnz    r7, 00001$
         pop     0x07
@@ -17,7 +16,7 @@ void AwtoDelayLoops(void) __naked
     __endasm;
 }
 
-// DELAY_XUS: the caller sets d_g_ucDelayXus_Counter = N >> 2 (outer passes of the 4 us base loop, count = Base).
+// DELAY_XUS: R6 = N >> 2 outer passes of the 4 us base loop (count = Base).
 void AwtoDelayXus(void) __naked
 {
     __asm
@@ -26,8 +25,18 @@ void AwtoDelayXus(void) __naked
         mov     r7, _d_isr_g_ucDelayXusN_Base
     00002$:
         djnz    r7, 00002$
-        djnz    _d_g_ucDelayXus_Counter, 00001$
+        djnz    0x06, 00001$
         pop     0x07
+        ret
+    __endasm;
+}
+
+// AWTO_GAP_RUN: R6 = loop count (the caller subtracts AWTO_GAP_CALL_CNT).
+void AwtoDelayCnt(void) __naked
+{
+    __asm
+    00001$:
+        djnz    0x06, 00001$
         ret
     __endasm;
 }

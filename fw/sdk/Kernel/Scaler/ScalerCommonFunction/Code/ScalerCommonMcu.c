@@ -87,10 +87,9 @@ StructHwI2cSettingData __code tHwI2cSetting[] =
 
 BYTE idata g_ucDdcciCountEXINT;
 
-volatile BYTE __data d_isr_g_ucDelay5usN_Base = 1;
+volatile BYTE __data d_g_ucDelay5usN_Base = 1;
 volatile BYTE __data d_isr_g_ucDelayXusN_Base = 1;
-BYTE __data d_g_ucDelay5usN_Call = 1;       // Base - AWTO_DELAY_CALL_CNT: the loops of AwtoDelayLoops (fw/timer/delay.c)
-volatile BYTE __data d_g_ucDelayXus_Counter = 1;   // volatile: only the asm routine reads it, SDCC drops the store otherwise
+BYTE __data d_isr_g_ucDelay5usN_Call = 1;       // Base - AWTO_DELAY_CALL_CNT: the loops of AwtoDelayLoops (fw/timer/delay.c)
 
 __xdata _Bool g_bRunDdcciCommand = _FAIL;
 #if(_DDCCI_AUTO_SWITCH_SUPPORT == _ON)
@@ -1743,21 +1742,21 @@ void ScalerMcu5usDelayCalc(EnumClkSel enumClock)
 
     if(enumClock == _M2PLL_CLK)
     {
-        d_isr_g_ucDelay5usN_Base = AWTO_DELAY_CNT(AWTO_CPU_KHZ_M2PLL, 5UL, AWTO_DELAY5US_OVH_CLK);
+        d_g_ucDelay5usN_Base = AWTO_DELAY_CNT(AWTO_CPU_KHZ_M2PLL, 5UL, AWTO_DELAY5US_OVH_CLK);
         d_isr_g_ucDelayXusN_Base = AWTO_DELAY_CNT(AWTO_CPU_KHZ_M2PLL, 4UL, AWTO_DELAYXUS_OVH_CLK);
-        d_g_ucDelay5usN_Call = d_isr_g_ucDelay5usN_Base - AWTO_DELAY_CALL_CNT;
+        d_isr_g_ucDelay5usN_Call = d_g_ucDelay5usN_Base - AWTO_DELAY_CALL_CNT;
     }
     else if(enumClock == _IOSC_CLK)
     {
-        d_isr_g_ucDelay5usN_Base = AWTO_DELAY_CNT(AWTO_CPU_KHZ_IOSC, 5UL, AWTO_DELAY5US_OVH_CLK);
+        d_g_ucDelay5usN_Base = AWTO_DELAY_CNT(AWTO_CPU_KHZ_IOSC, 5UL, AWTO_DELAY5US_OVH_CLK);
         d_isr_g_ucDelayXusN_Base = AWTO_DELAY_CNT(AWTO_CPU_KHZ_IOSC, 4UL, AWTO_DELAYXUS_OVH_CLK);
-        d_g_ucDelay5usN_Call = d_isr_g_ucDelay5usN_Base - AWTO_DELAY_CALL_CNT;
+        d_isr_g_ucDelay5usN_Call = d_g_ucDelay5usN_Base - AWTO_DELAY_CALL_CNT;
     }
     else // For Xtal
     {
-        d_isr_g_ucDelay5usN_Base = AWTO_DELAY_CNT(AWTO_CPU_KHZ_XTAL, 5UL, AWTO_DELAY5US_OVH_CLK);
+        d_g_ucDelay5usN_Base = AWTO_DELAY_CNT(AWTO_CPU_KHZ_XTAL, 5UL, AWTO_DELAY5US_OVH_CLK);
         d_isr_g_ucDelayXusN_Base = AWTO_DELAY_CNT(AWTO_CPU_KHZ_XTAL, 4UL, AWTO_DELAYXUS_OVH_CLK);
-        d_g_ucDelay5usN_Call = d_isr_g_ucDelay5usN_Base - AWTO_DELAY_CALL_CNT;
+        d_isr_g_ucDelay5usN_Call = d_g_ucDelay5usN_Base - AWTO_DELAY_CALL_CNT;
     }
 }
 

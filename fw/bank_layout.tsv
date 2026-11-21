@@ -937,6 +937,7 @@ stub	_AwtoSyncTiming	C	0x3968	8
 fn	_AwtoSyncWdtMs	C	0x3970	120
 stub	_AwtoTmdsIdleKhz	C	0x39e8	8
 stub	_AwtoT0EvIsr	C	0x39f0	8
+fn	_AwtoDelayCnt	C	0x39f8	8
 stub	_AwtoResetCard	C	0x3a10	8
 stub	_AwtoDemoLog	C	0x3a18	8
 stub	_AwtoDiagTestCmd	C	0x3a20	8
@@ -1520,6 +1521,7 @@ fn	_ScalerDpRx1VBIOSMSACheck	2	0x5638	336
 fn	_ScalerDpRx1ValidSignalDetection	2	0x5788	492
 fn	_AwtoMsgV	2	0x5974	244
 fn	_AwtoSyncSelect	2	0x5d60	164
+fn	_ScalerDpRx1SetDpcdValue	2	0x5e04	48
 fn	_ScalerDebugSendData	2	0x5e34	188
 fn	_ScalerDebugSetRegisters	2	0x5ef0	300
 fn	_ScalerSyncTMDSRx2HdmiColorInfoChanged	2	0x601c	588
@@ -1546,7 +1548,6 @@ fn	_ScalerDpRx1PhyCtsTp2Check	2	0x7be4	256
 fn	_ScalerDpRx1ScrambleSetting	2	0x7ce4	296
 fn	_ScalerDpRx1SetDFEInitial	2	0x7e0c	648
 fn	_ScalerDpRx1GetDpcdBitInfo	2	0x8094	44
-fn	_ScalerDpRx1SetDpcdValue	2	0x80c4	36
 fn	_ScalerDpRx1StableDetect	2	0x80e8	168
 fn	_ScalerTMDSRx2DviVideoSetting	2	0x8190	68
 fn	_ScalerTMDSRx2HdmiAviPixelRepInfoChanged	2	0x81d4	24

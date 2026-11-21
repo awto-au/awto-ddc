@@ -214,7 +214,7 @@ typedef struct
     unsigned int usHeartbeat;                   // main-loop passes
     unsigned int usT2Isr;                       // Timer2 ISR entries
     unsigned int usEx1Isr;                      // EXINT1 (DDC-CI/debug) ISR entries
-    unsigned char ucDelay5usN;                  // d_isr_g_ucDelay5usN_Base seen by the self-test
+    unsigned char ucDelay5usN;                  // d_g_ucDelay5usN_Base seen by the self-test
     unsigned int usDelayXms10;                  // 10 ticks of ScalerTimerDelayXms, Timer2 counts >> AWTO_DIAG_XMS_SHIFT
     unsigned int usDelay5us10;                  // 10 x ScalerDelay5us(), raw Timer2 counts, EA off
     unsigned char ucRcap2h;                     // RCAP2H at the test: tells XTAL from M2PLL reload

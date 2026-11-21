@@ -66,10 +66,7 @@
 //--------------------------------------------------
 // Macros of 5us Delay
 //--------------------------------------------------
-#define ScalerDelay5us()                               {\
-                                                           BYTE ucDly5 = d_isr_g_ucDelay5usN_Base;\
-                                                           while(--ucDly5) {};\
-                                                       }
+#define ScalerDelay5us()                               DELAY_5US()
 
 //--------------------------------------------------
 // Macros of SW IIC Status
@@ -115,9 +112,8 @@
 // INTERFACE VARIABLE DECLARATIONS
 //****************************************************************************
 
-extern volatile BYTE __data d_isr_g_ucDelay5usN_Base;
+extern volatile BYTE __data d_g_ucDelay5usN_Base;
 extern volatile BYTE __data d_isr_g_ucDelayXusN_Base;
-extern volatile BYTE __data d_g_ucDelayXus_Counter;
 
 extern __xdata _Bool g_bRunDdcciCommand;
 #if(_DDCCI_AUTO_SWITCH_SUPPORT == _ON)

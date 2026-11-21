@@ -61,7 +61,7 @@ static void AwtoDiagDelayCal(void)
     unsigned int usRcap;
     unsigned char ucEa = EA;
 
-    isr_g_stAwtoDiag.ucDelay5usN = d_isr_g_ucDelay5usN_Base;
+    isr_g_stAwtoDiag.ucDelay5usN = d_g_ucDelay5usN_Base;
     isr_g_stAwtoDiag.ucRcap2h = RCAP2H;
     usRcap = ((unsigned int)RCAP2H << 8) | RCAP2L;
 

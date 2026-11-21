@@ -192,7 +192,6 @@ extern __xdata BYTE g_pucAwtoProbe[9];
 #define AWTO_PROBE_DEF __xdata BYTE g_pucAwtoProbe[9];
 #define AWTO_PROBE_ONE(slot, preC2, postL, gapstmt)  {ScalerSetByte(PBA_C2_DPCD_ADDR_PORT_M, (preC2)); ScalerSetByte(PBA_C3_DPCD_ADDR_PORT_L, 0x00); g_pucAwtoProbe[8] ^= ScalerGetByte(PBA_C4_DPCD_DATA_PORT);\
                                      ScalerSetByte(PBA_C2_DPCD_ADDR_PORT_M, 0x00); ScalerSetByte(PBA_C3_DPCD_ADDR_PORT_L, (postL)); gapstmt g_pucAwtoProbe[slot] = ScalerGetByte(PBA_C4_DPCD_DATA_PORT);}
-#define AWTO_GAP_RUN(n)             {BYTE ucGap = (n); while(--ucGap) {};}
 #define AWTO_DPCD_PROBE_RUN()       {EX0 = 0; ScalerSetByte(PBA_C1_DPCD_ADDR_PORT_H, 0x00); g_pucAwtoProbe[8] = 0;\
                                      AWTO_PROBE_ONE(0, 0x01, 0x00,) AWTO_PROBE_ONE(1, 0x01, 0x00, AWTO_GAP_RUN(AWTO_GAP_025US)) AWTO_PROBE_ONE(2, 0x01, 0x00, AWTO_GAP_RUN(AWTO_GAP_1US)) AWTO_PROBE_ONE(3, 0x01, 0x00, DELAY_5US();)\
                                      AWTO_PROBE_ONE(4, 0x02, 0x01,) AWTO_PROBE_ONE(5, 0x02, 0x01, AWTO_GAP_RUN(AWTO_GAP_025US)) AWTO_PROBE_ONE(6, 0x02, 0x01, AWTO_GAP_RUN(AWTO_GAP_1US)) AWTO_PROBE_ONE(7, 0x02, 0x01, DELAY_5US();)\

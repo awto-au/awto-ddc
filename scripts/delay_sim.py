@@ -114,7 +114,7 @@ def attach(run, im, mapp):
         c = chunks.get(fn)
         if c is None:
             continue
-        cnt = D.var_addrs(mapp.read_text(errors="replace"))["cx"]         # d_g_ucDelayXus_Counter: the outer passes, set by the caller
+        cnt = R6_ADDR                                                     # the outer passes: R6, set by the caller's inline asm
         pr.range(("F", fn, 0, 0, 0), chunk_bank(im, c), c["addr"] & 0xFFFF, rets(im, c),
                  extra=(lambda m, r, cnt=cnt: m.core.iram[cnt]) if fn == "AwtoDelayXus" else (lambda m, r: 0))
         nf += 1
@@ -122,7 +122,8 @@ def attach(run, im, mapp):
     return pr
 
 
-B_FUNCS = ("AwtoDelayLoops", "AwtoDelayXus")      # neither takes an argument: Loops runs d_g_ucDelay5usN_Call (Base - 2); Xus runs d_g_ucDelayXus_Counter outer passes of the 4 us base
+B_FUNCS = ("AwtoDelayLoops", "AwtoDelayXus")      # Loops runs d_isr_g_ucDelay5usN_Call; Xus R6 outer passes of the 4 us base (AwtoDelayCnt: gap runs, no nominal)
+R6_ADDR = 0x06                                   # bank 0 direct (fw/timer/delay.c)
 HOT_CALLS = 20                    # a routine group is judged against the upper bound from this many calls on (fewer = cold code fetch after another state)
 
 
@@ -281,7 +282,7 @@ def judge(pr, run, fails):
     import delay_audit as DA
     khz = round(run.m.clock.f_cpu / 1000.0)
     want = DA.counts(khz)
-    ia, ib = run.m.addr("d_isr_g_ucDelay5usN_Base"), run.m.addr("d_isr_g_ucDelayXusN_Base")
+    ia, ib = run.m.addr("d_g_ucDelay5usN_Base"), run.m.addr("d_isr_g_ucDelayXusN_Base")
     have = (run.m.core.iram[ia] if ia < 256 else None, run.m.core.iram[ib] if ib < 256 else None)
     f.append((f"loop counts in the image = AWTO_DELAY_CNT of the running clock ({khz} kHz)", have == want, f"image {have}, formula {want}"))
     for name, ok, det in f:

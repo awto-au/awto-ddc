@@ -15,7 +15,7 @@
 
 ## Loop counts (class B): `AWTO_DELAY_CNT` in `ScalerCommonPLLInclude.h`
 - `count = ceil((T us x kHz / 1000 - ovh clk) / 16)`. DELAY_5US `while(--n)` = 16 clk per count + 15 clk entry; 4 us base of DELAY_XUS = 16 clk per count + 22 clk per outer pass. 16 clk per count [hw]: sweep 87.7 MHz 27/22 counts read 102 / 108 %; 175.4 MHz 57/44 read 103..106 / 105 %; 350.8 MHz 116/90 read 107 / 105 %.
-- The variable `d_isr_g_ucDelay5usN_Base` stays (DATA, 2 B): the clock state changes at run time and the EXINT copies read it. `ScalerMcu5usDelayCalc(clk)` only selects a constant pair.
+- The variable `d_g_ucDelay5usN_Base` stays (DATA, 2 B): the clock state changes at run time and the EXINT copies read it. `ScalerMcu5usDelayCalc(clk)` only selects a constant pair.
 
 | state | kHz | DELAY_5US | 4 us base | formula wall 5 us / 4 us | sim hot (5 us loop / DELAY_XUS) | was |
 |---|---|---|---|---|---|---|

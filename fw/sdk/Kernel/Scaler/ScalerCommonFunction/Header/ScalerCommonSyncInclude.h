@@ -1205,12 +1205,8 @@
                                                                 if(d_isr_g_ucDpRxHpdIrqAssertT2EventDelayXus_Counter > 0)\
                                                                 {\
                                                                     ScalerSyncDpAuxManualModeSetting_EXINT(_DP_AUX_MANUAL_MODE_SET);\
-                                                                    do\
-                                                                    {\
-                                                                        BYTE ucDly5 = d_isr_g_ucDelay5usN_Base;\
-                                                                        while(--ucDly5) {};\
-                                                                    }\
-                                                                    while(--d_isr_g_ucDpRxHpdIrqAssertT2EventDelayXus_Counter);\
+                                                                    AWTO_DELAY_R6_DATA(_d_isr_g_ucDpRxHpdIrqAssertT2EventDelayXus_Counter, _AwtoDelayXus);\
+                                                                    d_isr_g_ucDpRxHpdIrqAssertT2EventDelayXus_Counter = 0;\
                                                                     ScalerSyncDpAuxManualModeSetting_EXINT(_DP_AUX_MANUAL_MODE_RECOVER);\
                                                                 }\
                                                             }

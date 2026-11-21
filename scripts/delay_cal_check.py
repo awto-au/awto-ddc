@@ -40,8 +40,8 @@ CYCLES_PER_US = 87.7 / 4            # DW8051: MCU clock 87.7 MHz (M2PLL 350.8 / 
 # TOL_STAGE / TOL_ACTIVE: sim stage times shift by <= 1 tick when code moves (2 ms); the ACTIVE time is polled every 20 k instr (~5 ms).
 TOL_REF, TOL_NOM, TOL_STAGE, TOL_ACTIVE = 0.05, (0.70, 1.10), 2, 5
 MAX_STEPS = 400_000                 # DELAY_XUS(1000) is 250 x 21 iterations = 5.3 k steps; guard against a runaway
-DELAY_VARS = {"base5": "d_isr_g_ucDelay5usN_Base", "basex": "d_isr_g_ucDelayXusN_Base", "cx": "d_g_ucDelayXus_Counter"}
-ALLOW_FN = ("ScalerMcu5usDelayCalc", "AwtoDiag", "GSINIT", "AwtoDelayXus")     # writes the bases / the calibration test / C initialisers
+DELAY_VARS = {"base5": "d_g_ucDelay5usN_Base", "basex": "d_isr_g_ucDelayXusN_Base"}
+ALLOW_FN = ("AwtoDelayLoops", "AwtoDelayXus")     # the only code allowed to loop on the delay bases
 LOG = None
 
 
@@ -111,7 +111,7 @@ def pattern_cycles(kind: str, n_single: int, n_base: int, imm: int) -> int:
 
 def scan(im: "L.Image", v: dict, S: dict):
     """(sites {tag: [(chunk, addr16, imm, end offset from the site start)]}, bad [(chunk name, addr, text)]).
-    bad = a use of the outer counter (d_g_ucDelayXus_Counter, the one direct byte left) other than the count set before the lcall."""
+    bad = a counted loop on a delay base outside AwtoDelayLoops / AwtoDelayXus."""
     sites = defaultdict(list)
     bad = []
     for c in im.chunks:
@@ -145,14 +145,8 @@ def scan(im: "L.Image", v: dict, S: dict):
                     break
                 if nx.target is not None or nx.raw[0] in (0x22, 0x32, 0x73):
                     break
-        for ins in insns:
-            if ins.off in cover or any(ins.off <= x < ins.off + ins.n for x in cover):
-                continue
-            ops = [o.strip() for o in ins.text.split(" ", 1)[-1].split(",")] if " " in ins.text else []
-            if ins.text.startswith("MOV ") and "#" in ins.text:
-                continue                                  # DELAY_XUS sets the outer count before its lcall
-            if any(re.fullmatch(r"0?[0-9A-F]{2}h", o) and int(o[:-1], 16) == v["cx"] for o in ops) and not c["name"].lstrip("_").startswith(ALLOW_FN):
-                bad.append((c["name"], ins.addr, ins.text))
+    for tag, grp in sites.items():                        # every counted loop lives in fw/timer/delay.c: an inline copy is a bypass
+        bad += [(c["name"], addr, f"inline {tag} loop") for c, addr, _imm, _end in grp if not c["name"].lstrip("_").startswith(ALLOW_FN)]
     return sites, bad
 
 
