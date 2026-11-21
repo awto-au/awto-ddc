@@ -535,6 +535,10 @@ static void AwtoSdMode(BYTE ucMode)
     }
     if((g_ucAwtoSdFlags & AWTO_SD_F_DONE) != 0)
     {
+        if(ucMode == _MODE_STATUS_POWER_SAVING)
+        {
+            return;                                 // sleeping after a picture is by design; the next wake starts a new episode
+        }
         AwtoSyncPush(AWTO_SYNC_EV_SFAIL, AWTO_SD_WHY_LOST, ((DWORD)ucPort << 16) | (WORD)((WORD)AwtoMs() - s_usSdAct));
         AwtoSdReset();                              // the next ACTIVE is a new DONE with fresh stamps
         return;
@@ -711,10 +715,7 @@ void AwtoSyncSw(BYTE ucId, BYTE ucArg)
        (ucArg == _MODE_STATUS_NOSUPPORT) || (ucArg == _MODE_STATUS_POWER_SAVING)))
     {
         g_stAwtoSync.ucDone = 1;
-        if(ucArg != _MODE_STATUS_POWER_SAVING)
-        {
-            AwtoSdMode(ucArg);
-        }
+        AwtoSdMode(ucArg);
 #if(_AWTO_PS_WAKE == _ON)
         if(ucArg == _MODE_STATUS_ACTIVE)
         {

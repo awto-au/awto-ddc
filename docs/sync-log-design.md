@@ -29,7 +29,7 @@ Existing sync lines stay (C1 / C6 / C2 / F0..F4 / FC / system machine); the new 
 ## Hooks (no edit of RL6449_Series_TMDSRx2/Rx3 / SeptPhy)
 - PHY span: `ScalerTMDSPhySetDeferred` in `RL6449_Series_TMDS.c` (the dispatcher every caller goes through, also the AWTO_TMDS_PHY_PUMP): `AWTO_SD_PHY_BEGIN()` only when a Rx2 / Rx3 `PhyPend` is set, `AWTO_SD_PHY_END()` after.
 - Scan ok / retries / last reason: `AwtoSyncScan` (sync.c, already called per scan). Timing: `AwtoSyncTiming`. Port visit reset: `AwtoSyncVisit`. Episode reset: `AwtoSyncBegin`.
-- DONE / FAILED: `AwtoSyncSw` mode events ACTIVE / NO SIGNAL / NO SUPPORT (POWER SAVING is by design: no line).
+- DONE / FAILED: `AwtoSyncSw` mode events ACTIVE / NO SIGNAL / NO SUPPORT / POWER SAVING (POWER SAVING after a DONE is by design: no line; without a DONE, e.g. a wake search that found no source, it is FAILED).
 - DP trainings: one `isr_g_ucAwtoDpLtN++` at the TP1 case of `RL6449_Series_DP_INT.c` (EXINT0; byte counter only, no ring write in the ISR).
 - Link health: `AwtoSdTick` from `AwtoSwPoll` (every pass, a single flag test while nothing is pending). Non-blocking: reads once `AWTO_SD_HEALTH_MS` (100 ms ~ 6 frames at 60 Hz, a sampling time not a wait) after ACTIVE. No delay is added; `docs/delay-budget.tsv` unchanged.
 
