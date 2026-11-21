@@ -1602,7 +1602,7 @@ extern void AwtoSdPhy(unsigned char ucEnd);
 extern void AwtoSdTick(void);
 extern __xdata unsigned char g_ucAwtoSdFlags;
 extern volatile __xdata unsigned char isr_g_ucAwtoDpLtN;
-#define AWTO_SD_PHY_BEGIN()                                     { if((isr_g_ucTMDSRx2PhyPend | isr_g_ucTMDSRx3PhyPend) != 0) { AwtoSdPhy(0); } }
+#define AWTO_SD_PHY_BEGIN()                                     { if((isr_g_ucTMDSRxPhyPend[0] | isr_g_ucTMDSRxPhyPend[1]) != 0) { AwtoSdPhy(0); } }
 #define AWTO_SD_PHY_END()                                       AwtoSdPhy(1)
 #define AWTO_SD_TICK()                                          { if((g_ucAwtoSdFlags & AWTO_SD_F_HEALTH) != 0) { AwtoSdTick(); } }
 extern unsigned int AwtoSyncRow(unsigned char ucId, unsigned char ucArg);

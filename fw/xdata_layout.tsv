@@ -19,7 +19,6 @@ ScalerCommonTimerFunction	0xd700	1727	64
 awto_nvram_nvram	0xd700	1791	64
 RTDFactoryFunction	0xd700	1855	63
 RL6449_Series_FRC	0xd700	1918	62
-RL6449_Series_TMDSRx2	0xd700	1980	58
 RL6449_Series_TMDSRx3	0xd700	2038	57
 diag	0xd700	2095	54
 awto_arith_arith	0xd700	2149	50
@@ -87,7 +86,6 @@ RL6449_Series_DPRx1_INT	0xe580	46	4
 RL6449_Series_OsdPositionOffsetCorrection	0xe580	50	4
 ScalerAudio_SeptPhy	0xe580	54	4
 ScalerTMDSRx2_SeptPhy	0xe580	58	4
-ScalerTMDSRx3_SeptPhy	0xe580	62	4
 ScalerVGIP	0xe580	66	4
 flash_clk	0xe580	70	4
 OsdChange4BitColor	0xe580	74	3
@@ -129,6 +127,7 @@ SysAudio	0xe580	147	1
 SysCec	0xe580	148	1
 __ovl	0xe580	149	1
 flash_screen	0xe580	150	1
+RL6449_Series_TMDSRx2	0xe580	151	83
 sync	0xe780	37	699
 asteroids	0xe780	736	515
 ScalerCommonDebug	0xe780	1251	363
