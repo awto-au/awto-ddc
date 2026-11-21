@@ -486,9 +486,6 @@ void SysTimerIntProc2(void) __interrupt(5)
     // Timer Counter
     d_isr_g_usTimerCounter += 1;
 
-#if(_DEBUG_MESSAGE_SUPPORT == _ON)
-    d_g_usMeasureCounter += 1;
-#endif
 
 #else
 
@@ -501,9 +498,6 @@ void SysTimerIntProc2(void) __interrupt(5)
         // Timer Counter
         d_isr_g_usTimerCounter += 1;
 
-#if(_DEBUG_MESSAGE_SUPPORT == _ON)
-        d_g_usMeasureCounter += 1;
-#endif
     }
     else
     {

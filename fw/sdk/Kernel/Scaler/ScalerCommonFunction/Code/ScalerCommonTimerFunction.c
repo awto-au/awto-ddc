@@ -270,7 +270,6 @@ volatile __xdata _Bool g_bWDTimer2Update = _FALSE;
 volatile WORD __data d_isr_g_usTimerCounter;
 
 #if(_DEBUG_MESSAGE_SUPPORT == _ON)
-volatile WORD __data d_g_usMeasureCounter;
 #endif
 
 #if(_SYSTEM_TIMER_QUARTER_RESOLUTION == _ON)

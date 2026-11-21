@@ -31,7 +31,6 @@
 extern volatile WORD __data d_isr_g_usTimerCounter;
 
 #if(_DEBUG_MESSAGE_SUPPORT == _ON)
-extern volatile WORD __data d_g_usMeasureCounter;
 #endif
 
 //****************************************************************************
