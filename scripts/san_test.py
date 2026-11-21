@@ -24,7 +24,8 @@ WORK = ROOT / "tmp/scratch/san"
 RUN_INSTR = 400_000      # ~1500 IRQs at one per ~256 cycles; enough for every interleave below, < 1 s per case
 BUILD_TMO = 60           # sdcc compile+link of a 15-line file: < 2 s; 60 s = host-process stall limit
 
-# case -> list of (class, symbol, level) that must be present, and (class, symbol) that must be absent
+H = sdcc_san.MARKS_HDR + "\nsymbol\tmodule\tsize\tclass\tcontexts\treason\n"
+# case -> (rows that must be present: class, symbol, level; rows that must be absent: class, symbol[, level]; mark list rows or None)
 CASES = {
     "a_conflict": ([("A-conflict", "_g_flag", "did")], [("A-conflict", "_g_guarded")]),
     "b_lost": ([("B-lost-update", "_g_cnt", "did")], []),
@@ -32,6 +33,17 @@ CASES = {
     "c_torn": ([("C-torn", "_g_v", "did")], []),
     "d_clobber": ([("D-clobber", "_g_scratch", "did")], []),
     "e_guarded": ([], [("A-conflict", "_g_cnt"), ("B-lost-update", "_g_cnt"), ("B-lost-update", "_g_two"), ("C-torn", "_g_two"), ("D-clobber", "_g_two")]),
+    # mark list v1: marked / volatile drop (a) only, attr drops everything, exempt + two contexts = MISS
+    "a_conflict+marked": ([("D-clobber", "_g_flag", "did")], [("A-conflict", "_g_flag")]),
+    "b_lost+marked": ([("B-lost-update", "_g_cnt", "did")], [("A-conflict", "_g_cnt")]),
+    "b_lost+attr": ([], [("B-lost-update", "_g_cnt"), ("A-conflict", "_g_cnt")]),
+    "e_guarded+exempt": ([("MISS", "_g_two", "did")], []),
+}
+MARKS = {
+    "a_conflict+marked": H + "_g_flag\t-\t1\tmarked\tmain:r,t0_isr:w\t-\n",
+    "b_lost+marked": H + "_g_cnt\t-\t1\tmarked\tmain:rw,t0_isr:rw\t-\n",
+    "b_lost+attr": H + "_g_cnt\t-\t1\tattr\tmain:rw,t0_isr:rw\tshared on purpose\n",
+    "e_guarded+exempt": H + "_g_two\t-\t1\texempt\tmain:rw\t-\n",
 }
 
 
@@ -76,11 +88,15 @@ def build(name: str) -> Path:
 
 def one(name: str, log) -> bool:
     want, absent = CASES[name]
-    ihx = build(name)
+    ihx = build(name.split("+")[0])
     rig = Rig(ihx_bin(ihx), ihx.with_suffix(".map").read_text(errors="replace"), name)
     rig.core.run(RUN_INSTR)
-    rows = sdcc_san.finalise(rig, None)
-    sdcc_san.write(rows, WORK / f"{name}.san.tsv")
+    mf = None
+    if name in MARKS:
+        mf = WORK / f"{name}.marks.tsv"
+        mf.write_text(MARKS[name])
+    rows = sdcc_san.finalise(rig, sdcc_san.read_marks(mf) if mf else None)
+    sdcc_san.write(rows, WORK / f"{name.replace('+', '_')}.san.tsv")
     ok = True
     for cls, sym, lvl in want:
         hit = [r for r in rows if r["cls"] == cls and r["symbol"].lstrip("~").split("+")[0] == sym and r["level"] == lvl]

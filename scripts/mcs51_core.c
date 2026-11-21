@@ -253,7 +253,7 @@ static void san_push(core_t *c, int src)
 
 #define SAN_ON(c) __builtin_expect((c)->san != NULL, 0)
 #define SAN_X(c, a, w) do { if (SAN_ON(c) && IS_XRAM(a)) san_acc((c), (a) - 0xD000, (w)); } while (0)
-#define SAN_I(c, a, w) do { if (SAN_ON(c)) san_acc((c), SAN_IR + (a), (w)); } while (0)
+#define SAN_I(c, a, w) do { if (SAN_ON(c) && (a) >= 0x20) san_acc((c), SAN_IR + (a), (w)); } while (0)    /* register banks 0x00..0x1F: saved / restored by push / pop, not tracked */
 #define SAN_B(c, b, w) do { if (SAN_ON(c)) san_acc((c), SAN_BT + (b), (w)); } while (0)
 #define SAN_PUSH(c, src) do { if (SAN_ON(c)) san_push((c), (src)); } while (0)
 #define SAN_COMMIT(c) do { if (SAN_ON(c)) san_commit(c); } while (0)

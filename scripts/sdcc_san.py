@@ -52,8 +52,11 @@ def read_marks(path: Path) -> dict[str, dict]:
 
 
 def xdata_syms(map_text: str) -> tuple[list[int], list[str]]:
-    """Sorted XDATA / data globals (map 'D:' lines)."""
-    rows = sorted({(int(m.group(1), 16), m.group(2)) for m in re.finditer(r"^D:\s+([0-9A-F]{8})\s+(\w+)", map_text, re.MULTILINE)})
+    """Sorted XDATA globals: map 'D:' lines + the placed (ABS) rows."""
+    rows = {(int(m.group(1), 16), m.group(2)) for m in re.finditer(r"^D:\s+([0-9A-F]{8})\s+(\w+)", map_text, re.MULTILINE)}
+    rows |= {(int(m.group(1), 16), m.group(2)) for m in re.finditer(r"^ +([0-9A-F]{8})  (\w+) +\S+$", map_text, re.MULTILINE)      # ABS-area globals (placed objects)
+             if 0xD000 <= int(m.group(1), 16) < 0xF800}
+    rows = sorted(rows)
     return [r[0] for r in rows], [r[1] for r in rows]
 
 
@@ -192,9 +195,12 @@ def attach(m):
     syms = dict(zip(an, av))
     m.sym_data = lambda: syms
 
+    done = []
+
     def dump():
-        if m.core.h is None:
+        if m.core.h is None or done:
             return
+        done.append(1)
         mp = os.environ.get("AWTO_SIM_SAN_MARKS")
         rows = finalise(m, read_marks(Path(mp)) if mp else None)
         f = out / f"{re.sub(r'[^A-Za-z0-9._-]', '_', str(m.tag))}-{os.getpid()}-{n}.san.tsv"
@@ -203,6 +209,12 @@ def attach(m):
         with LOG.open("a") as lg:
             lg.write(f"{f}: {len(rows)} findings ({sum(r['level'] == 'did' for r in rows)} did)\n")
     atexit.register(dump)
+    free = m.core.free
+
+    def free_dump():                       # most sims close the machine (core freed) before exit
+        dump()
+        free()
+    m.core.free = free_dump
 
 
 def merge(paths: list[str], outp: str | None):
