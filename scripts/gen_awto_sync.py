@@ -36,7 +36,7 @@ def repo_root() -> Path:
 ROOT = repo_root()
 TSV = ROOT / "fw/awto/sync.tsv"
 LOG = ROOT / "tmp/logs/gen_awto_sync.log"
-FMTS = {"-": 0, "vport": 1, "res": 2, "mhz1": 3, "hz1": 4, "hz3": 5, "mhz3": 6, "dp": 7, "src": 8, "harg": 9, "pc": 10, "ms": 11, "n": 12, "x": 13, "htime": 14, "sms": 15, "wdt": 16, "sys": 17, "sysreq": 18, "ms2": 19, "pby": 20, "sname": 21, "nvw": 22, "mon": 23, "cec": 24, "note": 25, "pms": 26, "psrc": 27, "rms": 28, "lim": 29, "dly": 30, "sdone": 31, "slink": 32}
+FMTS = {"-": 0, "vport": 1, "res": 2, "mhz1": 3, "hz1": 4, "hz3": 5, "mhz3": 6, "dp": 7, "src": 8, "harg": 9, "pc": 10, "ms": 11, "n": 12, "x": 13, "htime": 14, "sms": 15, "wdt": 16, "sys": 17, "sysreq": 18, "ms2": 19, "pby": 20, "sname": 21, "nvw": 22, "mon": 23, "cec": 24, "note": 25, "pms": 26, "psrc": 27, "rms": 28, "lim": 29, "dly": 30, "sdone": 31, "slink": 32, "visit": 33}
 PORT_FLAG = 0x80                                     # fmt bit7: "Dn " prefix from arg
 
 
@@ -376,6 +376,7 @@ def value_segs(f: str, r: list, port: list) -> list:
         "rms": [["FFFF "], num(5), ["ms"]], "dly": [num(2), [":"], num(4), [" took "], num(5), [" us +15 more"]], "lim": [num(5), [" of "], num(5), [" px"]],
         "sdone": [port, [" "], ["DVI", "HDMI 1.4 (1:10)", "HDMI 2.0 (1:40)", "DP"], [", "], ["first try", "after 3+ retries"], [": "],
                   ["PHY 254ms (3+ set-ups)", "link trained 254ms (3+ trainings)"], [", scan ok "], ["+4094+ms"], [", timing "], ["+4094+ms"], [", ACTIVE "], num(5), ["ms"]],
+        "visit": [["reached ", "left "], port, [": predetect off, cable detected", " after 99999ms: predetect seen, 255+ edges, dwell re-armed by predetect", " after 99999ms: port disabled, skipped"]],
         "slink": [port, [" "], ["HDMI 2.0 (1:40): no scrambled data, SCDC 20h as the source left it: ratio bit 0 scrambling bit 0, errors 255+/255+/255+, 255ms after ACTIVE",
                                "DP HBR3 x4: lanes CR 4/4, EQ 4/4, symbol lock 4/4, 255ms after ACTIVE"]],
         "pc": [["STALL TEST, PC ", "STALL, PC "], ["FF", "C"], [":"], num(4)],

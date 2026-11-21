@@ -14,6 +14,7 @@
 #   hz3   value in mHz -> "59.997 Hz"                 mhz3  value in kHz -> "594.000 MHz"       dp   value = rate << 8 | lanes -> "HBR2 x4"
 #   sdone sync DONE (EF): arg = port idx | kind << 2 | scan retries << 4 | PHY set-ups or DP trainings << 6, value = scan ok ms << 20 | timing ms << 8 | PHY / link ms; the line prints the ACTIVE ms itself (docs/sync-log-design.md)
 #   slink link health (FF): HDMI = SCDC ratio / scrambling + CED error counters, DP = rate / lanes / DPCD 202 203 (docs/sync-log-design.md)
+#   visit search visit (F3): arg bit 7 = reached (bit 0 predetect on, bit 1 cable), else left (bit 2 predetect seen, bit 1 port disabled, bit 3 dwell re-armed), value = predetect edges << 24 | port << 16 | ms on the port
 #   pms   value = port << 16 | ms -> "D2, 188ms"   psrc  value = port << 8 | source type -> "D2 HDMI"   rms  value = register << 16 | ms -> "71A4 40ms"
 #   lim   value = width << 16 | limit -> "3840 of 4096 px"
 #   src   value = SDK source type -> "HDMI"           harg  arg in hex
@@ -157,6 +158,8 @@ E7	*	port	EDID read
 FA	00	vport	% HPD low	timing
 FA	01	vport	% HPD high	timing
 FA	02	n	EDID channels on:HPD pin mask % (bit0 = D1)	timing
+FA	03	x	EDID SRAM load start:HPD pin mask % (bit0 = D1)	timing
+FA	04	ms	EDID SRAM load end:took %	timing
 E8	01	n	OSD SRAM probe done:% addresses written and read back from M1 / M2 on the MCU, results in g_stAwtoOsdProbe
 E8	03	-	OSD SRAM probe refused:the OSD is on	warning
 EA	*	mon	monitor: %
@@ -341,7 +344,7 @@ F2	35	pms	scan fail:DP display format (%)	error
 F2	36	pms	scan fail:DP stream clock (%)	error
 F2	37	pms	scan fail:DP FIFO delay (%)	error
 F2	FF	-	scan lines stop for this episode	warning
-F3	00	pms	search left the port:%	timing
+F3	*	visit	search %	timing
 F4	00	n	format:DVI, RGB, % bit	timing
 F4	08	n	format:HDMI 1.4 (1:10), RGB, % bit	timing
 F4	09	n	format:HDMI 1.4 (1:10), YCbCr 4:2:2, % bit	timing
@@ -398,6 +401,13 @@ FB	11	rms	EXPIRED poll of register (hex) + took:%	error
 FB	02	rms	slow wait for event (hex) + took:%	warning
 FB	12	rms	EXPIRED wait for event (hex) + took:%	error
 FC	01	pms	DP link trained:% after the loop first saw it training	timing
+93	00	ms	INITIAL:first exit check % after it began	timing
+93	01	ms	INITIAL:held by the SDK source change flag, last seen set % after it began	timing
+93	02	ms	INITIAL:held by the SDK mode change flag, last seen set % after it began	timing
+93	03	ms	INITIAL:held by the SDK OSD change flag, last seen set % after it began	timing
+93	04	ms	INITIAL:held by the SDK others change flag, last seen set % after it began	timing
+94	00	ms2	ACTIVE wait after display set:SDK ACTIVE timer ran out %, panel video ready %	timing
+95	*	portms	search dwell re-armed by predetect to the SDK reactive time, % after reaching the port	warning
 EF	*	sdone	sync DONE %
 FF	*	slink	sync link %	timing
 FE	00	pms	sync FAILED:nothing detected on the input, no clock or link (%)	error

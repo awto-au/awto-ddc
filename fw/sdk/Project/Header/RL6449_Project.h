@@ -1398,7 +1398,7 @@ extern void osd_tc_show(unsigned char ucOn);
 extern void osd_tc_close(void);
 extern void osd_tc_bar(unsigned char ucWin, unsigned int usX0, unsigned int usY0, unsigned int usX1, unsigned int usY1, unsigned char ucColour);
 #define AWTO_SYNC_EV_EDID                                       0xE7    // arg = port: the source read the EDID (awake; the power saving reads are the wake lines)
-#define AWTO_SYNC_EV_HPD                                        0xFA    // arg 0 / 1 = HPD pin low / high (value = port); arg 2 = EDID channel enabled (value = HPD pin mask, bit n = D(n+1))
+#define AWTO_SYNC_EV_HPD                                        0xFA    // arg 0 / 1 = HPD pin low / high (value = port); arg 2 = EDID channel enabled (value = HPD pin mask, bit n = D(n+1)); 3 / 4 = EDID SRAM load start (value = HPD pin mask) / end (value = ms it took)
 #define AWTO_SYNC_EV_PS_DDC                                     0xDD    // arg = port: SDK DDC handshake in power saving, gated (once per sleep)
 #define AWTO_SYNC_EV_PS_AUX                                     0xDA    // arg = port: SDK DP AUX toggle in power saving, gated (once per sleep)
 #define AWTO_SYNC_EV_PS_AUXCMD                                  0xDB    // arg = port: AUX command in power saving, no wake
@@ -1549,6 +1549,14 @@ extern void AwtoSyncFreq(void);
 #define AWTO_SYNC_EV_SDONE                                      0xEF    // sync DONE at ACTIVE: arg = port idx | kind << 2 | scan retries << 4 | PHY set-ups / DP trainings << 6 (each 0..3), value = scan ok ms << 20 | timing ms << 8 | PHY / link ms (docs/sync-log-design.md)
 #define AWTO_SYNC_EV_SFAIL                                      0xFE    // sync FAILED: arg = reason (AWTO_SD_WHY_* or the last scan code), value port << 16 | ms
 #define AWTO_SYNC_EV_SLINK                                      0xFF    // link health once after ACTIVE: arg = port idx | kind << 2 | flags << 4, value = ms << 24 | HDMI errors ch0 / 1 / 2 or DP rate / DPCD 202 / 203
+#define AWTO_SYNC_EV_INITX                                      0x93    // INITIAL exit: arg 0 = first check, 1..4 = SDK change flag (source, mode, OSD, others) that held it; value = ms since INITIAL began
+#define AWTO_SYNC_EV_ATAIL                                      0x94    // display setting done -> ACTIVE: value = panel video ready ms << 16 | ACTIVE timer ms, both since the display setting ended
+#define AWTO_SYNC_EV_DWELL                                      0x95    // arg = port: predetect re-armed the search dwell (SDK reactive time); value = ms since the search reached the port
+#define AWTO_VISIT_REACHED                                      0x80    // F3 arg: search reached a port (bit 0 predetect on, bit 1 cable detected); else it left: flaps in value
+#define AWTO_VISIT_DWELL                                        0x08    // F3 left: the dwell was re-armed by predetect (AWTO_SYNC_EV_DWELL)
+#define AWTO_VISIT_SEEN                                         0x04    // F3 left: predetect was on at some point
+#define AWTO_VISIT_SKIP                                         0x02    // F3 left: the port is disabled by setting, skipped
+#define AWTO_SD_F_TAIL                                          0x10    // g_ucAwtoSdFlags bit: display setting done, the ACTIVE tail is being timed
 #define AWTO_SD_WHY_NONE                                        0x00    // nothing detected on the input
 #define AWTO_SD_WHY_NOSUPPORT                                   0x40    // SDK mode NO SUPPORT
 #define AWTO_SD_WHY_LOST                                        0x41    // signal lost after ACTIVE (value ms = since ACTIVE)
@@ -1590,6 +1598,9 @@ extern __xdata unsigned int g_usAwtoHsdSp;
 #define AWTO_FB_RULE(r)                                         (g_ucAwtoFbRule = (r))
 extern void AwtoSyncScan(unsigned char ucPort, unsigned char ucType);
 extern void AwtoSyncVisit(unsigned char ucOldPort);
+extern void AwtoSyncInitial(unsigned char ucHeld, unsigned int usSinceEntry);
+extern void AwtoSyncTail(unsigned char ucWhat);
+extern void AwtoSyncDwell(void);
 extern void AwtoStageMs(unsigned char ucStg);
 extern void AwtoSyncDisplay(void);
 extern void AwtoSyncFormat(unsigned char ucKind);
@@ -1624,6 +1635,8 @@ extern void AwtoPsAuxSeen(unsigned char ucPort);              // SDK DP PS prede
 extern void AwtoEdidPoll(void);
 extern void AwtoSyncEdidOn(void);
 #define AWTO_SYNC_EDID_ON()                                     AwtoSyncEdidOn()
+extern void AwtoSyncEdidLoad(unsigned char ucEnd);
+#define AWTO_SYNC_EDID_LOAD(e)                                  AwtoSyncEdidLoad(e)
 #define AWTO_EDID_POLL()                                        AwtoEdidPoll()
 // between main-loop handlers (keil2sdcc): armed (AwtoSyncPoll saw SAVING) and still SAVING; the poll returns unless due
 // one call per site, the compares in AwtoPsPollSite: 14 sites in main, which is in the full common area (#157 merge)
@@ -1633,6 +1646,7 @@ extern void AwtoPsPollSite(void);
 #define AWTO_SYNC_POLL()
 #define AWTO_EDID_POLL()
 #define AWTO_SYNC_EDID_ON()
+#define AWTO_SYNC_EDID_LOAD(e)
 #define AWTO_PS_POLL_SITE()
 #endif
 extern __xdata unsigned char g_ucAwtoConAuto;  // the open console opened itself: SOURCE closes it for the selector (#132)

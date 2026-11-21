@@ -116,6 +116,12 @@ static bit SysMachineFlagsClear(void)
             (GET_MODE_STATE_CHANGE_OSD() == _FALSE) && (GET_MODE_STATE_CHANGE_OTHERS() == _FALSE));
 }
 
+// The SDK change flags still set, bit 0 source, 1 mode, 2 OSD, 3 others (INITIAL exit log)
+static BYTE SysMachineFlagsHeld(void)
+{
+    return (GET_MODE_STATE_CHANGE_SOURCE() ? 1 : 0) | (GET_MODE_STATE_CHANGE_MODE() ? 2 : 0) | (GET_MODE_STATE_CHANGE_OSD() ? 4 : 0) | (GET_MODE_STATE_CHANGE_OTHERS() ? 8 : 0);
+}
+
 //--------------------------------------------------
 // Description  : The one transition: line, state, SDK views. A mode event sets the SDK change flags (as SysJudgeStateChangeEvent)
 //                even for the same mode (a reset to search from SEARCH restarts the SDK handlers' mode entry).
@@ -546,6 +552,7 @@ static void SysMachineJudge(void)
     switch(s_ucSysState)
     {
         case AWTO_SYS_INITIAL:
+            AwtoSyncInitial(SysMachineFlagsHeld(), (WORD)(AwtoMs() - s_ulSysEntry));
             if(SysMachineFlagsClear() == _TRUE)
             {
                 SysMachineGo(AWTO_SYS_SEARCH, AWTO_SYS_WHY_INITIAL, _TRUE);
@@ -590,6 +597,7 @@ static void SysMachineJudge(void)
         case AWTO_SYS_DISPLAY:
             if((SysModeGetActiveReady() == _TRUE) && (UserCommonInterfaceReadyForActive() == _TRUE))
             {
+                AwtoSyncTail(2);
                 if(SysMachineFlagsClear() == _TRUE)
                 {
                     SysMachineGo(AWTO_SYS_ACTIVE, AWTO_SYS_WHY_READY, _TRUE);

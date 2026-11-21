@@ -131,6 +131,7 @@ void SysTimerEventProc(EnumScalerTimerEventID enumEventID)
 
         case _SYSTEM_TIMER_EVENT_JUDGE_ACTIVE_STATE:
             SET_MODE_ACTIVE_READY();
+            AwtoSyncTail(1);
             break;
 
         case _SYSTEM_TIMER_EVENT_JUDGE_NOSUPPORT_STATE:

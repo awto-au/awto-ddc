@@ -127,6 +127,17 @@ def sync_link(a: int, v: int) -> str:
             f"scrambling bit {f & 1}, errors {e[0]}/{e[1]}/{e[2]}, {after}")
 
 
+def sync_visit(a: int, v: int) -> str:
+    """fmt visit (firmware copy: fw/osd/console.c AwtoPutVisit): arg bit 7 = reached (bit 0 predetect on, bit 1 cable detected), else left
+    (bit 2 predetect seen, bit 1 port disabled, bit 3 dwell re-armed by predetect); value = predetect edges << 24 | port << 16 | ms on the port"""
+    port = f"D{((v >> 16) & 0xFF) - D0}"
+    if a & 0x80:
+        return f"reached {port}: predetect {'on' if a & 1 else 'off'}, {'cable detected' if a & 2 else 'no cable'}"
+    out = f"left {port} after {v & 0xFFFF}ms: " + ("port disabled, skipped" if a & 2 else
+                                                 f"{'predetect seen' if a & 4 else 'no signal'}, {_sat(v >> 24, 255)} edges")
+    return out + (", dwell re-armed by predetect" if a & 8 else "")
+
+
 def value(fmt: str, arg: int, v: int) -> str:
     if fmt == "vport":
         return "auto" if (v & 0xFF) == 0xFF else f"D{(v & 0xFF) - D0}"
@@ -145,6 +156,8 @@ def value(fmt: str, arg: int, v: int) -> str:
         return f"{DP_RATE.get(r, f'{r:02X}')} x{v & 0xFF}"
     if fmt == "src":
         return SRC.get(v, str(v))
+    if fmt == "visit":
+        return sync_visit(arg, v)
     if fmt == "pms":                                     # #139 value = port << 16 | ms: "D2, 188ms"
         return f"D{((v >> 16) & 0xFF) - D0}, {v & 0xFFFF}ms"
     if fmt == "psrc":                                    # value = port << 8 | source type: "D2 HDMI"
