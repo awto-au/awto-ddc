@@ -3,6 +3,7 @@
 - Per-site audit of every delay at both clocks, the single clock option and the gate: `docs/delay-audit.md` (typed inventory `docs/delay-audit.tsv`). This file keeps the sources and rationale of the SDK constants.
 - Review 2026-11-13 by two read-only agents. Code = main 722e32d / image wb-p14ui-amp2. Panel T6 since then: 900 ms, run at power-down (b70095c).
 - Rule (Dan, 2026-11-13): every delay = **datasheet / spec value - 10 %**, never an added margin. Timeouts (event waits that fail on expiry) = 1.25 x expected worst case. Rule text: awto-dan `docs/agents/agent-rules.md`.
+- `no spec` in the tables = no datasheet or spec value found for that wait.
 - Columns: what it waits for, value, where defined, **what decided it**, source value, ratio code/source.
 - Clock decisions, SDK-count error, freed bytes, open decisions, `AwtoMs` tick-loss finding, gate fixes: `docs/delay-audit.md` only. `fw/diag/delaycal.c` (cited below) was removed 2026-11-18; counts are compile-time.
 - Superseded: the older `re/delays.tsv` / `re/delays_reasons.tsv` (image wb-stepB 1100f24; cite a BOE panel datasheet).
@@ -61,98 +62,98 @@ Abbreviations in the table:
 | RL6449_Series_Mcu.c:1762 | VCCK_OFF flag poll at GPIO init: up to 20 x `DelayXms(1)`, then always +10 ms (`ScalerPowerInclude.h:23-32`) | bound 20 ms (+10 ms fixed) | `Kernel/Common/RL6449_Pcb_Default.h:1004` (the AWTO_JXC4K PCB header does not define it) | SDK default; SDK comment "Wait for VCCK_OFF Power On Stable"; the pin is a no-op on our board (`RL6449_AWTO_JXC4K.h:279-285`) | n/a | n/a | continues |
 | RL6449_Series_Power.c:267 | same macro, group A isolation off | 20 + 10 ms | same | same | n/a | n/a | continues |
 | RL6449_Series_Power.c:428, :438, :446 | DDR power release 200 ms; DDR stable 10 ms; 1.1 V stable 10 ms | 200 / 10 / 10 ms **compiled out** | `_AWTO_FAST_BOOT == _ON`, `RL6449_Project.h:1159`; `_DDR_POWER_OFF_TIME` 200 at `RL6449_Pcb_Default.h:1032` | our board never switches these rails (comment :1156) | n/a | n/a | n/a |
-| ScalerGlobal.c:140 | whole-chip reset settle | 10 ms | SDK-lit | SDK comment "For Delay 10 ms"; no spec cited -> UNKNOWN | UNKNOWN | UNKNOWN | continues |
-| ScalerCommonPower.c:68 | xtal stable | 6 ms | SDK-lit | SDK comment "Waiting for xtal stable"; no datasheet value -> UNKNOWN | UNKNOWN | UNKNOWN | continues |
-| ScalerCommonIOSC.c:68, :104, :136 | IOSC enable settle 2 ms; IOSC trim poll 10 ms; trim finished poll 10 ms | 2 / 10 / 10 ms | SDK-lit | SDK comments ("Polling trimming finished, time-consuming"); no spec -> UNKNOWN | UNKNOWN | UNKNOWN | continues |
-| ScalerPLL.c:2802 | "Wait for Mpll stable (Must!)" | 2 ms | SDK-lit | SDK comment -> UNKNOWN value | UNKNOWN | UNKNOWN | continues |
-| ScalerPLL.c:3731 | DDR2 PLL lock flag poll | 40 ms bound | SDK-lit | SDK; no stated reason -> UNKNOWN | UNKNOWN | UNKNOWN | continues |
-| RL6449_Series_PLL.c:322, :328, :348 | CMU stable 2 ms; DPLL watchdog poll 2 ms; SSC-off stable 2 ms | 2 / 2 / 2 ms | SDK-lit | SDK comments "Wait for CMU Stable", "SSC Off stable"; no spec -> UNKNOWN | UNKNOWN | UNKNOWN | continues |
-| RL6449_Series_Measure.c:311, ScalerMeasure.c:660 | measure reset | `_MEASURE_RESET_TIME` = 2 ms at the xtal clock (`ScalerMeasureInclude.h:38`; depends on the runtime measure clock) | SDK | SDK comment "Delay for measure reset" | UNKNOWN | UNKNOWN | continues |
-| RL6449_Series_Measure.c:155 | offline measure done poll | `_MEASURE_TIMEOUT` = 512*10/CLK + 10 ms (650 ms at the 14.318 MHz xtal; M2PLL value depends on a runtime divider -> UNKNOWN) | `ScalerMeasureInclude.h:37` | SDK arithmetic | formula | n/a | returns _FALSE |
+| ScalerGlobal.c:140 | whole-chip reset settle | 10 ms | SDK-lit | SDK comment "For Delay 10 ms"; no spec cited -> no spec | no spec | no spec | continues |
+| ScalerCommonPower.c:68 | xtal stable | 6 ms | SDK-lit | SDK comment "Waiting for xtal stable"; no datasheet value -> no spec | no spec | no spec | continues |
+| ScalerCommonIOSC.c:68, :104, :136 | IOSC enable settle 2 ms; IOSC trim poll 10 ms; trim finished poll 10 ms | 2 / 10 / 10 ms | SDK-lit | SDK comments ("Polling trimming finished, time-consuming"); no spec -> no spec | no spec | no spec | continues |
+| ScalerPLL.c:2802 | "Wait for Mpll stable (Must!)" | 2 ms | SDK-lit | SDK comment -> no spec value | no spec | no spec | continues |
+| ScalerPLL.c:3731 | DDR2 PLL lock flag poll | 40 ms bound | SDK-lit | SDK; no stated reason -> no spec | no spec | no spec | continues |
+| RL6449_Series_PLL.c:322, :328, :348 | CMU stable 2 ms; DPLL watchdog poll 2 ms; SSC-off stable 2 ms | 2 / 2 / 2 ms | SDK-lit | SDK comments "Wait for CMU Stable", "SSC Off stable"; no spec -> no spec | no spec | no spec | continues |
+| RL6449_Series_Measure.c:311, ScalerMeasure.c:660 | measure reset | `_MEASURE_RESET_TIME` = 2 ms at the xtal clock (`ScalerMeasureInclude.h:38`; depends on the runtime measure clock) | SDK | SDK comment "Delay for measure reset" | no spec | no spec | continues |
+| RL6449_Series_Measure.c:155 | offline measure done poll | `_MEASURE_TIMEOUT` = 512*10/CLK + 10 ms (650 ms at the 14.318 MHz xtal; M2PLL value depends on a runtime divider -> no spec) | `ScalerMeasureInclude.h:37` | SDK arithmetic | formula | n/a | returns _FALSE |
 | ScalerGlobal / MDomain / VGIP double-buffer polls: RL6449_Series_Global.c:308, RL6449_Series_MDomain.c:258, ScalerVGIP.c:734 | double-buffer apply flag | 168 ms | `ScalerGlobalCommonInclude.h:31` | SDK comment: "4 frames at 24 Hz" = 166.7 ms | 166.7 ms | 1.008 | returns _FALSE |
-| ScalerTimerFunction.c:56-105 `ScalerTimerWaitForEvent`; **106 call sites**: fw/osd/console.c; fw/settings/settings_glue.c set_ap_volume / set_ap_mute; RL6449_Series_FRC.c:154,169,262,341-343,359,372,373,382,433,964,1075,1324,1364,1367; FormatConversion.c:174,276-279; MDomain.c:77-146 (13 sites); Measure.c:442-1080 (about 19 sites); Osd.c:179; Rotation.c:114,115; ColorOutputGammaAdjust.c:60,78; OsdPosition.c:62; ScalerDisplayDPTx.c:1685,1705,1706; ScalerGlobal.c:260; ScalerMDomain.c:392,427,1541,1542; ScalerMeasure.c:750,751,788,789,867; ScalerMemory.c:391-461,714-716; ScalerPLL.c:1330,1382,1930,2262-2297; ColorIDitherEnable.c:70; OsdCircuitActivated.c:79; OsdFontLibraryRotation.c:61; OsdDrawWindow.c:118; UserCommonInterface.c:1257; RTDFactoryFunction.c:2762; RTD2014UserAdjust.c:555; RTD2014OsdDisplay.c:557; RTD2014OsdWindow.c:131; plus the awto-rtdfw gamma.c:31,49 via `sdk_boundary.c:91-98` | IVS / DVS / IEN / DEN edge | 90 ms bound (91 ticks) | `ScalerCommonTimerFunctionInclude.h:48` | SDK-lit, no reason stated -> UNKNOWN | UNKNOWN | UNKNOWN | returns _FALSE; callers mostly ignore it |
+| ScalerTimerFunction.c:56-105 `ScalerTimerWaitForEvent`; **106 call sites**: fw/osd/console.c; fw/settings/settings_glue.c set_ap_volume / set_ap_mute; RL6449_Series_FRC.c:154,169,262,341-343,359,372,373,382,433,964,1075,1324,1364,1367; FormatConversion.c:174,276-279; MDomain.c:77-146 (13 sites); Measure.c:442-1080 (about 19 sites); Osd.c:179; Rotation.c:114,115; ColorOutputGammaAdjust.c:60,78; OsdPosition.c:62; ScalerDisplayDPTx.c:1685,1705,1706; ScalerGlobal.c:260; ScalerMDomain.c:392,427,1541,1542; ScalerMeasure.c:750,751,788,789,867; ScalerMemory.c:391-461,714-716; ScalerPLL.c:1330,1382,1930,2262-2297; ColorIDitherEnable.c:70; OsdCircuitActivated.c:79; OsdFontLibraryRotation.c:61; OsdDrawWindow.c:118; UserCommonInterface.c:1257; RTDFactoryFunction.c:2762; RTD2014UserAdjust.c:555; RTD2014OsdDisplay.c:557; RTD2014OsdWindow.c:131; plus the awto-rtdfw gamma.c:31,49 via `sdk_boundary.c:91-98` | IVS / DVS / IEN / DEN edge | 90 ms bound (91 ticks) | `ScalerCommonTimerFunctionInclude.h:48` | SDK-lit, no reason stated -> no spec | no spec | no spec | returns _FALSE; callers mostly ignore it |
 | **DP RX / TX (SDK, linked)** | | | | | | | |
 | ScalerCommonSyncInclude.h:161,162 and sites: ScalerDisplayDPTx.c:579 (DP Tx, unchanged) | one / two DP frames | 45 / 90 ms | `ScalerCommonSyncInclude.h:161` | SDK comment "in ms @ 23 Hz" | 43.5 ms (1/23 Hz) | 1.035 | continues |
 | DP Rx1 scan, MSA, video info, post-link and vsync-adjust waits (`AWTO_DP_ONE_FRAME()` / `AWTO_DP_TWO_FRAMES()`: ScalerCommonDPRx1.c, ScalerDPRx1_SeptPhy.c, RL6449_Series_DPRx1.c:2511) | one / two frames from the measured frame | measured frame ms (VBs2Bs / GDI clock + 1, floor 4 ms = bad count -> worst case), cleared on a failed scan / HPD toggle; 45 / 90 ms while unmeasured | `fw/dp/dpframe.c`, #78 | measured at runtime | 1 / 2 frames | (f+1)/f | continues |
 | ScalerDPRx1_SeptPhy.c:4068 and :4312 (`AWTO_DP_TWO_FRAMES()`) | two frames from the measured frame | 2 x measured frame ms + 1, capped at 90 | `fw/dp/dpframe.c:5-17`, `_AWTO_DP_FRAME_WAIT` `RL6449_Project.h:829` | measured at runtime (#60) | 2 frames | (2n+1)/(2n) | continues |
 | RL6449_Series_DPRx1.c:2421, :2479, :2505 (via ucFrameTime) | 1 frame | measured frame ms + 1 (:2403) | computed | computed from the measured stream clock; SDK comment "Delay 1 Frame" | 1 frame | (f+1)/f | continues |
-| RL6449_Series_DPRx1.c:1982,2283,2293,2298; ScalerCommonDPRx1.c:949; ScalerDPRx1_SeptPhy.c:381(3 ms),443,4499,4979; ScalerDP_SeptPhy.c:1009 | measure done, VBID, scramble, lane alignment, low-power settle | 2 ms (3 ms at :381) | SDK-lit | SDK comments ("Waiting for Measure Done", "Delay 2ms for Scramble"); no spec -> UNKNOWN | UNKNOWN | UNKNOWN | continues |
+| RL6449_Series_DPRx1.c:1982,2283,2293,2298; ScalerCommonDPRx1.c:949; ScalerDPRx1_SeptPhy.c:381(3 ms),443,4499,4979; ScalerDP_SeptPhy.c:1009 | measure done, VBID, scramble, lane alignment, low-power settle | 2 ms (3 ms at :381) | SDK-lit | SDK comments ("Waiting for Measure Done", "Delay 2ms for Scramble"); no spec -> no spec | no spec | no spec | continues |
 | ScalerCommonDPRx1.c:955 | 1 frame from VBID | `(count/_GDI_CLK_KHZ)+2` ms | computed | SDK comment "Delay 1 frame" | 1 frame | (f+2)/f | continues |
-| ScalerCommonDPRx1.c:2856; ScalerDPRx1_SeptPhy.c:4954 | MAC reset pulse | 30 ms | SDK-lit | UNKNOWN | UNKNOWN | UNKNOWN | continues |
-| ScalerDPRx1_SeptPhy.c:4318 | FIFO check settle | 10 ms | SDK-lit | UNKNOWN | UNKNOWN | UNKNOWN | continues |
-| `_DP_MEASURE_POLLING_TIMEOUT` sites: RL6449_Series_DPRx1.c:2037; ScalerCommonDPRx1.c:937; ScalerDPRx1_SeptPhy.c:607,3980,4535 | M/N measure done | 100 ms | `ScalerCommonSyncInclude.h:145` | SDK-lit -> UNKNOWN | UNKNOWN | UNKNOWN | returns _FALSE |
-| RL6449_Series_DPRx1.c:2499; ScalerDPRx1_SeptPhy.c:338 | VBID bit0 poll | 50 ms | SDK-lit | SDK comment "Polling Vertical BS" -> UNKNOWN | UNKNOWN | UNKNOWN | continues |
-| RL6449_Series_DPRx1.c:2425,2483 | PE flag loop | up to 10 passes of 1 frame | SDK-lit | UNKNOWN | UNKNOWN | UNKNOWN | exits |
-| RL6449_Series_DPRx1.c:3872-3972 (5x 2 ms), :4133 (1000 ms), :4187,:4261 (10 ms), :4238 (2 ms); ScalerDPRx1_SeptPhy.c:5153,5159,5218,5259 (10/2/10/2 ms) | PHY compliance test (lab only, `_AWTO_DP_PHYCTS` `RL6449_Project.h:~300`, kept by Dan) | as listed | SDK-lit | VESA PHY CTS flow in the SDK -> UNKNOWN per value | UNKNOWN | UNKNOWN | continues |
+| ScalerCommonDPRx1.c:2856; ScalerDPRx1_SeptPhy.c:4954 | MAC reset pulse | 30 ms | SDK-lit | no spec | no spec | no spec | continues |
+| ScalerDPRx1_SeptPhy.c:4318 | FIFO check settle | 10 ms | SDK-lit | no spec | no spec | no spec | continues |
+| `_DP_MEASURE_POLLING_TIMEOUT` sites: RL6449_Series_DPRx1.c:2037; ScalerCommonDPRx1.c:937; ScalerDPRx1_SeptPhy.c:607,3980,4535 | M/N measure done | 100 ms | `ScalerCommonSyncInclude.h:145` | SDK-lit -> no spec | no spec | no spec | returns _FALSE |
+| RL6449_Series_DPRx1.c:2499; ScalerDPRx1_SeptPhy.c:338 | VBID bit0 poll | 50 ms | SDK-lit | SDK comment "Polling Vertical BS" -> no spec | no spec | no spec | continues |
+| RL6449_Series_DPRx1.c:2425,2483 | PE flag loop | up to 10 passes of 1 frame | SDK-lit | no spec | no spec | no spec | exits |
+| RL6449_Series_DPRx1.c:3872-3972 (5x 2 ms), :4133 (1000 ms), :4187,:4261 (10 ms), :4238 (2 ms); ScalerDPRx1_SeptPhy.c:5153,5159,5218,5259 (10/2/10/2 ms) | PHY compliance test (lab only, `_AWTO_DP_PHYCTS` `RL6449_Project.h:~300`, kept by Dan) | as listed | SDK-lit | VESA PHY CTS flow in the SDK -> no spec per value | no spec | no spec | continues |
 | RL6449_Series_DPRx1.c:3665,3966,4050 `ScalerDpRx1PhyCTS` | until the DP source ends the CTS test | **no bound** (pokes the watchdog) | SDK | `docs/watchdog.md` row 113: "unbounded, bug class, lab-only, decision for Dan" | n/a | n/a | never (until the source ends the test) |
-| RL6449_Series_DisplayDPTx.c:284 | after every link-training attempt, including the passing one | 5 ms x up to 5 attempts | SDK-lit | UNKNOWN | UNKNOWN | UNKNOWN | next attempt |
-| RL6449_Series_DisplayDPTx.c:495 | "Waiting for PHY initial" | 10 ms | SDK-lit | SDK comment; no spec -> UNKNOWN | UNKNOWN | UNKNOWN | continues |
-| ScalerDisplayDPTx.c:206 | after the DPCD 600h power-up write | 10 ms | SDK-lit | UNKNOWN | UNKNOWN | UNKNOWN | continues |
-| ScalerDisplayDPTx.c:828,924,1929,1934,2084,2089 | AUX / training-pattern wait | `DELAY_XUS(400)` | SDK | SDK comment "Delay Time us [400,x]" | UNKNOWN beyond the comment (DP AUX timing is likely but not cited) | UNKNOWN | continues |
+| RL6449_Series_DisplayDPTx.c:284 | after every link-training attempt, including the passing one | 5 ms x up to 5 attempts | SDK-lit | no spec | no spec | no spec | next attempt |
+| RL6449_Series_DisplayDPTx.c:495 | "Waiting for PHY initial" | 10 ms | SDK-lit | SDK comment; no spec -> no spec | no spec | no spec | continues |
+| ScalerDisplayDPTx.c:206 | after the DPCD 600h power-up write | 10 ms | SDK-lit | no spec | no spec | no spec | continues |
+| ScalerDisplayDPTx.c:828,924,1929,1934,2084,2089 | AUX / training-pattern wait | `DELAY_XUS(400)` | SDK | SDK comment "Delay Time us [400,x]" | no spec beyond the comment (DP AUX timing is likely but not cited) | no spec | continues |
 | ScalerDisplayDPTx.c:1929-1940 and 2084-2095 | AUX done poll | 25 x `DELAY_5US` (125 us); 7 retries (:2004) | SDK | SDK comment "Delay Time us [5,175]" | n/a | n/a | retry then fail |
 | ScalerDisplayDPTx.c:652 `LinkTraining` | until LT_RESULT is PASS or FAIL | state machine, no timer | SDK | n/a | n/a | n/a | n/a |
 | **HDMI / TMDS (SDK, linked)** | | | | | | | |
-| RL6449_Series_TMDSRx2.c:3342 and RL6449_Series_TMDSRx3.c:3345 | blind wait "at least 3 frames" for the HW colour-depth update | 130 ms | SDK-lit | SDK comment | 3 frames (rate not stated; 130 ms = 3 frames at 23 Hz) | UNKNOWN | continues |
-| TMDSRx2.c:3385, TMDSRx3.c:3388; ScalerCommonSync.c:8733, 9341; ScalerTMDSRx2_SeptPhy.c:101, ScalerTMDSRx3_SeptPhy.c:101 | "down sampling effect" | 20 ms | SDK-lit | SDK comment -> UNKNOWN | UNKNOWN | UNKNOWN | continues |
-| TMDSRx2.c:3264,3279,3294,3975 and TMDSRx3.c:3267,3282,3297,3978 | packet / format polls | 130 / 180 / 180 / 130 ms | SDK-lit | SDK comments "3 frames", "more time to wait GCP/AVI" | UNKNOWN | UNKNOWN | falls through |
-| TMDSRx2.c:4060,4062 and TMDSRx3.c:4063,4065; ScalerTMDSRx2_SeptPhy.c:141,144 and TMDSRx3_SeptPhy.c:141,144 | HDCP-enabled / video detect | 45 / 20 ms | SDK-lit | SDK comment "at least 1 frame" | UNKNOWN | UNKNOWN | falls through |
-| ScalerTMDSRx2_SeptPhy.c:677 and ScalerTMDSRx3_SeptPhy.c:677 | pre-detect settle | 6 ms | SDK-lit | UNKNOWN | UNKNOWN | UNKNOWN | continues |
-| ScalerTMDSRx2_SeptPhy.c:632-636 and ScalerTMDSRx3_SeptPhy.c:632-636 | deep-colour PLL lock | 2 ms x up to 16 | SDK-lit | SDK comment "Delay for PLL Phase Lock" | UNKNOWN | UNKNOWN | returns _FALSE |
-| TMDSRx2.c:3183,3192,3197 and TMDSRx3.c:3186,3195,3200; ScalerTMDSRx2_SeptPhy.c:3630 and TMDSRx3_SeptPhy.c:3633 | deep-colour PLL set / PHY stable | 2 ms each | SDK-lit | UNKNOWN | UNKNOWN | UNKNOWN | continues |
+| RL6449_Series_TMDSRx2.c:3342 and RL6449_Series_TMDSRx3.c:3345 | blind wait "at least 3 frames" for the HW colour-depth update | 130 ms | SDK-lit | SDK comment | 3 frames (rate not stated; 130 ms = 3 frames at 23 Hz) | no spec | continues |
+| TMDSRx2.c:3385, TMDSRx3.c:3388; ScalerCommonSync.c:8733, 9341; ScalerTMDSRx2_SeptPhy.c:101, ScalerTMDSRx3_SeptPhy.c:101 | "down sampling effect" | 20 ms | SDK-lit | SDK comment -> no spec | no spec | no spec | continues |
+| TMDSRx2.c:3264,3279,3294,3975 and TMDSRx3.c:3267,3282,3297,3978 | packet / format polls | 130 / 180 / 180 / 130 ms | SDK-lit | SDK comments "3 frames", "more time to wait GCP/AVI" | no spec | no spec | falls through |
+| TMDSRx2.c:4060,4062 and TMDSRx3.c:4063,4065; ScalerTMDSRx2_SeptPhy.c:141,144 and TMDSRx3_SeptPhy.c:141,144 | HDCP-enabled / video detect | 45 / 20 ms | SDK-lit | SDK comment "at least 1 frame" | no spec | no spec | falls through |
+| ScalerTMDSRx2_SeptPhy.c:677 and ScalerTMDSRx3_SeptPhy.c:677 | pre-detect settle | 6 ms | SDK-lit | no spec | no spec | no spec | continues |
+| ScalerTMDSRx2_SeptPhy.c:632-636 and ScalerTMDSRx3_SeptPhy.c:632-636 | deep-colour PLL lock | 2 ms x up to 16 | SDK-lit | SDK comment "Delay for PLL Phase Lock" | no spec | no spec | returns _FALSE |
+| TMDSRx2.c:3183,3192,3197 and TMDSRx3.c:3186,3195,3200; ScalerTMDSRx2_SeptPhy.c:3630 and TMDSRx3_SeptPhy.c:3633 | deep-colour PLL set / PHY stable | 2 ms each | SDK-lit | no spec | no spec | no spec | continues |
 | ScalerTMDSRx2_SeptPhy.c:815 and ScalerTMDSRx3_SeptPhy.c:815 `HotPlugHighProc` | HDMI HPD low time | user setting x 100 ms; SDK NVRAM default 5 = 500 ms (`UserCommonNVRamSystem.c:52`). **Skipped:** `_AWTO_HDMI_HPD_TOGGLE == _OFF` (`RL6449_Project.h:1164`). | NVRAM | SDK default | n/a | n/a | continues |
 | ScalerCommonSyncInclude.h:118-120 | HDMI HPD times when toggling: HDCP 2.2 1000 / Acer 130 / EDID switch 600 ms | as listed | SDK | SDK constants | n/a | n/a | n/a |
-| `ScalerTMDS*FLD / SetPhy_EXINT0` (interrupt context): ScalerTMDSRx2.c:1362-1920 and Rx3.c:1365-1923 | EXINT0 PHY set blind steps | **5545 us per call** (50 + 3x360 + 5x150 + 2x290 + 2x1000 + 900 + 25 + 2x80 us) | SDK | SDK numbers, no stated reason -> UNKNOWN | UNKNOWN | UNKNOWN | continues |
-| `*MeasureClk`, `FLDBandFineTune_EXINT0`: TMDSRx2.c:691,728,2850,2906 and Rx3.c:694,731,2853,2909 | 5 us steps | 5 us each | SDK | UNKNOWN | UNKNOWN | UNKNOWN | continues |
-| TMDS timer events: TMDSRx2.c:3994,4200 and Rx3.c:3997,4203 | format reset wait | 130 ms | SDK-lit | UNKNOWN | UNKNOWN | UNKNOWN | event fires |
-| ScalerTMDSRx2_SeptPhy.c:191 and ScalerTMDSRx3_SeptPhy.c:191 | video-detect re-arm | 45 ms | SDK | "1 frame" comment | UNKNOWN | UNKNOWN | re-poll |
+| `ScalerTMDS*FLD / SetPhy_EXINT0` (interrupt context): ScalerTMDSRx2.c:1362-1920 and Rx3.c:1365-1923 | EXINT0 PHY set blind steps | **5545 us per call** (50 + 3x360 + 5x150 + 2x290 + 2x1000 + 900 + 25 + 2x80 us) | SDK | SDK numbers, no stated reason -> no spec | no spec | no spec | continues |
+| `*MeasureClk`, `FLDBandFineTune_EXINT0`: TMDSRx2.c:691,728,2850,2906 and Rx3.c:694,731,2853,2909 | 5 us steps | 5 us each | SDK | no spec | no spec | no spec | continues |
+| TMDS timer events: TMDSRx2.c:3994,4200 and Rx3.c:3997,4203 | format reset wait | 130 ms | SDK-lit | no spec | no spec | no spec | event fires |
+| ScalerTMDSRx2_SeptPhy.c:191 and ScalerTMDSRx3_SeptPhy.c:191 | video-detect re-arm | 45 ms | SDK | "1 frame" comment | no spec | no spec | re-poll |
 | `ScalerTMDSRx2_SeptPhy.c:562` (and Rx3 :562) | HDMI read-request retry on Timer0 | 10 ms | SDK; `fw/timer/t0ev.c:218` | SDK | n/a | n/a | retry event |
 | **busy-wait macros (main context)** | | | | | | | |
 | `ScalerCommonMcuInclude.h:40-215`; counts set at `ScalerCommonMcu.c:1844-1849`; our calibration `fw/diag/delaycal.c:88-99` | `DELAY_5US`, `DELAY_XUS(n)` and relatives | loop counts set so the shorter copy of each pair lands at 105 % of nominal | `AWTO_DELAY_TARGET_PCT` `RL6449_Project.h:188`, valid only at `AWTO_DELAY_CAL_RCAP2H 0xE3` | measured (T3 measurement, #54, diag block). Realtek's own count is 112..127 % depending on code placement. Health limit 90..125 %. | nominal us | 1.05 | n/a |
-| RL6449_Series_DPRx1.c:1201-1759 `RebuildPhy` | PHY rebuild steps | 905 us total (5x85 + 300 + 3x25 + 3x5 + 2x45) | SDK | UNKNOWN | UNKNOWN | UNKNOWN | continues |
-| DPRx1.c:2832-2954 `PhyCtsTp1SetPhy` / :3060-3609 `Tp2SetPhy` / :3920-4230 `PhyCTS` | CTS PHY steps | 370 / 815 / 165 us | SDK | UNKNOWN | UNKNOWN | UNKNOWN | continues |
-| ScalerPLL.c:309-317, 1406-1410, 2761-2765, 3689-3706, 3727-3743, 3769, 3843 | PLL power-up and reset steps | M2PLL 150 + 5 + 1000 us; DPLL cascade 155 us; MPLL 2x150 + 2x5 us; DDR2 ctrl 2x150 + 2x85 us; DDR2 output 3x85 us; DDR2 freq 2x150 us | SDK | "Wait for M2PLL Stable (1ms)" comment at :317; others UNKNOWN | 1000 us (:317) | 1.00 (:317) | continues |
-| RL6449_Series_DDR2.c:337; GDIPhy.c:213 | DDR2 DCPHY / bandgap | 5 us / 85 us | SDK | UNKNOWN | UNKNOWN | UNKNOWN | continues |
-| RL6449_Series_Power.c:482-495,527-540,572-585,617-630,662-675 | power-cut flag polls | 50 x `DELAY_5US` per flag (about 250 us each), 10 loops | SDK | UNKNOWN | UNKNOWN | UNKNOWN | continues |
-| ScalerCommonDPRx1.c:560; TMDS MeasureClk; ScalerDPRx1_SeptPhy.c:3418,3888(150 us),4686 | small settles | 5 us / 150 us | SDK | UNKNOWN | UNKNOWN | UNKNOWN | continues |
-| ScalerDisplayDPTx.c:338 | video stream output | 5 us | SDK | UNKNOWN | UNKNOWN | UNKNOWN | continues |
-| ScalerCommonDebug.c:343,744 | debug message gap | 30 us | SDK | UNKNOWN | UNKNOWN | UNKNOWN | continues |
+| RL6449_Series_DPRx1.c:1201-1759 `RebuildPhy` | PHY rebuild steps | 905 us total (5x85 + 300 + 3x25 + 3x5 + 2x45) | SDK | no spec | no spec | no spec | continues |
+| DPRx1.c:2832-2954 `PhyCtsTp1SetPhy` / :3060-3609 `Tp2SetPhy` / :3920-4230 `PhyCTS` | CTS PHY steps | 370 / 815 / 165 us | SDK | no spec | no spec | no spec | continues |
+| ScalerPLL.c:309-317, 1406-1410, 2761-2765, 3689-3706, 3727-3743, 3769, 3843 | PLL power-up and reset steps | M2PLL 150 + 5 + 1000 us; DPLL cascade 155 us; MPLL 2x150 + 2x5 us; DDR2 ctrl 2x150 + 2x85 us; DDR2 output 3x85 us; DDR2 freq 2x150 us | SDK | "Wait for M2PLL Stable (1ms)" comment at :317; others no spec | 1000 us (:317) | 1.00 (:317) | continues |
+| RL6449_Series_DDR2.c:337; GDIPhy.c:213 | DDR2 DCPHY / bandgap | 5 us / 85 us | SDK | no spec | no spec | no spec | continues |
+| RL6449_Series_Power.c:482-495,527-540,572-585,617-630,662-675 | power-cut flag polls | 50 x `DELAY_5US` per flag (about 250 us each), 10 loops | SDK | no spec | no spec | no spec | continues |
+| ScalerCommonDPRx1.c:560; TMDS MeasureClk; ScalerDPRx1_SeptPhy.c:3418,3888(150 us),4686 | small settles | 5 us / 150 us | SDK | no spec | no spec | no spec | continues |
+| ScalerDisplayDPTx.c:338 | video stream output | 5 us | SDK | no spec | no spec | no spec | continues |
+| ScalerCommonDebug.c:343,744 | debug message gap | 30 us | SDK | no spec | no spec | no spec | continues |
 | **INTERRUPT-CONTEXT BLIND WAITS** | | | | | | | |
-| RL6449_Series_DPRx1_INT.c:485-599 `Tp1SetPhy_EXINT0` | PHY | 260 us | SDK | UNKNOWN | UNKNOWN | UNKNOWN | continues |
-| DPRx1_INT.c:731-950 `Tp2SetPhy_EXINT0` | PHY | 710 us | SDK | UNKNOWN | UNKNOWN | UNKNOWN | continues |
-| DPRx1_INT.c:1065-1454 `RebuildPhy_WDINT` | PHY | 845 us | SDK | UNKNOWN | UNKNOWN | UNKNOWN | continues |
-| RL6449_Series_DP_INT.c:994 `WDTimerEventProc_WDINT` | AUX | 150 us | SDK | UNKNOWN | UNKNOWN | UNKNOWN | continues |
-| ScalerDPRx1_INT_SeptPhy.c:1170,1196,1819 | Tp2 check, FLD band | 2x25 us + 5 us | SDK | UNKNOWN | UNKNOWN | UNKNOWN | continues |
-| ScalerCommonSync.c:3669,3712 `DdcDetect_EXINT1` | DDC detect | 2 x 30 us (60 us); debounce loop `g_usDDCDebounceCnt` (:3559) | SDK | SDK comment "Debounce 300us" | 300 us | UNKNOWN (count is a runtime value) | continues |
-| `fw/diag/dbgisr.c:21,142`; DELAY_30US_EXINT calls | debug slave reply tail | 2 x 30 us | our code | copied from the SDK debug handler -> UNKNOWN | UNKNOWN | UNKNOWN | continues |
+| RL6449_Series_DPRx1_INT.c:485-599 `Tp1SetPhy_EXINT0` | PHY | 260 us | SDK | no spec | no spec | no spec | continues |
+| DPRx1_INT.c:731-950 `Tp2SetPhy_EXINT0` | PHY | 710 us | SDK | no spec | no spec | no spec | continues |
+| DPRx1_INT.c:1065-1454 `RebuildPhy_WDINT` | PHY | 845 us | SDK | no spec | no spec | no spec | continues |
+| RL6449_Series_DP_INT.c:994 `WDTimerEventProc_WDINT` | AUX | 150 us | SDK | no spec | no spec | no spec | continues |
+| ScalerDPRx1_INT_SeptPhy.c:1170,1196,1819 | Tp2 check, FLD band | 2x25 us + 5 us | SDK | no spec | no spec | no spec | continues |
+| ScalerCommonSync.c:3669,3712 `DdcDetect_EXINT1` | DDC detect | 2 x 30 us (60 us); debounce loop `g_usDDCDebounceCnt` (:3559) | SDK | SDK comment "Debounce 300us" | 300 us | no spec (count is a runtime value) | continues |
+| `fw/diag/dbgisr.c:21,142`; DELAY_30US_EXINT calls | debug slave reply tail | 2 x 30 us | our code | copied from the SDK debug handler -> no spec | no spec | no spec | continues |
 | ScalerCommonDebug.c:213-606 | debug DDC out-FIFO loops | bounded by `_DATA_OUT_COUNT` 5 passes | `ScalerCommonDebug.c:27` | SDK | n/a | n/a | exits |
 | ScalerCommonDebug.c:403; fw/diag/dbgisr.c:129 | IIC status wait inside the interrupt | no time bound (status bit only) | SDK / ours | n/a | n/a | n/a | unbounded in principle |
 | **OTHER SDK WAITS (linked)** | | | | | | | |
-| ScalerAudio.c:770-773 | DVC mute: `DelayXms(1)` loop until gain done | bound 400 | `_DVC_VOLUME_MUTE_TIMER` `RL6449_Project_Default.h:1985` | SDK default | UNKNOWN | UNKNOWN | continues |
+| ScalerAudio.c:770-773 | DVC mute: `DelayXms(1)` loop until gain done | bound 400 | `_DVC_VOLUME_MUTE_TIMER` `RL6449_Project_Default.h:1985` | SDK default | no spec | no spec | continues |
 | RL6449_Series_Audio.c:837,1384 and ScalerAudio_SeptPhy.c:1358 | audio PLL | 2 ms, comment "Delay 2000us" | SDK | SDK comment | 2 ms | 1.00 | continues |
 | RL6449_Series_Audio.c:843,849,1390,1396 and ScalerAudio_SeptPhy.c:1364,1370 | audio PLL | 2 ms, comment "Delay 1000us" | SDK | SDK comment; rounded up for the tick | 1 ms | 2.00 | continues |
 | RL6449_Series_Audio.c:1598,1614 | audio detect | 3 ms, comment "Waiting for 2ms" | SDK | SDK comment | 2 ms | 1.50 | continues |
-| RL6449_Series_Audio.c:1513, ScalerAudio_SeptPhy.c:736,985 | dynamic I-code reload event | 100 ms | `ScalerAudioInclude.h:29` | SDK | UNKNOWN | UNKNOWN | event fires |
+| RL6449_Series_Audio.c:1513, ScalerAudio_SeptPhy.c:736,985 | dynamic I-code reload event | 100 ms | `ScalerAudioInclude.h:29` | SDK | no spec | no spec | event fires |
 | RL6449_Series_OsdHardwareVLC.c:99; fw/osd/text_layer.c (`osd_tc_vlc_end`) | OSD HW decoder flush | 2 ms | SDK / ours | fw/osd/text_layer.c comment: "Realtek's loader waits 2 ms here for the same reason". The OSD busy flag exists as an alternative. | 2 ms (Realtek loader) | 1.00 | continues |
-| RTDFactoryFunction.c:2155,2161 | OSD HW | 1 ms x 2 | SDK | SDK comment as above | UNKNOWN | UNKNOWN | continues |
-| ScalerColorIDitherEnable.c:69 | dither | 2 ms | SDK | UNKNOWN | UNKNOWN | UNKNOWN | continues |
-| SysSource.c:3982,4093,4203 | cable-pin debounce, only after a status change | 10 ms | SDK-lit | UNKNOWN. `AWTO_SLOW_MS` 10 samples the same check. | UNKNOWN | UNKNOWN | continues |
+| RTDFactoryFunction.c:2155,2161 | OSD HW | 1 ms x 2 | SDK | SDK comment as above | no spec | no spec | continues |
+| ScalerColorIDitherEnable.c:69 | dither | 2 ms | SDK | no spec | no spec | no spec | continues |
+| SysSource.c:3982,4093,4203 | cable-pin debounce, only after a status change | 10 ms | SDK-lit | no spec. `AWTO_SLOW_MS` 10 samples the same check. | no spec | no spec | continues |
 | ScalerTimerFunction.c / ScalerCommonTimerFunction.c:2586 | the Timer2 spin itself; no-op when TR2 off | n | SDK; poked every ms by `AWTO_WDT_FEED` | n/a | n/a | n/a | n/a |
 | **TIMER EVENTS (SDK, linked)** | | | | | | | |
-| SysJudge.c:553, :707 | no-signal judge | 1 s | SDK | SDK | UNKNOWN | UNKNOWN | request no-signal |
-| SysJudge.c:569,593,630,712 | no-support judge | 0.5 s; 2 s in DISPLAY (:603, :712) | SDK | SDK | UNKNOWN | UNKNOWN | request no-support |
-| SysJudge.c:597, :878-893 | wait to active | VGA 50 ms; DVI / HDMI / DP 100 ms | `RL6449_Project.h:1814-1817` | SDK defaults (re-stated in the project header) | UNKNOWN | UNKNOWN | request active |
-| SysSource.c:636,690 etc.; consts `RL6449_Project.h:1800-1803` | source search window | ALL_PORT 2000 ms (the polling style used here, :931); VGA 500, HDMI 2000, DVI 2000, DP 3000 ms in the per-port branches | project header, `RL6449_Project_Default.h:1011-1052` | SDK defaults. Registry rows 40-43 (`search_*_ms`, `nocable_*_ms`) feed the per-port variables via `glue.inc:711-728`. | UNKNOWN | UNKNOWN | search ends -> no signal |
-| SysSource.c:698 | double-check search | 0.5 s | `_SOURCE_DOUBLE_CHECK_SEARCH_TIME_NVRAM_PORT` | SDK | UNKNOWN | UNKNOWN | search ends |
-| SysDP.c:257,304 and ScalerDPRx1_SeptPhy.c:4925 | DP hotplug / link-status IRQ | 100 ms | SDK | SDK | UNKNOWN | UNKNOWN | event fires |
-| ScalerDP_SeptPhy.c:594 | DP HPD sequence | table | SDK | SDK | UNKNOWN | UNKNOWN | event fires |
-| ScalerDPRx1_SeptPhy.c:5391 | HDCP long hotplug | 1 s | SDK | SDK | UNKNOWN | UNKNOWN | event fires |
-| RL6449_Series_DP_INT.c:822 | DP rebuild PHY on Timer0 | 30 ms | SDK; `fw/timer/t0ev.c:219` | SDK | UNKNOWN | UNKNOWN | event fires |
-| SysAudio.c:358,377,394 | DAC VCM initial 0.1 s; charge 0.5 s; depop 0.1 s | | SysAudio.c:30-31; `RL6449_Project_Default.h:1880` | SDK | UNKNOWN | UNKNOWN | state step |
-| RTD2014Osd.c:138-243 | no-signal / no-cable pop-up | 2 s | SDK | SDK | UNKNOWN | UNKNOWN | pop-up |
-| RTD2014Osd.c:204,210,220 | power-saving pop-up | 3 s | SDK | SDK | UNKNOWN | UNKNOWN | pop-up |
-| RTD2014Osd.c:243 | go to power saving | 2 s | SDK | SDK | UNKNOWN | UNKNOWN | request power saving |
+| SysJudge.c:553, :707 | no-signal judge | 1 s | SDK | SDK | no spec | no spec | request no-signal |
+| SysJudge.c:569,593,630,712 | no-support judge | 0.5 s; 2 s in DISPLAY (:603, :712) | SDK | SDK | no spec | no spec | request no-support |
+| SysJudge.c:597, :878-893 | wait to active | VGA 50 ms; DVI / HDMI / DP 100 ms | `RL6449_Project.h:1814-1817` | SDK defaults (re-stated in the project header) | no spec | no spec | request active |
+| SysSource.c:636,690 etc.; consts `RL6449_Project.h:1800-1803` | source search window | ALL_PORT 2000 ms (the polling style used here, :931); VGA 500, HDMI 2000, DVI 2000, DP 3000 ms in the per-port branches | project header, `RL6449_Project_Default.h:1011-1052` | SDK defaults. Registry rows 40-43 (`search_*_ms`, `nocable_*_ms`) feed the per-port variables via `glue.inc:711-728`. | no spec | no spec | search ends -> no signal |
+| SysSource.c:698 | double-check search | 0.5 s | `_SOURCE_DOUBLE_CHECK_SEARCH_TIME_NVRAM_PORT` | SDK | no spec | no spec | search ends |
+| SysDP.c:257,304 and ScalerDPRx1_SeptPhy.c:4925 | DP hotplug / link-status IRQ | 100 ms | SDK | SDK | no spec | no spec | event fires |
+| ScalerDP_SeptPhy.c:594 | DP HPD sequence | table | SDK | SDK | no spec | no spec | event fires |
+| ScalerDPRx1_SeptPhy.c:5391 | HDCP long hotplug | 1 s | SDK | SDK | no spec | no spec | event fires |
+| RL6449_Series_DP_INT.c:822 | DP rebuild PHY on Timer0 | 30 ms | SDK; `fw/timer/t0ev.c:219` | SDK | no spec | no spec | event fires |
+| SysAudio.c:358,377,394 | DAC VCM initial 0.1 s; charge 0.5 s; depop 0.1 s | | SysAudio.c:30-31; `RL6449_Project_Default.h:1880` | SDK | no spec | no spec | state step |
+| RTD2014Osd.c:138-243 | no-signal / no-cable pop-up | 2 s | SDK | SDK | no spec | no spec | pop-up |
+| RTD2014Osd.c:204,210,220 | power-saving pop-up | 3 s | SDK | SDK | no spec | no spec | pop-up |
+| RTD2014Osd.c:243 | go to power saving | 2 s | SDK | SDK | no spec | no spec | request power saving |
 | RTD2014Osd.c:282 | input-info pop-up | 6 s | `RL6449_Project.h:1433` | our change; SDK value was 3 s; no reason given | 3 s | 2.00 | OSD off |
-| RTDFactoryFunction.c:3436, `RL6449_AWTO_JXC4K.h:331` | panel-used hour counter | 60 s | SDK | SDK | UNKNOWN | UNKNOWN | event fires |
+| RTDFactoryFunction.c:3436, `RL6449_AWTO_JXC4K.h:331` | panel-used hour counter | 60 s | SDK | SDK | no spec | no spec | event fires |
 | **WATCHDOG** | | | | | | | |
 | `RL6449_Project.h:325,326,311-324` `AWTO_WDT_THR 0x577`, `AWTO_WDT_N 1` | warning IRQ | 200.1 ms (1399 x 143.0 us) | project header | measured: worst poke gap 160 ms (host_sleep, power saving), x 1.25 (`docs/watchdog.md` wd8) | 160 ms | 1.25 | capture, then soft reset |
 | same | hardware reset (CNT1 = N = 1) | 585.9 ms | project header | register arithmetic: 4096 x 2048 / 14.318 MHz | n/a | n/a | chip reset |
@@ -163,7 +164,7 @@ Abbreviations in the table:
 | SPI-flash halts (not code) | erase 200 ms, WRSR 40 ms, page program 3 ms | n/a | MX25L8006E datasheet, `docs/watchdog.md` | datasheet maxima | n/a | n/a | CPU halted; `FFEA[5]` freezes the counter |
 | **OUR OWN TIMED LOGIC (fw/sdcc, project header)** | | | | | | | |
 | `RL6449_Project.h:462` `AWTO_KEY_SAMPLE_MS`; `fw/keys/keys.c:382` | key debounce: two equal samples | 10 ms | project header | SDK key scan SEC(0.01) | 10 ms | 1.00 | sample accepted |
-| `RL6449_Project.h:463`; `fw/keys/keys.c:308` | UP / DOWN wait for combo partner | 80 ms | project header | our choice: "two-finger press skew; longer feels slow"; no measurement cited -> UNKNOWN | UNKNOWN | UNKNOWN | sends PRESS |
+| `RL6449_Project.h:463`; `fw/keys/keys.c:308` | UP / DOWN wait for combo partner | 80 ms | project header | our choice: "two-finger press skew; longer feels slow"; no measurement cited -> no spec | no spec | no spec | sends PRESS |
 | `RL6449_Project.h:464`; `fw/keys/keys.c:315` | first key repeat | 500 ms | project header | SDK SEC(0.5) | 500 ms | 1.00 | repeat |
 | `RL6449_Project.h:465`; `fw/keys/keys.c:314` | key repeat rate | 100 ms | project header | our choice: 10 steps/s so a 0..100 slider takes 10 s | n/a | n/a | repeat |
 | `fw/keys/keyinject.c:30` `s_usAwtoKeyHoldMs` | injected key hold | host value | host | host command | n/a | n/a | key released |
@@ -171,19 +172,19 @@ Abbreviations in the table:
 | `RL6449_Project.h:871` `AWTO_SW_SLOW_MS`; `fw/log/swlog.c:66` | stall log threshold | 20 ms | project header | "7x a 4K60 pass (2.7 ms)" | 2.7 ms | 7.4 | logs a slow-mark line |
 | `RL6449_Project.h:1175` `AWTO_TMDS_HPD_LOW_MS`; `fw/log/swlog.c:162` | HDMI HPD low pulse (non-blocking) | 110 ms | project header | comment: HDMI 1.4b, a source reads HPD low >= 100 ms as unplug | 100 ms | 1.10 | HPD high again |
 | `RL6449_Project.h:1067` `AWTO_PS_POLL_MS`; `fw/log/sync.c:754` | power-saving wake poll | 5 ms | project header | SDK's own freq-measure wait (5 ms) | 5 ms | 1.00 | next poll |
-| `AWTO_PS_TMDS_HOLD_MS`; `fw/log/sync.c:644` | TMDS wake hold | 50 ms | project header | "about 10 SDK stable windows" | UNKNOWN | UNKNOWN | wake |
+| `AWTO_PS_TMDS_HOLD_MS`; `fw/log/sync.c:644` | TMDS wake hold | 50 ms | project header | "about 10 SDK stable windows" | no spec | no spec | wake |
 | `AWTO_PS_TMDS_GAP_MS`; `fw/log/sync.c:652` | gap ends a TMDS run | 15 ms (3 x poll) | project header | derived | 15 ms | 1.00 | run ends |
-| `AWTO_HOLD_CHECK_MS`; `fw/input/fastsw.c:173` | receiver check while held | 10 ms | project header | wake latency <= 10 ms + 1 pass; UNKNOWN reason | UNKNOWN | UNKNOWN | next check |
-| `AWTO_REHOLD_MS`; `fw/input/fastsw.c:133` | no new hold after a fast wake | 3000 ms | project header | no source stated -> UNKNOWN | UNKNOWN | UNKNOWN | hold allowed |
-| `AWTO_L2_SEC`; `AWTO_HOLD_AUTO_SEC`; `AWTO_HOLD_TRIES` (`RL6449_Project.h:1230-1234`) | hold levels | 60 s; 5 s; 4 tries | project header | L2 = Dan 2026-11-08; the others are our choice, no reason cited | UNKNOWN | UNKNOWN | to SDK search |
+| `AWTO_HOLD_CHECK_MS`; `fw/input/fastsw.c:173` | receiver check while held | 10 ms | project header | wake latency <= 10 ms + 1 pass; no spec reason | no spec | no spec | next check |
+| `AWTO_REHOLD_MS`; `fw/input/fastsw.c:133` | no new hold after a fast wake | 3000 ms | project header | no source stated -> no spec | no spec | no spec | hold allowed |
+| `AWTO_L2_SEC`; `AWTO_HOLD_AUTO_SEC`; `AWTO_HOLD_TRIES` (`RL6449_Project.h:1230-1234`) | hold levels | 60 s; 5 s; 4 tries | project header | L2 = Dan 2026-11-08; the others are our choice, no reason cited | no spec | no spec | to SDK search |
 | `fw/input/fastsw.c:280` `AWTO_FAST_SETTLE_FRAMES` (`RL6449_Project.h:1249-1252`) | fast switch settle | 3 frames; 1 for a wake | project header | comment "frame-sync phase jump is over" | n/a | n/a | unblank |
-| `fw/input/fastsw.c:321` | fast path gives up | 8 frames | code literal | UNKNOWN | UNKNOWN | UNKNOWN | full path |
+| `fw/input/fastsw.c:321` | fast path gives up | 8 frames | code literal | no spec | no spec | no spec | full path |
 | `AWTO_SRC_POLL_MS` 250; `AWTO_SRC_DDC_POLLS` 12; `AWTO_SRC_SLEEP_SEC` 60; `AWTO_SRC_IDLE_COMMIT_MS` 2000 (`RL6449_Project.h:691-692,1095,1097`) | selector refresh; DDC "live"; sleep; idle commit | 250 ms; 3 s (12 polls); 60 s; 2000 ms | project header | refresh = human reading (4 Hz); DDC: HDCP Ri every 2 s x 1.25 = 2.5 s rounded up to 3 s; sleep = L2 60 s; idle commit = Dan 2026-11-12 (#132) | 2.5 s (DDC) | 1.20 (DDC) | field compare / sleep / commit |
 | `AWTO_KEY_REFRESH_MS` 80; `AWTO_KEY_RETRY_MS` 250; `AWTO_GPIO_REFRESH_MS` 20; `AWTO_DBG_REFRESH_MS` 500; `AWTO_TITLE_MS` 1000 | screen redraw periods | as listed | project header | 80 = 100 ms (10 Hz floor) / 1.25; 250 = one draw about 175 ms in the sim; 1000 = Dan | 100 ms (key refresh) | 0.80 | redraw |
 | `AWTO_MSG_HOST_MS` (`AwtoMsg.h:5`), `AwtoMsgWait` | host-silence limit for the debug wait | 100 ms | `AwtoMsg.h:5` | comment: poll gap 2 ms + fetch about 5 ms, x20 | 5 ms | 20.0 | channel off, message stays in the ring |
 | `AWTO_HT_STALE_MS` 180000; `AWTO_HT_DRIFT_MS` 1000; `AWTO_HT_GAP_S` | host-time stale / drift | as listed | project header | Dan: 3 minutes without a sync (host sends every 60 s); drift 1 s | 60 s period | 3.0 | marks the host time stale |
 | `AWTO_SET_LOOP_MS` 20; `AWTO_NV_EL_MAX_MS` 100 | settings service period; gate aging cap | 20 ms; 100 ms | `RL6449_Project.h:104,150` | derived: below key repeat 0.5 s; 5 x 20 | n/a | n/a | service call |
-| `AWTO_MEAS_PERIOD_MS` 25; `AWTO_MEAS_WINDOW_MS` 1000 (`fw/meas/meas4k.c:29,52`) | 4K measurement sampling | 25 ms; 1000 ms | project header | UNKNOWN reason | UNKNOWN | UNKNOWN | window ends |
+| `AWTO_MEAS_PERIOD_MS` 25; `AWTO_MEAS_WINDOW_MS` 1000 (`fw/meas/meas4k.c:29,52`) | 4K measurement sampling | 25 ms; 1000 ms | project header | no spec reason | no spec | no spec | window ends |
 | `fw/ddcci/ddcci.c:86` | debug-link minute countdown | 1000 ms steps | code | n/a | n/a | n/a | link back to DDC/CI |
 | `fw/diag/diag.c:12,49`; `fw/meas/meas4k.c:70,85`; `fw/diag/wdt.c:224` | spin to the next 1 ms tick | up to 1 ms | code | tick alignment | 1 tick | 1.00 | continues |
 | `fw/diag/delaycal.c:68,70` | calibration: align 1 tick, then `DelayXms(10)` | about 11 ms once per boot, after the first stream start | code | measurement method | n/a | n/a | continues |
@@ -225,7 +226,7 @@ Abbreviations in the table:
 - **DP frame waits**: 45 / 90 ms against 43.5 / 87 ms (1.035x). `_DOUBLE_BUFFER_WAIT_TIME` 168 against 166.7 ms (1.008x).
 - **`ScalerTimerDelayXms`**: always has up to 1 tick of extra wait. `T4..T6` are `<=` compares, so +1 tick.
 
-## (b) Source UNKNOWN
+## (b) Source no spec
 
 - **Our own values with no reason cited**:
   - `AWTO_KEY_COMBO_MS` 80

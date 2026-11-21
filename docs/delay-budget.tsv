@@ -1,0 +1,63 @@
+function	context	budget_us	extra_us	reason	review
+AwtoProbeScroll	main	90000		1 wait(s) of the SDK / our sequence at their bound; value source docs/delays.md	unreviewed
+OsdDispDisableOsd	main	90000		1 wait(s) of the SDK / our sequence at their bound; value source docs/delays.md	unreviewed
+OsdFuncSetPosition	main	90000		1 wait(s) of the SDK / our sequence at their bound; value source docs/delays.md	unreviewed
+OsdWindowDrawing	main	90000		1 wait(s) of the SDK / our sequence at their bound; value source docs/delays.md	unreviewed
+RTDFactoryOsdFuncDrawWindow	main	90000		1 wait(s) of the SDK / our sequence at their bound; value source docs/delays.md	unreviewed
+ScalerColorIDitherEnable	main	90000		1 wait(s) of the SDK / our sequence at their bound; value source docs/delays.md	unreviewed
+ScalerColorOutputGammaAdjust	main	180000		2 wait(s) of the SDK / our sequence at their bound; value source docs/delays.md	unreviewed
+ScalerDPLLFineTuneFrameSyncFrameBuffer	main	450000		5 wait(s) of the SDK / our sequence at their bound; value source docs/delays.md	unreviewed
+ScalerDPLLFineTuneFrameSyncLineBuffer	main	90000		1 wait(s) of the SDK / our sequence at their bound; value source docs/delays.md	unreviewed
+ScalerDisplayDPTx1AuxRead	main	5635	5635	AUX hardware reply wait x 7 retries (docs/delay-audit.tsv row), 805 us per try; issue #281 step 5	ok
+ScalerDisplayDPTx1AuxWrite	main	5635	5635	AUX hardware reply wait x 7 retries, 805 us per try; issue #281 step 5	ok
+ScalerDisplayDPTx1MeasureInputInfo	main	270000		3 wait(s) of the SDK / our sequence at their bound; value source docs/delays.md	unreviewed
+ScalerDpRx1PhyCTS	masked	165		5 wait(s) of the SDK / our sequence at their bound; value source docs/delays.md	unreviewed
+ScalerDpRx1RebuildPhy_WDINT	isr	860		PHY / link-rebuild settle sequence in a high-priority handler, DELAY_XUS steps at their written value (docs/delays.md); fix candidates in issue #281	ok
+ScalerDpRx1Tp1SetPhy_EXINT0	isr	275		PHY / link-rebuild settle sequence in a high-priority handler, DELAY_XUS steps at their written value (docs/delays.md); fix candidates in issue #281	ok
+ScalerDpRx1Tp2SetPhy_EXINT0	isr	715		PHY / link-rebuild settle sequence in a high-priority handler, DELAY_XUS steps at their written value (docs/delays.md); fix candidates in issue #281	ok
+ScalerDpWDTimerEventProc_WDINT	isr	150		PHY / link-rebuild settle sequence in a high-priority handler, DELAY_XUS steps at their written value (docs/delays.md); fix candidates in issue #281	ok
+ScalerFRCCompareIHFandDHF	main	90000		1 wait(s) of the SDK / our sequence at their bound; value source docs/delays.md	unreviewed
+ScalerFRCControl	main	720000		8 wait(s) of the SDK / our sequence at their bound; value source docs/delays.md	unreviewed
+ScalerFRCDisplayCtrl	main	90000		1 wait(s) of the SDK / our sequence at their bound; value source docs/delays.md	unreviewed
+ScalerFRCEn	main	180000		2 wait(s) of the SDK / our sequence at their bound; value source docs/delays.md	unreviewed
+ScalerFRCInitial	main	90000		1 wait(s) of the SDK / our sequence at their bound; value source docs/delays.md	unreviewed
+ScalerFRCOneFrameCtrl	main	90000		1 wait(s) of the SDK / our sequence at their bound; value source docs/delays.md	unreviewed
+ScalerFRCWaitWriteFrameBufFinish	main	180000		2 wait(s) of the SDK / our sequence at their bound; value source docs/delays.md	unreviewed
+ScalerFlashErasePage	main	200000	200000	sector erase halts the MCU until the flash finishes (flash datasheet tSE worst case); issue #281	ok
+ScalerFmtCnv420To422FinalSetting	main	90000		1 wait(s) of the SDK / our sequence at their bound; value source docs/delays.md	unreviewed
+ScalerFmtCnvFinalSetting	main	360000		4 wait(s) of the SDK / our sequence at their bound; value source docs/delays.md	unreviewed
+ScalerGlobalResetProc	main	90000		1 wait(s) of the SDK / our sequence at their bound; value source docs/delays.md	unreviewed
+ScalerMDomainControl	main	180000		2 wait(s) of the SDK / our sequence at their bound; value source docs/delays.md	unreviewed
+ScalerMDomainControlDBApply	main	1080000		12 wait(s) of the SDK / our sequence at their bound; value source docs/delays.md	unreviewed
+ScalerMDomainGetDisplayActiveRegion	main	180000		2 wait(s) of the SDK / our sequence at their bound; value source docs/delays.md	unreviewed
+ScalerMcuGpioInitial	main	20000		1 wait(s) of the SDK / our sequence at their bound; value source docs/delays.md	unreviewed
+ScalerMeasureAutoFuncWaitFinish	main	90000		1 wait(s) of the SDK / our sequence at their bound; value source docs/delays.md	unreviewed
+ScalerMeasureCheckFirstLineShift	main	180000		2 wait(s) of the SDK / our sequence at their bound; value source docs/delays.md	unreviewed
+ScalerMeasureCheckInterlaceVst	main	270000		3 wait(s) of the SDK / our sequence at their bound; value source docs/delays.md	unreviewed
+ScalerMeasureGetDisplayRegionCountResult	main	180000		2 wait(s) of the SDK / our sequence at their bound; value source docs/delays.md	unreviewed
+ScalerMeasureGetInputRegionCountResult	main	180000		2 wait(s) of the SDK / our sequence at their bound; value source docs/delays.md	unreviewed
+ScalerMeasureInputInfo	main	540000		6 wait(s) of the SDK / our sequence at their bound; value source docs/delays.md	unreviewed
+ScalerMeasureInterlaceCheck	main	360000		4 wait(s) of the SDK / our sequence at their bound; value source docs/delays.md	unreviewed
+ScalerMemoryFineTuneIVS2DVSDelay	main	990000		11 wait(s) of the SDK / our sequence at their bound; value source docs/delays.md	unreviewed
+ScalerMemoryFrameTracking	main	270000		3 wait(s) of the SDK / our sequence at their bound; value source docs/delays.md	unreviewed
+ScalerOsdCircuitActivated	main	180000		2 wait(s) of the SDK / our sequence at their bound; value source docs/delays.md	unreviewed
+ScalerOsdDrawWindow	main	90000		1 wait(s) of the SDK / our sequence at their bound; value source docs/delays.md	unreviewed
+ScalerOsdFontLibraryRotation	main	90000		1 wait(s) of the SDK / our sequence at their bound; value source docs/delays.md	unreviewed
+ScalerOsdMapRotation	main	90000		1 wait(s) of the SDK / our sequence at their bound; value source docs/delays.md	unreviewed
+ScalerOsdPosition	main	90000		1 wait(s) of the SDK / our sequence at their bound; value source docs/delays.md	unreviewed
+ScalerOsdScaleUpOnOff	main	90000		1 wait(s) of the SDK / our sequence at their bound; value source docs/delays.md	unreviewed
+ScalerPLLM2PLLPower	main	1155		3 wait(s) of the SDK / our sequence at their bound; value source docs/delays.md	unreviewed
+ScalerPLLSetDPLLFreqNfCascade	main	180155		4 wait(s) of the SDK / our sequence at their bound; value source docs/delays.md	unreviewed
+ScalerPowerGroupAIsolation	main	20000		1 wait(s) of the SDK / our sequence at their bound; value source docs/delays.md	unreviewed
+ScalerRotationReset	main	180000		2 wait(s) of the SDK / our sequence at their bound; value source docs/delays.md	unreviewed
+ScalerSyncDpHpdIrqAssertTimer2EventProc_EXINT	isr	1190	1190	HPD IRQ pulse: ((95 - DP IRQ time x10 us) x 10) >> 2 passes of the 4 us base; shortest IRQ time is the maximum; DP spec HPD_IRQ width (DP_RX_HPD_IRQ_ASSERT_T2_DELAY, Timer2 ISR)	ok
+ScalerTMDSRx2SetPhy_EXINT0	main	5545		PHY set-up from the main loop (PhySetDeferred, EX0 masked around it), 34 DELAY steps; being shortened by the tmds-phy work (issue #281)	ok
+ScalerTMDSRx3SetPhy_EXINT0	main	5545		PHY set-up from the main loop (PhySetDeferred, EX0 masked around it), 34 DELAY steps; being shortened by the tmds-phy work (issue #281)	ok
+SysEXINT0	isr-path	1056		union of every wait the handler can reach (branch-unaware upper bound); real worst path is shorter, issue #281	unreviewed
+SysEXINT1	isr-path	120		union of every wait the handler can reach (branch-unaware upper bound); real worst path is shorter, issue #281	unreviewed
+SysTimerIntProc0	isr-path	1010		union of every wait the handler can reach (branch-unaware upper bound); real worst path is shorter, issue #281	unreviewed
+SysTimerIntProc2	isr-path	1190		Timer2 tick handler incl. the HPD-IRQ pulse loop (row ScalerSyncDpHpdIrqAssertTimer2EventProc_EXINT); issue #281 step 5	ok
+UserAdjustContrast	main	90000		1 wait(s) of the SDK / our sequence at their bound; value source docs/delays.md	unreviewed
+UserCommonInterfaceAdjustColorProc	main	90000		1 wait(s) of the SDK / our sequence at their bound; value source docs/delays.md	unreviewed
+osd_tc_win_draw	main	90000		1 wait(s) of the SDK / our sequence at their bound; value source docs/delays.md	unreviewed
+set_ap_gamma	main	180000		2 wait(s) of the SDK / our sequence at their bound; value source docs/delays.md	unreviewed

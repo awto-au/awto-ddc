@@ -14,16 +14,8 @@
 - Not clock-derived and unchanged: power-saving (IOSC 28 MHz) and boot (crystal 14.318 MHz) states; their loop counts come from the same formula with their own clock (below).
 
 ## Loop counts (class B): `AWTO_DELAY_CNT` in `ScalerCommonPLLInclude.h`
-- `count = ceil((T us x kHz / 1000 - ovh clk) / 16)`. DELAY_5US `while(--n)` = 16 clk per count + 15 clk entry; 4 us base of DELAY_XUS = 16 clk per count + 22 clk per outer pass. 16 clk per count [hw]: sweep 87.7 MHz 27/22 counts read 102 / 108 %; 175.4 MHz 57/44 read 103..106 / 105 %; 350.8 MHz 116/90 read 107 / 105 %.
-- The variable `d_g_ucDelay5usN_Base` stays (DATA, 2 B): the clock state changes at run time and the EXINT copies read it. `ScalerMcu5usDelayCalc(clk)` only selects a constant pair.
-
-| state | kHz | DELAY_5US | 4 us base | formula wall 5 us / 4 us | sim hot (5 us loop / DELAY_XUS) | was |
-|---|---|---|---|---|---|---|
-| M2PLL 350.8 (default) | 350791 | 109 | 87 | 5.00 / 4.00 | 100 % / 101..104 % | boot calibration skipped above RCAP2H 0xE3: SDK counts 26 / 21 = 24 % of nominal |
-| M2PLL 175.4 | 175395 | 54 | 43 | 5.01 / 4.05 | 100 % / 102..107 % | SDK 53 / 44 [sdk-hypothesis] |
-| M2PLL 87.7 (stock) | 87697 | 27 | 21 | 5.10 / 4.08 | 101 % / 104..108 % | calibrated 23 (sim, 87 % of nominal) .. 28 [hw] |
-| XTAL 14.318 (boot) | 14318 | 4 | 3 | 5.52 / 4.89 | not run in the scenario | SDK 2 / 2 = 3.3 us / 3.8 us (formula) |
-| IOSC 28 (power saving) | 28000 | 8 | 6 | 5.11 / 4.21 | 100 % | SDK 3 / 6: 5 us loop = 2.14 us = 43 % [emu, old image] |
+- `count = ceil((T us x kHz / 1000 - ovh clk) / 12)`. Every loop is `mov R7,base; djnz R7,$` in `fw/timer/delay.c`: 12 clk per count (`AWTO_DELAY_CLK_PER_CNT`, DW8051 djnz Rn = 3 cycles of 4 clk); `AWTO_DELAY5US_OVH_CLK` 8, `AWTO_DELAYXUS_OVH_CLK` 20 per outer pass.
+- Counts: `delay_audit.py --counts` (350.8 MHz 146 / 116, 175.4 73 / 57, 87.7 36 / 28, XTAL 6 / 4, IOSC 11 / 8). The variable `d_g_ucDelay5usN_Base` (DATA) is set at each clock-state change by `ScalerMcu5usDelayCalc`; `d_isr_g_ucDelay5usN_Call` = Base - `AWTO_DELAY_CALL_CNT`.
 
 - The SDK 26 / 21 at 350.8 MHz is what the old code would have run if the calibration had been skipped (it was calibrated to 105 % only at the stock reload); 4x faster loops, the case Dan flagged.
 - Tolerance: ceil() makes the hot loop >= nominal; upper = nominal + one count (0.9 % at 350.8 MHz, 3.7 % at 87.7 MHz for 5 us) + entry. [emu] hot loops 100..108 %; cold (first fetch, ISR) up to 175 %.
@@ -38,7 +30,7 @@
 ## Findings and open decisions (2026-11-18/19)
 - Decision: delays are build-time constants from `AWTO_CLOCK_MHZ` (above); boot-time calibration deleted. Freed: code -1135 B, XDATA -2 B (map before / after).
 - Error found: SDK counts 26 / 21 (`_M2PLL_DELAY*_CNT`) at 350.8 MHz would have run at ~24 % of nominal; boot calibration was skipped above `RCAP2H` 0xE3 [sdk-hypothesis wrong at this clock, derived from the count arithmetic and the sim]. IOSC old counts 3 / 6 gave 43 % of nominal.
-- Inventory: 586 linked sites, 0 FIX / UNKNOWN; classes A 306 (timer), B 157 (micro-delay), C 47 (loop count: 31 NOCLOCK, 15 SCALES-BENIGN, 1 OK), D 13, E 63.
+- Inventory (2026-11-18): 586 linked sites, 0 FIX / UNKNOWN; classes A 306 (timer), B 157 (micro-delay), C 47 (loop count: 31 NOCLOCK, 15 SCALES-BENIGN, 1 OK), D 13, E 63.
 - Finding, not fixed (Dan's call): `AwtoMs()` / Timer2 loses ticks while a high-priority EXINT0 handler runs >= ~1 ms (power-saving priority swap). Sim: 2.0 ms wall = 1.14 ms firmware ms. Timer0 events are unaffected.
   - Gate `wdt` case `t0_arm_from_isr` now judges the EXINT0-armed Timer0 event in wall ms with derived bounds 8.0..12.0 ms: not a firmware regression.
 - Gate fixes: `delays` inventory keys were absolute worktree paths (now repo-relative); gates `inputrate` and canary timeouts 90 s.
@@ -70,6 +62,11 @@
 | `delay_cal_check.var_addrs` | failed on the 32-char truncated map name of the `_EXINT` counters | prefix match |
 | `wdt_test.py`, `fw_gates.py` | wdt on the 8052 model (no clock model: the 350.8 MHz boot never reached stage 8) | dw8051; two Timer0 cases judged in wall ms (bounds 12.5 / 15.5 ms) |
 | `input_rate_sim.py` | calibration window without pulses (missed the pulse-triggered pass at 350.8) | 6 s with one DPS17 pulse per second |
+
+## Blocking budget (gate `delays`, `delay_audit.py --check`)
+- Per function: sum of its wait rows at their bound (micro-delays as written, `ScalerTimerDelayXms` / polls / event waits at their timeout, branch-unaware upper bound) + declared extras; per ISR handler root: the same over everything it can call.
+- Default caps: ISR function / handler tree and any function that clears EX0 or EA: 100 us; main-context function: 1000 us. Above the cap = FAIL unless `docs/delay-budget.tsv` has a row for it: `budget_us` (the new cap), `extra_us` (blocking the inventory cannot see: flash erase, AUX retries, the HPD-IRQ loop), `reason` (one line, required), `review` (ok / unreviewed).
+- A new wait that pushes a function over its cap fails the gate; raising a cap is a reviewed edit of that TSV. `delay_audit.py --write-budget` adds rows (unreviewed) for functions over their default.
 
 ## Run
 - Gate: `scripts/fw_gates.py <stem> --only delays` (about 55 s with both images): panel_sim scenario (cold boot, POWER off / on, signal loss, power saving = IOSC, wake) at the image's clock, class A wall time vs argument, Timer2 / wall, every executed loop site >= 99 % of nominal, image counts = formula, DDC debounce, `delay_audit.py --check`. A sibling image `<stem minus -be>-clk87-be` (`-D AWTO_CLOCK_MHZ=87`) is measured too and compared.

@@ -3,6 +3,7 @@
 
 usage: delay_audit.py --write [--tree DIR] [--map MAP] [--variant hwtest]   regenerate docs/delay-audit.tsv from the tree's last build (hand columns kept by key)
        delay_audit.py --check [--tree DIR] [--map MAP] [--variant hwtest]   FAIL on a linked site that is not in the TSV, a TSV verdict FIX / UNKNOWN, a stale count formula
+       delay_audit.py --check also judges the blocking budget (per function, per ISR handler tree; docs/delay-budget.tsv rows with a reason raise a cap); --write-budget adds rows
        delay_audit.py --counts                            the loop-count formula (AWTO_DELAY_CNT) at every clock state (350.8 default, 175.4, 87.7, XTAL, IOSC), from the header text
 Source of the sites: scripts/delay_inventory.py (post-link: the SDCC listing of the tree's build, so "linked" is exact).
 Classes: A timer wait (Timer2 ms) | B micro-delay (DELAY_5US / DELAY_XUS loop count, per clock state) | C spin loop / counted loop |
@@ -72,6 +73,11 @@ HAND_STMT = {
     ("testcmd.c", "while(((MCU_FFF3_SCA_INF_CONTROL & _BIT3) != 0) && (--ucLeft > 0))"): ("C", "burst-write restart, at most AWTO_OSW_BURST_RESTARTS passes, each ended by the hardware", "no", "NOCLOCK",
                                                                                           "OSD write-sweep test op: the hardware ends the burst; the restart count is reported to the host"),
 }
+BUDGET_TSV = ROOT / "docs/delay-budget.tsv"
+BUDGET_COLS = ["function", "context", "budget_us", "extra_us", "reason", "review"]
+DEFAULT_BUDGET_US = {"isr": 100, "masked": 100, "main": 1000}      # per function (isr path: per handler root); masked = clears EX0 / EA in its body
+MASKED_RE = re.compile(r"\b(?:EX0|EA)\s*=\s*(?:0|_FALSE|_DISABLE)\b")
+WAIT_KINDS_MS = ("delay_ms", "poll", "wait_event")
 PARAM_D = re.compile(r"PANEL|VCCK|DDR_POWER|DEPOP|HPD|ZCD|AUX_REPLY|_POWER_OFF|WAITING_FOR_PANEL")
 PARAM_E = re.compile(r"AWTO|OSD_TIMEOUT|DDCCI_TIMEOUT|SEARCH_TIME|WAIT_TIME_TO_ACTIVE|_SOURCE_")
 
@@ -258,11 +264,109 @@ def check(tree, mapp, variant=""):
     return 1 if fails else 0
 
 
+# ---------------------------------------------------------------- blocking budget (docs/delay-budget.tsv)
+def wait_us(r: dict) -> float:
+    """worst case of one row in us: micro-delays as written, ms waits / poll timeouts / event bounds at their bound, others 0 (non-blocking or not a wait)"""
+    try:
+        v = float(r["value"])
+    except (TypeError, ValueError):
+        return 0.0
+    if r["kind"] in WAIT_KINDS_MS or (r["kind"] == "status_loop" and r["units"] == "ms"):
+        return v * 1000.0
+    if r["kind"] == "delay_us":
+        return v
+    return 0.0
+
+
+def load_budget() -> dict:
+    if not BUDGET_TSV.exists():
+        return {}
+    return {(r["function"], r["context"]): r for r in csv.DictReader(BUDGET_TSV.open(), delimiter="\t") if not r["function"].startswith("#")}
+
+
+def blocking(tree: Path, mapp: Path) -> list:
+    """per function: own blocking (sum of its wait rows, branch-unaware upper bound) + declared extras, context, and per ISR handler root the sum over its call tree.
+    [{function, context, own_us, extra_us, total_us, rows, loop_rows, variable}]"""
+    import types
+
+    import delay_inventory as DI
+    rows, fns, g = DI.build_rows(types.SimpleNamespace(build=str(tree), map=str(mapp)))
+    extra = {k[0]: float(v["extra_us"] or 0) for k, v in load_budget().items() if v["extra_us"]}
+    per = collections.defaultdict(lambda: {"own": 0.0, "rows": 0, "loops": 0, "variable": 0, "ctx": ""})
+    for r in rows:
+        if r["linked"] != "yes" or r["reachable"] != "yes":
+            continue
+        e = per[r["function"]]
+        e["ctx"] = e["ctx"] or r["ctx_all"]
+        w = wait_us(r)
+        if r["kind"] in WAIT_KINDS_MS + ("delay_us",) and r["value"] in ("variable", "", None):
+            e["variable"] += 1
+        if w:
+            e["own"] += w
+            e["rows"] += 1
+            e["loops"] += r["in_loop"] == "yes"
+    out = []
+    masked = {n[1:] for n, f in fns.items() if any(MASKED_RE.search(t) for _, _, t, _ in f.stmts)}
+    for name in sorted(set(per) | set(extra)):
+        e = per[name]
+        ctx = "isr" if "isr" in e["ctx"].split(",") else "masked" if name in masked else "main"
+        out.append({"function": name, "context": ctx, "own_us": e["own"], "extra_us": extra.get(name, 0.0), "total_us": e["own"] + extra.get(name, 0.0),
+                    "rows": e["rows"], "loop_rows": e["loops"], "variable": e["variable"]})
+    own = {o["function"]: o["total_us"] for o in out}
+    for n, f in sorted(fns.items()):
+        if f.reti:                                                       # handler root: sum over everything it can call (union, branch-unaware)
+            tree_us = sum(own.get(c[1:], 0.0) for c in DI.reach(g, [n]))
+            out.append({"function": n[1:], "context": "isr-path", "own_us": tree_us, "extra_us": 0.0, "total_us": tree_us, "rows": 0, "loop_rows": 0, "variable": 0})
+    return out
+
+
+def check_budget(tree: Path, mapp: Path) -> int:
+    allow = load_budget()
+    bad, unused = [], set(allow)
+    for b in blocking(tree, mapp):
+        key = (b["function"], b["context"] if b["context"] != "isr" else "isr")
+        cap = DEFAULT_BUDGET_US.get(b["context"], DEFAULT_BUDGET_US["isr"])
+        a = allow.get(key)
+        if a:
+            unused.discard(key)
+            cap = float(a["budget_us"])
+            if not a["reason"].strip():
+                bad.append(f"{b['function']} ({b['context']}): allow row without a reason")
+        if round(b["total_us"]) > cap:
+            bad.append(f"{b['function']} ({b['context']}) {b['total_us']:.0f} us > budget {cap:.0f} us ({b['rows']} waits)")
+    for k in sorted(unused):
+        if allow[k]["context"] != "isr-path":
+            say(f"  info budget row for {k[0]} ({k[1]}) matches no linked function with waits (run --write-budget to drop)")
+    ok = not bad
+    say(f"  {'PASS' if ok else 'FAIL'} blocking budget (isr / masked {DEFAULT_BUDGET_US['isr']} us, main {DEFAULT_BUDGET_US['main']} us, docs/delay-budget.tsv): "
+        f"{len(bad)} over{(': ' + '; '.join(bad[:6])) if bad else ''}")
+    return 0 if ok else 1
+
+
+def write_budget(tree: Path, mapp: Path) -> int:
+    """add a row (budget = today's worst case, review = unreviewed) for every function over its default; hand rows and their reasons are kept"""
+    allow = load_budget()
+    rows = {k: dict(v) for k, v in allow.items()}
+    for b in blocking(tree, mapp):
+        cap = DEFAULT_BUDGET_US.get(b["context"], DEFAULT_BUDGET_US["isr"])
+        key = (b["function"], b["context"])
+        if b["total_us"] > cap and key not in rows:
+            rows[key] = {"function": b["function"], "context": b["context"], "budget_us": f"{b['total_us']:.0f}", "extra_us": f"{b['extra_us']:.0f}" if b["extra_us"] else "",
+                         "reason": f"{b['rows']} wait(s) of the SDK / our sequence at their bound; value source docs/delays.md", "review": "unreviewed"}
+    with BUDGET_TSV.open("w", newline="") as f:
+        w = csv.DictWriter(f, BUDGET_COLS, delimiter="\t", lineterminator="\n")
+        w.writeheader()
+        w.writerows(rows[k] for k in sorted(rows))
+    say(f"wrote {BUDGET_TSV} ({len(rows)} rows, {sum(r['review'] == 'unreviewed' for r in rows.values())} unreviewed)")
+    return 0
+
+
 def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--write", action="store_true")
     ap.add_argument("--check", action="store_true")
     ap.add_argument("--counts", action="store_true")
+    ap.add_argument("--write-budget", action="store_true", help="add docs/delay-budget.tsv rows for functions over their default budget")
     ap.add_argument("--tree", type=Path, default=ROOT)
     ap.add_argument("--map", type=Path)
     ap.add_argument("--variant", choices=sorted(VARIANT_TSV), default="")
@@ -273,7 +377,11 @@ def main():
         return 0
     mapp = a.map or sorted((a.tree / "tmp/fw").glob("*-be.map"), key=lambda p: p.stat().st_mtime)[-1]
     say(f"delay_audit tree {a.tree} map {mapp.name}")
-    return write(a.tree, mapp, a.variant) if a.write else check(a.tree, mapp, a.variant)
+    if a.write_budget:
+        return write_budget(a.tree, mapp)
+    if a.write:
+        return write(a.tree, mapp, a.variant)
+    return check(a.tree, mapp, a.variant) | (0 if a.variant else check_budget(a.tree, mapp))      # test-op images (hwtest) block on purpose
 
 
 if __name__ == "__main__":

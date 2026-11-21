@@ -272,7 +272,10 @@ PRIM = [   # (kind, regex on callee name)
     ("timer_event", r"_ScalerTimer(?:WD)?(?:Active|Reactive|Activate)\w*TimerEvent\w*"),
     ("wait_event", r"_ScalerTimerWaitFor\w+"),
 ]
-US_RE = re.compile(r"\b(DELAY_(\d+)US(_EXINT)?|ScalerDelay5us|DELAY_XUS(_EXINT)?)\s*\(([^)]*)\)")
+US_RE = re.compile(r"\b(DELAY_(\d+)US(_EXINT)?|ScalerDelay5us|DELAY_XUS(_EXINT)?|AWTO_GAP_RUN|AWTO_DPCD_SETTLE(?:_E)?|AWTO_(?:TP1|LTWR|PULSE)_WAIT|"
+                   r"DP_RX_HPD_IRQ_ASSERT_T2_DELAY)\s*\(([^)]*)\)")
+GAP_CLK_PER_CNT = 12                    # AWTO_DELAY_CLK_PER_CNT: one gap / loop count of fw/timer/delay.c
+MCU_KHZ = 350791                        # default clock (docs/delay-audit.md); gap rows are listed at it
 STATUS_TOK = re.compile(r"ScalerGet\w*Bit|MCU_F[0-9A-F]{3}|\bP[0-9A-F]{1,2}_[0-9A-F]{2}_|GET_\w+\(\)|d_isr_g_usTimerCounter|\bT[FH]2\b|"
                         r"usTimeElapsed|TimeOut|_DATA_OUT_COUNT|ScalerVgipGet\w*|ucHalt|ucPhyCtsAutoMode")
 COUNT_TOK = re.compile(r"(\w+\[?\d*\]?)\s*(?:--|\+\+)?\s*(?:>|<=|<|>=)\s*(\w+)|--\s*(\w+)\s*>\s*0|\((\w+)--\s*>\s*0\)")
@@ -430,6 +433,15 @@ def extract_sites(fns, ctx, live, defs: Eval, build: Path):
                 nm = m.group(1)
                 if nm.startswith("DELAY_XUS"):
                     v = defs.value(m.group(5))
+                elif nm == "AWTO_GAP_RUN" or nm.startswith("AWTO_DPCD_SETTLE"):
+                    n = defs.value(m.group(5) if nm == "AWTO_GAP_RUN" else "AWTO_DPCD_SETTLE_RD")
+                    v = round(n * GAP_CLK_PER_CNT * 1000.0 / MCU_KHZ, 2) if isinstance(n, (int, float)) else None
+                elif nm in ("AWTO_TP1_WAIT", "AWTO_LTWR_WAIT"):
+                    v = defs.value(nm.replace("_WAIT", "_WAIT_US"))
+                elif nm == "AWTO_PULSE_WAIT":
+                    v = 5
+                elif nm == "DP_RX_HPD_IRQ_ASSERT_T2_DELAY":
+                    v = None                                       # variable count x 4 us base: bound in docs/delay-budget.tsv
                 elif nm == "ScalerDelay5us":
                     v = 5
                 else:
@@ -535,7 +547,7 @@ def compiled_out(fns, build: Path, ev: Eval, ctx) -> list[dict]:
                     continue
                 if kind == "delay_us":
                     nm = m.group(1)
-                    v = 5 if nm == "ScalerDelay5us" else (ev.value(m.group(5)) if nm.startswith("DELAY_XUS") else int(m.group(2)))
+                    v = 5 if nm in ("ScalerDelay5us", "AWTO_PULSE_WAIT") else (ev.value(m.group(5)) if nm.startswith("DELAY_XUS") else int(m.group(2)) if m.group(2) else None)
                     units = "us"
                 else:
                     a = split_args(l, m.group(0).rstrip("( ").strip())
