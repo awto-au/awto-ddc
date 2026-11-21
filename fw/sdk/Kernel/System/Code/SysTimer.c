@@ -384,34 +384,15 @@ void SysTimerEventProc(EnumScalerTimerEventID enumEventID)
 // Input Value  : None
 // Output Value : None
 //--------------------------------------------------
-#pragma save
-// dropped pragma (Keil only)
 void SysTimerIntProc0(void) __interrupt(1)
 {
     AWTO_CPUS_ISR(1);
     // Backup for Burst Write Bug
     g_ucBackup_TIMER0 = MCU_FFF4_SCA_INF_ADDR; AwtoT0EvIsr(); AWTO_ISR_WAKE(T0);
 
-#if(_INSTANT_TIMER_EVENT_0 == _ON)
-    // Clear Timer0 flag
-    TF0 = 0;
-
-    TL0 = g_ucTimerCountLByte0;
-    TH0 = g_ucTimerCountHByte0;
-
-    TR0 = _ON;
-
-    if(++g_usTimerAxisCnt0 == g_usTimerEventPeriod0)
-    {
-        g_usTimerAxisCnt0 = 0;
-        UserInterfaceTimer0InstantAccess_EXINT();
-    }
-#endif
-
     // Reload Backup for Burst Write Bug
     MCU_FFF4_SCA_INF_ADDR = g_ucBackup_TIMER0;
 }
-#pragma restore
 
 #ifdef _AWTO_CPU_SUITE
 // Timer1 vector: only the CPU suite image enables it; every other image gets a bare reti (fw_build write_vectors)
@@ -426,8 +407,6 @@ void SysTimerIntProc1(void) __interrupt(3)
 // Input Value  : None
 // Output Value : None
 //--------------------------------------------------
-#pragma save
-// dropped pragma (Keil only)
 void SysTimerIntProc2(void) __interrupt(5)
 {
     // Backup for Burst Write Bug
@@ -437,50 +416,10 @@ void SysTimerIntProc2(void) __interrupt(5)
     AWTO_DIAG_T2ISR();
     TF2 = 0;
 
-#if(_WD_TIMER_INT_SUPPORT == _OFF)
-    // Clear watchdog
-    CLR_MCU_WATCH_DOG();
-#else
-
-
-
-
-
-
-
-
-
-
-#endif
-
-#if(_SYSTEM_TIMER_QUARTER_RESOLUTION == _OFF)
-
     d_isr_g_bNotifyTimer2Int = _TRUE;
 
     // Timer Counter
     d_isr_g_usTimerCounter += 1;
-
-
-#else
-
-    if(g_ucTimerQuarterCount >= 3)
-    {
-        g_ucTimerQuarterCount = 0;
-
-        d_isr_g_bNotifyTimer2Int = _TRUE;
-
-        // Timer Counter
-        d_isr_g_usTimerCounter += 1;
-
-    }
-    else
-    {
-        g_ucTimerQuarterCount++;
-    }
-
-    UserInterfaceTimer2InstantAccess_EXINT();
-
-#endif
 
 #if((_DP_SUPPORT == _ON) && (_DP_IRQ_HPD_MODE == _DP_IRQ_HPD_T2_MODE))
     ScalerSyncDpHpdIrqAssertTimer2EventProc_EXINT();
@@ -490,15 +429,12 @@ void SysTimerIntProc2(void) __interrupt(5)
     // Reload Backup for Burst Write Bug
     MCU_FFF4_SCA_INF_ADDR = g_ucBackup_TIMER2;
 }
-#pragma restore
 
 //--------------------------------------------------
 // Description  : WD Timer Int Function
 // Input Value  : None
 // Output Value : None
 //--------------------------------------------------
-#pragma save
-// dropped pragma (Keil only)
 void SysTimerWDIntProc(void) __interrupt(8)
 {
     // Backup for Burst Write Bug
@@ -519,4 +455,3 @@ void SysTimerWDIntProc(void) __interrupt(8)
     // Reload Backup for Burst Write Bug
     MCU_FFF4_SCA_INF_ADDR = g_ucBackup_WDTIMER;
 }
-#pragma restore

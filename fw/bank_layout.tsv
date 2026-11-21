@@ -2825,6 +2825,7 @@ fn	_ScalerTMDSInterruptInitial	9	0x3dd4	20
 fn	_ScalerTMDSYUV420SupportCheck	9	0x3de8	20
 fn	_ScalerTMDSRx2FreqDetectDisable	9	0x3dfc	100
 fn	_ScalerMeasureUpdateInputTimingPolarity	9	0x3e60	516
+fn	_AwtoT0EvTestIsr	9	0x4064	216
 fn	_ScalerTMDSRx3FreqDetectDisable	9	0x4140	100
 fn	_ScalerVgipInputInitial	9	0x4484	92
 fn	_UserInterfaceGetDpLaneCount	9	0x44e0	16
@@ -2941,7 +2942,7 @@ fn	_AwtoSyncT2Start	9	0x93dc	272
 fn	_ScalerDpRx1GetDpcdInfo_WDINT	9	0x94ec	32
 fn	_ScalerTMDSRx3PowerSavingProc	9	0x950c	80
 fn	_AwtoT0EvFire	9	0x95a0	64
-fn	_AwtoT0EvTest	9	0x96cc	1112
+fn	_AwtoT0EvTest	9	0x95e0	1112
 fn	_ScalerTimerWDInitial	9	0x9b24	100
 fn	_AwtoWdtProbe	9	0x9b88	156
 fn	_AwtoT0EvClock	9	0x9c24	216
@@ -3455,7 +3456,6 @@ fn	_AwtoPsDdcSeen	10	0x88a4	92
 fn	_AwtoMinMs	10	0x8900	20
 fn	_AwtoTick	10	0x8914	8
 fn	_AwtoSyncPut	10	0x89a0	212
-fn	_AwtoT0EvTestIsr	10	0x8ac0	216
 const	_tAwtoInFast	10	0x8b98	16
 const	_tAwtoInSlow	10	0x8ba8	40
 fn	_AwtoDemoLog	10	0x8bd0	120

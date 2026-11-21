@@ -481,10 +481,14 @@ extern void AwtoCpuSuiteMain(void);
 // #138: WD-timer protocol events on Timer0 (fw/timer/t0ev.c)
 extern void AwtoT0EvIsr(void);
 extern void AwtoT0EvClock(void);
+#ifdef _AWTO_T0EV_TEST          // sim / bench image (-D _AWTO_T0EV_TEST, wdt_test t0_* / prio_*): test cmds 0x24..0x2F, 0x5A..0x5F and the EXINT0 hook
 extern void AwtoT0EvTest(unsigned char ucHow);
 extern void AwtoT0EvTestIsr(void);
 extern volatile __xdata unsigned char isr_g_ucAwtoT0Test;
 #define AWTO_T0EV_EXINT0()                                      do { if(isr_g_ucAwtoT0Test != 0) { AwtoT0EvTestIsr(); } } while(0)
+#else
+#define AWTO_T0EV_EXINT0()
+#endif
 #ifdef _AWTO_OSD_HWTEST
 #define AWTO_MSG_RING                                           32      // test image: 48 B less XDATA for its test ops (#268)
 #else

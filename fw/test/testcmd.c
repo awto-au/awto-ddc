@@ -3249,6 +3249,7 @@ void AwtoDiagTestCmd(void)
     {
         AwtoWdtProbe(ucCmd == 0x4F);
     }
+#ifdef _AWTO_T0EV_TEST
     else if((ucCmd >= 0x2A) && (ucCmd <= 0x2F))         // #138 Timer0 events: 2A DP rebuild 30 ms, 2B/2C HDMI RR D2/D3 10 ms,
     {                                                   // 2D 2A+2B, 2E/2F = 2A/2B across a forced clock-switch reload
         AwtoT0EvTest(ucCmd - 0x2A);
@@ -3265,6 +3266,7 @@ void AwtoDiagTestCmd(void)
     {
         isr_g_ucAwtoT0Test = (ucCmd == 0x25) ? 0 : (ucCmd - 0x5C);
     }
+#endif
 #endif
     else if((ucCmd >= 0x60) && (ucCmd <= 0x6F))         // diagnostic screen font: 0x60 + font index (osd_font_load)
     {

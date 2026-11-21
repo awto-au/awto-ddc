@@ -58,6 +58,10 @@ void SysEXINT3(void) __interrupt(9);
 //--------------------------------------------------
 void SysEXINT0(void) __interrupt(0)
 {
+#if((_DVI_SUPPORT == _ON) || (_HDMI_SUPPORT == _ON))
+    BYTE ucPowerStatus;
+#endif
+
     AWTO_CPUS_ISR(0);
     AWTO_ISR_WAKE(Ex0);
     // Backup for Burst Write Bug
@@ -103,7 +107,9 @@ void SysEXINT0(void) __interrupt(0)
     ScalerCecIntHandler_EXINT0();
 #endif
 
-    if((GET_POWER_STATUS() != _POWER_STATUS_SAVING) && (GET_POWER_STATUS() != _POWER_STATUS_OFF))
+    ucPowerStatus = GET_POWER_STATUS();
+
+    if((ucPowerStatus != _POWER_STATUS_SAVING) && (ucPowerStatus != _POWER_STATUS_OFF))
     {
         ScalerTMDSIntHandler_EXINT0();
     }

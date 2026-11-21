@@ -921,6 +921,9 @@ class Runner:
         if not self.has("AwtoT0EvFire"):
             self.row(name, "SKIP", "image without the Timer0 scheduler (pre-#138)")
             return False
+        if not self.has("AwtoT0EvTest"):
+            self.row(name, "SKIP", "image without the test hooks (build -D _AWTO_T0EV_TEST)")
+            return False
         if not getattr(self, "_hooked", False):
             self._hooked, self.fired, self.armed, self.t2_at, self.isr_arm, self.isr_arm_w = True, [], [], [], [], []
             t = self.t
