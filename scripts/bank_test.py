@@ -26,7 +26,7 @@ RT = ROOT / "fw/simtests/_rt"
 W = ROOT / "tmp/banktest"
 BANK = 0x10000
 STEP_CAP = 3_000_000
-CFLAGS = ["-mmcs51", "--model-large", "--std-sdcc11", "--opt-code-size", "--nooverlay", "--noinvariant", "--constseg", "CONST", *T.CFLAGS_EXTRA]
+CFLAGS = ["-mmcs51", "--model-large", "--std-sdcc23", "--opt-code-size", "--nooverlay", "--noinvariant", "--constseg", "CONST", *T.CFLAGS_EXTRA]
 
 
 def run(cmd, **kw):

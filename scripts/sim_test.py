@@ -4,7 +4,7 @@ run both in sdcc-ucsim_51, require identical serial output containing the sentin
 
 usage: sim_test.py [name ...]     (no names = all tests; all run even after a failure)
 - Tests: fw/simtests/*.c (single file) and fw/simtests/<dir>/*.c (multi-file); `_rt/` is the shared runtime.
-- Build: sdcc -S (-mmcs51 --model-large --std-sdcc11 --opt-code-size) -> sdas8051 -plosgff -> sdcc links the .rel.
+- Build: sdcc -S (-mmcs51 --model-large --std-sdcc23 --opt-code-size) -> sdas8051 -plosgff -> sdcc links the .rel.
 - Output: program writes to SBUF (TI polled); ucsim `-S uart=0,out=FILE` captures it (flushed at quit).
 - Stop: commands on stdin `break <_sim_halt>` / `step CAP` / `quit`; step ends at the breakpoint or after CAP.
   CAP = 20M instr: slowest test runs ~3.5M clocks (>=5x margin); ucsim ~9M instr/s so a runaway costs ~2 s. No sentinel = TIMEOUT.
@@ -43,7 +43,7 @@ ROOT = repo_root()
 TESTS = ROOT / "fw/simtests"
 RT = TESTS / "_rt"
 WORK = ROOT / "tmp/simtest"
-CFLAGS = ["-mmcs51", "--model-large", "--std-sdcc11", "--opt-code-size", "--nooverlay", "--noinvariant", *T.CFLAGS_EXTRA]   # = fw_compile
+CFLAGS = ["-mmcs51", "--model-large", "--std-sdcc23", "--opt-code-size", "--nooverlay", "--noinvariant", *T.CFLAGS_EXTRA]   # = fw_compile
 STEP_CAP = 20_000_000
 BUILD_TMO, SIM_TMO = 60, 30
 SENTINEL = "SIM-DONE"

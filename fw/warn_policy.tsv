@@ -9,7 +9,6 @@
 # W158 on (x << n) constants is a compiler false positive (awto-sdcc#47). Per-site entries (overflow 158, always-false 94, enum 291, optimizer 110, unreachable 126) follow from the review in #26.
 # Reviewed 2026-11-05 (#26): overflow 158 / always-false 94 / enum 291 - no bugs; spurious 158 above 127 into BYTE with --fsigned-char
 ^overflow in implicit constant conversion$	Kernel/Scaler/RL6449_Series_Scaler/Code/RL6449_Series_DisplayDPTx.c	489	ok	0x98 into BYTE; asm #0x98
-^enumeration constant outside the range of int	Kernel/Scaler/ScalerCommonFunction/Header/ScalerCommonSyncCommonInclude.h	130	ok	_DP_HPD_TIME_NONE 0xFFFF = int -1, stored 16-bit; only ==/!=/assign uses see it
 ^comparison is always false due to limited range of data type$	User/RTD Factory/Code/RTDFactoryFunction.c	2812	ok	(bit)x == _BIT1 always false in Keil too; callers pass _FORCE_SHOW_NUMBER_OFF only
 # Reviewed 2026-11-05 (#26): optimizer-fold 110 / unreachable 126. 16 BUG sites (non-volatile ISR flags) fixed by the volatile bit rule of scripts/sdk_import.py, no entry
 ^unreachable code$	Kernel/Scaler/RL6449_Series_Scaler/Code/RL6449_Series_DisplayDPTx.c	725	ok	OK-CONFIG: _PANEL_DPTX_LINK_RATE==HBR2 (AWTO_M280DCA_E3B panel) is constant; RBR/HBR table else-branch dead
