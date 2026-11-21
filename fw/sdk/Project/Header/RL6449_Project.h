@@ -1185,8 +1185,8 @@ extern void AwtoWaitLog(unsigned char ucKind, unsigned int usArg, unsigned int u
 #define AWTO_PS_COUNT(i, v)                                     { if((v) != 0) { if(i == 28) { g_pucAwtoInCnt[0]++; } } }
 // GENERATED-END awto_port_cnt
 extern __xdata unsigned char g_pucAwtoInCnt[];   // fw/input/inputs.c: rising edges per counted input (wraps), read by the selector
-#define AWTO_SYNC_N                                             80      // cold boot 38 lines + the input-sync lines (docs/input-sync-timeline.md) x1.1; divides WRAP (#233)
-#define AWTO_SYNC_WRAP                                          240     // seq counts 0..239 (a multiple of AWTO_SYNC_N): entry = seq % N
+#define AWTO_SYNC_N                                             88      // a boot episode is ~80 lines with the gap lines (#284); divides WRAP (#233)
+#define AWTO_SYNC_WRAP                                          176     // seq counts 0..175 (a multiple of AWTO_SYNC_N): entry = seq % N
 #define AWTO_SYNC_IDX(s)                                        ((unsigned char)((s) % AWTO_SYNC_N))
 #define AWTO_SYNC_NEXT(s)                                       ((unsigned char)((((s) + 1) >= AWTO_SYNC_WRAP) ? 0 : ((s) + 1)))
 #define AWTO_SYNC_BACK(s, n)                                    ((unsigned char)(((s) >= (n)) ? ((s) - (n)) : ((s) + AWTO_SYNC_WRAP - (n))))
@@ -1218,7 +1218,7 @@ typedef struct
 } StAwtoSync;
 // The ring is no-init XDATA at the top of the linker pool (fw/rl6449_memory.toml pool end = AWTO_SYNC_ADDR): the crt RAM clear stops
 // below it, so a warm reset / watchdog bite keeps the previous boot's lines (AwtoSyncInit validates it, a cold power-up clears it).
-#define AWTO_SYNC_ADDR                                          0xF409
+#define AWTO_SYNC_ADDR                                          0xF3C9
 typedef char tAwtoSyncEnd[(AWTO_SYNC_ADDR + sizeof(StAwtoSync) == 0xF697) ? 1 : -1];     // ends where the backlight knob starts
 extern __xdata __at(AWTO_SYNC_ADDR) StAwtoSync g_stAwtoSync;
 extern __xdata StAwtoSyncEv g_stAwtoSyncPin;  // #150: this boot's reason line, kept out of the ring
