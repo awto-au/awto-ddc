@@ -414,10 +414,23 @@ extern void AwtoOsdWdtLines(void);
 extern void ScalerTimerWDInitial(void);
 #define AWTO_WDT_IRQ()                                          AwtoWdtIrq(SP, d_isr_bs_cur)
 // clr_wdt latches the old counters: FFAC = CNT3[11:5], FFAD = CNT1 -> the gap this poke ended, for ucMaxPoke + the site (#150)
-#define AWTO_WDT_POKE(site)                                     do { unsigned char ucG_; AWTO_XFR(AWTO_R_WATCHDOG_TIMER) |= AWTO_F_WATCHDOG_TIMER_CLR_WDT; \
-                                                                     ucG_ = ((AWTO_XFR(AWTO_R_WATCHDOG_CNT1_VALUE) & AWTO_F_WATCHDOG_CNT1_VALUE_WDT_CNT1_VALUE) != 0) ? 0xFF : (AWTO_XFR(AWTO_R_WATCHDOG_CNT3_VALUE) & AWTO_F_WATCHDOG_CNT3_VALUE_WDT_CNT3_H_VALUE); \
-                                                                     if(ucG_ > isr_g_stAwtoWdt.ucMaxPoke) { isr_g_stAwtoWdt.ucMaxPoke = ucG_; g_ucAwtoPokeSite = (site); \
-                                                                         g_ucAwtoPokeFrom = g_ucAwtoPokeLast; } g_ucAwtoPokeLast = (site); } while(0)
+#define AWTO_WDT_POKE(site)                                     AwtoWdtPoke(site)
+// Stall classes (#281): longest poke gap per class, by the site that ended it, from the counters the poke latches (CNT3 / CNT2, xtal clock):
+// gap = (FFAC << 9 | FFAB << 1 | FFAA >> 7) x 8.94 us (128 xtal clocks), 16 bit = up to 586 ms. Host: scripts/mon_decode.py, health `monitor` row.
+#define AWTO_STALL_MAIN                                         0       // ended by the main-loop pass poke
+#define AWTO_STALL_WAIT                                         1       // ScalerTimerDelayXms / polling / event wait / message wait
+#define AWTO_STALL_FLASH                                        2       // flash write-enable .. sector write (flash halts the MCU during erase / program)
+#define AWTO_STALL_OTHER                                        3       // OSD string, console line, stack check, ...
+#define AWTO_STALL_N                                            4
+#define AWTO_STALL_UNIT_NS                                      8938    // 128 / 14.318 MHz
+typedef struct
+{
+    unsigned int usGap[AWTO_STALL_N];           // longest gap this boot, x 8.94 us
+    unsigned char ucSite[AWTO_STALL_N];         // AWTO_WDT_S_* that ended it
+    unsigned char ucFrom[AWTO_STALL_N];         // AWTO_WDT_S_* of the poke before
+} StAwtoStall;
+extern volatile __xdata StAwtoStall g_stAwtoStall;
+extern void AwtoWdtPoke(unsigned char ucSite);
 // poke sites (g_ucAwtoPokeSite: which one ended the longest gap; rtd_crash.py SITES)
 #define AWTO_WDT_S_PASS                                         1       // main-loop pass
 #define AWTO_WDT_S_DELAY                                        2       // ScalerTimerDelayXms
@@ -1254,14 +1267,15 @@ extern __xdata unsigned char g_ucAwtoMemForce;  // 1 = ScalerMDomainMemoryConfig
 #define AWTO_MON_BEAT_K                                         30      // heartbeat = every K samples (5 min): all rows again; between them only a changed row
 #define AWTO_MON_ADC_STEP                                       16      // an ADC row changed = a channel moved 2 codes (8 per code)
 #define AWTO_MON_TRIM_STEP                                      4       // IOSC trim counter moved this many counts
+#define AWTO_MON_GAP_STEP                                       10      // longest stall grew by this much (0.1 ms: 1 ms) = a new LOOP row
 #ifndef AWTO_MON_FLASH_CHECK
 #define AWTO_MON_FLASH_CHECK(beat)                              // hook, every sample (beat != 0 = heartbeat): the flash read-window CRC check (awto-ddc#238) goes here
 #endif
-typedef struct                                  // 21 B, byte-only (LE = BE layout); host: scripts/mon_decode.py, unit_health.py
+typedef struct                                  // 33 B, byte-only (LE = BE layout); host: scripts/mon_decode.py, unit_health.py
 {
     unsigned char ucMagic0;                     // 'M'
     unsigned char ucMagic1;                     // 'N'
-    unsigned char ucVersion;                    // 1
+    unsigned char ucVersion;                    // 2
     unsigned char ucOn;                         // registry monitor at the last sample
     unsigned char ucBeat;                       // samples taken (wraps)
     unsigned char pucAdc[4];                    // A0..A3 raw
@@ -1275,8 +1289,10 @@ typedef struct                                  // 21 B, byte-only (LE = BE layo
     unsigned char ucBoot;                       // AwtoBootReason()
     unsigned char pucUp[3];                     // uptime s, high byte first
     unsigned char ucRows;                       // sync rows written by the monitor (saturates)
+    unsigned char pucGap[AWTO_STALL_N][2];      // longest poke gap per class (AWTO_STALL_*), 0.1 ms, high byte first
+    unsigned char pucGapSite[AWTO_STALL_N];     // AWTO_WDT_S_* that ended it
 } StAwtoMon;
-typedef char AwtoMonSizeCheck[(sizeof(StAwtoMon) == 21) ? 1 : -1];
+typedef char AwtoMonSizeCheck[(sizeof(StAwtoMon) == 33) ? 1 : -1];
 extern __xdata StAwtoMon g_stAwtoMon;
 extern void AwtoMonSample(void);
 extern void AwtoOsdDemo(unsigned char ucGroup);

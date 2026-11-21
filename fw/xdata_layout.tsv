@@ -31,7 +31,7 @@ ScalerDPRx1_SeptPhy	0xd700	2330	37
 awto_osd_font	0xd700	2367	36
 freq	0xd700	2403	34
 ScalerCommonMcu	0xd700	2437	33
-monitor	0xd700	2470	32
+wdt	0xd700	2470	26
 RTD2014UserInterfaceCec	0xd700	2502	28
 SysSource	0xd700	2530	27
 UserCommonInterface	0xd700	2557	27
@@ -70,7 +70,6 @@ ScalerDP_SeptPhy	0xe380	136	8
 ScalerDisplay	0xe380	144	7
 awto_reg_burst	0xe380	151	7
 pacman_classic	0xe380	158	7
-wdt	0xe380	165	7
 OsdChange2BitColor	0xe380	172	6
 RL6449_Series_OsdHardwareVLC	0xe380	178	6
 ScalerCommonFlashWrite	0xe380	184	6
@@ -129,6 +128,7 @@ SysCec	0xe580	81	1
 __ovl	0xe580	82	1
 flash_screen	0xe580	83	1
 delay	0xe580	84	12
+monitor	0xe580	96	48
 sync	0xe780	37	678
 asteroids	0xe780	715	515
 ScalerCommonDebug	0xe780	1230	363

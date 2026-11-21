@@ -3359,7 +3359,7 @@ static void AwtoPutMon(BYTE ucArg)              // fmt mon (fw/diag/monitor.c; h
     else if(ucArg == AWTO_MON_EV_LOOP)
     {
         AwtoPutStr("main loop "); AwtoPutNum(s_ulAwtoLnV >> 16, 1);
-        AwtoPutStr(" passes/s, longest watchdog gap "); AwtoPutNum(s_ulAwtoLnV & 0xFFFF, 1); AwtoPutStr("ms");
+        AwtoPutStr(" passes/s, longest watchdog gap "); AwtoPutTenths(s_ulAwtoLnV & 0xFFFF); AwtoPutStr("ms");
     }
     else if(ucArg == AWTO_MON_EV_HEAD)
     {

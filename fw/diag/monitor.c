@@ -10,6 +10,7 @@ static __xdata BYTE s_ucMonBeat;                // samples since the last heartb
 static __xdata BYTE s_pucMonAdc[4];             // last logged
 static __xdata WORD s_usMonTrim;
 static __xdata BYTE s_ucMonPoke;
+static __xdata WORD s_usMonGap;                // longest gap logged, 0.1 ms
 static __xdata BYTE s_ucMonStack;
 
 static BYTE AwtoMonMoved(BYTE ucA, BYTE ucB, BYTE ucStep)
@@ -24,6 +25,7 @@ void AwtoMonSample(void)
     BYTE ucAdc = 0;
     WORD usTrim;
     WORD usLoop;
+    WORD usGap = 0;
     DWORD ulUp;
     BYTE ucLog;
 
@@ -35,7 +37,7 @@ void AwtoMonSample(void)
         }
         g_stAwtoMon.ucMagic0 = 'M';
         g_stAwtoMon.ucMagic1 = 'N';
-        g_stAwtoMon.ucVersion = 1;
+        g_stAwtoMon.ucVersion = 2;
     }
     g_stAwtoMon.ucOn = (AWTO_SET(MONITOR) != 0) ? 1 : 0;
     if(g_stAwtoMon.ucOn == 0)
@@ -55,6 +57,15 @@ void AwtoMonSample(void)
     g_stAwtoMon.ucLoopLo = (BYTE)usLoop;
     g_stAwtoMon.ucMaxPoke = isr_g_stAwtoWdt.ucMaxPoke;
     g_stAwtoMon.ucPokeSite = g_ucAwtoPokeSite;
+    for(ucI = 0; ucI < AWTO_STALL_N; ucI++)
+    {
+        WORD usG = (WORD)(((DWORD)g_stAwtoStall.usGap[ucI] * AWTO_STALL_UNIT_NS) / 100000UL);
+
+        g_stAwtoMon.pucGap[ucI][0] = (BYTE)(usG >> 8);
+        g_stAwtoMon.pucGap[ucI][1] = (BYTE)usG;
+        g_stAwtoMon.pucGapSite[ucI] = g_stAwtoStall.ucSite[ucI];
+        usGap = (usG > usGap) ? usG : usGap;
+    }
     g_stAwtoMon.ucStack = g_ucAwtoStackHigh;
     g_stAwtoMon.ucBoot = AwtoBootReason();
     ulUp = AwtoMs() / 1000;
@@ -89,10 +100,11 @@ void AwtoMonSample(void)
         AwtoSyncPush(AWTO_SYNC_EV_MON, AWTO_MON_EV_TRIM, usTrim);
         ucLog++;
     }
-    if((ucBeat != 0) || (g_stAwtoMon.ucMaxPoke != s_ucMonPoke))
+    if((ucBeat != 0) || (g_stAwtoMon.ucMaxPoke != s_ucMonPoke) || (usGap >= s_usMonGap + AWTO_MON_GAP_STEP))
     {
         s_ucMonPoke = g_stAwtoMon.ucMaxPoke;
-        AwtoSyncPush(AWTO_SYNC_EV_MON, AWTO_MON_EV_LOOP, ((DWORD)usLoop << 16) | (((WORD)g_stAwtoMon.ucMaxPoke * 293) >> 6));
+        s_usMonGap = usGap;
+        AwtoSyncPush(AWTO_SYNC_EV_MON, AWTO_MON_EV_LOOP, ((DWORD)usLoop << 16) | usGap);
         ucLog++;
     }
 #if(AWTO_LOOP_PACING > 0)

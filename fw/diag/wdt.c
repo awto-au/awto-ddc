@@ -44,6 +44,47 @@ static void AwtoWdtFresh(void)                  // empty record: cold RAM, a hos
 volatile __xdata BYTE g_ucAwtoPokeSite;         // AWTO_WDT_S_* that ended the longest poke gap this boot (#150)
 volatile __xdata BYTE g_ucAwtoPokeFrom;         // ... and the site that started it
 volatile __xdata BYTE g_ucAwtoPokeLast;
+volatile __xdata StAwtoStall g_stAwtoStall;
+
+// Every watchdog poke (AWTO_WDT_POKE): clear, then read the counters clr_wdt latched = the gap this poke ended (#150, #281).
+void AwtoWdtPoke(BYTE ucSite)
+{
+    BYTE ucAc;
+    BYTE ucAb;
+    BYTE ucAa;
+    BYTE ucCls;
+    WORD usGap;
+
+    AWTO_XFR(AWTO_R_WATCHDOG_TIMER) |= AWTO_F_WATCHDOG_TIMER_CLR_WDT;
+    ucAc = AWTO_XFR(AWTO_R_WATCHDOG_CNT3_VALUE) & AWTO_F_WATCHDOG_CNT3_VALUE_WDT_CNT3_H_VALUE;
+    ucAb = AWTO_XFR(AWTO_R_WATCHDOG_CNT23_VALUE);
+    ucAa = AWTO_XFR(AWTO_R_WATCHDOG_CNT2_VALUE);
+    if((AWTO_XFR(AWTO_R_WATCHDOG_CNT1_VALUE) & AWTO_F_WATCHDOG_CNT1_VALUE_WDT_CNT1_VALUE) != 0)
+    {
+        ucAc = 0xFF;
+        usGap = 0xFFFF;
+    }
+    else
+    {
+        usGap = ((WORD)ucAc << 9) | ((WORD)ucAb << 1) | (ucAa >> 7);
+    }
+    if(ucAc > isr_g_stAwtoWdt.ucMaxPoke)
+    {
+        isr_g_stAwtoWdt.ucMaxPoke = ucAc;
+        g_ucAwtoPokeSite = ucSite;
+        g_ucAwtoPokeFrom = g_ucAwtoPokeLast;
+    }
+    ucCls = (ucSite == AWTO_WDT_S_PASS) ? AWTO_STALL_MAIN :
+            ((ucSite >= AWTO_WDT_S_DELAY) && (ucSite <= AWTO_WDT_S_MSG)) ? AWTO_STALL_WAIT :
+            ((ucSite >= AWTO_WDT_S_WREN) && (ucSite <= AWTO_WDT_S_FWRITE)) ? AWTO_STALL_FLASH : AWTO_STALL_OTHER;
+    if(usGap > g_stAwtoStall.usGap[ucCls])
+    {
+        g_stAwtoStall.usGap[ucCls] = usGap;
+        g_stAwtoStall.ucSite[ucCls] = ucSite;
+        g_stAwtoStall.ucFrom[ucCls] = g_ucAwtoPokeLast;
+    }
+    g_ucAwtoPokeLast = ucSite;
+}
 
 void AwtoWdtLibPoke(BYTE ucSite)                // the FunctionLib flash read / write loops (no project header there)
 {
@@ -109,6 +150,7 @@ void AwtoStackDeepTest(void)                   // test cmd AWTO_TC_STACK_DEEP: z
 
 void AwtoWdtInit(void)
 {
+    BYTE ucI;
     BYTE ucOld = isr_g_stAwtoWdt.ucBoot;
     BYTE ucNew = 0;
 
@@ -145,6 +187,10 @@ void AwtoWdtInit(void)
     isr_g_stAwtoWdt.ucPassLo = 0;
     isr_g_stAwtoWdt.ucMaxPass = 0;
     isr_g_stAwtoWdt.ucMaxPoke = 0;
+    for(ucI = 0; ucI < sizeof(g_stAwtoStall); ucI++)
+    {
+        ((volatile __xdata BYTE *)&g_stAwtoStall)[ucI] = 0;
+    }
 }
 
 // Why this boot (#29). Inputs: the canary only (no reset-cause flag in DW8051 or RL6449; a found one goes in here first).

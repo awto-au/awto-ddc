@@ -8,13 +8,15 @@ sys.path.insert(0, str(ROOT / "scripts"))
 import mon_decode as D
 import sync_log as SL
 
-BLOCK = bytes([ord("M"), ord("N"), 1, 1, 7, 0xF8, 0xF8, 0x58, 0x20, 0x07, 0xCF, 0x02, 0xBC, 0x0F, 3, 0xBC, 1, 0, 0x0E, 0x10, 9])
+BLOCK = bytes([ord("M"), ord("N"), 1, 1, 7, 0xF8, 0xF8, 0x58, 0x20, 0x07, 0xCF, 0x02, 0xBC, 0x0F, 3, 0xBC, 1, 0, 0x0E, 0x10, 9, 0, 14, 0, 40, 0, 3, 0, 200, 1, 1, 2, 10])
 
 
 def test_decode_block():
     d = D.decode(BLOCK)
     assert d["adc"] == [0xF8, 0xF8, 0x58, 0x20] and d["trim"] == 0x07CF == 1999 and d["loop"] == 700
     assert d["up_s"] == 3600 and d["stack"] == 0xBC and d["rows"] == 9 and d["poke_ms"] == round(15 * 293 / 64)
+    assert d["gap"] == [1.4, 4.0, 0.3, 20.0] and d["gap_site"] == [1, 1, 2, 10]
+    assert "longest stall 20.0 ms (main 1.4 ms at site 1" in D.text(d)
     assert "ADC A0 F8 A1 F8 A2 58 A3 20" in D.text(d) and "boot cold power-up" in D.text(d)
 
 
@@ -25,7 +27,7 @@ def test_decode_no_sample():
 def test_sync_row_text():
     assert SL.mon_text(1, 0xF8F85820) == "ADC A0 F8 A1 F8 A2 58 A3 20"
     assert SL.mon_text(2, 1999) == "IOSC trim count 1999"
-    assert SL.mon_text(3, 700 << 16 | 18) == "main loop 700 passes/s, longest watchdog gap 18ms"
+    assert SL.mon_text(3, 700 << 16 | 18) == "main loop 700 passes/s, longest watchdog gap 1.8ms"
     assert SL.mon_text(5, 15 << 24 | 11 << 12 | 300) == "headroom 300 passes/s, busy 15 %, worst pass 0.687ms"
     assert SL.mon_text(4, 3600 << 8 | 0xBC) == "uptime 3600 s, stack high BC"
     rows = SL.load_rows(ROOT / "fw/awto/sync.tsv")

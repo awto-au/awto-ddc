@@ -170,13 +170,13 @@ def cec_line(arg: int, v: int) -> str:
 
 
 def mon_text(arg: int, v: int) -> str:
-    """health monitor rows (firmware copy: fw/osd/console.c case 23); the watchdog gap is already in ms"""
+    """health monitor rows (firmware copy: fw/osd/console.c case 23); the watchdog gap is in 0.1 ms"""
     if arg == 1:
         return f"ADC A0 {v >> 24:02X} A1 {(v >> 16) & 0xFF:02X} A2 {(v >> 8) & 0xFF:02X} A3 {v & 0xFF:02X}"
     if arg == 2:
         return f"IOSC trim count {v}"
     if arg == 3:
-        return f"main loop {v >> 16} passes/s, longest watchdog gap {v & 0xFFFF}ms"
+        return f"main loop {v >> 16} passes/s, longest watchdog gap {(v & 0xFFFF) // 10}.{(v & 0xFFFF) % 10}ms"
     if arg == 5:
         return f"headroom {v & 0xFFF} passes/s, busy {v >> 24} %, worst pass {(((v >> 12) & 0xFFF) * 1000 // 16) / 1000:.3f}ms"
     if arg == 4:

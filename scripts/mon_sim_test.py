@@ -118,7 +118,7 @@ def main():
         r.check("first sample: the four rows (+ headroom on a paced image) on the heartbeat, ADC row decoded", kinds(first) == beat_rows
                 and any("ADC A0 F8 A1 F8 A2 58 A3 20" in x for x in first), str(kinds(first)))
         r.check("first sample: loop rate > 0 and a watchdog gap are in the row",
-                any(re.search(r"main loop [1-9]\d* passes/s, longest watchdog gap \d+ms", x) for x in first))
+                any(re.search(r"main loop [1-9]\d* passes/s, longest watchdog gap \d+\.\dms", x) for x in first))
         c0 = r.calls
         r.wait(ms / 1000.0 + pad)
         r.check("one sample period, nothing changed: no new row", r.new() == [] or kinds(r.new()) == [], f"{r.new()}")
