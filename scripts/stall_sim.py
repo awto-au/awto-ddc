@@ -105,7 +105,7 @@ def run_other(name, a, im, worst):
         runpy.run_path(str(Path(__file__).resolve().parent / (mod + ".py")), run_name="__main__")
     except SystemExit:
         pass
-    except Exception as e:                 # the scenario's own end checks (crash block read) may fail under the hooks; the stretches seen so far count
+    except (S.SimError, TypeError, OSError) as e:                 # the scenario's own end checks (crash block read) may fail under the hooks; the stretches seen so far count
         say(f"scenario {name} ended with {type(e).__name__}: {e}")
     finally:
         sys.argv = argv

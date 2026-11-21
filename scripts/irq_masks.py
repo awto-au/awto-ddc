@@ -33,10 +33,10 @@ SOURCES = {"SCALER_IRQ": "all scaler IRQs into EXINT0 (P0_04[7] ScalerGlobalIRQC
 LIMIT_US = {"WDT warning": 146000, "Timer2 tick": 1000, "EXINT0 AUX reply": 300}   # starvation limits: docs/delays.md (WDT margin), 1 ms tick, DP AUX reply
 DEFAULT_BUDGET_US = 100                  # non-PHY masked section; a longer one needs budget_us + reason in docs/irq-masks.tsv
 MCU_KHZ = 350791                         # default MCU clock (delay_audit clock_states); 12 clocks per machine cycle are the listing's [n]
-CLR = re.compile(r"(?:clr|jbc)\s+_?(EA|EX0|EX1|ET0|ET1|ET2|ES|EX2)\b(?:$|,)", re.I)          # jbc ea,L = SDCC __critical
-SET = re.compile(r"setb\s+_?(EA|EX0|EX1|ET0|ET1|ET2|ES|EX2)$", re.I)
-MOVB = re.compile(r"mov\s+_?(EA|EX0|EX1|ET0|ET1|ET2|ES|EX2),c$", re.I)
-SAVE = re.compile(r"mov\s+c,_?(EA|EX0|EX1|ET0|ET1|ET2|ES|EX2)$", re.I)
+CLR = re.compile(r"(?:clr|jbc)\s+_?(EA|EX0|EX1|ET0|ET1|ET2|ES|EX2)\b(?:$|,)", re.IGNORECASE)          # jbc ea,L = SDCC __critical
+SET = re.compile(r"setb\s+_?(EA|EX0|EX1|ET0|ET1|ET2|ES|EX2)$", re.IGNORECASE)
+MOVB = re.compile(r"mov\s+_?(EA|EX0|EX1|ET0|ET1|ET2|ES|EX2),c$", re.IGNORECASE)
+SAVE = re.compile(r"mov\s+c,_?(EA|EX0|EX1|ET0|ET1|ET2|ES|EX2)$", re.IGNORECASE)
 BYTEW = re.compile(r"(mov|anl|orl)\s+_(IE|EIE)\b(.*)")
 PRIO = re.compile(r"mov\s+_IP,#(0x[0-9a-f]+)")
 JUMPS = re.compile(r"(sjmp|ajmp|ljmp|jz|jnz|jc|jnc|jb|jnb|jbc|cjne|djnz)\s+(.*)$")
@@ -120,7 +120,7 @@ class Model:
 
     def succ(self, fn, i):
         f = self.fns[fn]
-        a, t = f.ins[i]
+        t = f.ins[i][1]
         if t.startswith(("ret", "reti")):
             return [], False
         m = JUMPS.match(t)
@@ -163,6 +163,19 @@ class Model:
                 esc = esc or escf.get(s, False)
             best[i], escf[i] = cost + best_s, esc
         return best.get(start, 0.0), escf.get(start, False), loops
+
+    def region(self, fn, start, stops):
+        """instruction indexes reachable from start without passing a stop (the masked instructions; forward and backward edges)"""
+        seen, todo = set(), [start]
+        while todo:
+            i = todo.pop()
+            if i in seen:
+                continue
+            seen.add(i)
+            if i in (stops or ()) and i != start:
+                continue
+            todo.extend(self.succ(fn, i)[0])
+        return seen
 
     def fn_cost(self, fn):
         if fn in self.memo:
@@ -223,8 +236,8 @@ def find_sites(M: Model):
             if mp:
                 file, line, _ = stmt_at(f, a)
                 seq[("IP", "priority")] += 1
-                sites.append(dict(function=c_function(file, line, fn[1:]), symbol=fn[1:], file=short(file), line=line, addr=a,
-                                  bit="IP", kind="priority " + mp.group(1), restore="-", static_us=0.0, waits="", loops=0, escape="", calls=[], ord=seq[("IP", "priority")], start=i, end=i + 1))
+                sites.append({"function": c_function(file, line, fn[1:]), "symbol": fn[1:], "file": short(file), "line": line, "addr": a, "bit": "IP", "kind": "priority " + mp.group(1),
+                              "restore": "-", "static_us": 0.0, "waits": "", "loops": 0, "escape": "", "calls": [], "ord": seq[("IP", "priority")], "start": i, "end": i + 1, "nodes": set()})
             if not m and not bit:
                 mb = BYTEW.match(t)
                 if mb and mb.group(1) != "orl":
@@ -237,28 +250,30 @@ def find_sites(M: Model):
                 us, esc, loops = M.path(fn, i, stops)
                 j = max(stops) if stops else None
                 file, line, _ = stmt_at(f, a)
-                waits = [(ad, w) for ad, w in M.wait[fn].items() if a <= ad and (j is None or ad < f.ins[j][0]) and w]
-                calls = sorted({c[1:] for k in range(i, j if j is not None else n) for c in (lambda mm: [x for x in M.callee(mm.group(2))] if mm else [])(CALLS.match(f.ins[k][1]))})
+                nodes = M.region(fn, i, stops)
+                addrs = {f.ins[k][0] for k in nodes}
+                waits = [(ad, w) for ad, w in M.wait[fn].items() if ad in addrs and w]
+                calls = sorted({c[1:] for k in nodes if CALLS.match(f.ins[k][1]) for c in M.callee(CALLS.match(f.ins[k][1]).group(2))})
                 restore = "none (open)" if j is None else ("saved value" if MOVB.match(f.ins[j][1]) else "setb") + (" + escapes" if esc and j is not None else "")
                 seq[(bit, kind)] += 1
-                sites.append(dict(function=c_function(file, line, fn[1:]), symbol=fn[1:], file=short(file), line=line, addr=a, bit=bit, kind=kind,
-                                  restore=restore, static_us=us, waits=";".join(f"{w:.0f}us" for _, w in waits), loops=loops, escape="yes" if esc else "",
-                                  calls=calls, ord=seq[(bit, kind)], start=i, end=j))
+                sites.append({"function": c_function(file, line, fn[1:]), "symbol": fn[1:], "file": short(file), "line": line, "addr": a, "bit": bit, "kind": kind,
+                              "restore": restore, "static_us": us, "waits": ";".join(f"{w:.0f}us" for _, w in waits), "loops": loops, "escape": "yes" if esc else "",
+                              "calls": calls, "ord": seq[(bit, kind)], "start": i, "end": j, "nodes": nodes})
             ms = SET.match(t)
             if ms:
                 bit = ms.group(1).upper()
                 saved = any((SAVE.match(x[1]) and SAVE.match(x[1]).group(1).upper() == bit) or (CLR.match(x[1]) and CLR.match(x[1]).group(1).upper() == bit) for x in f.ins[:i])
                 if not saved:
                     file, line, _ = stmt_at(f, a)
-                    unc.append(dict(function=c_function(file, line, fn[1:]), symbol=fn[1:], bit=bit, file=file, line=line, addr=a))
+                    unc.append({"function": c_function(file, line, fn[1:]), "symbol": fn[1:], "bit": bit, "file": file, "line": line, "addr": a})
     return sites, unc
 
 
-def reach_calls(M, fn, lo, hi):
-    """functions a section (instruction range of fn) can reach through calls"""
-    f = M.fns["_" + fn] if not fn.startswith("_") else M.fns[fn]
+def reach_calls(M, fn, nodes):
+    """functions a section (its instruction indexes in fn) can reach through calls"""
+    f = M.fns[fn if fn.startswith("_") else "_" + fn]
     roots = set()
-    for k in range(lo, hi):
+    for k in nodes:
         m = CALLS.match(f.ins[k][1])
         if m:
             roots.update(M.callee(m.group(2)))
@@ -275,16 +290,14 @@ def build(tree: Path, mapp: Path):
     out = []
     for s in sites:
         fnk = "_" + s["symbol"]
-        hi = s["end"] if s["end"] is not None else len(M.fns[fnk].ins)
-        reach = reach_calls(M, s["symbol"], s["start"], hi)
+        reach = reach_calls(M, s["symbol"], s["nodes"])
         hz = sorted({f"{u['function']}:{u['file'].split('/')[-1]}:{u['line']}" for r in reach for u in byfn.get(r, []) if u["bit"] == s["bit"] or s["bit"] in ("EA", "IE")})
         file = s["file"]
         src = SOURCES.get(s["bit"], s["bit"])
         us = s["static_us"]
         starves = []
-        if s["bit"] in ("EA", "IE", "EIE"):
-            if us > LIMIT_US["WDT warning"]:
-                starves.append("WDT warning")
+        if s["bit"] in ("EA", "IE", "EIE") and us > LIMIT_US["WDT warning"]:
+            starves.append("WDT warning")
         if s["bit"] in ("EA", "IE", "EIE", "ET2") and us > LIMIT_US["Timer2 tick"]:
             starves.append("Timer2 tick")
         if s["bit"] in ("EA", "IE", "EIE", "EX0") and us > LIMIT_US["EXINT0 AUX reply"]:
@@ -357,7 +370,7 @@ def check(tree, mapp):
 
 def sim_merge(path):
     sim = {}
-    for r in csv.DictReader(Path(path).open(), delimiter="\t"):
+    for r in csv.DictReader(Path(path).read_text().splitlines(), delimiter="\t"):
         if r["class"].startswith("masked"):
             k = (re.sub(r"^CH_", "", r["site"]), r["class"].split()[-1])
             sim[k] = max(sim.get(k, 0.0), float(r["longest_ms_x10"]) * 100.0)         # tsv unit 0.1 ms -> us
@@ -386,7 +399,7 @@ def main():
     a = ap.parse_args()
     if a.sim_merge:
         return sim_merge(a.sim_merge)
-    mapp = a.map or sorted((a.tree / "tmp/fw").glob("*-be.map"), key=lambda p: p.stat().st_mtime)[-1]
+    mapp = a.map or max((a.tree / "tmp/fw").glob("*-be.map"), key=lambda p: p.stat().st_mtime)
     return write(a.tree, mapp) if a.write else check(a.tree, mapp)
 
 
