@@ -1,0 +1,10 @@
+# awto-sdcc isr_volatile_link.py allow list for this tree (W381 ISR objects that need no volatile); one line of reason each.
+# Run: python3 scripts/isr_volatile_link.py --ddc tmp/gate/opt/bin --allow <this file>  (in /mnt/2tb/git/awto-sdcc)
+# Class A = used by one ISR only (nothing preempts it, no main use); delay counters: volatile would break the djnz loop.
+[object]
+"d_isr_g_ucDelay5usI_EXINT" = "class A: EXINT0 delay counter (one per context, #281); djnz loop, volatile would change the calibrated timing"
+"d_isr_g_ucDelayXus_Counter_EXINT" = "class A: EXINT0 outer delay counter (#281); djnz loop"
+"d_g_ucDelay5usI_INTLO" = "class A: EXINT1 + T0 delay counter (same priority, cannot preempt each other, #281); djnz loop"
+"d_g_ucDelayXus_Counter_INTLO" = "class A: T0 outer delay counter (#281); djnz loop"
+"d_g_ucDpRxHpdIrqAssertT2EventDelay5usI" = "class A: T2 event delay counter, only SysTimerIntProc2 touches it (#281)"
+"pData_EXINT" = "class A: EXINT0 scratch slots, no other context uses them in this build (#281)"

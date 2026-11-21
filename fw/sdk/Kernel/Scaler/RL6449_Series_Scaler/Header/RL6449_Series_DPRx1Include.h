@@ -175,7 +175,6 @@ extern BYTE g_ucDpRx1LinkStatus01;
 extern BYTE g_ucDpRx1LinkStatus23;
 extern BYTE g_ucDpRx1LinkRequest01;
 extern BYTE g_ucDpRx1LinkRequest23;
-extern BYTE g_ucDpRx1Temp;
 extern BYTE g_pucDpRx1Backup[3];
 
 extern BYTE isr_g_ucDpRx1Info;

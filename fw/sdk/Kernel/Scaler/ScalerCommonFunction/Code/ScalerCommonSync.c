@@ -3554,6 +3554,10 @@ void ScalerSyncDdcDetectDebounce_EXINT1(void)
 }
 #pragma restore
 
+#undef AWTO_DLY5_CNT
+#define AWTO_DLY5_CNT d_g_ucDelay5usI_INTLO
+#undef AWTO_DLYX_CNT
+#define AWTO_DLYX_CNT d_g_ucDelayXus_Counter_INTLO
 //--------------------------------------------------
 // Description  : TMDS Power Saving Detect DDC Handshake
 // Input Value  : None
@@ -3789,6 +3793,10 @@ BYTE ScalerSyncDdcDetect_EXINT1(void)
 
     return _FALSE;
 }
+#undef AWTO_DLY5_CNT
+#define AWTO_DLY5_CNT d_isr_g_ucDelay5usI_EXINT
+#undef AWTO_DLYX_CNT
+#define AWTO_DLYX_CNT d_isr_g_ucDelayXus_Counter_EXINT
 
 //--------------------------------------------------
 // Description  : Initial Setting for TMDS Scanning Port(Power Normal)

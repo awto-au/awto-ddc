@@ -49,7 +49,6 @@ BYTE g_ucDpRx1LinkStatus01;
 BYTE g_ucDpRx1LinkStatus23;
 BYTE g_ucDpRx1LinkRequest01;
 BYTE g_ucDpRx1LinkRequest23;
-BYTE g_ucDpRx1Temp;
 BYTE g_pucDpRx1Backup[3];
 BYTE isr_g_ucDpRx1Info;
 BYTE g_ucDpRx1LinkRate;

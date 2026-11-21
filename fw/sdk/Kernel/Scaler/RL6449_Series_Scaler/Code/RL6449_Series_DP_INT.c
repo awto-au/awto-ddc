@@ -892,6 +892,10 @@ void ScalerDpIntHandler_EXINT0(void)
 }
 
 #if(_WD_TIMER_INT_SUPPORT == _ON)
+#undef AWTO_DLY5_CNT
+#define AWTO_DLY5_CNT d_g_ucDelay5usI_INTLO
+#undef AWTO_DLYX_CNT
+#define AWTO_DLYX_CNT d_g_ucDelayXus_Counter_INTLO
 //--------------------------------------------------
 // Description  : Handle DP Related WD Timer Event
 // Input Value  : ucEventID
@@ -1021,6 +1025,10 @@ void ScalerDpWDTimerEventProc_WDINT(EnumScalerWDTimerEventID enumEventID)
             break;
     }
 }
+#undef AWTO_DLY5_CNT
+#define AWTO_DLY5_CNT d_isr_g_ucDelay5usI_EXINT
+#undef AWTO_DLYX_CNT
+#define AWTO_DLYX_CNT d_isr_g_ucDelayXus_Counter_EXINT
 #endif
 
 //--------------------------------------------------

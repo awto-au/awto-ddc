@@ -41,7 +41,9 @@ CYCLES_PER_US = 87.7 / 4            # DW8051: MCU clock 87.7 MHz (M2PLL 350.8 / 
 TOL_REF, TOL_NOM, TOL_STAGE, TOL_ACTIVE = 0.05, (0.70, 1.10), 2, 5
 MAX_STEPS = 400_000                 # DELAY_XUS(1000) is 250 x 21 iterations = 5.3 k steps; guard against a runaway
 DELAY_VARS = {"base5": "d_isr_g_ucDelay5usN_Base", "basex": "d_isr_g_ucDelayXusN_Base", "i5": "d_isr_g_ucDelay5usI", "i5e": "d_isr_g_ucDelay5usI_EXINT",
-              "cx": "d_isr_g_ucDelayXus_Counter", "cxe": "d_isr_g_ucDelayXus_Counter_EXINT"}
+              "cx": "d_isr_g_ucDelayXus_Counter", "cxe": "d_isr_g_ucDelayXus_Counter_EXINT",
+              "i5l": "d_g_ucDelay5usI_INTLO", "cxl": "d_g_ucDelayXus_Counter_INTLO"}
+CTX_ISR = (("_exint", "i5e", "cxe"), ("_intlo", "i5l", "cxl"))     # EXINT0 pair, EXINT1 + T0 pair
 ALLOW_FN = ("ScalerMcu5usDelayCalc", "AwtoDiag", "GSINIT")     # writes the bases / the calibration test / C initialisers
 LOG = None
 
@@ -81,12 +83,12 @@ def shapes(v: dict) -> dict:
     """name -> (regex over code bytes, ...). Single loop: mov counter,base; djnz counter,$. Nest: DELAY_XUS."""
     h = lambda x: re.escape(bytes([x]))
     S = {}
-    for tag, base, cnt in (("5us", "base5", "i5"), ("5us_exint", "base5", "i5e"), ("xus_base", "basex", "i5"), ("xus_base_exint", "basex", "i5e")):
+    for tag, base, cnt in (("5us", "base5", "i5"), ("xus_base", "basex", "i5")) + tuple(x for sfx, i5, _c in CTX_ISR for x in ((f"5us{sfx}", "base5", i5), (f"xus_base{sfx}", "basex", i5))):
         S[tag] = re.compile(b"\x85" + h(v[base]) + h(v[cnt]) + b"\xd5" + h(v[cnt]) + b"\xfd", re.DOTALL)
-    for tag, base, cnt in (("5us_dec", "base5", "i5"), ("5us_dec_exint", "base5", "i5e"), ("xus_base_dec", "basex", "i5"), ("xus_base_dec_exint", "basex", "i5e")):
+    for tag, base, cnt in (("5us_dec", "base5", "i5"), ("xus_base_dec", "basex", "i5")) + tuple(x for sfx, i5, _c in CTX_ISR for x in ((f"5us_dec{sfx}", "base5", i5), (f"xus_base_dec{sfx}", "basex", i5))):
         # SDCC form inside a polling `while(flag && ...)`: mov v,base; L: dec v; mov a,v; jz out; sjmp L  (8 cycles/iteration)
         S[tag] = re.compile(b"\x85" + h(v[base]) + h(v[cnt]) + b"\x15" + h(v[cnt]) + b"\xe5" + h(v[cnt]) + b"\x60(.)\x80\xf8", re.DOTALL)
-    for tag, outer, cnt in (("xus", "cx", "i5"), ("xus_exint", "cxe", "i5e")):
+    for tag, outer, cnt in (("xus", "cx", "i5"),) + tuple((f"xus{sfx}", c, i5) for sfx, i5, c in CTX_ISR):
         S[tag] = re.compile(b"\x75" + h(v[outer]) + b"(.)\x85" + h(v["basex"]) + h(v[cnt]) + b"\xd5" + h(v[cnt]) + b"\xfd\xd5" + h(v[outer]) + b"\xf7", re.DOTALL)
     return S
 
@@ -113,7 +115,7 @@ def scan(im: "L.Image", v: dict, S: dict):
     """(sites {tag: [(chunk, addr16, imm, end offset from the site start)]}, bad [(chunk name, addr, text)])."""
     sites = defaultdict(list)
     bad = []
-    counters = {v["i5"], v["i5e"], v["cx"], v["cxe"]}
+    counters = {v["i5"], v["i5e"], v["cx"], v["cxe"], v["i5l"], v["cxl"]}
     for c in im.chunks:
         if c["kind"] != "fn":
             continue
@@ -123,7 +125,7 @@ def scan(im: "L.Image", v: dict, S: dict):
             for m in rx.finditer(code):
                 if tag.startswith("xus_base") and "dec" not in tag and any(x in cover for x in range(m.start(), m.end())):
                     continue                                      # the inner loop of a nest
-                imm = m.group(1)[0] if tag in ("xus", "xus_exint") else 0
+                imm = m.group(1)[0] if tag in ("xus", "xus_exint", "xus_intlo") else 0
                 if "dec" in tag:
                     rel = m.group(1)[0]
                     end = 9 + (rel - 256 if rel > 127 else rel)       # JZ at +7 leaves the loop; its target is the end
@@ -135,13 +137,13 @@ def scan(im: "L.Image", v: dict, S: dict):
                 cover.update(range(m.start(), m.end()))
         insns = [item[1] for item in L.sweep(code, base) if item[0] == "i"]
         for k, ins in enumerate(insns):                   # `mov v,base`, a few straight-line moves, then `djnz v,$` (code motion)
-            if ins.off in cover or ins.raw[0] != 0x85 or ins.raw[2] not in (v["i5"], v["i5e"]) or ins.raw[1] not in (v["base5"], v["basex"]):
+            if ins.off in cover or ins.raw[0] != 0x85 or ins.raw[2] not in (v["i5"], v["i5e"], v["i5l"]) or ins.raw[1] not in (v["base5"], v["basex"]):
                 continue
             for j in range(k + 1, min(k + 12, len(insns))):
                 nx = insns[j]
                 if nx.raw[0] == 0xD5 and nx.raw[1] == ins.raw[2] and nx.target == nx.addr:
                     five = ins.raw[1] == v["base5"]
-                    tag = ("5us" if five else "xus_base") + ("_exint" if ins.raw[2] == v["i5e"] else "") + "_moved"
+                    tag = ("5us" if five else "xus_base") + {v["i5e"]: "_exint", v["i5l"]: "_intlo"}.get(ins.raw[2], "") + "_moved"
                     sites[tag].append((c, ins.addr, 0, nx.addr + nx.n - ins.addr))
                     cover.update(range(ins.off, nx.off + nx.n))
                     break

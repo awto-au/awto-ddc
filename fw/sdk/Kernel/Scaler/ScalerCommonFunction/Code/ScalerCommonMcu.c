@@ -92,8 +92,10 @@ BYTE __data d_isr_g_ucDelayXusN_Base = 1;
 BYTE __data d_g_ucDelay5usN_Call = 1;       // Base - AWTO_DELAY_CALL_CNT: the loops of AwtoDelayLoops (fw/timer/delay.c)
 BYTE __data d_isr_g_ucDelay5usI = 1;
 BYTE __data d_isr_g_ucDelay5usI_EXINT = 1;
+BYTE __data d_g_ucDelay5usI_INTLO = 1;
 BYTE __data d_isr_g_ucDelayXus_Counter = 1;
 BYTE __data d_isr_g_ucDelayXus_Counter_EXINT = 1;
+BYTE __data d_g_ucDelayXus_Counter_INTLO = 1;
 
 __xdata _Bool g_bRunDdcciCommand = _FAIL;
 #if(_DDCCI_AUTO_SWITCH_SUPPORT == _ON)

@@ -399,6 +399,10 @@ void ScalerDpRx1HDCPSetKsvFifo_EXINT0(void)
 #endif // End of #if((_DP_TX_SUPPORT == _ON) && (_D1_DP_MST_PORT_SUPPORT == _ON))
 
 #if(_WD_TIMER_INT_SUPPORT == _ON)
+#undef AWTO_DLY5_CNT
+#define AWTO_DLY5_CNT d_g_ucDelay5usI_INTLO
+#undef AWTO_DLYX_CNT
+#define AWTO_DLYX_CNT d_g_ucDelayXus_Counter_INTLO
 //--------------------------------------------------
 // Description  : Get DPCD Table Information in WDINT
 // Input Value  : ucDpcdAccessPortH --> High Byte of DPCD Address
@@ -414,7 +418,15 @@ BYTE ScalerDpRx1GetDpcdInfo_WDINT(BYTE ucDpcdAccessPortH, BYTE ucDpcdAccessPortM
 
     AWTO_DPCD_SETTLE_E() return ScalerGetByte_EXINT(PBA_C4_DPCD_DATA_PORT);
 }
+#undef AWTO_DLY5_CNT
+#define AWTO_DLY5_CNT d_isr_g_ucDelay5usI_EXINT
+#undef AWTO_DLYX_CNT
+#define AWTO_DLYX_CNT d_isr_g_ucDelayXus_Counter_EXINT
 #if(_DP_HDCP_2_2_SUPPORT == _ON)
+#undef AWTO_DLY5_CNT
+#define AWTO_DLY5_CNT d_g_ucDelay5usI_INTLO
+#undef AWTO_DLYX_CNT
+#define AWTO_DLYX_CNT d_g_ucDelayXus_Counter_INTLO
 //--------------------------------------------------
 // Description  : Get DPCD Table Information in WDINT
 // Input Value  : ucDpcdAccessPortH --> High Byte of DPCD Address
@@ -430,6 +442,10 @@ BYTE ScalerDpRx1GetDpcdBitInfo_WDINT(BYTE ucDpcdAccessPortH, BYTE ucDpcdAccessPo
 
     AWTO_DPCD_SETTLE_E() return ScalerGetBit_EXINT(PBA_C4_DPCD_DATA_PORT, ucDpcdBit);
 }
+#undef AWTO_DLY5_CNT
+#define AWTO_DLY5_CNT d_isr_g_ucDelay5usI_EXINT
+#undef AWTO_DLYX_CNT
+#define AWTO_DLYX_CNT d_isr_g_ucDelayXus_Counter_EXINT
 #endif
 #endif
 
@@ -1139,6 +1155,8 @@ BYTE ScalerDpRx1Tp1Check_EXINT0(EnumDpLinkTrainingType enumDpLtType)
 //--------------------------------------------------
 BYTE ScalerDpRx1Tp2Check_EXINT0(EnumDpLinkTrainingType enumDpLtType)
 {
+    BYTE ucTemp;
+
     BYTE ucEQCRCStatus = 0;
     BYTE ucEQCRCStatus1 = 0;
     BYTE ucEQCRCStatus2 = 0;
@@ -1173,14 +1191,14 @@ BYTE ScalerDpRx1Tp2Check_EXINT0(EnumDpLinkTrainingType enumDpLtType)
 
         if(g_ucDpRx1LinkRate == _DP_LINK_HBR2)
         {
-            for(g_ucDpRx1Temp = 0; g_ucDpRx1Temp <= 30; g_ucDpRx1Temp++)
+            for(ucTemp = 0; ucTemp <= 30; ucTemp++)
             {
                 ucEQCRCStatus1 = ucEQCRCStatus1 & ScalerGetByte_EXINT(PB0_12_EQ_CRC_1);
             }
         }
         else
         {
-            for(g_ucDpRx1Temp = 0; g_ucDpRx1Temp <= 5; g_ucDpRx1Temp++)
+            for(ucTemp = 0; ucTemp <= 5; ucTemp++)
             {
                 ucEQCRCStatus1 = ucEQCRCStatus1 & ScalerGetByte_EXINT(PB0_12_EQ_CRC_1);
             }
@@ -1197,7 +1215,7 @@ BYTE ScalerDpRx1Tp2Check_EXINT0(EnumDpLinkTrainingType enumDpLtType)
 
         ucEQCRCStatus2 = ScalerGetByte_EXINT(PB0_12_EQ_CRC_1);
 
-        for(g_ucDpRx1Temp = 0; g_ucDpRx1Temp <= 5; g_ucDpRx1Temp++)
+        for(ucTemp = 0; ucTemp <= 5; ucTemp++)
         {
             ucEQCRCStatus2 = ucEQCRCStatus2 & ScalerGetByte_EXINT(PB0_12_EQ_CRC_1);
         }
@@ -1772,6 +1790,8 @@ BYTE ScalerDpRx1Tp2Check_EXINT0(EnumDpLinkTrainingType enumDpLtType)
 //--------------------------------------------------
 void ScalerDpRx1AdjustLaneFLDBand_EXINT0(BYTE ucDpRx1LaneNumber, WORD usVCOBandDiff)
 {
+    BYTE ucTemp;
+
     BYTE ucBestVCOBand = 0;
     BYTE ucAutoVCOBand = 0;
 
@@ -1814,7 +1834,7 @@ void ScalerDpRx1AdjustLaneFLDBand_EXINT0(BYTE ucDpRx1LaneNumber, WORD usVCOBandD
     ScalerSetBit_EXINT(PB0_50_DP_SIG_DET_0, ~_BIT7, _BIT7);
 
     // Delay Time us [5,150] Polling for Measure Done
-    for(g_ucDpRx1Temp = 0; g_ucDpRx1Temp <= 30; g_ucDpRx1Temp++)
+    for(ucTemp = 0; ucTemp <= 30; ucTemp++)
     {
         DELAY_5US_EXINT();
 

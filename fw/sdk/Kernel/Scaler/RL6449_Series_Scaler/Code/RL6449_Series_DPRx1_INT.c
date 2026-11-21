@@ -63,6 +63,8 @@ void ScalerDpRx1RebuildPhy_WDINT(BYTE ucDpLinkRate);
 //--------------------------------------------------
 void ScalerDpRx1Tp1SetPhy_EXINT0(EnumDpNFCodeRef enumDpNFCodeRef)
 {
+    BYTE ucTemp;
+
     /////////////////////////////
     // MAC Lane Swap Selection //
     /////////////////////////////
@@ -594,7 +596,7 @@ void ScalerDpRx1Tp1SetPhy_EXINT0(EnumDpNFCodeRef enumDpNFCodeRef)
     ScalerSetBit_EXINT(PB0_50_DP_SIG_DET_0, ~_BIT7, _BIT7);
 
     // Delay Time us [5,150] Polling for Measure Done
-    for(g_ucDpRx1Temp = 0; g_ucDpRx1Temp <= 30; g_ucDpRx1Temp++)
+    for(ucTemp = 0; ucTemp <= 30; ucTemp++)
     {
         DELAY_5US_EXINT();
 
@@ -648,6 +650,8 @@ void ScalerDpRx1Tp1SetPhy_EXINT0(EnumDpNFCodeRef enumDpNFCodeRef)
 //--------------------------------------------------
 void ScalerDpRx1Tp2SetPhy_EXINT0(void)
 {
+    BYTE ucTemp;
+
     WORD usVCOBandDiff = 0;
     WORD usVCOBandScan = 0;
     BYTE ucIcp = (ScalerGetByte_EXINT(P7A_31_ANA_CDR_06) & 0x0F);
@@ -821,7 +825,7 @@ void ScalerDpRx1Tp2SetPhy_EXINT0(void)
     ScalerSetBit_EXINT(PB0_50_DP_SIG_DET_0, ~_BIT7, _BIT7);
 
     // Delay Time us [5,150] Polling for Measure Done
-    for(g_ucDpRx1Temp = 0; g_ucDpRx1Temp <= 30; g_ucDpRx1Temp++)
+    for(ucTemp = 0; ucTemp <= 30; ucTemp++)
     {
         DELAY_5US_EXINT();
 
@@ -858,7 +862,7 @@ void ScalerDpRx1Tp2SetPhy_EXINT0(void)
     ScalerSetBit_EXINT(PB0_50_DP_SIG_DET_0, ~_BIT7, _BIT7);
 
     // Delay Time us [5,150] Polling for Measure Done
-    for(g_ucDpRx1Temp = 0; g_ucDpRx1Temp <= 30; g_ucDpRx1Temp++)
+    for(ucTemp = 0; ucTemp <= 30; ucTemp++)
     {
         DELAY_5US_EXINT();
 
@@ -966,6 +970,10 @@ void ScalerDpRx1Tp2SetPhy_EXINT0(void)
 }
 
 #if(_WD_TIMER_INT_SUPPORT == _ON)
+#undef AWTO_DLY5_CNT
+#define AWTO_DLY5_CNT d_g_ucDelay5usI_INTLO
+#undef AWTO_DLYX_CNT
+#define AWTO_DLYX_CNT d_g_ucDelayXus_Counter_INTLO
 //--------------------------------------------------
 // Description  : Rebuilding DP PHY in WDINT
 // Input Value  : DPCD Bit Rate and Lane Count
@@ -973,6 +981,8 @@ void ScalerDpRx1Tp2SetPhy_EXINT0(void)
 //--------------------------------------------------
 void ScalerDpRx1RebuildPhy_WDINT(BYTE ucDpLinkRate)
 {
+    BYTE ucTemp;
+
     BYTE pucTap0[4];
     BYTE ucIcp = 0;
 
@@ -1449,7 +1459,7 @@ void ScalerDpRx1RebuildPhy_WDINT(BYTE ucDpLinkRate)
     ScalerSetBit_EXINT(PB0_50_DP_SIG_DET_0, ~_BIT7, _BIT7);
 
     // Delay Time us [5,150] Polling for Measure Done
-    for(g_ucDpRx1Temp = 0; g_ucDpRx1Temp <= 30; g_ucDpRx1Temp++)
+    for(ucTemp = 0; ucTemp <= 30; ucTemp++)
     {
         DELAY_5US_EXINT();
 
@@ -1495,6 +1505,10 @@ void ScalerDpRx1RebuildPhy_WDINT(BYTE ucDpLinkRate)
     isr_g_pusDpRx1ClockCount[2] = isr_g_pusDpRx1ClockCount[0];
     isr_g_pusDpRx1ClockCount[1] = isr_g_pusDpRx1ClockCount[0];
 }
+#undef AWTO_DLY5_CNT
+#define AWTO_DLY5_CNT d_isr_g_ucDelay5usI_EXINT
+#undef AWTO_DLYX_CNT
+#define AWTO_DLYX_CNT d_isr_g_ucDelayXus_Counter_EXINT
 #endif
 
 #endif // End of #if(_D1_DP_EXIST == _ON)

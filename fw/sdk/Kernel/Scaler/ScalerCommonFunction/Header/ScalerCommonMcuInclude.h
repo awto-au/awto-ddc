@@ -34,6 +34,13 @@
 #define _HW_IIC_FD10_14318K                 (tHwI2cSetting[g_ucHwI2cSettingIndex].ucFD10_14318K)
 #define _HW_IIC_FD10_28000K                 (tHwI2cSetting[g_ucHwI2cSettingIndex].ucFD10_28000K)
 
+// One counter pair per context (EXINT0 can preempt EXINT1 / T0 / main). Default EXINT0; a .c file re-points a
+// function block with #undef + #define of both names (_INTLO = EXINT1 + T0, same priority; or the main pair d_isr_g_ucDelay5usI / d_isr_g_ucDelayXus_Counter).
+#ifndef AWTO_DLY5_CNT
+#define AWTO_DLY5_CNT d_isr_g_ucDelay5usI_EXINT
+#define AWTO_DLYX_CNT d_isr_g_ucDelayXus_Counter_EXINT
+#endif
+
 //--------------------------------------------------
 // Macros of 5us Delay
 //--------------------------------------------------
@@ -44,8 +51,8 @@
                                             }
 
 #define DELAY_5US_EXINT()                   {\
-                                                d_isr_g_ucDelay5usI_EXINT = (d_isr_g_ucDelay5usN_Base);\
-                                                while(--d_isr_g_ucDelay5usI_EXINT) {};\
+                                                AWTO_DLY5_CNT = (d_isr_g_ucDelay5usN_Base);\
+                                                while(--AWTO_DLY5_CNT) {};\
                                             }
 
 #define DELAY_10US()                        {\
@@ -190,8 +197,8 @@
                                             }
 
 #define DELAY_XUS_BASE_EXINT()              {\
-                                                d_isr_g_ucDelay5usI_EXINT = (d_isr_g_ucDelayXusN_Base);\
-                                                while(--d_isr_g_ucDelay5usI_EXINT) {};\
+                                                AWTO_DLY5_CNT = (d_isr_g_ucDelayXusN_Base);\
+                                                while(--AWTO_DLY5_CNT) {};\
                                             }
 
 // Delay 50~1000 us
@@ -201,12 +208,12 @@
                                             }
 
 #define DELAY_XUS_EXINT(N)                  {\
-                                                d_isr_g_ucDelayXus_Counter_EXINT = (N) >> 2;\
+                                                AWTO_DLYX_CNT = (N) >> 2;\
                                                 do\
                                                 {\
                                                     DELAY_XUS_BASE_EXINT();\
                                                 }\
-                                                while(--d_isr_g_ucDelayXus_Counter_EXINT);\
+                                                while(--AWTO_DLYX_CNT);\
                                             }
 
 #ifdef AWTO_TP1_WAIT_US
@@ -227,7 +234,7 @@
 #endif
 #endif
 #if(AWTO_DPCD_SETTLE_RD != 0)
-#define AWTO_DPCD_SETTLE_E() {d_isr_g_ucDelay5usI_EXINT = (AWTO_DPCD_SETTLE_RD); while(--d_isr_g_ucDelay5usI_EXINT) {};}
+#define AWTO_DPCD_SETTLE_E() {AWTO_DLY5_CNT = (AWTO_DPCD_SETTLE_RD); while(--AWTO_DLY5_CNT) {};}
 #define AWTO_DPCD_SETTLE() {d_isr_g_ucDelay5usI = (AWTO_DPCD_SETTLE_RD); while(--d_isr_g_ucDelay5usI) {};}
 #else
 #define AWTO_DPCD_SETTLE_E()
@@ -350,8 +357,10 @@ extern BYTE __data d_isr_g_ucDelay5usN_Base;
 extern BYTE __data d_isr_g_ucDelayXusN_Base;
 extern BYTE __data d_isr_g_ucDelay5usI;
 extern BYTE __data d_isr_g_ucDelay5usI_EXINT;
+extern BYTE __data d_g_ucDelay5usI_INTLO;
 extern BYTE __data d_isr_g_ucDelayXus_Counter;
 extern BYTE __data d_isr_g_ucDelayXus_Counter_EXINT;
+extern BYTE __data d_g_ucDelayXus_Counter_INTLO;
 extern __xdata _Bool g_bRunDdcciCommand;
 #if(_DDCCI_AUTO_SWITCH_SUPPORT == _ON)
 extern bit g_bReceiveDdcciCmdNotFinish;
