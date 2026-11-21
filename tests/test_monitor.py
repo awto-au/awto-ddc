@@ -8,11 +8,12 @@ sys.path.insert(0, str(ROOT / "scripts"))
 import mon_decode as D
 import sync_log as SL
 
-BLOCK = bytes([ord("M"), ord("N"), 1, 1, 7, 0xF8, 0xF8, 0x58, 0x20, 0x07, 0xCF, 0x02, 0xBC, 0x0F, 3, 0xBC, 1, 0, 0x0E, 0x10, 9, 0, 14, 0, 40, 0, 3, 0, 200, 1, 1, 2, 10])
+BLOCK = bytes([ord("M"), ord("N"), 1, 1, 7, 0xF8, 0xF8, 0x58, 0x20, 0x07, 0xCF, 0x02, 0xBC, 0x0F, 3, 0xBC, 1, 0, 0x0E, 0x10, 9])
+STALL = bytes([0, 157, 1, 0xC1, 0, 34, 8, 0xBE, 1, 1, 2, 10])      # g_stAwtoStall: usGap x 8.938 us, ucSite
 
 
 def test_decode_block():
-    d = D.decode(BLOCK)
+    d = D.decode(BLOCK, STALL)
     assert d["adc"] == [0xF8, 0xF8, 0x58, 0x20] and d["trim"] == 0x07CF == 1999 and d["loop"] == 700
     assert d["up_s"] == 3600 and d["stack"] == 0xBC and d["rows"] == 9 and d["poke_ms"] == round(15 * 293 / 64)
     assert d["gap"] == [1.4, 4.0, 0.3, 20.0] and d["gap_site"] == [1, 1, 2, 10]

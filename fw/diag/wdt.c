@@ -81,7 +81,6 @@ void AwtoWdtPoke(BYTE ucSite)
     {
         g_stAwtoStall.usGap[ucCls] = usGap;
         g_stAwtoStall.ucSite[ucCls] = ucSite;
-        g_stAwtoStall.ucFrom[ucCls] = g_ucAwtoPokeLast;
     }
     g_ucAwtoPokeLast = ucSite;
 }

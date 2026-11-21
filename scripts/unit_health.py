@@ -45,7 +45,7 @@ TIMING_EXACT_TOL_MHZ = 10
 TIMING_EXACT_TOL_REL = 0.0025
 HDIAG_STAGE = 8
 MAP_SYMS = ("isr_g_stAwtoDiag", "isr_g_stModeInfo", "isr_g_stPowerInfo", "g_stMDomainInputData", "g_stOsdInfo", "g_ulInputActiveRegionBackUp")
-MAP_SYMS_OPT = (P.AWTO_FREQ_SYM, "g_stAwtoLoop", "g_stAwtoMon", "g_stAwtoHead")   # fw/meas/freq.c (#34); fw/diag/loopsplit.c (#75)
+MAP_SYMS_OPT = (P.AWTO_FREQ_SYM, "g_stAwtoLoop", "g_stAwtoMon", "g_stAwtoHead", "g_stAwtoStall")   # fw/meas/freq.c (#34); fw/diag/loopsplit.c (#75)
 RETRY_TRIES = 2
 
 
@@ -335,14 +335,14 @@ def check_delaycal(rep, d: Dbg, base: int, sim: bool = False) -> bool:
     return rep.add("delay cal", not bad, "; ".join(f"{n} {det}" for n, ok, det in rows) + (f"  [FAIL: {', '.join(bad)}]" if bad else ""))
 
 
-def check_monitor(rep, d: Dbg, mon: int | None) -> bool:
+def check_monitor(rep, d: Dbg, mon: int | None, stall: int | None = None) -> bool:
     """Health monitor block (fw/diag/monitor.c, docs/monitoring.md): both key ladders idle (no stuck / held key, no floating ladder),
     a sample taken since boot. An image without the monitor, or registry monitor off, passes with a note."""
     import key_bands
     import mon_decode
     if mon is None:
         return rep.add("monitor", True, "image has no health monitor")
-    m = mon_decode.decode(d.read(mon, mon_decode.SIZE))
+    m = mon_decode.decode(d.read(mon, mon_decode.SIZE), d.read(stall, mon_decode.STALL_SIZE) if stall is not None else None)
     if m is None:
         return rep.add("monitor", True, "no sample yet (first one AWTO_MON_MS after boot) or registry monitor off since boot")
     hit = key_bands.keys_for(key_bands.ours(), m["adc"][0], m["adc"][1])
@@ -361,7 +361,7 @@ def run(d: Dbg, maps: dict, host, rep: Report, wait=time.sleep, sim: bool = Fals
              ("pins", lambda: check_pins(rep, d)),
              ("osd", lambda: check_osd(rep, d, maps["g_stOsdInfo"], base, maps["osd_ofs"], wait)),
              ("delay cal", lambda: check_delaycal(rep, d, base, sim)),
-             ("monitor", lambda: check_monitor(rep, d, maps.get("g_stAwtoMon")))]
+             ("monitor", lambda: check_monitor(rep, d, maps.get("g_stAwtoMon"), maps.get("g_stAwtoStall")))]
     for name, fn in steps:
         if name == "osd" and not osd:
             continue                                # --no-osd: the info card + debug pop-up would cover a visual test

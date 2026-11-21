@@ -427,7 +427,6 @@ typedef struct
 {
     unsigned int usGap[AWTO_STALL_N];           // longest gap this boot, x 8.94 us
     unsigned char ucSite[AWTO_STALL_N];         // AWTO_WDT_S_* that ended it
-    unsigned char ucFrom[AWTO_STALL_N];         // AWTO_WDT_S_* of the poke before
 } StAwtoStall;
 extern volatile __xdata StAwtoStall g_stAwtoStall;
 extern void AwtoWdtPoke(unsigned char ucSite);
@@ -1325,10 +1324,8 @@ typedef struct                                  // 33 B, byte-only (LE = BE layo
     unsigned char ucBoot;                       // AwtoBootReason()
     unsigned char pucUp[3];                     // uptime s, high byte first
     unsigned char ucRows;                       // sync rows written by the monitor (saturates)
-    unsigned char pucGap[AWTO_STALL_N][2];      // longest poke gap per class (AWTO_STALL_*), 0.1 ms, high byte first
-    unsigned char pucGapSite[AWTO_STALL_N];     // AWTO_WDT_S_* that ended it
 } StAwtoMon;
-typedef char AwtoMonSizeCheck[(sizeof(StAwtoMon) == 33) ? 1 : -1];
+typedef char AwtoMonSizeCheck[(sizeof(StAwtoMon) == 21) ? 1 : -1];
 extern __xdata StAwtoMon g_stAwtoMon;
 extern void AwtoMonSample(void);
 extern void AwtoOsdDemo(unsigned char ucGroup);

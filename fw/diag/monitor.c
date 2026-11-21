@@ -37,7 +37,7 @@ void AwtoMonSample(void)
         }
         g_stAwtoMon.ucMagic0 = 'M';
         g_stAwtoMon.ucMagic1 = 'N';
-        g_stAwtoMon.ucVersion = 2;
+        g_stAwtoMon.ucVersion = 3;
     }
     g_stAwtoMon.ucOn = (AWTO_SET(MONITOR) != 0) ? 1 : 0;
     if(g_stAwtoMon.ucOn == 0)
@@ -61,9 +61,6 @@ void AwtoMonSample(void)
     {
         WORD usG = (WORD)(((DWORD)g_stAwtoStall.usGap[ucI] * AWTO_STALL_UNIT_NS) / 100000UL);
 
-        g_stAwtoMon.pucGap[ucI][0] = (BYTE)(usG >> 8);
-        g_stAwtoMon.pucGap[ucI][1] = (BYTE)usG;
-        g_stAwtoMon.pucGapSite[ucI] = g_stAwtoStall.ucSite[ucI];
         usGap = (usG > usGap) ? usG : usGap;
     }
     g_stAwtoMon.ucStack = g_ucAwtoStackHigh;
