@@ -3806,7 +3806,7 @@ BYTE ScalerSyncDdcDetect_EXINT1(void)
 void ScalerSyncTMDSScanInitial(BYTE ucInputPort)
 {
     // Set Power normal DDC Debounce Counter
-    __critical { isr_g_usDDCDebounceCnt = _TMDS_DDC_DEBOUNCE_NORMAL; }   // EXINT1 reads it: one 2-byte write
+    isr_g_usDDCDebounceCnt = _TMDS_DDC_DEBOUNCE_NORMAL;
     ScalerTMDSInitial(ucInputPort);
 
     ScalerTMDSInterruptInitial(ucInputPort);

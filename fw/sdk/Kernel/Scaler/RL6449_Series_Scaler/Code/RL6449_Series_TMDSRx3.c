@@ -3591,7 +3591,7 @@ void ScalerTMDSRx3HdmiWatchDog(BYTE ucWDType, bit bEnable)
 void ScalerTMDSRx3PowerSavingProc(void)
 {
     // Set Power Saving DDC Debounce Counter
-    __critical { isr_g_usDDCDebounceCnt = _TMDS_DDC_DEBOUNCE_PS; }   // EXINT1 reads it: one 2-byte write
+    isr_g_usDDCDebounceCnt = _TMDS_DDC_DEBOUNCE_PS;
     ScalerTMDSRx3FreqDetectDisable();
 
     // Switch TMDS Input/Output to Auto
