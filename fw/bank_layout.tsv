@@ -937,9 +937,6 @@ stub	_AwtoSyncTiming	C	0x3968	8
 fn	_AwtoSyncWdtMs	C	0x3970	120
 stub	_AwtoTmdsIdleKhz	C	0x39e8	8
 stub	_AwtoT0EvIsr	C	0x39f0	8
-stub	_AwtoT0EvTest	C	0x39f8	8
-stub	_AwtoT0EvTestIsr	C	0x3a00	8
-stub	_ScalerTimerWDCancelTimerEvent	C	0x3a08	8
 stub	_AwtoResetCard	C	0x3a10	8
 stub	_AwtoDemoLog	C	0x3a18	8
 stub	_AwtoDiagTestCmd	C	0x3a20	8
@@ -2230,7 +2227,7 @@ const	_tLUTGAMMA_18_TABLE	6	0x0164	6352
 const	_tLUTGAMMA_20_TABLE	6	0x1a34	6352
 const	_tLUTGAMMA_22_TABLE	6	0x3304	6352
 const	_tLUTGAMMA_24_TABLE	6	0x4bd4	6352
-const	_UserInterfaceGetOverScanStatus_tusOverscanEnTable_10000_1357	6	0x64a4	92
+const	_UserInterfaceGetOverScanStatus_tusOverscanEnTable_10000_1355	6	0x64a4	92
 const	_OperationFactoryTable	6	0x6500	756
 const	_tCOLOR_CONV_RGB2YUV_ITU709	6	0x67f4	32
 const	_tCOLOR_CONV_YUV2RGB_ITU601	6	0x6814	32
@@ -2745,7 +2742,7 @@ const	_tDISPLAY_DPTX_DRV_HBR2_TABLE	9	0x0000	56
 const	_tEDID_TABLE_D1	9	0x0038	268
 const	_tEDID_TABLE_D2	9	0x0144	268
 const	_tEDID_TABLE_D3	9	0x0250	268
-const	_set_ap_rotate_tFlipToSdk_10000_1381	9	0x035c	8
+const	_set_ap_rotate_tFlipToSdk_10000_1379	9	0x035c	8
 fn	_ScalerColor420To422D2D3Enable	9	0x0364	60
 fn	_ScalerDpPowerSwitch	9	0x03a0	120
 fn	_ScalerDpRx1AuxIntInitial	9	0x0418	116
@@ -2825,7 +2822,6 @@ fn	_ScalerTMDSInterruptInitial	9	0x3dd4	20
 fn	_ScalerTMDSYUV420SupportCheck	9	0x3de8	20
 fn	_ScalerTMDSRx2FreqDetectDisable	9	0x3dfc	100
 fn	_ScalerMeasureUpdateInputTimingPolarity	9	0x3e60	516
-fn	_AwtoT0EvTestIsr	9	0x4064	216
 fn	_ScalerTMDSRx3FreqDetectDisable	9	0x4140	100
 fn	_ScalerVgipInputInitial	9	0x4484	92
 fn	_UserInterfaceGetDpLaneCount	9	0x44e0	16
@@ -2942,7 +2938,6 @@ fn	_AwtoSyncT2Start	9	0x93dc	272
 fn	_ScalerDpRx1GetDpcdInfo_WDINT	9	0x94ec	32
 fn	_ScalerTMDSRx3PowerSavingProc	9	0x950c	80
 fn	_AwtoT0EvFire	9	0x95a0	64
-fn	_AwtoT0EvTest	9	0x95e0	1112
 fn	_ScalerTimerWDInitial	9	0x9b24	100
 fn	_AwtoWdtProbe	9	0x9b88	156
 fn	_AwtoT0EvClock	9	0x9c24	216

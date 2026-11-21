@@ -99,7 +99,7 @@ RTD2014Key	0xe580	23	3
 RTD2014UserInterface	0xe580	26	3
 ScalerCommonColor	0xe580	29	3
 ScalerCommonFlashRead	0xe580	32	3
-SysInt	0xe580	35	3
+SysInt	0xe580	35	2
 SysMode	0xe580	38	3
 dbgport	0xe580	41	3
 ports	0xe580	44	3

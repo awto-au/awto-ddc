@@ -35,9 +35,6 @@
 //****************************************************************************
 // VARIABLE DECLARATIONS
 //****************************************************************************
-// Backup for Burst Write Bug
-volatile BYTE g_ucBackup_EXINT0;
-volatile BYTE g_ucBackup_EXINT1;
 
 //****************************************************************************
 // FUNCTION DECLARATIONS
@@ -58,6 +55,8 @@ void SysEXINT3(void) __interrupt(9);
 //--------------------------------------------------
 void SysEXINT0(void) __interrupt(0)
 {
+    static BYTE ucFff4;                     // own storage: an overlaid ISR local broke the stall test (frame shared with main code)
+
 #if((_DVI_SUPPORT == _ON) || (_HDMI_SUPPORT == _ON))
     BYTE ucPowerStatus;
 #endif
@@ -65,13 +64,13 @@ void SysEXINT0(void) __interrupt(0)
     AWTO_CPUS_ISR(0);
     AWTO_ISR_WAKE(Ex0);
     // Backup for Burst Write Bug
-    g_ucBackup_EXINT0 = MCU_FFF4_SCA_INF_ADDR; AWTO_T0EV_EXINT0();
+    ucFff4 = MCU_FFF4_SCA_INF_ADDR; AWTO_T0EV_EXINT0();
 
 #if(_DP_SUPPORT == _ON)
     if(ScalerDpAuxJudgeHandler_EXINT0() == _TRUE)
     {
         // Reload Backup for Burst Write Bug
-        MCU_FFF4_SCA_INF_ADDR = g_ucBackup_EXINT0;
+        MCU_FFF4_SCA_INF_ADDR = ucFff4;
 
         return;
     }
@@ -155,7 +154,7 @@ void SysEXINT0(void) __interrupt(0)
 #endif
 
     // Reload Backup for Burst Write Bug
-    MCU_FFF4_SCA_INF_ADDR = g_ucBackup_EXINT0;
+    MCU_FFF4_SCA_INF_ADDR = ucFff4;
 }
 
 //--------------------------------------------------
@@ -165,10 +164,12 @@ void SysEXINT0(void) __interrupt(0)
 //--------------------------------------------------
 void SysEXINT1(void) __interrupt(2)
 {
+    static BYTE ucFff4;                     // own storage: an overlaid ISR local broke the stall test (frame shared with main code)
+
     // Backup for Burst Write Bug
     AWTO_DIAG_EX1ISR();
     AWTO_ISR_WAKE(Ex1);
-    g_ucBackup_EXINT1 = MCU_FFF4_SCA_INF_ADDR;
+    ucFff4 = MCU_FFF4_SCA_INF_ADDR;
 
 #if((_DVI_SUPPORT == _ON) || (_HDMI_SUPPORT == _ON))
     ScalerSyncDdcDetect_EXINT1();
@@ -195,7 +196,7 @@ void SysEXINT1(void) __interrupt(2)
 #endif
 
     // Reload Backup for Burst Write Bug
-    MCU_FFF4_SCA_INF_ADDR = g_ucBackup_EXINT1;
+    MCU_FFF4_SCA_INF_ADDR = ucFff4;
 }
 
 #if(_USB3_RETIMER_SUPPORT == _ON)

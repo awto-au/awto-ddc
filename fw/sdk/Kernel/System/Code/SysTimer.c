@@ -39,10 +39,6 @@
 //****************************************************************************
 // VARIABLE DECLARATIONS
 //****************************************************************************
-// Backup for Burst Write Bug
-volatile BYTE g_ucBackup_TIMER0;
-volatile BYTE g_ucBackup_TIMER2;
-volatile BYTE g_ucBackup_WDTIMER;
 
 //****************************************************************************
 // FUNCTION DECLARATIONS
@@ -386,12 +382,14 @@ void SysTimerEventProc(EnumScalerTimerEventID enumEventID)
 //--------------------------------------------------
 void SysTimerIntProc0(void) __interrupt(1)
 {
+    static BYTE ucFff4;                     // own storage: an overlaid ISR local broke the stall test (frame shared with main code)
+
     AWTO_CPUS_ISR(1);
     // Backup for Burst Write Bug
-    g_ucBackup_TIMER0 = MCU_FFF4_SCA_INF_ADDR; AwtoT0EvIsr(); AWTO_ISR_WAKE(T0);
+    ucFff4 = MCU_FFF4_SCA_INF_ADDR; AwtoT0EvIsr(); AWTO_ISR_WAKE(T0);
 
     // Reload Backup for Burst Write Bug
-    MCU_FFF4_SCA_INF_ADDR = g_ucBackup_TIMER0;
+    MCU_FFF4_SCA_INF_ADDR = ucFff4;
 }
 
 #ifdef _AWTO_CPU_SUITE
@@ -409,8 +407,10 @@ void SysTimerIntProc1(void) __interrupt(3)
 //--------------------------------------------------
 void SysTimerIntProc2(void) __interrupt(5)
 {
+    static BYTE ucFff4;                     // own storage: an overlaid ISR local broke the stall test (frame shared with main code)
+
     // Backup for Burst Write Bug
-    g_ucBackup_TIMER2 = MCU_FFF4_SCA_INF_ADDR;
+    ucFff4 = MCU_FFF4_SCA_INF_ADDR;
 
     // Clear Timer2 flag
     AWTO_DIAG_T2ISR();
@@ -427,7 +427,7 @@ void SysTimerIntProc2(void) __interrupt(5)
 
     AWTO_MEAS_T2ISR();
     // Reload Backup for Burst Write Bug
-    MCU_FFF4_SCA_INF_ADDR = g_ucBackup_TIMER2;
+    MCU_FFF4_SCA_INF_ADDR = ucFff4;
 }
 
 //--------------------------------------------------
@@ -437,8 +437,10 @@ void SysTimerIntProc2(void) __interrupt(5)
 //--------------------------------------------------
 void SysTimerWDIntProc(void) __interrupt(8)
 {
+    static BYTE ucFff4;                     // own storage: an overlaid ISR local broke the stall test (frame shared with main code)
+
     // Backup for Burst Write Bug
-    g_ucBackup_WDTIMER = MCU_FFF4_SCA_INF_ADDR;
+    ucFff4 = MCU_FFF4_SCA_INF_ADDR;
 
     // Clear Flag
     EXIF &= ~_BIT4;
@@ -453,5 +455,5 @@ void SysTimerWDIntProc(void) __interrupt(8)
     }
 
     // Reload Backup for Burst Write Bug
-    MCU_FFF4_SCA_INF_ADDR = g_ucBackup_WDTIMER;
+    MCU_FFF4_SCA_INF_ADDR = ucFff4;
 }
