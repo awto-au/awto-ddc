@@ -93,20 +93,19 @@ Abbreviations in the table:
 | ScalerDisplayDPTx.c:1929-1940 and 2084-2095 | AUX done poll | 25 x `DELAY_5US` (125 us); 7 retries (:2004) | SDK | SDK comment "Delay Time us [5,175]" | n/a | n/a | retry then fail |
 | ScalerDisplayDPTx.c:652 `LinkTraining` | until LT_RESULT is PASS or FAIL | state machine, no timer | SDK | n/a | n/a | n/a | n/a |
 | **HDMI / TMDS (SDK, linked)** | | | | | | | |
-| RL6449_Series_TMDSRx2.c:3342 and RL6449_Series_TMDSRx3.c:3345 | blind wait "at least 3 frames" for the HW colour-depth update | 130 ms | SDK-lit | SDK comment | 3 frames (rate not stated; 130 ms = 3 frames at 23 Hz) | no spec | continues |
-| TMDSRx2.c:3385, TMDSRx3.c:3388; ScalerCommonSync.c:8733, 9341; ScalerTMDSRx2_SeptPhy.c:101, ScalerTMDSRx3_SeptPhy.c:101 | "down sampling effect" | 20 ms | SDK-lit | SDK comment -> no spec | no spec | no spec | continues |
-| TMDSRx2.c:3264,3279,3294,3975 and TMDSRx3.c:3267,3282,3297,3978 | packet / format polls | 130 / 180 / 180 / 130 ms | SDK-lit | SDK comments "3 frames", "more time to wait GCP/AVI" | no spec | no spec | falls through |
-| TMDSRx2.c:4060,4062 and TMDSRx3.c:4063,4065; ScalerTMDSRx2_SeptPhy.c:141,144 and TMDSRx3_SeptPhy.c:141,144 | HDCP-enabled / video detect | 45 / 20 ms | SDK-lit | SDK comment "at least 1 frame" | no spec | no spec | falls through |
-| ScalerTMDSRx2_SeptPhy.c:677 and ScalerTMDSRx3_SeptPhy.c:677 | pre-detect settle | 6 ms | SDK-lit | no spec | no spec | no spec | continues |
-| ScalerTMDSRx2_SeptPhy.c:632-636 and ScalerTMDSRx3_SeptPhy.c:632-636 | deep-colour PLL lock | 2 ms x up to 16 | SDK-lit | SDK comment "Delay for PLL Phase Lock" | no spec | no spec | returns _FALSE |
-| TMDSRx2.c:3183,3192,3197 and TMDSRx3.c:3186,3195,3200; ScalerTMDSRx2_SeptPhy.c:3630 and TMDSRx3_SeptPhy.c:3633 | deep-colour PLL set / PHY stable | 2 ms each | SDK-lit | no spec | no spec | no spec | continues |
-| ScalerTMDSRx2_SeptPhy.c:815 and ScalerTMDSRx3_SeptPhy.c:815 `HotPlugHighProc` | HDMI HPD low time | user setting x 100 ms; SDK NVRAM default 5 = 500 ms (`UserCommonNVRamSystem.c:52`). **Skipped:** `_AWTO_HDMI_HPD_TOGGLE == _OFF` (`RL6449_Project.h:1164`). | NVRAM | SDK default | n/a | n/a | continues |
+| TMDSRx2.c:3558 (shared with Rx3); ScalerCommonSync.c:8733, 9341; ScalerTMDSRx2_SeptPhy.c:102 (shared with Rx3) | "down sampling effect" | 20 ms | SDK-lit | SDK comment -> no spec | no spec | no spec | continues |
+| TMDSRx2.c:3438,3453,3468,4210 (shared with Rx3) | packet / format polls | 130 / 180 / 180 / 130 ms | SDK-lit | SDK comments "3 frames", "more time to wait GCP/AVI" | no spec | no spec | falls through |
+| TMDSRx2.c:4295,4297; ScalerTMDSRx2_SeptPhy.c:166,169 (both shared with Rx3) | HDCP-enabled / video detect | 45 / 20 ms | SDK-lit | SDK comment "at least 1 frame" | no spec | no spec | falls through |
+| ScalerTMDSRx2_SeptPhy.c:813 (shared with Rx3) | pre-detect settle | 6 ms | SDK-lit | no spec | no spec | no spec | continues |
+| ScalerTMDSRx2_SeptPhy.c:768 (shared with Rx3) | deep-colour PLL lock | 2 ms x up to 16 | SDK-lit | SDK comment "Delay for PLL Phase Lock" | no spec | no spec | returns _FALSE |
+| TMDSRx2.c:3346,3355,3360,3850; ScalerTMDSRx2_SeptPhy.c:889 (shared with Rx3) | deep-colour PLL set / PHY stable | 2 ms each | SDK-lit | no spec | no spec | no spec | continues |
+| ScalerTMDSRx2_SeptPhy.c:981 `HotPlugHighProc` (shared with Rx3) | HDMI HPD low time | user setting x 100 ms; SDK NVRAM default 5 = 500 ms (`UserCommonNVRamSystem.c:52`). **Skipped:** `_AWTO_HDMI_HPD_TOGGLE == _OFF` (`RL6449_Project.h:1164`). | NVRAM | SDK default | n/a | n/a | continues |
 | ScalerCommonSyncInclude.h:118-120 | HDMI HPD times when toggling: HDCP 2.2 1000 / Acer 130 / EDID switch 600 ms | as listed | SDK | SDK constants | n/a | n/a | n/a |
-| `ScalerTMDSRx{2,3}SetPhy_EXINT0` (main context from `ScalerTMDSRx{2,3}PhySetDeferred`, EX0 masked, #256): TMDSRx2.c:758-1930 and Rx3.c | PHY set blind steps | **5545 us = sum over all branches**; DCDR (<= 200 MHz) ~1.2 ms, ACDR > 340 MHz ~4.3 ms (2.9 ms block at Rx2.c:1618) (50 + 3x360 + 5x150 + 2x290 + 2x1000 + 900 + 25 + 2x80 us) | SDK | SDK numbers, no stated reason -> no spec | no spec | no spec | continues |
-| `*MeasureClk`, `FLDBandFineTune_EXINT0`: TMDSRx2.c:691,728,2850,2906 and Rx3.c:694,731,2853,2909 | 5 us steps | 5 us each | SDK | no spec | no spec | no spec | continues |
-| TMDS timer events: TMDSRx2.c:3994,4200 and Rx3.c:3997,4203 | format reset wait | 130 ms | SDK-lit | no spec | no spec | no spec | event fires |
-| ScalerTMDSRx2_SeptPhy.c:191 and ScalerTMDSRx3_SeptPhy.c:191 | video-detect re-arm | 45 ms | SDK | "1 frame" comment | no spec | no spec | re-poll |
-| `ScalerTMDSRx2_SeptPhy.c:562` (and Rx3 :562) | HDMI read-request retry on Timer0 | 10 ms | SDK; `fw/timer/t0ev.c:218` | SDK | n/a | n/a | retry event |
+| `ScalerTMDSRxSetPhy_EXINT0` (one body for both ports; main context from `ScalerTMDSRx{2,3}PhySetDeferred`, EX0 masked, #256): TMDSRx2.c:808-2000 | PHY set blind steps | **5545 us = sum over all branches**; DCDR (<= 200 MHz) ~1.2 ms, ACDR > 340 MHz ~4.3 ms (2.9 ms block at TMDSRx2.c:1671) (50 + 3x360 + 5x150 + 2x290 + 2x1000 + 900 + 25 + 2x80 us) | SDK | SDK numbers, no stated reason -> no spec | no spec | no spec | continues |
+| `*MeasureClk`, `FLDBandFineTune_EXINT0`: TMDSRx2.c:749,787,3005,3061 (shared with Rx3) | 5 us steps | 5 us each | SDK | no spec | no spec | no spec | continues |
+| TMDS timer events: TMDSRx2.c:4229,4457 (shared with Rx3) | format reset wait | 130 ms | SDK-lit | no spec | no spec | no spec | event fires |
+| ScalerTMDSRx2_SeptPhy.c:216 (shared with Rx3) | video-detect re-arm | 45 ms | SDK | "1 frame" comment | no spec | no spec | re-poll |
+| `ScalerTMDSRx2_SeptPhy.c:671` (shared with Rx3) | HDMI read-request retry on Timer0 | 10 ms | SDK; `fw/timer/t0ev.c:218` | SDK | n/a | n/a | retry event |
 | **busy-wait macros (main context)** | | | | | | | |
 | `ScalerCommonMcuInclude.h:40-215`; counts set at `ScalerCommonMcu.c:1844-1849`; our calibration `fw/diag/delaycal.c:88-99` | `DELAY_5US`, `DELAY_XUS(n)` and relatives | loop counts set so the shorter copy of each pair lands at 105 % of nominal | `AWTO_DELAY_TARGET_PCT` `RL6449_Project.h:188`, valid only at `AWTO_DELAY_CAL_RCAP2H 0xE3` | measured (T3 measurement, #54, diag block). Realtek's own count is 112..127 % depending on code placement. Health limit 90..125 %. | nominal us | 1.05 | n/a |
 | RL6449_Series_DPRx1.c:1201-1759 `RebuildPhy` | PHY rebuild steps | 905 us total (5x85 + 300 + 3x25 + 3x5 + 2x45) | SDK | no spec | no spec | no spec | continues |
@@ -273,9 +272,9 @@ All of these are `ScalerTimerDelayXms` or a poll, which spin and poke the watchd
   - `ScalerDisplayDPTx.c:579` 45 ms.
 - **Source search and cable**
   - `SysSource.c:3982,4093,4203` 10 ms (only after a status change).
-  - TMDS `ScalerTMDSRx2` / `Rx3` waits: 130 ms (`TMDSRx2.c:3342`, `Rx3.c:3345`); 20 ms (`TMDSRx2.c:3385`, `Rx3.c:3388`; `ScalerCommonSync.c:8733,9341`; `ScalerTMDSRx2_SeptPhy.c:101`, `Rx3_SeptPhy.c:101`); polls up to 130 / 180 ms; 6 ms pre-detect (`ScalerTMDSRx2_SeptPhy.c:677`, `Rx3_SeptPhy.c:677`).
+  - TMDS waits (one body for Rx2 and Rx3): 20 ms (`TMDSRx2.c:3558`; `ScalerCommonSync.c:8733,9341`; `ScalerTMDSRx2_SeptPhy.c:102`); polls up to 130 / 180 ms; 6 ms pre-detect (`ScalerTMDSRx2_SeptPhy.c:813`).
   - DP RX: 45 / 90 ms frame waits, 30 ms resets, 100 ms measure polls.
-  - HDMI HPD toggle: `ScalerTMDSRx2_SeptPhy.c:815` and `Rx3_SeptPhy.c:815`, 500 ms by default. Skipped while `_AWTO_HDMI_HPD_TOGGLE` is `_OFF`.
+  - HDMI HPD toggle: `ScalerTMDSRx2_SeptPhy.c:981` (both ports), 500 ms by default. Skipped while `_AWTO_HDMI_HPD_TOGGLE` is `_OFF`.
   - DP PHY compliance test: `RL6449_Series_DPRx1.c:4133` 1000 ms, plus unbounded loops at :3665, :3966 and :4050 (lab only).
 - **Per mode change or measure**
   - `ScalerTimerWaitForEvent` waits of up to 90 ms each (106 sites, many in `ScalerMDomain` and `FRC`).

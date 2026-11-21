@@ -51,8 +51,7 @@ ScalerPLLSetDPLLFreqNfCascade	main	180155		4 wait(s) of the SDK / our sequence a
 ScalerPowerGroupAIsolation	main	20000		1 wait(s) of the SDK / our sequence at their bound; value source docs/delays.md	unreviewed
 ScalerRotationReset	main	180000		2 wait(s) of the SDK / our sequence at their bound; value source docs/delays.md	unreviewed
 ScalerSyncDpHpdIrqAssertTimer2EventProc_EXINT	isr	1190	1190	HPD IRQ pulse: ((95 - DP IRQ time x10 us) x 10) >> 2 passes of the 4 us base; shortest IRQ time is the maximum; DP spec HPD_IRQ width (DP_RX_HPD_IRQ_ASSERT_T2_DELAY, Timer2 ISR)	ok
-ScalerTMDSRx2SetPhy_EXINT0	main	5545		PHY set-up from the main loop (PhySetDeferred, EX0 masked around it); worst call 5545 us is the retry with the 2.9 ms block, the first 4K60 call is ~2.6 ms (issue #256)	ok
-ScalerTMDSRx3SetPhy_EXINT0	main	5545		PHY set-up from the main loop (PhySetDeferred, EX0 masked around it); worst call 5545 us is the retry with the 2.9 ms block, the first 4K60 call is ~2.6 ms (issue #256)	ok
+ScalerTMDSRxSetPhy_EXINT0	main	5545		PHY set-up from the main loop (PhySetDeferred, EX0 masked around it); worst call 5545 us is the retry with the 2.9 ms block, the first 4K60 call is ~2.6 ms (issue #256)	ok
 SysEXINT0	isr-path	1056		union of every wait the handler can reach (branch-unaware upper bound); real worst path is shorter, issue #281	unreviewed
 SysEXINT1	isr-path	120		union of every wait the handler can reach (branch-unaware upper bound); real worst path is shorter, issue #281	unreviewed
 SysTimerIntProc0	isr-path	1010		union of every wait the handler can reach (branch-unaware upper bound); real worst path is shorter, issue #281	unreviewed

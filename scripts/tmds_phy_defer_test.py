@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
-"""TMDS Rx2 freq-stable handshake in the firmware sim (docs/main-loop-pacing.md ISR diet; the sim has no PHY / freq-detect IRQs,
+"""TMDS Rx2 / Rx3 freq-stable handshake (shared body, #rx-share) in the firmware sim (docs/main-loop-pacing.md ISR diet; the sim has no PHY / freq-detect IRQs,
 so this raises EX0 with the P71 registers set and stubs the clock measure, CDR check and PHY set-up).
 
-usage: tmds_phy_defer_test.py BIN [MAP]
+usage: tmds_phy_defer_test.py BIN [MAP] [--port 2|3]   (default: both ports)
 - isr:   stable IRQ -> handler only sets the pending flag; SetPhy_EXINT0 not called, the unstable IRQ enable still off.
          (PHY_SET is a `bit` since #281 step 2: not in the map, not read here.)
 - main:  next main-loop pass (SysTMDSRxHandler) -> set-up runs once with EX0 masked, unstable IRQ enabled first, pending cleared,
@@ -22,7 +22,8 @@ os.environ.setdefault("AWTO_SIM_CORE", "fast")
 import fw_sim as S
 
 LOG = ROOT / "tmp/logs/tmds_phy_defer_test.log"
-EF, E6, E8, E9, EA_, EB = 0x71EF, 0x71E6, 0x71E8, 0x71E9, 0x71EA, 0x71EB
+PAGE_BASE = 0x7100                             # D2 page; D3 = +0x100 (RX_CHK_REG)
+EF, E6 = 0xEF, 0xE6
 COUNT = 0x0A00
 ISR_STEP_INSTR, ISR_STEPS = 20, 500           # the EXINT0 handler is a few hundred instructions; stop at the first pend, not at a fixed time
 fails = 0
@@ -43,48 +44,64 @@ def check(name: str, ok: bool, detail: str) -> None:
 
 
 def main() -> int:
-    bin_ = Path(sys.argv[1])
-    mapp = Path(sys.argv[2]) if len(sys.argv) > 2 else bin_.with_suffix(".map")
+    args = [a for a in sys.argv[1:] if not a.startswith("--") and a not in ("2", "3")]
+    ports = [int(sys.argv[sys.argv.index("--port") + 1])] if "--port" in sys.argv else [2, 3]
+    bin_ = Path(args[0])
+    mapp = Path(args[1]) if len(args) > 1 else bin_.with_suffix(".map")
+    rc = 0
+    for port in ports:
+        rc |= run_port(bin_, mapp, port)
+    return rc
+
+
+def run_port(bin_: Path, mapp: Path, port: int) -> int:
+    global fails
+    fails = 0
+    pg = PAGE_BASE + 0x100 * (port - 2)
+    ef, e6 = pg + EF, pg + E6
     bus = S.SimBus(bin_, mapp, "tpd-" + bin_.stem, None, video="1080p60")
     if not bus.run_until_mode(3):
         say("FAIL never reached ACTIVE")
         return 1
     m = bus.m
-    pend, info, clk_irq = m.addr("isr_g_ucTMDSRx2PhyPend"), m.addr("g_stTMDSRx2CtrlInfo"), m.addr("isr_g_ucTMDSRx2ClkIRQ")
+    pend, info, clk_irq = m.addr("isr_g_ucTMDSRxPhyPend") + port - 2, m.addr(f"g_stTMDSRx{port}CtrlInfo"), m.addr("isr_g_ucTMDSRxClkIRQ") + port - 2
     ev = {"phy": [], "cdr": []}
+    port_addr = m.addr("isr_g_ucTMDSRxPort")
 
     def ex0():
         return (m.rd(0xA8, 1, "sfr")[0] >> 0) & 1
 
     def phy(m_, r):
-        ev["phy"].append({"ex0": ex0(), "pend": m_.rd(pend)[0], "e6": m_.rd(E6)[0]})
+        if m_.rd(port_addr, 1, "iram")[0] != port - 2:      # the D2 scan runs in the sim too: count only this port's set-ups
+            return {}
+        ev["phy"].append({"ex0": ex0(), "pend": m_.rd(pend)[0], "e6": m_.rd(e6)[0]})
         return {}
 
     def cdr(m_, r):
         ev["cdr"].append({"info": m_.rd(info)[0], "ex0": ex0()})
         return {"val": 0}                       # not stable: scan takes its failure path and returns
 
-    for fn, f in (("ScalerTMDSRx2SetPhy_EXINT0", phy), ("ScalerTMDSRx2CheckCDRStable", cdr),
-                  ("ScalerTMDSRx2CheckCDRStable_EXINT0", lambda m_, r: {"val": 0}),
-                  ("ScalerTMDSRx2MeasureClk_EXINT0", lambda m_, r: {"val": COUNT}),
-                  ("ScalerTMDSRx2CheckDataDFE", lambda m_, r: {"carry": 0})):
+    for fn, f in (("ScalerTMDSRxSetPhy_EXINT0", phy), ("ScalerTMDSRxCheckCDRStable", cdr),
+                  ("ScalerTMDSRxCheckCDRStable_EXINT0", lambda m_, r: {"val": 0}),
+                  ("ScalerTMDSRxMeasureClk_EXINT0", lambda m_, r: {"val": COUNT}),
+                  ("ScalerTMDSRxCheckDataDFE", lambda m_, r: {"carry": 0})):
         m.stub(fn, f)
 
-    m.wr(0x71EC, bytes([0x00]))
+    m.wr(pg + 0xEC, bytes([0x00]))
     m.wr(clk_irq, bytes([1]))
     m.wr(pend, bytes([0]))
-    m.wr(E6, bytes([m.rd(E6)[0] & ~0x06 & 0xFF]))
-    m.wr(EF, bytes([0xC0]))
-    m.wr(0x71ED, bytes([0x0A, 0x00]))            # popped counter: 0x0A00
+    m.wr(e6, bytes([m.rd(e6)[0] & ~0x06 & 0xFF]))
+    m.wr(ef, bytes([0xC0]))
+    m.wr(pg + 0xED, bytes([0x0A, 0x00]))            # popped counter: 0x0A00
     m.wr(0x88, bytes([m.rd(0x88, 1, "sfr")[0] | 0x02]), "sfr")      # TCON.IE0: EXINT0
     for _ in range(ISR_STEPS):                   # step until the handler has returned (pend set): main must not have run the set-up yet
         m.run(ISR_STEP_INSTR)
         if m.rd(pend)[0] or ev["phy"]:
             break
     b = ev["phy"]
-    check("isr", m.rd(pend)[0] == 1 and not b and (m.rd(E6)[0] & 0x02) == 0,
+    check("isr", m.rd(pend)[0] == 1 and not b and (m.rd(e6)[0] & 0x02) == 0,
           f"pend {m.rd(pend)[0]} (1), SetPhy calls {len(b)} (0), "
-          f"E6 {m.rd(E6)[0]:02x} unstable enable {(m.rd(E6)[0] >> 1) & 1} (0)")
+          f"E6 {m.rd(e6)[0]:02x} unstable enable {(m.rd(e6)[0] >> 1) & 1} (0)")
     bus.wait(0.3)                                # SysTMDSRxHandler runs the deferred set-up
     b = ev["phy"]
     ok = len(b) == 1 and b[0]["ex0"] == 0 and b[0]["e6"] & 0x02 and m.rd(pend)[0] == 0 and ex0() == 1

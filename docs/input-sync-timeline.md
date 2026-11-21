@@ -45,8 +45,8 @@ SDK reading = hypothesis; the log lines are the measurement.
 | predetect | `SysSource.c:412` `SysSourceDetectPort` -> `ScalerTMDSNormalPreDetect` / `ScalerDpNormalPreDetect` | one search port per pass |
 | TMDS scan | `RL6449_Series_TMDSRx2.c:3601` (Rx3 same, `RL6449_Series_TMDSRx3.c`) | 2 ms PHY settle; CDR / DFE / video-detect chain; 1:10 / 1:40 retry toggle `:3684` |
 | TMDS video detect | `ScalerTMDSRx2_SeptPhy.c:134` | polls 45 ms (RGBHV) + 20 ms (DE) |
-| TMDS packet detect | `RL6449_Series_TMDSRx2.c:3259` | polls 130 ms (AVI + GCP), 180 ms each |
-| TMDS format detect | `RL6449_Series_TMDSRx2.c:3976` | poll 130 ms |
+| TMDS packet detect | `RL6449_Series_TMDSRx2.c:3438` | polls 130 ms (AVI + GCP), 180 ms each; the colour depth is read once after them (no 130 ms wait; re-checked in `TMDSStableDetect`, #216) |
+| TMDS format detect | `RL6449_Series_TMDSRx2.c:4210` | poll 130 ms |
 | DP scan | `ScalerDPRx1_SeptPhy.c` `ScalerDpRx1ScanInputPort`: HDCP, stream, MSA, video info, display format, stream clock, FIFO delay (`AWTO_SW_MARK` 30..36) | link training itself runs in the ISR (`ScalerDPRx1_INT_SeptPhy.c`) |
 | judge | `SysSource.c:1278` `SysSourceJudge` (probe 19, F0 line) | |
 | measure | `System/Code/SysJudge.c` `SysMachineWork` (probes 17 / 18, F1 stage 1) | `ScalerMeasureInputInfo` |
