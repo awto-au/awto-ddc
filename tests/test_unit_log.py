@@ -87,6 +87,13 @@ def test_host_time_marks(tmp_path):
     assert out[0].startswith("2026-11-21T09:59:59.500+10:00 ") and out[1].startswith("2026-11-21T10:00:00.000+10:00~")
 
 
+def test_poll_join_used_without_a_host_sync(tmp_path):
+    s = U.Store("T1", tmp_path)
+    e = {**ent(0), "poll_wall": "2026-11-21T09:59:58.250+10:00"}
+    out = s.ingest({**snap(0, 1), "entries": [e], "seq": 1})
+    assert out[0].startswith("2026-11-21T09:59:58.250+10:00~ ")
+
+
 def test_host_note_text_is_kept_and_ring_entry_not_duplicated(tmp_path):
     U.note_written("T1", 7, "mark 1", tmp_path)
     s = U.Store("T1", tmp_path)
