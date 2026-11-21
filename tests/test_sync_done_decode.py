@@ -36,9 +36,9 @@ def test_done_dp_counts_trainings():
 
 
 def test_link_hdmi():
-    arg = 1 | (2 << 2) | (3 << 4)                         # scrambling on + ratio 1:40, no scrambled data seen
+    arg = 1 | (2 << 2) | (3 << 4)                         # SCDC 20h bits both 1, no scrambled data seen
     v = (100 << 24) | (0 << 16) | (7 << 8) | 255
-    assert S.sync_link(arg, v) == "D2 HDMI 2.0 (1:40): SCDC ratio 1:40, scrambling on, no scrambled data, errors 0/7/255+, 100ms after ACTIVE"
+    assert S.sync_link(arg, v) == "D2 HDMI 2.0 (1:40): no scrambled data, SCDC 20h as the source left it: ratio bit 1 scrambling bit 1, errors 0/7/255+, 100ms after ACTIVE"
 
 
 def test_link_dp_lane_status():
@@ -77,3 +77,8 @@ def test_generated_tables_current():
 def test_fmts_known_to_generator(fmt):
     import gen_awto_sync as G
     assert fmt in G.FMTS
+
+
+def test_link_scdc_zero_is_raw_evidence_not_a_verdict():
+    out = S.sync_link(1 | (2 << 2) | (4 << 4), 147 << 24)           # PHY 1:40, scrambled data seen, SCDC bits left 0 by the source
+    assert out.startswith("D2 HDMI 2.0 (1:40): scrambled data seen, SCDC 20h as the source left it: ratio bit 0 scrambling bit 0")

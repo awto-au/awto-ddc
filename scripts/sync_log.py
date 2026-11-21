@@ -110,7 +110,7 @@ def sync_done(a: int, v: int, ms: int) -> str:
 
 
 def sync_link(a: int, v: int) -> str:
-    """fmt slink: arg = port idx | kind << 2 | flags << 4 (HDMI bit 0 scrambling on, 1 ratio 1:40, 2 scrambled data seen; DP bits 2:0 lanes) | 0x80 n/a,
+    """fmt slink: arg = port idx | kind << 2 | flags << 4 (HDMI bit 0 / 1 = SCDC 20h scrambling / ratio bits as the source left them (sources leave them 0, docs/input-sync-timeline.md section 5; the PHY mode in the head is the authority), bit 2 scrambled data seen; DP bits 2:0 lanes) | 0x80 n/a,
     value = ms after ACTIVE << 24 | HDMI errors ch0 / 1 / 2 (each 255 max) or DP rate / DPCD 202h / 203h"""
     kind, f, after = (a >> 2) & 3, (a >> 4) & 7, f"{v >> 24}ms after ACTIVE"
     head = f"D{(a & 3) + 1} {SD_KIND[kind]}"
@@ -123,8 +123,8 @@ def sync_link(a: int, v: int) -> str:
         r = (v >> 16) & 0xFF
         return f"{head} {DP_RATE.get(r, f'{r:02X}')} x{f}: lanes CR {cnt[0]}/{f}, EQ {cnt[1]}/{f}, symbol lock {cnt[2]}/{f}, {after}"
     e = [_sat((v >> s) & 0xFF, 255) for s in (16, 8, 0)]
-    return (f"{head}: SCDC ratio {'1:40' if f & 2 else '1:10'}, scrambling {'on' if f & 1 else 'off'}, "
-            f"{'scrambled data seen' if f & 4 else 'no scrambled data'}, errors {e[0]}/{e[1]}/{e[2]}, {after}")
+    return (f"{head}: {'scrambled data seen' if f & 4 else 'no scrambled data'}, SCDC 20h as the source left it: ratio bit {(f >> 1) & 1} "
+            f"scrambling bit {f & 1}, errors {e[0]}/{e[1]}/{e[2]}, {after}")
 
 
 def value(fmt: str, arg: int, v: int) -> str:

@@ -6,13 +6,13 @@ Existing sync lines stay (C1 / C6 / C2 / F0..F4 / FC / system machine); the new 
 ## Goal
 - One line per sync episode and port that says the sync is DONE, with the step times and the retry evidence.
 - One line when a sync cannot complete (FAILED), one when the picture is lost after ACTIVE. Never silent.
-- One link-health line shortly after ACTIVE (HDMI: SCDC ratio, scrambling, character errors; DP: rate, lanes, lane status).
+- One link-health line shortly after ACTIVE (HDMI: PHY mode, scrambled data seen, raw SCDC 20h bits, character errors; DP: rate, lanes, lane status).
 
 ## Lines (examples from the sim image, `sync_sim`)
 - `sync DONE D2 HDMI 2.0 (1:40), first try: PHY 34ms (1 set-up), scan ok 120ms, timing 380ms, ACTIVE 452ms`
 - `sync DONE D2 HDMI 2.0 (1:40), after 1 retry: PHY 31ms (2 set-ups), scan ok 640ms, timing 700ms, ACTIVE 810ms`
 - `sync DONE D1 DP, first try: link trained 120ms (1 training), scan ok 150ms, timing 380ms, ACTIVE 452ms`
-- `sync link D2 HDMI 2.0 (1:40): SCDC ratio 1:40, scrambling on, scrambled data seen, errors 0/0/0, 100ms after ACTIVE`
+- `sync link D2 HDMI 2.0 (1:40): scrambled data seen, SCDC 20h as the source left it: ratio bit 0 scrambling bit 0, errors 0/0/0, 147ms after ACTIVE`
 - `sync link D1 DP HBR2 x4: lanes CR 4/4, EQ 4/4, symbol lock 4/4, 100ms after ACTIVE`
 - `sync FAILED:CDR not locked at 1:10, retry 1:40 not done (D2, 3012ms)`
 - `sync FAILED:signal lost, the picture was up; time = since ACTIVE (D2, 5000ms)`
@@ -46,6 +46,7 @@ Existing sync lines stay (C1 / C6 / C2 / F0..F4 / FC / system machine); the new 
 - Fmts `sdone` / `slink` (31 / 32): `scripts/gen_awto_sync.py` (width check: 2 console rows), `fw/osd/console.c` `AwtoPutSdone` / `AwtoPutSlink`, `scripts/sync_log.py` `sync_done` / `sync_link`. Class: DONE normal, link timing, FAILED error.
 
 ## Link health registers (regdb `re/regdb/RTD2795T-CG.tsv.gz`; D2 = page 71, D3 = page 72)
+- SCDC 20h is printed as raw evidence only: sources (Intel / NVIDIA) leave `TMDS_Bit_Clock_Ratio` 0 while the PHY runs 1:40 (docs/input-sync-timeline.md section 5; unit 1 4K60: PHY 1:40, scrambled data seen, SCDC bits 0). The PHY mode in the line head (1:10 / 1:40) and `scrambled data seen` are the authority.
 - SCDC 20h via the SCDC data port (`HDMI_CTRL_39` index `PORT_PAGE71_HDMI_SCDC_20`): `tmds_clk_ratio` bit 1, `scram_en` bit 0 (what the source wrote).
 - `HDMI_CTRL_01.scram_det` bit 3: sink detected scrambled control codes.
 - CED: `HDMI_CTRL_0C.err_popup` bit 7 latches, then `err_cnt_ch0 / 1 / 2` = `HDMI_CTRL_0C..11` (15-bit each, MSB regs bit 6..0). Counter source is `HDMI_CTRL_0B.err_cnt_sel` as the SDK leaves it (0, lock / unlock counter).

@@ -3490,11 +3490,11 @@ static void AwtoPutSlink(BYTE ucArg)
     }
     else
     {
-        AwtoPutStr(": SCDC ratio ");
-        AwtoPutStr(((s_ucSdN & 2) != 0) ? "1:40" : "1:10");
-        AwtoPutStr(", scrambling ");
-        AwtoPutStr(((s_ucSdN & 1) != 0) ? "on, " : "off, ");
-        AwtoPutStr(((s_ucSdN & 4) != 0) ? "scrambled data seen" : "no scrambled data");
+        AwtoPutStr(((s_ucSdN & 4) != 0) ? ": scrambled data seen" : ": no scrambled data");
+        AwtoPutStr(", SCDC 20h as the source left it: ratio bit ");
+        AwtoPutNum((s_ucSdN >> 1) & 1, 1);
+        AwtoPutStr(" scrambling bit ");
+        AwtoPutNum(s_ucSdN & 1, 1);
         AwtoPutStr(", errors ");
         AwtoPutSat((BYTE)(s_ulAwtoLnV >> 16), 255);
         AwtoPutChar('/');
