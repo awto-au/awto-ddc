@@ -106,14 +106,9 @@ class Sim:
         return lines
 
     def inject(self, evs):
-        """ring entries as AwtoSyncPush writes them (StAwtoSync: seq at 3, N at 12, wrap at 13, 8 B entries after 14 B)"""
-        h = bytes(self.m.rd(self.a_sync, SL.HDR))
-        seq, n, wrap = h[3], h[12], h[13]
+        """ring entries as AwtoSyncPush writes them (sync_log.inject_lines: version 3 slots, version 4 tail + sim DDR)"""
         ms = self.m.rd(0xF6D0 + SL.DIAG_T2, 2)             # ring ms = usT2Isr (diag block)
-        for i, a, v in evs:
-            self.m.wr(self.a_sync + SL.HDR + SL.EV * (seq % n), bytes([i, a, *ms]) + v.to_bytes(4, "big"))
-            seq = (seq + 1) % wrap
-        self.m.wr(self.a_sync + 3, bytes([seq]))
+        SL.inject_lines(self.m.rd, self.m.wr, self.a_sync, evs, bytes(ms))
         say(f"  injected {len(evs)} widest lines: " + " | ".join(SL.line(self.rows, (i, a, 0, v), 0) for i, a, v in evs))
 
     def long_wraps(self) -> int:

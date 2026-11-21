@@ -17,6 +17,7 @@ size = 0x6000
 
 [xdata]
 pool = [0xD700, 0xF3C9]    # SDK XDATA end 0xF700 less the 48 B diag block, 32 B watchdog record, 20 B reset snapshot, 5 B backlight test knob, 718 B sync ring (RL6449_Project.h AWTO_SYNC_ADDR: no-init, kept over a warm reset)
+pool_end_dram_log = 0xF53F   # the same pool with _AWTO_DRAM_LOG=_ON: the sync ring is a 344 B tail (AWTO_SYNC_ADDR 0xF53F)
 # DDC RAM per port (Mcu.c MCU_DDCRAM_D1..D3, 256 B each), hardware-owned; D0 (0xE080) has no port: XDATA (#165)
 ddc_ram = [[0xE280, 0xE380], [0xE480, 0xE580], [0xE680, 0xE780]]
 

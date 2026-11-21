@@ -245,6 +245,41 @@ class Dev:
         pass
 
 
+class DdrPort(Dev):
+    """MCU_DC port A (page 37): 16 B bursts at 8 B unit addresses, write / read buffers with swapped halves (fw/test/ddr_draw.c, docs/ddr-draw.md).
+    The DDR content lives in the model (survives the chip reset like the real DDR, docs/note-store.md); the DRAM log / note store use it."""
+    R_CMD, R_ADDR, R_WBUF, R_RBUF, R_FLAG = 0x3700, 0x3704, 0x3710, 0x3720, 0x3734
+    CMD_WRITE, CMD_READ = 0x80, 0xA0
+    writes = (R_CMD,)
+
+    def __init__(self):
+        self.mem: dict[int, bytes] = {}
+        self.bursts_w = self.bursts_r = 0
+        try:
+            import sync_log
+            sync_log.DDR_UNIT = lambda u: self.mem.get(u, bytes(16))      # host view for sync_log.read_ring (DRAM log)
+            sync_log.DDR_MEM = self.mem
+        except ImportError:
+            pass
+
+    def on_write(self, m, a):
+        cmd = m.rd(self.R_CMD)[0]
+        if cmd not in (self.CMD_WRITE, self.CMD_READ):
+            return
+        h, mid, lo, u0 = m.rd(self.R_ADDR, 4)
+        unit = h << 24 | mid << 16 | lo << 8 | u0
+        if cmd == self.CMD_WRITE:
+            buf = m.rd(self.R_WBUF, 16)
+            self.mem[unit] = bytes(buf[(j + 8) % 16] for j in range(16))
+            self.bursts_w += 1
+        else:
+            mem = self.mem.get(unit, bytes(16))
+            m.wr(self.R_RBUF, bytes(mem[(j - 8) % 16] for j in range(16)))
+            m.wr(self.R_FLAG, b"\x01")
+            self.bursts_r += 1
+        m.wr(self.R_CMD, b"\x00")
+
+
 class FlashDev(Dev):
     """FlashPort (FF78..FF7B) as a Dev."""
     reads, writes = (FlashPort.PORT,), (FlashPort.ADDR + 2,)
@@ -727,7 +762,7 @@ def video_devs(img: bytes, mode: str = "1080p60", fault: str | None = None, port
     tmp/regs/AWT26110003-20261105-181408.json (P0_02 = 0x01; the vendor dump 180523 has 0x00) (#26)."""
     hdmi = HdmiInput(mode)
     return [regdb_cells(), FlashDev(img), IicSlave(), Cells(CABLE[port]),
-            IndPort((0xBAC1, 0xBAC2, 0xBAC3), 0xBAC4),
+            IndPort((0xBAC1, 0xBAC2, 0xBAC3), 0xBAC4), DdrPort(),
             W1C({0x0002: 0xFF, 0x000C: 0x01, 0x1603: 0xFF, 0x1616: 0x70, 0x3003: 0xF0, 0x3016: 0x70},
                 FAULTS[fault] if fault else None), hdmi, ChipReset(), FlashHalt(), EdpPanel()], hdmi
 
@@ -1042,7 +1077,7 @@ class SimBus:
             self.iic = next(d for d in all_devs if isinstance(d, IicSlave))
         else:
             self.iic = IicSlave()
-            all_devs, self.hdmi = [FlashDev(self.img), self.iic], None
+            all_devs, self.hdmi = [FlashDev(self.img), self.iic, DdrPort()], None
         self.m = Machine(self.img, Path(mapp), tag or Path(binp).stem, log, [*all_devs, *devs])
         if video:
             video_stubs(self.m, self.hdmi, port)

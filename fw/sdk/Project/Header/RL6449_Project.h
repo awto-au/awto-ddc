@@ -1197,11 +1197,21 @@ typedef struct                                  // 8 B
     unsigned char ucMsLo;
     unsigned char pucVal[4];                    // value, high byte first (fw/awto/sync.tsv fmt)
 } StAwtoSyncEv;
+#ifndef _AWTO_DRAM_LOG
+#define _AWTO_DRAM_LOG                                          _ON     // ON (default): the ring's history lives in the DDR (docs/dram-log-design.md), XDATA keeps a tail
+#endif
+#define AWTO_SYNC_TAIL                                          32      // DRAM log: XDATA entries (power of 2): collapse look-back, console cache, lines waiting for the DDR
+typedef struct                                  // 10 B
+{
+    StAwtoSyncEv stEv;                          // the 8 B ring entry (ms = low 16 bits)
+    unsigned char ucMs3;                        // ms bits 31..24
+    unsigned char ucMs2;                        // ms bits 23..16
+} StAwtoSyncTl;
 typedef struct
 {
     unsigned char ucMagic0;                     // 'S'
     unsigned char ucMagic1;                     // 'Y'
-    unsigned char ucVersion;                    // 3: ucN / ucWrap in the header
+    unsigned char ucVersion;                    // 3: ucN / ucWrap in the header; 4: DRAM log (tail in XDATA, history in the DDR)
     unsigned char ucSeq;                        // next event's seq, 0..AWTO_SYNC_WRAP-1; entry = stEv[seq % AWTO_SYNC_N]
     unsigned char ucEpSeq;                      // seq of the current episode's first event
     unsigned char ucKind;                       // AWTO_SYNC_K_* of the current episode
@@ -1211,16 +1221,51 @@ typedef struct
     unsigned char ucDone;                       // mode reached ACTIVE / NOSIGNAL / NOSUPPORT / POWER SAVING since the start
     unsigned char ucOpenReq;                    // console auto-open pending (fw/osd/console.c AwtoSyncConPoll); AWTO_SYNC_OPEN_KEY = by UP+DOWN
     unsigned char ucSpare;                      // #150: repeats of the last line pair not yet written (AwtoSyncPush)
-    unsigned char ucN;                          // AWTO_SYNC_N: entries in the ring (hosts size the read from this)
+    unsigned char ucN;                          // AWTO_SYNC_N: entries the ring shows (hosts size the read from this)
     unsigned char ucWrap;                       // AWTO_SYNC_WRAP
+#if(_AWTO_DRAM_LOG == _ON)
+    unsigned char ucGen;                        // DDR ring generation: entries of another generation are not ours (a cold power-up bumps it)
+    unsigned char ucBoot;                       // boots since the DDR ring was made (wraps)
+    unsigned char ucPend;                       // tail entries not yet in the DDR
+    unsigned char ucLost;                       // lines dropped (tail full of pending lines in a path that cannot flush), 255 max
+    unsigned char ucHead;                       // tail slot of the next line (stTl[ucHead % AWTO_SYNC_TAIL]); the newest line is ucHead - 1
+    unsigned long ulWr;                         // absolute index of the oldest pending line = the next one written to the DDR (slot ulWr % AWTO_DLOG_SLOTS)
+    unsigned char ucOld;                        // of the pending lines, the oldest ucOld are the previous boot's (kept over the reset)
+    StAwtoSyncTl stTl[AWTO_SYNC_TAIL];
+#else
     StAwtoSyncEv stEv[AWTO_SYNC_N];
+#endif
 } StAwtoSync;
 // The ring is no-init XDATA at the top of the linker pool (fw/rl6449_memory.toml pool end = AWTO_SYNC_ADDR): the crt RAM clear stops
 // below it, so a warm reset / watchdog bite keeps the previous boot's lines (AwtoSyncInit validates it, a cold power-up clears it).
+#if(_AWTO_DRAM_LOG == _ON)
+#define AWTO_SYNC_ADDR                                          0xF53F
+#else
 #define AWTO_SYNC_ADDR                                          0xF3C9
+#endif
 typedef char tAwtoSyncEnd[(AWTO_SYNC_ADDR + sizeof(StAwtoSync) == 0xF697) ? 1 : -1];     // ends where the backlight knob starts
 extern __xdata __at(AWTO_SYNC_ADDR) StAwtoSync g_stAwtoSync;
 extern __xdata StAwtoSyncEv g_stAwtoSyncPin;  // #150: this boot's reason line, kept out of the ring
+// Entry access (8 B ring entry view): AWTO_SYNC_ENT(n) = the entry n lines back (tail / ring, n <= 16 in the DRAM log), AwtoSyncAt(seq) = any
+// line the ring shows (AWTO_SYNC_N back; a DRAM log reads the DDR for older ones into a 2-entry cache).
+#if(_AWTO_DRAM_LOG == _ON)
+#define AWTO_SYNC_ENT(n)                                        ((unsigned char __xdata *)&g_stAwtoSync.stTl[(unsigned char)(g_stAwtoSync.ucHead - (n)) & (AWTO_SYNC_TAIL - 1)])
+extern unsigned char __xdata *AwtoSyncAt(unsigned char ucSeq);
+// DDR ring: 2^15 slots of one 16 B burst (entry), header burst just below, the note store (AWTO_DDRN_*) just above (docs/dram-log-design.md)
+#define AWTO_DLOG_SLOTS                                         32768UL
+#define AWTO_DLOG_UNITS0                                        0x3EC000UL  // first entry; ring ends at AWTO_DDRN_UNITS0
+#define AWTO_DLOG_HDR_UNITS                                     0x3EBFFEUL  // header burst
+#define AWTO_DLOG_ENTRY_UNITS                                   2
+#define AWTO_DLOG_HINT_EVERY                                    64          // header hint (newest entry index) rewritten every 64 entries: a warm start scans <= 64 slots forward
+#define AWTO_DLOG_DRAIN_MAX                                     4           // entries a main-loop pass writes to the DDR (~75 us each)
+extern void AwtoDlFlush(unsigned char ucOp);                    // main context only: write up to ucOp & 0x3F pending tail lines to the DDR; ucOp | 0x80 = also before Timer2
+#define AWTO_DLOG_DRAIN()                                       AwtoDlFlush(AWTO_DLOG_DRAIN_MAX)
+#define AWTO_TC_DLOG_FILL                                       0xB4    // test cmd: 34000 demo lines (> the DDR ring) at the drain rate: wrap test
+#else
+#define AWTO_SYNC_ENT(n)                                        ((unsigned char __xdata *)&g_stAwtoSync.stEv[AWTO_SYNC_IDX(AWTO_SYNC_BACK(g_stAwtoSync.ucSeq, (n)))])
+#define AwtoSyncAt(s)                                           ((unsigned char __xdata *)&g_stAwtoSync.stEv[AWTO_SYNC_IDX(s)])
+#define AWTO_DLOG_DRAIN()
+#endif
 #define AWTO_SYNC_K_POWER_ON                                    1
 #define AWTO_SYNC_K_SWITCH                                      2
 #define AWTO_SYNC_K_WAKE                                        3
@@ -1426,6 +1471,7 @@ extern void osd_tc_bar(unsigned char ucWin, unsigned int usX0, unsigned int usY0
 #define AWTO_DDRN_BYTE(j)                                       AWTO_XB(AWTO_R_MCU_DC_DATABUF_R_00_A + (((j) + AWTO_DDRN_HALF) % AWTO_DDRN_BURST_BYTES))
 extern void AwtoDdrNoteWrite(void);                 // g_aucAwtoNote -> its DDR line (sequence g_usAwtoNoteN)
 extern unsigned char AwtoDdrNoteRead(unsigned int usSeq, unsigned char ucBurst);    // 1 = burst ucBurst of that line is in the read buffer (AWTO_DDRN_BYTE)
+extern __xdata unsigned int g_usAwtoT2Base;         // 0xFFFF until Timer2 runs (ring stamps are WDT time then: AwtoSyncT2Start re-bases them)
 #define AWTO_TC_HOST_NOTE                                       0x35    // test cmd: the host wrote the slot (tag = g_usAwtoNoteN + 1) over 0x35: log it (#273)
 extern __xdata unsigned int g_usAwtoNoteN;
 extern __xdata unsigned char g_aucAwtoNote[AWTO_NOTE_SIZE];
@@ -1551,6 +1597,7 @@ extern void AwtoSyncFreq(void);
 #define AWTO_SYNC_EV_DWELL                                      0x95    // arg = port: predetect re-armed the search dwell (SDK reactive time); value = ms since the search reached the port
 #define AWTO_SYNC_EV_PASSSLOW                                   0x96    // arg = stage AWTO_PS_*; value = state << 24 | per-boot count << 16 | ms: one main-loop segment >= AWTO_PS_SLOW_MS (#311)
 #define AWTO_SYNC_EV_PASSBOOT                                   0x97    // arg = stage that owned the longest pass of a state; value = state << 24 | ms (count byte 0), once per boot after ACTIVE (#311)
+#define AWTO_SYNC_EV_LOGLOST                                    0x98    // DRAM log: value = lines dropped before this one (tail full of pending lines in a path that cannot write the DDR)
 // #311 main-loop stage timing: AWTO_PSTG(id) after each stage; Timer2 ms (usT2Isr). Names: sync.tsv table 19 args 0x20 + id.
 #ifndef AWTO_PSTG_SLOW_MS
 #define AWTO_PSTG_SLOW_MS                                         20      // a segment this long writes a line (7x a 4K60 pass); constant, no registry row (XDATA / NVRAM)

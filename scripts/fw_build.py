@@ -35,7 +35,16 @@ ROOT = repo_root()
 LOG = None
 import chip_mem as CM
 
-XRAM = CM.XRAM                                                # fw/rl6449_memory.toml (#149 a)
+
+def _xram() -> tuple:
+    """pool from fw/rl6449_memory.toml; the sync ring is 718 B (default) or a 344 B tail with the DRAM log (-D _AWTO_DRAM_LOG=_ON / _OFF, else the header default)"""
+    m = re.search(r"-D\s*_AWTO_DRAM_LOG=(_ON|_OFF)", os.environ.get("K2S_SDCC_EXTRA", ""))
+    d = re.search(r"#define\s+_AWTO_DRAM_LOG\s+(_ON|_OFF)", (ROOT / "fw/sdk/Project/Header/RL6449_Project.h").read_text())
+    on = (m.group(1) if m else d.group(1)) == "_ON"
+    return (CM.XRAM[0], CM.XRAM_DRAM_LOG_END if on else CM.XRAM[1])
+
+
+XRAM = _xram()                                                # fw/rl6449_memory.toml (#149 a)
 EDID_RAM = CM.DDC_RAM
 BANK = CM.BANK_SIZE
 NBANKS = CM.CODE_BANKS

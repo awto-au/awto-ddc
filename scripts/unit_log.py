@@ -30,6 +30,7 @@ LOG = ROOT / "tmp/logs/unit_log.log"
 INTERVAL_S = 30
 READ_LIMIT_S = 60                          # dev.py synclog through the port: server limit 45 s + 15 s
 NOTE_EV = 0xEE
+DRAM_FIRST = 64                            # first poll of a unit with the DRAM log: the newest entries (the history is read on demand: dev.py synclog --dram --all)
 
 
 def say(s: str) -> None:
@@ -81,8 +82,33 @@ class Store:
         with self.log.open("a") as f:
             f.writelines(x + "\n" for x in lines)
 
+    def ingest_dram(self, snap: dict) -> list[str]:
+        """DRAM log image: the entries come with their absolute DDR index, so there is no ring-lap dedupe: append the ones after the saved index.
+        Line = host time (current boot: poll join, marked '~'; an older boot: its ms since reset only), boot counter, index, text"""
+        prev, read = self._state(), snap["read"]
+        last = prev.get("abs") if prev else None
+        out: list[str] = []
+        ents = snap["entries"]
+        if last is not None and ents and ents[0]["abs"] > last + 1:
+            out.append(f"# {read} ---- gap: {ents[0]['abs'] - last - 1} entries between two polls are not in this read ----")
+        noted = self._noted()
+        for e in ents:
+            if last is not None and e["abs"] <= last:
+                continue
+            if e["id"] == NOTE_EV and e["val"] in noted:
+                continue                                   # host_note.py logged its text at write time
+            when = e["poll_wall"] or f"boot {e['boot']}"
+            out.append(f"{when}~ {e['abs']:6d} {e['text']}")
+        if ents:
+            self._append(out)
+            self.dir.mkdir(parents=True, exist_ok=True)
+            self.state.write_text(json.dumps({"abs": ents[-1]["abs"], "read": read}))
+        return out
+
     def ingest(self, snap: dict) -> list[str]:
         """append the entries the log does not have yet; returns the lines written"""
+        if snap.get("dram"):
+            return self.ingest_dram(snap)
         ents, wrap, n, seq = snap["entries"], snap["wrap"], snap["n"], snap["seq"]
         prev, read = self._state(), snap["read"]
         out: list[str] = []
@@ -132,12 +158,38 @@ DIRECT = False                              # --direct: dev.py talks to the bus 
 
 
 def read_snapshot(unit: str) -> dict:
-    r = subprocess.run([sys.executable, str(ROOT / "dev.py"), "synclog", "--unit", unit, "--whole", "--json", *(["--direct"] if DIRECT else [])], cwd=ROOT, capture_output=True,
-                       text=True, check=False, timeout=READ_LIMIT_S)
-    snap = parse_output(r.stdout + r.stderr)
+    """a DRAM log image answers `--dram` (only the entries after the saved index); any other image: the ring"""
+    for args in (["--dram", "--json", *_dram_range(unit)], ["--whole", "--json"]):
+        r = subprocess.run([sys.executable, str(ROOT / "dev.py"), "synclog", "--unit", unit, *args, *(["--direct"] if DIRECT else [])], cwd=ROOT, capture_output=True,
+                           text=True, check=False, timeout=READ_LIMIT_S)
+        snap = parse_output(r.stdout + r.stderr)
+        if snap is not None:
+            break
     if snap is None:
         raise OSError(f"no ring in the synclog output (rc {r.returncode}): {(r.stdout + r.stderr).strip().splitlines()[-1:]}")
     return snap
+
+
+def _dram_range(unit: str) -> list[str]:
+    """--since saved index + 1 (the unit's saved state), else the newest DRAM_FIRST entries"""
+    for p in LOGDIR.glob("*-sync.state.json"):
+        try:
+            st = json.loads(p.read_text())
+        except (OSError, ValueError):
+            continue
+        if "abs" in st and unit_of(p) == unit:
+            return ["--since", str(st["abs"] + 1)]
+    return ["--last", str(DRAM_FIRST)]
+
+
+def unit_of(state: Path) -> str:
+    """serial from the state file name; the unit argument may be a number: matched through scripts/devices.json"""
+    serial = state.name.split("-sync.state.json")[0]
+    try:
+        units = json.loads((ROOT / "scripts/devices.json").read_text())["units"]
+    except (OSError, ValueError, KeyError):
+        return serial
+    return next((n for n, u in units.items() if u.get("serial") == serial), serial)
 
 
 def poll_once(unit: str, store_for=None, read=read_snapshot, busy=flash_running) -> list[str]:

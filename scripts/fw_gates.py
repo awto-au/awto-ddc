@@ -90,6 +90,7 @@ EXTENSIVE = {
     "conkeep": "~6 s CPU (marks in the ring: console close / reopen keeps them, flood, watchdog reset keeps the previous boot)",
     "sysm": "~10 s CPU (power / mode machine chain)",
     "sync": "~11 s CPU (sync-log sim boots)",
+    "dramlog": "~40 s CPU (DRAM log image: boot, two 34000-line fills = wrap + stamps above 65 s, watchdog reset keeps the history)",
 }
 SIM_CPU = os.environ.get("AWTO_SIM_CPU", "dw8051")   # fast-core CPU model of the sims (#162 step 1); results are comparable only at the same model
 CPU_OF = {}      # per-gate CPU model override; wdt runs on dw8051 since the Timer0 cases use wall ms (the 8052 model has no clock: the 350.8 MHz boot never reaches stage 8 in wdt_test)
@@ -113,6 +114,7 @@ SKIP_IF_MISSING = {      # gate -> map symbols the image must define, else SKIP 
     "panel": ("_g_ucAwtoPanelOwn",),
     "sysm": ("_g_ucAwtoSysOwn",),
     "nvlog": ("_g_stAwtoNv", "_AwtoNvLog"),
+    "dramlog": ("_AwtoDlFlush",),
 }
 
 
@@ -205,6 +207,7 @@ def gates(b: Path, m: Path, ref, tree):
     g["conmode"] = [*PY, f"{s}/console_mode_sim.py", b, m]    # #218: Off / Until signal (3 s close, key dismiss) / Always
     if " _g_ucAwtoStackFatal" in mt:                       # #203 stack canary: quiet at ACTIVE, fatal + halt on 0x3F
         g["canary"] = [*PY, f"{s}/stack_canary_sim.py", b, m]
+    g["dramlog"] = [*PY, f"{s}/dram_log_sim.py", b, m]         # DRAM log: DDR ring format, wrap, warm reset keeps the history
     g["conkeep"] = [*PY, f"{s}/con_keep_sim.py", b, "--map", m]       # log keeping: the console is a view of the ring, a warm reset keeps it
     g["conwrap_full"] = [*PY, f"{s}/con_wrap_sim.py", b, "--map", m, "--out", out / "conwrap_full", *(["--tree", tree] if tree else [])]   # no line clipped, real events
     g["conwrap"] = [*PY, f"{s}/con_wrap_sim.py", b, "--map", m, "--out", out / "conwrap", "--scope", "inject", *(["--tree", tree] if tree else [])]    # NORMAL: injected widest lines

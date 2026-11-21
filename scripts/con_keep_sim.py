@@ -33,41 +33,15 @@ BITE_INSTR = 40_000_000  # boot_sim.py: test cmd 0x4C -> reset = 14 M instr (cmd
 RESET_S = 160_000_000   # boot instruction budget (con_wrap_sim)
 
 
-class DdrPort(C.S.Dev):
-    """MCU_DC port A (page 37): 16 B bursts at 8 B unit addresses, write / read buffers with swapped halves (fw/test/ddr_draw.c, docs/ddr-draw.md);
-    the DDR content lives in the model, so it survives the chip reset like the real DDR (measured on unit 3, tmp/scratch/issue-note-store.md)"""
-    R_CMD, R_ADDR, R_WBUF, R_RBUF, R_FLAG = 0x3700, 0x3704, 0x3710, 0x3720, 0x3734
-    CMD_WRITE, CMD_READ = 0x80, 0xA0
-    writes = (R_CMD,)
-
-    def __init__(self):
-        self.mem: dict[int, bytes] = {}
-
-    def on_write(self, m, a):
-        cmd = m.rd(self.R_CMD)[0]
-        if cmd not in (self.CMD_WRITE, self.CMD_READ):
-            return
-        h, mid, lo, u0 = m.rd(self.R_ADDR, 4)
-        unit = h << 24 | mid << 16 | lo << 8 | u0
-        if cmd == self.CMD_WRITE:
-            buf = m.rd(self.R_WBUF, 16)
-            self.mem[unit] = bytes(buf[(j + 8) % 16] for j in range(16))
-        else:
-            mem = self.mem.get(unit, bytes(16))
-            m.wr(self.R_RBUF, bytes(mem[(j - 8) % 16] for j in range(16)))
-            m.wr(self.R_FLAG, b"\x01")
-        m.wr(self.R_CMD, b"\x00")
-
-
 class KSim(C.Sim):
-    """con_wrap_sim.Sim + the DDR port"""
+    """con_wrap_sim.Sim with the DDR model of fw_sim (kept over the chip reset)"""
 
     def __init__(self, binp: Path, mapp: Path):
         super().__init__(binp, mapp)
         self.bus.close()
-        self.ddr = DdrPort()
-        self.bus = C.S.SimBus(binp, mapp, "conkeep-" + binp.stem, None, boot=False, devs=[self.model, self.eng, self.ddr], video="1080p60")
+        self.bus = C.S.SimBus(binp, mapp, "conkeep-" + binp.stem, None, boot=False, devs=[self.model, self.eng], video="1080p60")
         self.m = self.bus.m
+        self.ddr = next(d for d in self.m.devs if isinstance(d, C.S.DdrPort))     # the sim's DDR (fw_sim.video_devs)
         self.mccs = C.D.Mccs(self.bus, self.eng)
 
 

@@ -425,13 +425,82 @@ def paint_lines(h: dict, lines: list[str], rows: list[dict], tty: bool) -> list[
     return [sync_classes.paint(ln, row_class(rows, ev), True, classes) for ev, ln in zip(evs, lines)]
 
 
-def read_ring(rd, addr: int):
-    """the whole ring at addr: header first, then HDR + N x EV (N from the header). rd(addr, n) -> bytes or None"""
+DDR_MEM = None                           # the sim's DDR content (fw_sim.DdrPort.mem: unit -> 16 B), for inject_lines
+DDR_UNIT = None                          # callable(units) -> 16 B (memory order) | None: the DDR over a debug link or the sim's DDR model (DRAM log, scripts/dram_log.py)
+V4_HDR, V4_TAIL, V4_TL = 24, 32, 10     # version 4 header (14 B + gen, boot, pend, lost, head, 32 bit write index, old), tail entries of 10 B (8 B entry + ms bits 31..16)
+
+
+def _ring_v4(rd, addr: int, whole: bool = True):
+    """DRAM log image (version 4) as the old version 3 ring bytes: the newest N lines from the XDATA tail and the DDR, entry of seq s at slot s % N.
+    Lines the DDR cannot give (no reader, stalled, overwritten) stay all 0 = never written; `read_ring.dram_missing` counts them."""
+    import dram_log as D
+    b = rd(addr, V4_HDR + V4_TAIL * V4_TL)
+    if b is None:
+        return None
+    b = bytes(b)
+    seq, n, wrap, gen, pend, head, wr = b[3], b[12], b[13], b[14], b[16], b[18], int.from_bytes(b[19:23], "big")
+    nxt = wr + pend                                          # index of the next line to be made
+    ring = bytearray(HDR + n * EV)
+    ring[:HDR] = b[:HDR]
+    ring[2] = 3
+    missing = 0
+    want = n if whole else min(n, (seq - b[4]) % wrap)       # the current episode only: no DDR reads for older lines
+    for d in range(1, min(want, nxt) + 1):
+        a = nxt - d
+        if d <= V4_TAIL:
+            o = V4_HDR + V4_TL * ((head - d) & (V4_TAIL - 1))
+            e = b[o:o + EV]
+        else:
+            ent = D.entry(DDR_UNIT, a, gen) if DDR_UNIT else None
+            if ent is None:
+                missing += 1
+                continue
+            e = bytes([ent["id"], ent["arg"], (ent["ms"] >> 8) & 0xFF, ent["ms"] & 0xFF]) + ent["val"].to_bytes(4, "big")
+        s = (seq - d) % wrap
+        ring[HDR + EV * (s % n):HDR + EV * (s % n) + EV] = e
+    read_ring.dram_missing = missing
+    return bytes(ring)
+
+
+def inject_lines(rd, wr, addr: int, evs, ms2: bytes) -> None:
+    """sim tests: ring lines (id, arg, value) as AwtoSyncPush leaves them, at time ms2 (2 B BE). Version 3: XDATA ring slots. Version 4: the XDATA tail
+    and the sim's DDR (DDR_MEM) as a flushed line, so a burst of any size fits (no pending lines)."""
+    h = bytes(rd(addr, V4_HDR))
+    seq, n, wrap = h[3], h[12], h[13]
+    for i, a, v in evs:
+        if h[2] != 4:
+            wr(addr + HDR + EV * (seq % n), bytes([i, a, *ms2]) + v.to_bytes(4, "big"))
+        else:
+            gen, boot, pend, head, w = h[14], h[15], h[16], h[18], int.from_bytes(h[19:23], "big")
+            assert pend == 0 and DDR_MEM is not None, "inject into a DRAM log image needs a drained tail and the sim DDR"
+            wr(addr + V4_HDR + V4_TL * (head % V4_TAIL), bytes([i, a, *ms2]) + v.to_bytes(4, "big") + b"\0\0")
+            import dram_log as D
+            ent = bytes([i, a, 0, 0, *ms2]) + v.to_bytes(4, "big") + (w & 0xFFFFFF).to_bytes(3, "big") + bytes([gen, boot, 0])
+            ent = ent[:15] + bytes([D._sum(ent + b"\0")])
+            u = D.C["AWTO_DLOG_UNITS0"] + (w % D.C["AWTO_DLOG_SLOTS"]) * D.C["AWTO_DLOG_ENTRY_UNITS"]
+            DDR_MEM[u] = ent
+            head, w = (head + 1) & 0xFF, w + 1
+            h = h[:18] + bytes([head]) + w.to_bytes(4, "big")
+            wr(addr + 18, h[18:23])
+        seq = (seq + 1) % wrap
+    wr(addr + 3, bytes([seq]))
+
+
+def read_ring(rd, addr: int, whole: bool = True):
+    """the whole ring at addr: header first, then HDR + N x EV (N from the header). rd(addr, n) -> bytes or None.
+    Version 4 (DRAM log): the same bytes, older lines from the DDR through DDR_UNIT"""
     h = rd(addr, HDR)
     if h is None:
         return None
     h = bytes(h)
-    return h if h[:2] != b"SY" else rd(addr, HDR + h[12] * EV)
+    if h[:2] != b"SY":
+        return h
+    if h[2] == 4:
+        return _ring_v4(rd, addr, whole)
+    return rd(addr, HDR + h[12] * EV)
+
+
+read_ring.dram_missing = 0
 
 
 def decode(raw: bytes, rows: list[dict], whole: bool = False, note: bytes | None = None):
@@ -541,6 +610,12 @@ def main() -> int:
     ap.add_argument("--whole", action="store_true", help="every entry still in the ring (all episodes), times vs the current episode")
     ap.add_argument("--json", action="store_true", help="one 'SYNCJSON {...}' line with every entry (ring seq, raw bytes, text, host time) for scripts/unit_log.py")
     ap.add_argument("--delta", action="store_true", help="add a +ms column: time since the previous line (#216 boot timing)")
+    ap.add_argument("--dram", action="store_true", help="DRAM log image: the history from the DDR ring (all boots), per boot ms since reset (scripts/dram_log.py)")
+    g = ap.add_mutually_exclusive_group()
+    g.add_argument("--last", type=int, help="with --dram: the newest K entries (default 64)")
+    g.add_argument("--all", action="store_true", help="with --dram: every entry in the DDR ring (slow over the debug link: ~25 entries/s)")
+    g.add_argument("--boot", type=int, help="with --dram: only the entries of this boot counter value")
+    g.add_argument("--since", type=int, help="with --dram: the entries with absolute index >= N (the unit log saver)")
     a = ap.parse_args()
     sys.path.insert(0, str(Path(__file__).resolve().parent))
     import dbg_xdata as X
@@ -550,12 +625,52 @@ def main() -> int:
         i2cbus.require_unit(a.bus, a.serial)
     rows = load_rows(a.tsv or tsv_for(a.map))
     io = B.Real(a.bus, allow_write=True, regread=True)
-    raw = read_ring(lambda ad, n: X.read_blocks(io, ad, n), sym(a.map, "g_stAwtoSync"))
+    global DDR_UNIT, NOTE_DDR
+    dram_img = " _AwtoDlFlush " in a.map.read_text(errors="replace")
+    stats: dict = {}
+    if dram_img:                                         # DRAM log image: older ring lines and the whole history are in the DDR
+        import ddr_frame_test as T
+        import ddr_note_read as DN
+        import dram_log as D
+        dbg = T.Dbg.__new__(T.Dbg)
+        dbg.io, dbg.bus, dbg.n_tx = io, None, 0
+        DDR_UNIT = D.ddr_reader(dbg, DN.regs(), stats)
+    if a.dram and not dram_img:
+        io.close()
+        log("sync: --dram needs an image with the DRAM log (_AWTO_DRAM_LOG=_ON)")
+        return 3
+    if a.dram:
+        import ddr_note_read as DN2
+        notes: dict = {}
+        NOTE_DDR = lambda seq: notes.setdefault(seq, DN2.text_of(io, seq))      # note text from the DDR note store, as the ring path
+        sys.modules.setdefault("sync_log", sys.modules[__name__])                # run as a script: dram_log's `import sync_log` must see this copy
+        ht, t2 = read_ht(io, a.map)
+        read_at = T2_READ_AT or dt.datetime.now().astimezone()
+        xh = X.read_blocks(io, sym(a.map, "g_stAwtoSync"), V4_HDR)
+        wr = int.from_bytes(bytes(xh[19:23]), "big") if xh else None
+        snap = D.snapshot(DDR_UNIT, rows, None if a.all or a.boot is not None else (a.last or 64), a.boot, a.serial,
+                          fw_now(ht, t2) if ht and t2 is not None else None, read_at, a.since, wr)
+        io.close()
+        if snap is None:
+            log("sync: no valid DDR log header (a cold power-up, or the image never ran with the DRAM log)")
+            return 2
+        if a.json:
+            print("SYNCJSON " + json.dumps({"dram": True, **snap}), flush=True)
+            return 0
+        log(f"dram log: gen {snap['gen']} boot {snap['boot']} next index {snap['next']} (wraps {snap['next'] // snap['slots']}), {len(snap['entries'])} entries, "
+            f"{stats.get('bursts', 0)} DDR bursts in {stats.get('s', 0):.1f} s")
+        boot = None
+        for e in snap["entries"]:
+            if e["boot"] != boot:
+                boot = e["boot"]
+                log(f"--- boot {boot}")
+            log(f"  {e['abs']:6d} {e['text']}")
+        return 0
+    raw = read_ring(lambda ad, n: X.read_blocks(io, ad, n), sym(a.map, "g_stAwtoSync"), a.whole)
     ht, t2 = read_ht(io, a.map) if raw is not None else (None, None)
     note = read_note(io, a.map) if raw is not None else None
     if raw is not None and " _AwtoDdrNoteWrite " in a.map.read_text(errors="replace"):
         import ddr_note_read as DN
-        global NOTE_DDR
         cache: dict = {}
         NOTE_DDR = lambda seq: cache.setdefault(seq, DN.text_of(io, seq))
     try:

@@ -78,6 +78,7 @@ static void SysMainPass(void)
     AWTO_LP(0);
     AWTO_SW_MARK(0);
     AwtoSwPoll();
+    AWTO_DLOG_DRAIN();                      // DRAM log: a few lines of the XDATA tail into the DDR (bounded, main only)
     AWTO_PSTG(AWTO_PSTG_SWPOLL);
     AwtoDiagMainPass();
     AWTO_PSTG(AWTO_PSTG_DIAG);

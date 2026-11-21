@@ -34,3 +34,7 @@
 - Firmware store, unit 3: notes 1..5 written, read back from the DDR by the host (`ddr-notes`) intact, still intact after an ISP reset; note 6 after the reset continued the numbering; `./dev.py synclog` prints the old texts from the DDR.
 - Not measured: a cold power-up (the DDR content is then undefined by design: the ring restarts too), picture glitches by eye (no camera login on this box).
 - OSD SRAM (option E): no working read-back found (reads returned option-register values with the console shown, over ISP and from the MCU); not used.
+
+## DRAM log (docs/dram-log-design.md)
+- Ring of 16 B entries directly below the store (units 0x3EC000..0x3FBFFF) + header burst at 0x3EBFFE; the header also holds the note sequence (`g_usAwtoNoteN` continues over a reset without scanning the ring).
+- Port helpers shared in `fw/log/hostnote.c`; the log only spins, the notes keep the 50 ms wait.

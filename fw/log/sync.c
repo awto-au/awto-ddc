@@ -33,9 +33,9 @@ static __xdata BYTE s_ucTailTimer;                 // ms after the tail start wh
 static __xdata BYTE s_ucTailReady;                 // ms after the tail start when the panel video was ready (same)
 
 // GENERATED-BEGIN awto_sync_rows
-#define AWTO_SYNC_ROWS 418
+#define AWTO_SYNC_ROWS 419
 #pragma place bank(11)
-static const __code BYTE tAwtoSyncRowId[418] = {
+static const __code BYTE tAwtoSyncRowId[419] = {
     0xD0, 0xD0, 0xD0, 0xD0, 0xD0, 0xD1, 0xD1, 0xD1, 0xD1, 0xD1, 0xD2, 0xD2, 0xD2, 0xD4, 0xD4, 0xD4,
     0xD4, 0xD4, 0xD4, 0xD4, 0xD4, 0xD4, 0xD4, 0xD4, 0xD4, 0xD4, 0xD4, 0xD4, 0xD5, 0xD6, 0xD7, 0xD8,
     0xD8, 0xD9, 0xC0, 0xC0, 0xC0, 0xC0, 0x10, 0x10, 0x10, 0x10, 0x10, 0x10, 0x10, 0x10, 0x10, 0x10,
@@ -59,12 +59,12 @@ static const __code BYTE tAwtoSyncRowId[418] = {
     0xF5, 0xF5, 0xF5, 0xF5, 0xF5, 0xF5, 0xF5, 0xF5, 0xF5, 0xF6, 0xF6, 0xF6, 0xF6, 0xF6, 0xF6, 0xF7,
     0xF7, 0xF7, 0xF7, 0xF7, 0xF7, 0xF7, 0xF8, 0xF8, 0xF8, 0xF8, 0xF8, 0xF8, 0xF8, 0xF8, 0xF8, 0xF9,
     0xF9, 0xF9, 0xFB, 0xFB, 0xFB, 0xFB, 0xFB, 0xFB, 0xFC, 0x93, 0x93, 0x93, 0x93, 0x93, 0x93, 0x94,
-    0x95, 0x96, 0x97, 0xEF, 0xFF, 0xFE, 0xFE, 0xFE, 0xFE, 0xFE, 0xFE, 0xFE, 0xFE, 0xFE, 0xFE, 0xFE,
-    0xFE, 0xFE, 0xFE, 0xFE, 0xFE, 0xFE, 0xFE, 0xFE, 0xFE, 0xFE, 0xFE, 0xFE, 0xFE, 0xE6, 0xE6, 0xE6,
-    0xEB, 0xED, 0xED, 0xED, 0xED, 0xED, 0xED, 0xED, 0xED, 0xED, 0xED, 0xED, 0xED, 0xED, 0xED, 0xED,
-    0xEE, 0xFD};
+    0x95, 0x96, 0x97, 0x98, 0xEF, 0xFF, 0xFE, 0xFE, 0xFE, 0xFE, 0xFE, 0xFE, 0xFE, 0xFE, 0xFE, 0xFE,
+    0xFE, 0xFE, 0xFE, 0xFE, 0xFE, 0xFE, 0xFE, 0xFE, 0xFE, 0xFE, 0xFE, 0xFE, 0xFE, 0xFE, 0xE6, 0xE6,
+    0xE6, 0xEB, 0xED, 0xED, 0xED, 0xED, 0xED, 0xED, 0xED, 0xED, 0xED, 0xED, 0xED, 0xED, 0xED, 0xED,
+    0xED, 0xEE, 0xFD};
 #pragma place bank(11)
-static const __code BYTE tAwtoSyncRowArg[418] = {
+static const __code BYTE tAwtoSyncRowArg[419] = {
     0x01, 0x02, 0x03, 0x04, 0x05, 0x01, 0x02, 0x03, 0x04, 0x06, 0x01, 0x02, 0x03, 0x01, 0x02, 0x03,
     0x04, 0x05, 0x11, 0x12, 0x13, 0x14, 0x15, 0x16, 0x21, 0x17, 0x20, 0x0C, 0xFF, 0xFF, 0xFF, 0x01,
     0x02, 0xFF, 0x01, 0x02, 0x03, 0x04, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0x0A, 0x0B, 0x0C, 0x0E,
@@ -88,10 +88,10 @@ static const __code BYTE tAwtoSyncRowArg[418] = {
     0x01, 0x02, 0x03, 0x04, 0x10, 0x11, 0x12, 0x13, 0x14, 0x00, 0x11, 0x12, 0x13, 0x14, 0xFF, 0x00,
     0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x00,
     0x01, 0x02, 0x00, 0x10, 0x01, 0x11, 0x02, 0x12, 0x01, 0x00, 0x05, 0x01, 0x02, 0x03, 0x04, 0x00,
-    0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0x00, 0x10, 0x11, 0x12, 0x13, 0x14, 0x15, 0x16, 0x17, 0x20, 0x21,
-    0x22, 0x24, 0x30, 0x31, 0x32, 0x33, 0x34, 0x35, 0x36, 0x37, 0x40, 0x41, 0xFF, 0x01, 0x02, 0x03,
-    0xFF, 0x00, 0x14, 0x3A, 0x3C, 0x0A, 0x0B, 0x0C, 0x0D, 0x0E, 0x0F, 0x10, 0x11, 0x39, 0x81, 0x82,
-    0xFF, 0xFF};
+    0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0x00, 0x10, 0x11, 0x12, 0x13, 0x14, 0x15, 0x16, 0x17, 0x20,
+    0x21, 0x22, 0x24, 0x30, 0x31, 0x32, 0x33, 0x34, 0x35, 0x36, 0x37, 0x40, 0x41, 0xFF, 0x01, 0x02,
+    0x03, 0xFF, 0x00, 0x14, 0x3A, 0x3C, 0x0A, 0x0B, 0x0C, 0x0D, 0x0E, 0x0F, 0x10, 0x11, 0x39, 0x81,
+    0x82, 0xFF, 0xFF};
 #pragma place bank(11)
 static const __code WORD tAwtoSyncIdRow[256] = {
     0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
@@ -103,13 +103,13 @@ static const __code WORD tAwtoSyncIdRow[256] = {
     0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
     0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
     0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-    94, 0, 0, 362, 368, 369, 370, 371, 0, 0, 0, 0, 0, 0, 0, 0,
+    94, 0, 0, 362, 368, 369, 370, 371, 372, 0, 0, 0, 0, 0, 0, 0,
     98, 0, 0, 0, 0, 0, 0, 0, 102, 0, 0, 0, 0, 0, 0, 0,
     103, 104, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
     35, 105, 107, 108, 109, 110, 106, 111, 112, 0, 113, 114, 115, 178, 179, 268,
     1, 6, 11, 180, 14, 29, 30, 31, 32, 34, 183, 184, 181, 182, 185, 186,
-    188, 199, 232, 239, 250, 210, 398, 116, 122, 139, 124, 401, 125, 402, 417, 372,
-    274, 278, 282, 305, 306, 320, 330, 336, 343, 352, 117, 355, 361, 418, 374, 373};
+    188, 199, 232, 239, 250, 210, 399, 116, 122, 139, 124, 402, 125, 403, 418, 373,
+    274, 278, 282, 305, 306, 320, 330, 336, 343, 352, 117, 355, 361, 419, 375, 374};
 #pragma place bank(11)
 WORD AwtoSyncRow(BYTE ucId, BYTE ucArg)           // row + 1 of the first match (arg 0xFF = any), 0 = not logged
 {
@@ -134,7 +134,7 @@ WORD AwtoSyncRow(BYTE ucId, BYTE ucArg)           // row + 1 of the first match 
 // 143 us per CNT3 count, crystal), carried over the ScalerMcuInitial clear (AwtoSyncMark); at the Timer2 start those lines
 // are moved to usT2Isr time and the power-on T0 set to -(ms since reset at usT2Isr = 0): the episode prints ms since reset.
 static __xdata WORD s_usAwtoBootMs;                 // WDT ms at the ScalerMcuInitial clear
-static __xdata WORD s_usAwtoT2Base;                 // 0xFFFF = Timer2 not started, else 0
+__xdata WORD g_usAwtoT2Base;                        // 0xFFFF = Timer2 not started, else 0 (the DRAM log writes after it: lines are re-based at the start)
 
 static WORD AwtoSyncWdtMs(void)                     // ms on the WDT counter since its last clear (+ the carried part)
 {
@@ -189,15 +189,30 @@ void AwtoSyncT2Start(void)                          // every Timer2 reload (Awto
 {
     BYTE ucS;
     WORD usBase;
+#if(_AWTO_DRAM_LOG == _ON)
+    DWORD ulMs;
+#else
     WORD usMs;
+#endif
     BYTE __xdata *puc;
 
-    if(s_usAwtoT2Base != 0xFFFF)
+    if(g_usAwtoT2Base != 0xFFFF)
     {
         return;
     }
     usBase = AwtoSyncWdtMs() - isr_g_stAwtoDiag.usT2Isr;  // ms since reset at usT2Isr = 0
-    s_usAwtoT2Base = 0;
+    g_usAwtoT2Base = 0;
+#if(_AWTO_DRAM_LOG == _ON)
+    for(ucS = g_stAwtoSync.ucPend - g_stAwtoSync.ucOld; ucS != 0; ucS--)     // this boot's lines not in the DDR yet: WDT time -> usT2Isr time (32 bit)
+    {
+        puc = AWTO_SYNC_ENT(ucS);
+        ulMs = (((DWORD)puc[8] << 24) | ((DWORD)puc[9] << 16) | ((WORD)puc[2] << 8) | puc[3]) - usBase;
+        puc[8] = (BYTE)(ulMs >> 24);
+        puc[9] = (BYTE)(ulMs >> 16);
+        puc[2] = (BYTE)(ulMs >> 8);
+        puc[3] = (BYTE)ulMs;
+    }
+#else
     for(ucS = g_stAwtoSync.ucEpSeq; ucS != g_stAwtoSync.ucSeq; ucS = AWTO_SYNC_NEXT(ucS))
     {
         puc = (BYTE __xdata *)&g_stAwtoSync.stEv[AWTO_SYNC_IDX(ucS)];
@@ -205,6 +220,7 @@ void AwtoSyncT2Start(void)                          // every Timer2 reload (Awto
         puc[2] = (BYTE)(usMs >> 8);
         puc[3] = (BYTE)usMs;
     }
+#endif
     g_stAwtoSync.ucT0Hi = (BYTE)((0 - usBase) >> 8);
     g_stAwtoSync.ucT0Lo = (BYTE)(0 - usBase);
     AwtoSyncPush(AWTO_SYNC_EV_INIT, 2, 0);
@@ -212,46 +228,59 @@ void AwtoSyncT2Start(void)                          // every Timer2 reload (Awto
 
 __xdata StAwtoSyncEv g_stAwtoSyncPin;               // #150: copy of this boot's reason line (the ring may lose it)
 
-static bit AwtoSyncSame(BYTE ucBack, BYTE ucId, BYTE ucArg, DWORD ulVal)    // entry ucBack lines back = this event (time aside)
-{
-    BYTE __xdata *puc = (BYTE __xdata *)&g_stAwtoSync.stEv[AWTO_SYNC_IDX(AWTO_SYNC_BACK(g_stAwtoSync.ucSeq, ucBack))];
+// Entry n lines back = this event (time aside). A macro: no function, no common-bank stub (the common bank is full, #311).
+#define AWTO_SYNC_SAME(n, id, arg, val)   ((AWTO_SYNC_ENT(n)[0] == (id)) && (AWTO_SYNC_ENT(n)[1] == (arg)) && (AWTO_SYNC_ENT(n)[4] == (BYTE)((val) >> 24)) && \
+                                           (AWTO_SYNC_ENT(n)[5] == (BYTE)((val) >> 16)) && (AWTO_SYNC_ENT(n)[6] == (BYTE)((val) >> 8)) && (AWTO_SYNC_ENT(n)[7] == (BYTE)(val)))
 
-    return (puc[0] == ucId) && (puc[1] == ucArg) && (puc[4] == (BYTE)(ulVal >> 24)) && (puc[5] == (BYTE)(ulVal >> 16)) &&
-           (puc[6] == (BYTE)(ulVal >> 8)) && (puc[7] == (BYTE)ulVal);
-}
-
-static void AwtoSyncPutRaw(BYTE ucId, BYTE ucArg, DWORD ulVal)
+// The ring write: no live console draw, no DDR write, no repeat collapse (AwtoWaitLog runs inside the deepest DATA path; the console and the pass drain catch up next pass).
+// DRAM log: the tail full of lines the DDR has not taken = dropped, counted in ucLost.
+BYTE AwtoSyncPushQuiet(BYTE ucId, BYTE ucArg, DWORD ulVal)    // 1 = written
 {
     BYTE ucN = g_stAwtoSync.ucSeq;
-    BYTE __xdata *puc = (BYTE __xdata *)&g_stAwtoSync.stEv[AWTO_SYNC_IDX(ucN)];
-    WORD usNow = (WORD)AwtoMs();
+#if(_AWTO_DRAM_LOG == _ON)
+    DWORD ulNow = AwtoMs();
+    BYTE __xdata *puc;
 
+    if(g_stAwtoSync.ucPend >= AWTO_SYNC_TAIL)
+    {
+        if(g_stAwtoSync.ucLost != 0xFF)
+        {
+            g_stAwtoSync.ucLost++;
+        }
+        return 0;
+    }
+    puc = (BYTE __xdata *)&g_stAwtoSync.stTl[g_stAwtoSync.ucHead & (AWTO_SYNC_TAIL - 1)];
+    puc[8] = (BYTE)(ulNow >> 24);
+    puc[9] = (BYTE)(ulNow >> 16);
+    g_stAwtoSync.ucHead++;
+    g_stAwtoSync.ucPend++;
+#else
+    BYTE __xdata *puc = (BYTE __xdata *)&g_stAwtoSync.stEv[AWTO_SYNC_IDX(ucN)];
+    WORD ulNow = (WORD)AwtoMs();
+#endif
     puc[0] = ucId;
     puc[1] = ucArg;
-    puc[2] = (BYTE)(usNow >> 8);
-    puc[3] = (BYTE)usNow;
+    puc[2] = (BYTE)(ulNow >> 8);
+    puc[3] = (BYTE)ulNow;
     puc[4] = (BYTE)(ulVal >> 24);
     puc[5] = (BYTE)(ulVal >> 16);
     puc[6] = (BYTE)(ulVal >> 8);
     puc[7] = (BYTE)ulVal;
     g_stAwtoSync.ucSeq = AWTO_SYNC_NEXT(ucN);
+    return 1;
 }
 
 
-static void AwtoSyncPut(BYTE ucId, BYTE ucArg, DWORD ulVal)
-{
-    AwtoSyncPutRaw(ucId, ucArg, ulVal);
-    if(g_stAwtoGpio.ucOpen != 0)
-    {
-        AwtoConLogSync();                           // #144 live: the line shows now, also inside a blocking SDK step (panel on)
-    }
-}
-
-// Ring line without the live console draw (AwtoWaitLog runs inside the deepest DATA path; the console catches up next pass) and without repeat collapse.
-static void AwtoSyncPushQuiet(BYTE ucId, BYTE ucArg, DWORD ulVal)
-{
-    AwtoSyncPutRaw(ucId, ucArg, ulVal);
-}
+// One line with the live console draw (#144: the line shows now, also inside a blocking SDK step, panel on). Macro: see AWTO_SYNC_SAME.
+#if(_AWTO_DRAM_LOG == _ON)
+#define AWTO_SYNC_RESERVE                     4       // tail entries kept free for the deep path (AwtoWaitLog cannot flush)
+#define AWTO_SYNC_FULL_FLUSH()                { if(g_stAwtoSync.ucPend >= AWTO_SYNC_TAIL - AWTO_SYNC_RESERVE) { AwtoDlFlush(AWTO_SYNC_RESERVE | 0x80); } }   // tail nearly full, main context: the oldest lines to the DDR now (also before Timer2)
+#else
+#define AWTO_SYNC_FULL_FLUSH()
+#endif
+// Same without the console draw (shallow callers only: the deep WaitLog path cannot flush, it counts a full tail as lost).
+#define AWTO_SYNC_QUIET(id, arg, val)         { AWTO_SYNC_FULL_FLUSH(); AwtoSyncPushQuiet((id), (arg), (val)); }
+#define AWTO_SYNC_PUT(id, arg, val)           { AWTO_SYNC_FULL_FLUSH(); if((AwtoSyncPushQuiet((id), (arg), (val)) != 0) && (g_stAwtoGpio.ucOpen != 0)) { AwtoConLogSync(); } }
 
 // Repeats collapse (#150): the last line again is dropped (probes in retry loops); a pair repeating (A B A B, e.g. an idle
 // port's predetect flapping in NO SIGNAL) is counted in ucSpare and written once as "the 2 lines above x N".
@@ -282,17 +311,18 @@ void AwtoMstep(BYTE ucId, BYTE ucArg, WORD usVal)
 void AwtoSyncPush(BYTE ucId, BYTE ucArg, DWORD ulVal)
 {
     BYTE ucK = AWTO_SYNC_BACK(g_stAwtoSync.ucSeq, g_stAwtoSync.ucEpSeq);      // lines in this episode
+    BYTE ucR;
 
-    if((ucK >= 1) && (AwtoSyncSame(1, ucId, ucArg, ulVal) != 0))
+    if((ucK >= 1) && (AWTO_SYNC_SAME(1, ucId, ucArg, ulVal)))
     {
         return;
     }
     if(ucK >= 3)
     {
-        BYTE __xdata *puc1 = (BYTE __xdata *)&g_stAwtoSync.stEv[AWTO_SYNC_IDX(AWTO_SYNC_BACK(g_stAwtoSync.ucSeq, 1))];
+        BYTE __xdata *puc1 = AWTO_SYNC_ENT(1);
         DWORD ulV1 = ((DWORD)puc1[4] << 24) | ((DWORD)puc1[5] << 16) | ((WORD)puc1[6] << 8) | puc1[7];
 
-        if((AwtoSyncSame(2, ucId, ucArg, ulVal) != 0) && (AwtoSyncSame(3, puc1[0], puc1[1], ulV1) != 0))
+        if(AWTO_SYNC_SAME(2, ucId, ucArg, ulVal) && AWTO_SYNC_SAME(3, puc1[0], puc1[1], ulV1))
         {
             if(g_stAwtoSync.ucSpare != 0xFF)
             {
@@ -301,21 +331,30 @@ void AwtoSyncPush(BYTE ucId, BYTE ucArg, DWORD ulVal)
             return;
         }
     }
+#if(_AWTO_DRAM_LOG == _ON)
+    if(g_stAwtoSync.ucLost != 0)
+    {
+        ucR = g_stAwtoSync.ucLost;
+
+        g_stAwtoSync.ucLost = 0;
+        AWTO_SYNC_PUT(AWTO_SYNC_EV_LOGLOST, 0, ucR);  // never silent: the lines dropped before this one
+    }
+#endif
     if(g_stAwtoSync.ucSpare != 0)
     {
-        BYTE ucR = g_stAwtoSync.ucSpare;
+        ucR = g_stAwtoSync.ucSpare;
 
         g_stAwtoSync.ucSpare = 0;
-        AwtoSyncPut(AWTO_SYNC_EV_REPEAT, 0, ucR);
+        AWTO_SYNC_PUT(AWTO_SYNC_EV_REPEAT, 0, ucR);
     }
-    AwtoSyncPut(ucId, ucArg, ulVal);
+    AWTO_SYNC_PUT(ucId, ucArg, ulVal);
     if(ucId == AWTO_SYNC_EV_BOOT)
     {
         BYTE ucP;
 
         for(ucP = 0; ucP < sizeof(StAwtoSyncEv); ucP++)
         {
-            ((BYTE __xdata *)&g_stAwtoSyncPin)[ucP] = ((BYTE __xdata *)&g_stAwtoSync.stEv[AWTO_SYNC_IDX(AWTO_SYNC_BACK(g_stAwtoSync.ucSeq, 1))])[ucP];
+            ((BYTE __xdata *)&g_stAwtoSyncPin)[ucP] = AWTO_SYNC_ENT(1)[ucP];
         }
     }
 }
@@ -331,7 +370,7 @@ unsigned long AwtoMs(void)
     WORD usHi;
     WORD usLo;
 
-    if(s_usAwtoT2Base == 0xFFFF)
+    if(g_usAwtoT2Base == 0xFFFF)
     {
         return AwtoSyncWdtMs();
     }
@@ -694,35 +733,51 @@ void AwtoSyncInit(void)                             // boot (before SysMainSyste
 {
     BYTE __xdata *puc = (BYTE __xdata *)&g_stAwtoSync;
     WORD usI;
+    BYTE ucFirst = (s_ucAwtoSyncRan == 0);
+    BYTE ucNew = 0;
 
-    if(((s_ucAwtoSyncRan == 0) && (AwtoBootReason() == AWTO_BOOT_COLD)) || (g_stAwtoSync.ucMagic0 != 'S') || (g_stAwtoSync.ucMagic1 != 'Y') || (g_stAwtoSync.ucVersion != 3) ||
+#if(_AWTO_DRAM_LOG == _ON)
+#define AWTO_SYNC_VER 4
+#else
+#define AWTO_SYNC_VER 3
+#endif
+    if(((s_ucAwtoSyncRan == 0) && (AwtoBootReason() == AWTO_BOOT_COLD)) || (g_stAwtoSync.ucMagic0 != 'S') || (g_stAwtoSync.ucMagic1 != 'Y') || (g_stAwtoSync.ucVersion != AWTO_SYNC_VER) ||
        (g_stAwtoSync.ucN != AWTO_SYNC_N) || (g_stAwtoSync.ucWrap != AWTO_SYNC_WRAP) || (g_stAwtoSync.ucSeq >= AWTO_SYNC_WRAP) || (g_stAwtoSync.ucEpSeq >= AWTO_SYNC_WRAP))
     {
         for(usI = 0; usI < sizeof(StAwtoSync); usI++)
         {
             puc[usI] = 0;                           // cold power-up (RAM not ours) or a ring that fails its header: an empty ring
         }
+        ucNew = 1;
     }
     g_stAwtoSync.ucMagic0 = 'S';
     g_stAwtoSync.ucMagic1 = 'Y';
-    g_stAwtoSync.ucVersion = 3;
+    g_stAwtoSync.ucVersion = AWTO_SYNC_VER;
     g_stAwtoSync.ucN = AWTO_SYNC_N;
     g_stAwtoSync.ucWrap = AWTO_SYNC_WRAP;
     g_stAwtoSync.ucKind = 0;
     g_stAwtoSync.ucSpare = 0;
     g_stAwtoSync.ucOpenReq = 0;
     s_ucAwtoSyncRan = 1;
+#if(_AWTO_DRAM_LOG == _ON)
+    if(ucFirst != 0)
+    {
+        g_stAwtoSync.ucOld = g_stAwtoSync.ucPend;   // lines the previous boot left pending: written with its boot number, not re-based (the DDR work starts at the first main-loop drain)
+    }
+#endif
+#if(_AWTO_DRAM_LOG != _ON)                          // the DRAM log keeps the note number in its DDR header (AwtoDlInit)
     for(usI = 1; usI <= AWTO_SYNC_N; usI++)         // a kept ring: the note numbers go on (the DDR lines are keyed by them)
     {
-        puc = (BYTE __xdata *)&g_stAwtoSync.stEv[AWTO_SYNC_IDX(AWTO_SYNC_BACK(g_stAwtoSync.ucSeq, usI))];
+        puc = AwtoSyncAt(AWTO_SYNC_BACK(g_stAwtoSync.ucSeq, usI));
         if(puc[0] == AWTO_SYNC_EV_NOTE)
         {
             g_usAwtoNoteN = ((WORD)puc[6] << 8) | puc[7];
             break;
         }
     }
+#endif
     g_ucAwtoSyncPwr = _POWER_STATUS_AC_ON;
-    s_usAwtoT2Base = 0xFFFF;
+    g_usAwtoT2Base = 0xFFFF;
     AwtoSyncBegin(AWTO_SYNC_K_POWER_ON, 0xFF);
     g_stAwtoSync.ucT0Hi = 0;                        // power-on lines print ms since reset
     g_stAwtoSync.ucT0Lo = 0;
@@ -1459,7 +1514,7 @@ static BYTE AwtoHpdPins(void)                       // bit n = HPD pin of D(n+1)
 
 void AwtoSyncEdidOn(void)                           // ScalerMcuDdcRamEnable: the EDID channels answer from here (HPD level at that moment)
 {
-    AwtoSyncPushQuiet(AWTO_SYNC_EV_HPD, 2, AwtoHpdPins());
+    AWTO_SYNC_QUIET(AWTO_SYNC_EV_HPD, 2, AwtoHpdPins());
 }
 
 static __xdata BYTE s_ucEdidT0;                    // AwtoMs low byte at the load start (the load is a few ms)
@@ -1469,10 +1524,10 @@ void AwtoSyncEdidLoad(BYTE ucEnd)                   // SysPowerInitial around th
     if(ucEnd == 0)
     {
         s_ucEdidT0 = (BYTE)AwtoMs();
-        AwtoSyncPushQuiet(AWTO_SYNC_EV_HPD, 3, AwtoHpdPins());
+        AWTO_SYNC_QUIET(AWTO_SYNC_EV_HPD, 3, AwtoHpdPins());
         return;
     }
-    AwtoSyncPushQuiet(AWTO_SYNC_EV_HPD, 4, (BYTE)((BYTE)AwtoMs() - s_ucEdidT0));
+    AWTO_SYNC_QUIET(AWTO_SYNC_EV_HPD, 4, (BYTE)((BYTE)AwtoMs() - s_ucEdidT0));
 }
 
 void AwtoEdidPoll(void)                             // awake: every EDID read by a source is a log line (power saving: the wake lines)
@@ -1488,7 +1543,7 @@ void AwtoEdidPoll(void)                             // awake: every EDID read by
     {
         if((ucV & ((BYTE)1 << ucI)) != 0)
         {
-            AwtoSyncPushQuiet(AWTO_SYNC_EV_HPD, (ucH >> ucI) & 1, _D1_INPUT_PORT + ucI);      // no live console draw: its ms would delay the boot it measures
+            AWTO_SYNC_QUIET(AWTO_SYNC_EV_HPD, (ucH >> ucI) & 1, _D1_INPUT_PORT + ucI);      // no live console draw: its ms would delay the boot it measures
         }
     }
     if(g_ucAwtoSyncPwr == _POWER_STATUS_SAVING)

@@ -82,3 +82,6 @@ Existing sync lines stay (C1 / C6 / C2 / F0..F4 / FC / system machine); the new 
 - Names and line words: `AWTO_PSTG_NAMES` (RL6449_Project.h, ids < `AWTO_PSTG_WORD0`, then the words); firmware table `tAwtoPassName` + reader in bank 6 (bank 11 sync text and common are full), host `sync_log.pass_names()`, fmt `pass` (34, `AwtoPutPass` / `pass_value`).
 - A pass is attributed to its state at the end: the pass that moves AC ON -> INITIAL is an INITIAL pass.
 - Cost: XDATA 15 B (+4 B layout), flash common -185 B (main shrank), cycles/pass +25 (sim, `./dev.py stats`). Findings and boot table: awto-ddc#311.
+
+## DRAM log (#284 / #291: history in the DDR)
+- `_AWTO_DRAM_LOG` (default ON): ring = 32-line XDATA tail + DDR ring (docs/dram-log-design.md). Collapse, episodes, console and host decoders unchanged (`AwtoSyncAt`, `sync_log.read_ring` version 4).

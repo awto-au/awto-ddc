@@ -3150,8 +3150,23 @@ static void AwtoA5Probe(void)
 }
 #endif
 
+#if(_AWTO_DRAM_LOG == _ON)
+#define AWTO_DLFILL_LINES                       34000   // test cmd AWTO_TC_DLOG_FILL: more than the DDR ring holds (AWTO_DLOG_SLOTS 32768): one wrap
+#define AWTO_DLFILL_PER_PASS                    AWTO_DLOG_DRAIN_MAX   // = the pass drain: the tail never fills
+static __xdata unsigned int s_usAwtoDlFill;     // lines still to push (0 = idle)
+#endif
+
 static void AwtoDemoLog(void)                   // each main pass while lines are left
 {
+#if(_AWTO_DRAM_LOG == _ON)
+    unsigned char ucK;
+
+    for(ucK = 0; (s_usAwtoDlFill != 0) && (ucK < AWTO_DLFILL_PER_PASS); ucK++)
+    {
+        s_usAwtoDlFill--;
+        AwtoSyncPush(AWTO_SYNC_EV_DEMO, 1 + (s_usAwtoDlFill % 3), AWTO_DLFILL_LINES - s_usAwtoDlFill);    // value = line number: never collapsed
+    }
+#endif
     if((s_ucAwtoDemoN == 0) || ((unsigned int)((WORD)AwtoMs() - s_usAwtoDemoAt) < AWTO_DEMO_MS))
     {
         return;
@@ -3267,6 +3282,12 @@ void AwtoDiagTestCmd(void)
         isr_g_ucAwtoT0Test = (ucCmd == 0x25) ? 0 : (ucCmd - 0x5C);
     }
 #endif
+#endif
+#if(_AWTO_DRAM_LOG == _ON)
+    else if(ucCmd == AWTO_TC_DLOG_FILL)                 // DRAM log wrap test: AWTO_DLFILL_LINES demo lines, AWTO_DLFILL_PER_PASS per main pass
+    {
+        s_usAwtoDlFill = AWTO_DLFILL_LINES;
+    }
 #endif
     else if((ucCmd >= 0x60) && (ucCmd <= 0x6F))         // diagnostic screen font: 0x60 + font index (osd_font_load)
     {

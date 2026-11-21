@@ -17,6 +17,7 @@ RESID_END = _C["resid_end"]
 BANK_REG = _C["bank_reg"]
 RESERVED = {r["name"]: (r["addr"], r["size"]) for r in _C.get("reserved", [])}
 XRAM = tuple(_X["pool"])
+XRAM_DRAM_LOG_END = _X["pool_end_dram_log"]              # pool end with the DRAM log (_AWTO_DRAM_LOG=_ON, docs/dram-log-design.md)
 DDC_RAM = [tuple(w) for w in _X["ddc_ram"]]
 DIRECT_END = _I["direct_end"]
 ISEG_BASE = _I["iseg_base"]
