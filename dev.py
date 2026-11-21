@@ -89,6 +89,8 @@ STEPS: dict[str, tuple[str, list[str], bool]] = {
     "fmt-check": ("formatting check (no writes)", [], False),
     "fmt":       ("reformat in place",            [], False),
     "run":       ("build + execute",              [], True),
+    "san":       ("sdcc_san self-test: synthetic races on the -DSDCC_SAN core (docs/sanitizer.md)",
+                  [sys.executable, "scripts/san_test.py"], True),
     "speed":     ("offline cycle bench of fw images (fw_profile, docs/speed-bench.tsv)",
                   [sys.executable, "scripts/speed_bench.py"], True),
 }

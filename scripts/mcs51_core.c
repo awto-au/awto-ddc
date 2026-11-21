@@ -66,6 +66,7 @@ typedef struct {
     uint8_t oplen[256];         /* instruction bytes per opcode */
     uint32_t xacc[0x10000];     /* tools: MOVX accesses per XDATA address (rd + wr) */
     uint32_t *fm_lacc, *fm_lmiss;   /* tools: per physical line (FM_NLINES): cached fetches / line fills */
+    struct san *san;            /* sdcc_san race detector (-DSDCC_SAN builds only; docs/sanitizer.md) */
 } core_t;
 #define FM_NLINES 131072
 #define IS_XRAM(a) ((a) >= 0xD000 && (a) < 0xF800)   /* the build's XDATA pool is 0xD700..0xF6xx (map); everything else is scaler registers */
@@ -92,6 +93,184 @@ typedef struct {
 enum { T2_RELOAD, T2_CAPTURE, T2_BAUD, T2_DOWN, T2_CLKOUT, T2_OFF };
 
 static uint8_t par[256];
+
+/* ---- sdcc_san: runtime race detector (docs/sanitizer.md). Compiled only with -DSDCC_SAN (tmp/mcs51_core_san.so); the normal build has none of it. ---- */
+#ifdef SDCC_SAN
+#define SAN_NX 0x2800                       /* XDATA pool 0xD000..0xF7FF */
+#define SAN_IR (SAN_NX)                     /* direct + indirect IRAM, byte granular */
+#define SAN_BT (SAN_NX + 256)               /* bit space 0x00..0x7F (bit instructions only) */
+#define SAN_NIDX (SAN_NX + 256 + 128)
+#define SAN_NCAND (1 << 16)
+#define SAN_D_TICKS 512                     /* clobber: write and later read of the same byte at most 512 instructions apart (init-to-use) */
+#define SAN_TORN_TICKS 16                   /* two same-direction accesses to adjacent bytes within 16 instructions = one multi-byte access */
+enum { SC_A = 1, SC_B, SC_C, SC_D };        /* conflict, lost update, torn, clobber */
+typedef struct { uint64_t tick; uint32_t inst, pc; } san_rec_t;     /* pc = bank << 16 | pc; tick 0 = never */
+typedef struct {
+    uint64_t start, n, la_n, last_open[8], la_tick;   /* n: instructions this instance ran (the torn window counts only its own) */  /* last_open[ctx]: tick of the last boundary where ctx could preempt this frame */
+    uint32_t id, la_pc;
+    uint16_t la_idx;
+    uint8_t ctx, la_kind;
+} san_frame_t;
+typedef struct { uint32_t pc1, pc2; uint16_t idx, idx2; uint8_t cls, ctx, kind, open, did, _p[3]; uint32_t n; } san_cand_t;
+typedef struct san {
+    san_rec_t *rec;                         /* [SAN_NIDX][8 ctx][2: read, write] */
+    uint8_t *evr, *evw;                     /* per index: contexts that ever read / wrote */
+    san_frame_t fr[9];                      /* fr[nlvl] = running context instance */
+    uint64_t tick, nacc, dropped;
+    uint32_t next_id, ncand;
+    san_cand_t *cand;
+    struct { uint16_t idx; uint8_t w, did; uint32_t pc; } pend[8];
+    int npend;
+} san_t;
+
+static const uint8_t san_iem[8] = {1, 2, 4, 8, 0x10, 0x10, 0x20, 0x20};    /* IE bit per irq() SRC[] index */
+
+static void san_reset(core_t *c)
+{
+    san_t *s = c->san;
+    if (!s) return;
+    memset(s->fr, 0, sizeof s->fr);
+    s->fr[0].start = s->tick;
+}
+
+static san_cand_t *san_slot(san_t *s, int cls, uint16_t idx, uint16_t idx2, int ctx, int kind, uint32_t pc1, uint32_t pc2)
+{
+    uint32_t h = (pc1 * 2654435761u) ^ (pc2 * 40503u) ^ ((uint32_t)idx << 7) ^ ((uint32_t)idx2 * 131u) ^ (cls << 3) ^ ctx, i;
+    for (i = 0; i < 64; i++) {
+        san_cand_t *e = &s->cand[(h + i) & (SAN_NCAND - 1)];
+        if (!e->cls) {
+            e->cls = cls; e->idx = idx; e->idx2 = idx2; e->ctx = ctx; e->kind = kind; e->pc1 = pc1; e->pc2 = pc2;
+            s->ncand++;
+            return e;
+        }
+        if (e->cls == cls && e->idx == idx && e->idx2 == idx2 && e->ctx == ctx && e->kind == kind && e->pc1 == pc1 && e->pc2 == pc2)
+            return e;
+    }
+    s->dropped++;
+    return NULL;
+}
+
+static void san_cand(san_t *s, int cls, uint16_t idx, uint16_t idx2, int ctx, int kind, uint32_t pc1, uint32_t pc2, int open, int did)
+{
+    san_cand_t *e = san_slot(s, cls, idx, idx2, ctx, kind, pc1, pc2);
+    if (!e) return;
+    e->open |= open; e->did |= did; e->n++;
+}
+
+static uint8_t san_open_since(const san_frame_t *f, uint64_t tp)
+{
+    uint8_t m = 0;
+    int v;
+    for (v = 1; v < 8; v++)
+        if (f->last_open[v] >= tp) m |= 1 << v;
+    return m;
+}
+
+/* contexts other than x that wrote (or, with rd, also read) idx after tick tp */
+static uint8_t san_since(san_t *s, uint32_t idx, int x, uint64_t tp, int rd)
+{
+    uint8_t m = 0;
+    int v;
+    for (v = 0; v < 8; v++) {
+        san_rec_t *r = &s->rec[((size_t)idx * 8 + v) * 2];
+        if (v != x && (r[1].tick > tp || (rd && r[0].tick > tp))) m |= 1 << v;
+    }
+    return m;
+}
+
+static void san_acc(core_t *c, uint32_t idx, int w)
+{
+    san_t *s = c->san;
+    int d = c->p.nlvl > 8 ? 8 : c->p.nlvl;
+    san_frame_t *f = &s->fr[d];
+    int x = f->ctx;
+    uint64_t t = s->tick, tp = 0;
+    uint32_t pc = c->p.bank << 16 | c->p.pc;
+    san_rec_t *R = &s->rec[((size_t)idx * 8 + x) * 2], *W = R + 1;
+    int vr = R->tick && R->inst == f->id && R->tick < t, vw = W->tick && W->inst == f->id && W->tick < t, did;
+    s->nacc++;
+    if (!w && vw && t - W->tick <= SAN_D_TICKS) {   /* (d) clobber: own write, then this read */
+        uint8_t dd = san_since(s, idx, x, W->tick, 0), op = san_open_since(f, W->tick) | dd;
+        if (op) san_cand(s, SC_D, idx, 0, x, 0, W->pc, pc, op, dd);
+    }
+    if (w && vr) {                          /* (b) lost update: own read, then this write */
+        uint8_t dd = san_since(s, idx, x, R->tick, 0), op = san_open_since(f, R->tick) | dd;
+        if (op) san_cand(s, SC_B, idx, 0, x, 1, R->pc, pc, op, dd);
+    }
+    if (vr && R->tick > tp) tp = R->tick;
+    if (vw && W->tick > tp) tp = W->tick;
+    did = tp ? san_since(s, idx, x, tp, w) : 0;     /* a conflicting access between this and the previous own access */
+    if (f->la_tick && f->la_kind == w && f->n - f->la_n <= SAN_TORN_TICKS && (idx == f->la_idx + 1u || idx + 1u == f->la_idx)) {
+        uint32_t o = f->la_idx;                     /* (c) torn: adjacent byte, same direction, one multi-byte access */
+        uint8_t dd = san_since(s, idx, x, f->la_tick, w) | san_since(s, o, x, f->la_tick, w), op = san_open_since(f, f->la_tick) | dd;
+        if (op) san_cand(s, SC_C, idx < o ? idx : o, idx < o ? o : idx, x, w, f->la_pc, pc, op, dd);
+    }
+    (w ? W : R)->tick = t;
+    (w ? W : R)->inst = f->id;
+    (w ? W : R)->pc = pc;
+    (w ? s->evw : s->evr)[idx] |= 1 << x;
+    f->la_tick = t; f->la_n = f->n; f->la_idx = idx; f->la_kind = w; f->la_pc = pc;
+    if (s->npend < 8) {
+        s->pend[s->npend].idx = idx; s->pend[s->npend].w = w; s->pend[s->npend].did = did; s->pend[s->npend].pc = pc;
+        s->npend++;
+    }
+}
+
+/* boundary after an instruction, before the IRQ poll: which sources could preempt (EA, enable, priority vs the running level;
+ * none right after RETI / an IE write) */
+static void san_commit(core_t *c)
+{
+    san_t *s = c->san;
+    int d = c->p.nlvl > 8 ? 8 : c->p.nlvl, cur = c->p.nlvl ? c->lvl[c->p.nlvl - 1] : -1, i;
+    uint8_t m = 0, ie = IE;
+    san_frame_t *f = &s->fr[d];
+    if (!c->was_reti && (ie & 0x80)) {
+        for (i = 0; i < 8; i++) {
+            int ctx = (i < 4 ? i : i < 6 ? 4 : 5) + 1, pr = (IP & san_iem[i]) ? 1 : 0;
+            if ((ie & san_iem[i]) && (cur < 0 || pr > cur)) m |= 1 << ctx;
+        }
+        if ((S(0xE8) & 1) && (cur < 0 || (S(0xF8) & 1) > cur)) m |= 1 << 7;
+    }
+    f->n++;
+    for (i = 1; i < 8; i++)
+        if (m >> i & 1) f->last_open[i] = s->tick;
+    for (i = 0; i < s->npend; i++)
+        if (m)
+            san_cand(s, SC_A, s->pend[i].idx, 0, f->ctx, s->pend[i].w, s->pend[i].pc, 0, m, s->pend[i].did);
+    s->npend = 0;
+    s->tick++;
+}
+
+static void san_push(core_t *c, int src)
+{
+    san_t *s = c->san;
+    san_frame_t *f = &s->fr[c->p.nlvl > 8 ? 8 : c->p.nlvl];
+    memset(f, 0, sizeof *f);
+    f->ctx = src + 1;
+    f->id = ++s->next_id;
+    f->start = s->tick;
+}
+
+#define SAN_ON(c) __builtin_expect((c)->san != NULL, 0)
+#define SAN_X(c, a, w) do { if (SAN_ON(c) && IS_XRAM(a)) san_acc((c), (a) - 0xD000, (w)); } while (0)
+#define SAN_I(c, a, w) do { if (SAN_ON(c)) san_acc((c), SAN_IR + (a), (w)); } while (0)
+#define SAN_B(c, b, w) do { if (SAN_ON(c)) san_acc((c), SAN_BT + (b), (w)); } while (0)
+#define SAN_PUSH(c, src) do { if (SAN_ON(c)) san_push((c), (src)); } while (0)
+#define SAN_COMMIT(c) do { if (SAN_ON(c)) san_commit(c); } while (0)
+#define SAN_RESET(c) san_reset(c)
+#define SAN_FREE(c) do { if ((c)->san) { free((c)->san->rec); free((c)->san->evr); free((c)->san->evw); free((c)->san->cand); free((c)->san); } } while (0)
+#else
+#define SAN_X(c, a, w) ((void)0)
+#define SAN_I(c, a, w) ((void)0)
+#define SAN_B(c, b, w) ((void)0)
+#define SAN_PUSH(c, src) ((void)0)
+#define SAN_COMMIT(c) ((void)0)
+#define SAN_RESET(c) ((void)0)
+#define SAN_FREE(c) ((void)0)
+#endif
+
+static inline uint8_t ird(core_t *c, uint8_t a) { SAN_I(c, a, 0); return c->iram[a]; }
+static inline void iwr(core_t *c, uint8_t a, uint8_t v) { SAN_I(c, a, 1); c->iram[a] = v; }
 
 static inline void ev(core_t *c, int kind, uint32_t a)
 {
@@ -188,8 +367,10 @@ static void sfr_store_raw(core_t *c, int a, uint8_t v)
 
 static inline uint8_t dread(core_t *c, uint8_t a)
 {
-    if (a < 0x80)
+    if (a < 0x80) {
+        SAN_I(c, a, 0);
         return c->iram[a];
+    }
     ev(c, EV_SR, a);
     TSYNC(c, a);
     return S(a);
@@ -198,6 +379,7 @@ static inline uint8_t dread(core_t *c, uint8_t a)
 static inline void dwrite(core_t *c, uint8_t a, uint8_t v)
 {
     if (a < 0x80) {
+        SAN_I(c, a, 1);
         c->iram[a] = v;
         return;
     }
@@ -216,12 +398,22 @@ static inline uint8_t dget(core_t *c, uint8_t a)      /* no read event (bit writ
 
 static inline int bit_read(core_t *c, uint8_t b)
 {
+    if (b < 0x80) {
+        SAN_B(c, b, 0);
+        return c->iram[0x20 + (b >> 3)] >> (b & 7) & 1;
+    }
     uint8_t a = b < 0x80 ? 0x20 + (b >> 3) : (b & 0xF8);
     return dread(c, a) >> (b & 7) & 1;
 }
 
 static inline void bit_write(core_t *c, uint8_t b, int v)
 {
+    if (b < 0x80) {
+        uint8_t m0 = 1 << (b & 7), *p = &c->iram[0x20 + (b >> 3)];
+        SAN_B(c, b, 1);
+        *p = v ? (*p | m0) : (*p & ~m0);
+        return;
+    }
     uint8_t a = b < 0x80 ? 0x20 + (b >> 3) : (b & 0xF8);
     uint8_t m = 1 << (b & 7), x = dget(c, a);
     dwrite(c, a, v ? (x | m) : (x & ~m));
@@ -230,6 +422,7 @@ static inline void bit_write(core_t *c, uint8_t b, int v)
 static inline uint8_t xread(core_t *c, uint16_t a)
 {
     ev(c, EV_XR, a);
+    SAN_X(c, a, 0);
     c->cnt[IS_XRAM(a) ? 0 : 2]++;
     c->xacc[a]++;
     return c->xram[a];
@@ -238,6 +431,7 @@ static inline uint8_t xread(core_t *c, uint16_t a)
 static inline void xwrite(core_t *c, uint16_t a, uint8_t v)
 {
     c->xram[a] = v;
+    SAN_X(c, a, 1);
     c->cnt[IS_XRAM(a) ? 1 : 3]++;
     c->xacc[a]++;
     if (c->port_extra && a == c->port_addr)
@@ -670,8 +864,10 @@ static inline void irq(core_t *c)
             S(SRC[i].src) &= ~SRC[i].srcm;
             if (c->dw) timers_sched(c);
         }
-        if (c->p.nlvl < 8)
+        if (c->p.nlvl < 8) {
             c->lvl[c->p.nlvl++] = pr;
+            SAN_PUSH(c, i < 4 ? i : i < 6 ? 4 : 5);
+        }
         irq_cost(c);
         push(c, c->p.pc & 0xFF);
         push(c, c->p.pc >> 8);
@@ -685,8 +881,10 @@ static inline void irq(core_t *c)
         int pr = (S(0xF8) & 0x01) ? 1 : 0;
         if (cur >= 0 && pr <= cur)
             return;
-        if (c->p.nlvl < 8)
+        if (c->p.nlvl < 8) {
             c->lvl[c->p.nlvl++] = pr;
+            SAN_PUSH(c, 6);
+        }
         irq_cost(c);
         push(c, c->p.pc & 0xFF);
         push(c, c->p.pc >> 8);
@@ -739,7 +937,7 @@ static int step(core_t *c)
     case 0x03: a = ACC; set_acc(c, a >> 1 | a << 7); break;
     case 0x04: set_acc(c, ACC + 1); break;
     case 0x05: a = FETCH(); dwrite(c, a, dread(c, a) + 1); break;
-    case 0x06: case 0x07: c->iram[RN(op & 1)]++; break;
+    case 0x06: case 0x07: a = RN(op & 1); iwr(c, a, ird(c, a) + 1); break;
     case 0x08: case 0x09: case 0x0A: case 0x0B: case 0x0C: case 0x0D: case 0x0E: case 0x0F: RN(op & 7)++; break;
     case 0x10:
         a = FETCH(); b = FETCH(); cyc = 2;
@@ -753,14 +951,14 @@ static int step(core_t *c)
     case 0x13: a = ACC; d = CYF; setc(c, a & 1); set_acc(c, a >> 1 | d << 7); break;
     case 0x14: set_acc(c, ACC - 1); break;
     case 0x15: a = FETCH(); dwrite(c, a, dread(c, a) - 1); break;
-    case 0x16: case 0x17: c->iram[RN(op & 1)]--; break;
+    case 0x16: case 0x17: a = RN(op & 1); iwr(c, a, ird(c, a) - 1); break;
     case 0x18: case 0x19: case 0x1A: case 0x1B: case 0x1C: case 0x1D: case 0x1E: case 0x1F: RN(op & 7)--; break;
     case 0x20: a = FETCH(); b = FETCH(); cyc = 2; if (bit_read(c, a)) REL(b); break;
     case 0x22: a = pop(c); b = pop(c); pc = a << 8 | b; cyc = 2; break;
     case 0x23: a = ACC; set_acc(c, a << 1 | a >> 7); break;
     case 0x24: add(c, FETCH(), 0); break;
     case 0x25: a = FETCH(); add(c, dread(c, a), 0); break;
-    case 0x26: case 0x27: add(c, c->iram[RN(op & 1)], 0); break;
+    case 0x26: case 0x27: add(c, ird(c, RN(op & 1)), 0); break;
     case 0x28: case 0x29: case 0x2A: case 0x2B: case 0x2C: case 0x2D: case 0x2E: case 0x2F: add(c, RN(op & 7), 0); break;
     case 0x30: a = FETCH(); b = FETCH(); cyc = 2; if (!bit_read(c, a)) REL(b); break;
     case 0x32:
@@ -771,35 +969,35 @@ static int step(core_t *c)
     case 0x33: a = ACC; d = CYF; setc(c, a & 0x80); set_acc(c, a << 1 | d); break;
     case 0x34: add(c, FETCH(), 1); break;
     case 0x35: a = FETCH(); add(c, dread(c, a), 1); break;
-    case 0x36: case 0x37: add(c, c->iram[RN(op & 1)], 1); break;
+    case 0x36: case 0x37: add(c, ird(c, RN(op & 1)), 1); break;
     case 0x38: case 0x39: case 0x3A: case 0x3B: case 0x3C: case 0x3D: case 0x3E: case 0x3F: add(c, RN(op & 7), 1); break;
     case 0x40: a = FETCH(); cyc = 2; if (CYF) REL(a); break;
     case 0x42: a = FETCH(); dwrite(c, a, dread(c, a) | ACC); break;
     case 0x43: a = FETCH(); b = FETCH(); dwrite(c, a, dread(c, a) | b); cyc = 2; break;
     case 0x44: set_acc(c, ACC | FETCH()); break;
     case 0x45: a = FETCH(); set_acc(c, ACC | dread(c, a)); break;
-    case 0x46: case 0x47: set_acc(c, ACC | c->iram[RN(op & 1)]); break;
+    case 0x46: case 0x47: set_acc(c, ACC | ird(c, RN(op & 1))); break;
     case 0x48: case 0x49: case 0x4A: case 0x4B: case 0x4C: case 0x4D: case 0x4E: case 0x4F: set_acc(c, ACC | RN(op & 7)); break;
     case 0x50: a = FETCH(); cyc = 2; if (!CYF) REL(a); break;
     case 0x52: a = FETCH(); dwrite(c, a, dread(c, a) & ACC); break;
     case 0x53: a = FETCH(); b = FETCH(); dwrite(c, a, dread(c, a) & b); cyc = 2; break;
     case 0x54: set_acc(c, ACC & FETCH()); break;
     case 0x55: a = FETCH(); set_acc(c, ACC & dread(c, a)); break;
-    case 0x56: case 0x57: set_acc(c, ACC & c->iram[RN(op & 1)]); break;
+    case 0x56: case 0x57: set_acc(c, ACC & ird(c, RN(op & 1))); break;
     case 0x58: case 0x59: case 0x5A: case 0x5B: case 0x5C: case 0x5D: case 0x5E: case 0x5F: set_acc(c, ACC & RN(op & 7)); break;
     case 0x60: a = FETCH(); cyc = 2; if (!ACC) REL(a); break;
     case 0x62: a = FETCH(); dwrite(c, a, dread(c, a) ^ ACC); break;
     case 0x63: a = FETCH(); b = FETCH(); dwrite(c, a, dread(c, a) ^ b); cyc = 2; break;
     case 0x64: set_acc(c, ACC ^ FETCH()); break;
     case 0x65: a = FETCH(); set_acc(c, ACC ^ dread(c, a)); break;
-    case 0x66: case 0x67: set_acc(c, ACC ^ c->iram[RN(op & 1)]); break;
+    case 0x66: case 0x67: set_acc(c, ACC ^ ird(c, RN(op & 1))); break;
     case 0x68: case 0x69: case 0x6A: case 0x6B: case 0x6C: case 0x6D: case 0x6E: case 0x6F: set_acc(c, ACC ^ RN(op & 7)); break;
     case 0x70: a = FETCH(); cyc = 2; if (ACC) REL(a); break;
     case 0x72: a = FETCH(); cyc = 2; if (bit_read(c, a)) setc(c, 1); break;
     case 0x73: pc = DPTR + ACC; cyc = 2; break;
     case 0x74: set_acc(c, FETCH()); break;
     case 0x75: a = FETCH(); b = FETCH(); dwrite(c, a, b); cyc = 2; break;
-    case 0x76: case 0x77: c->iram[RN(op & 1)] = FETCH(); break;
+    case 0x76: case 0x77: iwr(c, RN(op & 1), FETCH()); break;
     case 0x78: case 0x79: case 0x7A: case 0x7B: case 0x7C: case 0x7D: case 0x7E: case 0x7F: RN(op & 7) = FETCH(); break;
     case 0x80: a = FETCH(); REL(a); cyc = 2; break;
     case 0x82: a = FETCH(); cyc = 2; if (!bit_read(c, a)) setc(c, 0); break;
@@ -810,7 +1008,7 @@ static int step(core_t *c)
         else { d &= ~0x04; BR = a % b; a = a / b; }
         PSW = d; set_acc(c, a); cyc = 4; break;
     case 0x85: a = FETCH(); b = FETCH(); dwrite(c, b, dread(c, a)); cyc = 2; break;
-    case 0x86: case 0x87: a = FETCH(); dwrite(c, a, c->iram[RN(op & 1)]); cyc = 2; break;
+    case 0x86: case 0x87: a = FETCH(); dwrite(c, a, ird(c, RN(op & 1))); cyc = 2; break;
     case 0x88: case 0x89: case 0x8A: case 0x8B: case 0x8C: case 0x8D: case 0x8E: case 0x8F:
         a = FETCH(); dwrite(c, a, RN(op & 7)); cyc = 2; break;
     case 0x90: a = FETCH(); b = FETCH(); DPH = a; DPL = b; cyc = 2; break;
@@ -818,7 +1016,7 @@ static int step(core_t *c)
     case 0x93: set_acc(c, c->cur[(uint16_t)(DPTR + ACC)]); cyc = 2; break;
     case 0x94: subb(c, FETCH()); break;
     case 0x95: a = FETCH(); subb(c, dread(c, a)); break;
-    case 0x96: case 0x97: subb(c, c->iram[RN(op & 1)]); break;
+    case 0x96: case 0x97: subb(c, ird(c, RN(op & 1))); break;
     case 0x98: case 0x99: case 0x9A: case 0x9B: case 0x9C: case 0x9D: case 0x9E: case 0x9F: subb(c, RN(op & 7)); break;
     case 0xA0: a = FETCH(); cyc = 2; if (!bit_read(c, a)) setc(c, 1); break;
     case 0xA2: a = FETCH(); setc(c, bit_read(c, a)); break;
@@ -826,7 +1024,7 @@ static int step(core_t *c)
     case 0xA4:
         t = ACC * BR; set_acc(c, t & 0xFF); BR = t >> 8;
         PSW = (PSW & 0x7B) | (BR ? 0x04 : 0); cyc = 4; break;
-    case 0xA6: case 0xA7: a = FETCH(); c->iram[RN(op & 1)] = dread(c, a); cyc = 2; break;
+    case 0xA6: case 0xA7: a = FETCH(); iwr(c, RN(op & 1), dread(c, a)); cyc = 2; break;
     case 0xA8: case 0xA9: case 0xAA: case 0xAB: case 0xAC: case 0xAD: case 0xAE: case 0xAF:
         a = FETCH(); RN(op & 7) = dread(c, a); cyc = 2; break;
     case 0xB0: a = FETCH(); cyc = 2; if (bit_read(c, a)) setc(c, 0); break;
@@ -835,7 +1033,7 @@ static int step(core_t *c)
     case 0xB4: a = FETCH(); b = FETCH(); cyc = 2; setc(c, ACC < a); if (ACC != a) REL(b); break;
     case 0xB5: a = FETCH(); b = FETCH(); cyc = 2; d = dread(c, a); setc(c, ACC < d); if (ACC != d) REL(b); break;
     case 0xB6: case 0xB7:
-        a = FETCH(); b = FETCH(); cyc = 2; d = c->iram[RN(op & 1)]; setc(c, d < a); if (d != a) REL(b); break;
+        a = FETCH(); b = FETCH(); cyc = 2; d = ird(c, RN(op & 1)); setc(c, d < a); if (d != a) REL(b); break;
     case 0xB8: case 0xB9: case 0xBA: case 0xBB: case 0xBC: case 0xBD: case 0xBE: case 0xBF:
         a = FETCH(); b = FETCH(); cyc = 2; d = RN(op & 7); setc(c, d < a); if (d != a) REL(b); break;
     case 0xC0: a = FETCH(); push(c, dread(c, a)); cyc = 2; break;
@@ -843,7 +1041,7 @@ static int step(core_t *c)
     case 0xC3: PSW &= 0x7F; break;
     case 0xC4: a = ACC; set_acc(c, a << 4 | a >> 4); break;
     case 0xC5: a = FETCH(); d = dread(c, a); r = ACC; set_acc(c, d); dwrite(c, a, r); break;
-    case 0xC6: case 0xC7: d = c->iram[RN(op & 1)]; c->iram[RN(op & 1)] = ACC; set_acc(c, d); break;
+    case 0xC6: case 0xC7: d = ird(c, RN(op & 1)); iwr(c, RN(op & 1), ACC); set_acc(c, d); break;
     case 0xC8: case 0xC9: case 0xCA: case 0xCB: case 0xCC: case 0xCD: case 0xCE: case 0xCF:
         d = RN(op & 7); RN(op & 7) = ACC; set_acc(c, d); break;
     case 0xD0: a = FETCH(); d = pop(c); dwrite(c, a, d); cyc = 2; break;
@@ -856,21 +1054,21 @@ static int step(core_t *c)
         PSW = d; set_acc(c, a); break;
     case 0xD5: a = FETCH(); b = FETCH(); cyc = 2; d = dread(c, a) - 1; dwrite(c, a, d); if (d) REL(b); break;
     case 0xD6: case 0xD7:
-        d = c->iram[RN(op & 1)]; a = ACC;
-        c->iram[RN(op & 1)] = (d & 0xF0) | (a & 15); set_acc(c, (a & 0xF0) | (d & 15)); break;
+        d = ird(c, RN(op & 1)); a = ACC;
+        iwr(c, RN(op & 1), (d & 0xF0) | (a & 15)); set_acc(c, (a & 0xF0) | (d & 15)); break;
     case 0xD8: case 0xD9: case 0xDA: case 0xDB: case 0xDC: case 0xDD: case 0xDE: case 0xDF:
         a = FETCH(); cyc = 2; if (--RN(op & 7)) REL(a); break;
     case 0xE0: set_acc(c, xread(c, DPTR)); cyc = 2; break;
     case 0xE2: case 0xE3: set_acc(c, xread(c, S(0xA0) << 8 | RN(op & 1))); cyc = 2; break;
     case 0xE4: set_acc(c, 0); break;
     case 0xE5: a = FETCH(); set_acc(c, dread(c, a)); break;
-    case 0xE6: case 0xE7: set_acc(c, c->iram[RN(op & 1)]); break;
+    case 0xE6: case 0xE7: set_acc(c, ird(c, RN(op & 1))); break;
     case 0xE8: case 0xE9: case 0xEA: case 0xEB: case 0xEC: case 0xED: case 0xEE: case 0xEF: set_acc(c, RN(op & 7)); break;
     case 0xF0: xwrite(c, DPTR, ACC); cyc = 2; break;
     case 0xF2: case 0xF3: xwrite(c, S(0xA0) << 8 | RN(op & 1), ACC); cyc = 2; break;
     case 0xF4: set_acc(c, ~ACC); break;
     case 0xF5: a = FETCH(); dwrite(c, a, ACC); break;
-    case 0xF6: case 0xF7: c->iram[RN(op & 1)] = ACC; break;
+    case 0xF6: case 0xF7: iwr(c, RN(op & 1), ACC); break;
     case 0xF8: case 0xF9: case 0xFA: case 0xFB: case 0xFC: case 0xFD: case 0xFE: case 0xFF: RN(op & 7) = ACC; break;
     default:                     /* 0xA5 */
         c->p.bad_op = op;
@@ -993,6 +1191,7 @@ void core_free(core_t *c)
         free(c->fm_tag);
         free(c->fm_lacc);
         free(c->fm_lmiss);
+        SAN_FREE(c);
         free(c);
     }
 }
@@ -1005,6 +1204,7 @@ void core_reset(core_t *c)      /* ucsim cl_51core/cl_uc52 clear_sfr; RAM keeps 
     c->p.pc = 0;
     c->p.nlvl = 0;
     c->was_reti = 0;
+    SAN_RESET(c);
     c->exf2_active = 1;
     c->t2mode = T2_RELOAD;
     c->t2ex_bit = 1;
@@ -1097,6 +1297,7 @@ static int core_run_(core_t *c, uint64_t n)
             c->p.cycles += cyc;
             tick_hw(c, cyc);
         }
+        SAN_COMMIT(c);
         uint64_t n0 = c->p.nirq;
         irq(c);
         if (c->idle_req) {                      /* PCON.IDL: CPU halted until an IRQ is accepted; timers keep counting (databook 3-55) */
@@ -1147,6 +1348,7 @@ void core_restore(core_t *c, const uint8_t *buf)
 {
     uint8_t *code = c->code, *cur = c->cur;
     uint32_t *tag = c->fm_tag, *la = c->fm_lacc, *lm = c->fm_lmiss;
+    struct san *sn = c->san;
     static uint8_t hk[4][8192];
     static uint16_t pc_[65536];
     (void)cur;
@@ -1155,7 +1357,7 @@ void core_restore(core_t *c, const uint8_t *buf)
     memcpy(c, buf, sizeof *c);
     memcpy(c->hook, hk, sizeof hk);
     memcpy(c->pch, pc_, sizeof pc_);
-    c->code = code; c->fm_tag = tag; c->fm_lacc = la; c->fm_lmiss = lm;
+    c->code = code; c->fm_tag = tag; c->fm_lacc = la; c->fm_lmiss = lm; c->san = sn;
     c->cur = code + (((core_t *)buf)->cur - ((core_t *)buf)->code);     /* cur points into code */
     if (tag)
         memcpy(tag, buf + sizeof *c, (size_t)c->fm_sets * c->fm_ways * 4);
@@ -1179,3 +1381,36 @@ void core_ffwd(core_t *c, uint64_t clk, uint64_t cycles, uint64_t instr, int op)
     c->opcount[op & 255] += instr;
     c->cycop[op & 255] += cycles;
 }
+
+/* ---- sdcc_san API (host side: scripts/sdcc_san.py) ---- */
+#ifdef SDCC_SAN
+int core_san_enable(core_t *c)
+{
+    san_t *s;
+    if (c->san)
+        return 0;
+    s = calloc(1, sizeof *s);
+    s->rec = calloc((size_t)SAN_NIDX * 16, sizeof(san_rec_t));
+    s->evr = calloc(SAN_NIDX, 1);
+    s->evw = calloc(SAN_NIDX, 1);
+    s->cand = calloc(SAN_NCAND, sizeof(san_cand_t));
+    s->tick = 1;
+    c->san = s;
+    san_reset(c);
+    return 0;
+}
+void *core_san_ptr(core_t *c, int what)       /* 0 cand table, 1 evr, 2 evw */
+{
+    san_t *s = c->san;
+    return !s ? NULL : what == 0 ? (void *)s->cand : what == 1 ? (void *)s->evr : (void *)s->evw;
+}
+void core_san_stats(core_t *c, uint64_t *out)    /* tick, accesses, candidates, dropped, table size, cand size */
+{
+    san_t *s = c->san;
+    out[0] = s->tick; out[1] = s->nacc; out[2] = s->ncand; out[3] = s->dropped; out[4] = SAN_NCAND; out[5] = sizeof(san_cand_t);
+}
+#else
+int core_san_enable(core_t *c) { (void)c; return -1; }
+void *core_san_ptr(core_t *c, int what) { (void)c; (void)what; return NULL; }
+void core_san_stats(core_t *c, uint64_t *out) { (void)c; (void)out; }
+#endif

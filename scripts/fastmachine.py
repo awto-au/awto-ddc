@@ -48,6 +48,7 @@ from sdcc_overlay import repo_root
 ROOT = repo_root()
 SRC = HERE / "mcs51_core.c"
 SO = ROOT / "tmp/mcs51_core.so"
+SO_SAN = ROOT / "tmp/mcs51_core_san.so"      # -DSDCC_SAN build (AWTO_SIM_SAN=<outdir>): the race sanitizer, docs/sanitizer.md
 BANK = 0x10000
 R_DONE, R_EVENT, R_PC, R_BADOP = 0, 1, 2, 3
 EV_KIND = ("read", "write", "sread", "swrite")
@@ -76,13 +77,14 @@ def lib():
     global _LIB
     if _LIB is not None:
         return _LIB
-    if not SO.exists() or SO.stat().st_mtime < SRC.stat().st_mtime:
-        SO.parent.mkdir(parents=True, exist_ok=True)
-        tmp = SO.with_name(f"{SO.name}.{os.getpid()}")
-        subprocess.run(["gcc", "-O2", "-shared", "-fPIC", "-o", str(tmp), str(SRC)], check=True, timeout=GCC_TIMEOUT_S,
-                       capture_output=True)
-        os.replace(tmp, SO)                        # atomic: a concurrent build never loads half a file
-    L = ctypes.CDLL(str(SO))
+    so = SO_SAN if os.environ.get("AWTO_SIM_SAN") else SO
+    if not so.exists() or so.stat().st_mtime < SRC.stat().st_mtime:
+        so.parent.mkdir(parents=True, exist_ok=True)
+        tmp = so.with_name(f"{so.name}.{os.getpid()}")
+        subprocess.run(["gcc", "-O2", "-shared", "-fPIC", *(["-DSDCC_SAN"] if so is SO_SAN else []), "-o", str(tmp), str(SRC)],
+                       check=True, timeout=GCC_TIMEOUT_S, capture_output=True)
+        os.replace(tmp, so)                        # atomic: a concurrent build never loads half a file
+    L = ctypes.CDLL(str(so))
     vp = ctypes.c_void_p
     L.core_new.restype, L.core_new.argtypes = vp, [ctypes.c_char_p, ctypes.c_uint32]
     L.core_free.argtypes = [vp]
@@ -107,6 +109,9 @@ def lib():
     L.core_run.restype, L.core_run.argtypes = ctypes.c_int, [vp, ctypes.c_uint64]
     L.core_ffwd_room.restype, L.core_ffwd_room.argtypes = ctypes.c_uint64, [vp]
     L.core_ffwd.argtypes = [vp, ctypes.c_uint64, ctypes.c_uint64, ctypes.c_uint64, ctypes.c_int]
+    L.core_san_enable.restype, L.core_san_enable.argtypes = ctypes.c_int, [vp]
+    L.core_san_ptr.restype, L.core_san_ptr.argtypes = vp, [vp, ctypes.c_int]
+    L.core_san_stats.argtypes = [vp, vp]
     L.core_snap_size.restype, L.core_snap_size.argtypes = ctypes.c_size_t, [vp]
     L.core_snap.argtypes = [vp, ctypes.c_char_p]
     L.core_restore.argtypes = [vp, ctypes.c_char_p]
@@ -198,6 +203,10 @@ class Core:
         return {"pc": self.p.pc, "acc": s[0x60], "b": s[0x70], "psw": s[0x50], "sp": s[0x01], "dptr": s[0x03] << 8 | s[0x02],
                 "r": list(self.iram[rs:rs + 8]), "bank": self.p.bank}
 
+    def san_enable(self):
+        """Turn the race sanitizer on (needs the AWTO_SIM_SAN build); False when this is the normal build."""
+        return self.L.core_san_enable(self.h) == 0
+
     def ffwd_room(self) -> int:
         return self.L.core_ffwd_room(self.h)
 
@@ -272,6 +281,9 @@ class FastMachine:
         FastMachine._said = True
         self.core.reset()
         self.core.iram[:] = ucsim_iram()
+        if os.environ.get("AWTO_SIM_SAN"):
+            import sdcc_san
+            sdcc_san.attach(self)
         self.p = self.core.p
         self.ticks, self.instr, self._stop, self.last_out = 0, 0, False, ""
         self._tpi = S.TICKS_PER_INSTR
