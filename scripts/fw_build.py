@@ -220,21 +220,79 @@ def select_lib():
 VEC_END = CM.VECTORS_END
 
 
-def write_vectors(bank_dir: Path):
-    """SDCC emits ISR vectors only in main's file when the ISR prototypes are visible there; SysMain.c does not
-    see them, so the first image had no vectors (hardware died at the first interrupt, #8). Generate them:
-    reset + ljmp per ISR found in the banked asm, reti elsewhere; HOME is based after the table."""
+ISR_RE = re.compile(r"^;\s+\S+:\d+: void (\w+)\s*\(void\)\s*__interrupt\s*\(\s*(\d+)\s*\)", re.MULTILINE)
+VEC_COUNT = (VEC_END - 3) // 8
+VEC_ALWAYS = {0: "EXINT0", 1: "Timer0", 2: "EXINT1", 5: "Timer2", 8: "WDT"}      # enabled in every image
+VEC_PROBE = """#include "SysInclude.h"
+#if(_UART_SUPPORT == _ON)
+AWTO_VEC 4 serial
+#endif
+#if(_INSTANT_TIMER_EVENT_1 == _ON)
+AWTO_VEC 3 Timer1
+#endif
+#if(_USB3_RETIMER_SUPPORT == _ON)
+AWTO_VEC 9 EXINT3
+#endif
+#ifdef _AWTO_CPU_SUITE
+AWTO_VEC 3 Timer1
+#endif
+"""
+
+
+def required_vectors() -> dict:
+    """Vectors this image needs a handler for: the always-on five plus those its config macros enable (one sdcpp run)."""
+    import shlex
+
+    import fw_compile as FC
+    probe = ROOT / "tmp/sdcc-port/vec_probe.c"
+    probe.write_text(VEC_PROBE)
+    _files, defines, incs, model = FC.parse_uv2(FC.SRC / "STD_FW_1P.Uv2", "RL6449_Project")
+    sysdir = FC.SRC / "Kernel/System/Code"
+    cmd = FC.sdcc_cmd(sysdir / "SysMain.c", (FC.SRC / "STD_FW_1P.Uv2").parent, defines, incs, model) + [f"-I{sysdir}"] \
+        + shlex.split(os.environ.get("K2S_SDCC_EXTRA", "")) + ["-E", str(probe)]
+    r = subprocess.run(cmd, capture_output=True, text=True, errors="replace", timeout=TIMEOUT["pp"], check=False)
+    if r.returncode:
+        sys.exit(f"vectors: preprocessing the config probe failed rc {r.returncode}: {r.stderr[-300:]}")
+    req = dict(VEC_ALWAYS)
+    req.update({int(n): name for n, name in re.findall(r"^AWTO_VEC (\d+) (\w+)", r.stdout, re.MULTILINE)})
+    return req
+
+
+def vector_table(asm_texts, required: dict):
+    """-> (isr {n: '_Name'}, asm lines of the table). ValueError: no ISR found (SDCC comment format changed?),
+    an ISR number outside the table, or a required vector without a handler. Unrequired free slots get `reti`."""
     isr = {}
-    for asm in bank_dir.glob("*.asm"):
-        for name, n in re.findall(r"^;\s+\S+:\d+: void (\w+)\s*\(void\)\s*__interrupt\s*\(\s*(\d+)\s*\)", asm.read_text(errors="replace"), re.MULTILINE):
+    for t in asm_texts:
+        for name, n in ISR_RE.findall(t):
             isr[int(n)] = "_" + name
+    if not isr:
+        raise ValueError("no `; file:line: void Name(void) __interrupt(N)` comment found in any banked asm: the SDCC asm comment format changed or no ISR was compiled")
+    bad = sorted(n for n in isr if not 0 <= n < VEC_COUNT)
+    if bad:
+        raise ValueError(f"ISR number(s) {bad} outside the vector table (0..{VEC_COUNT - 1}, vectors end 0x{VEC_END:x}): {[isr[n] for n in bad]}")
+    missing = sorted(n for n in required if n not in isr)
+    if missing:
+        raise ValueError("required interrupt vector(s) without a handler: " + ", ".join(f"{n} ({required[n]}, 0x{3 + 8 * n:x})" for n in missing))
     lines = ["\t.module awto_vectors", "\t.globl __sdcc_gsinit_startup"] + [f"\t.globl {v}" for v in isr.values()]
     lines += ["\t.area VECTORS (ABS,CODE)", "\t.org 0x0000", "\tljmp __sdcc_gsinit_startup"]
-    for n in range((VEC_END - 3) // 8):
+    for n in range(VEC_COUNT):
         lines += [f"\t.org 0x{3 + 8 * n:04x}", f"\tljmp {isr[n]}" if n in isr else "\treti"]
+    return isr, lines
+
+
+def write_vectors(bank_dir: Path, required: dict | None = None):
+    """SDCC emits ISR vectors only in main's file when the ISR prototypes are visible there; SysMain.c does not
+    see them, so the first image had no vectors (hardware died at the first interrupt, #8). Generate them:
+    reset + ljmp per ISR found in the banked asm, reti elsewhere; HOME is based after the table.
+    The build fails when a vector the image enables has no handler (required_vectors)."""
+    required = required_vectors() if required is None else required
+    try:
+        isr, lines = vector_table([a.read_text(errors="replace") for a in sorted(bank_dir.glob("*.asm"))], required)
+    except ValueError as e:
+        sys.exit(f"vectors: {e}")
     (bank_dir / "awto_vectors.asm").write_text("\n".join(lines) + "\n")
     run("bank", [T.tool("sdas8051"), "-plosgffw", bank_dir / "awto_vectors.rel", bank_dir / "awto_vectors.asm"])
-    log(f"vectors: { {hex(3 + 8 * n): v for n, v in sorted(isr.items())} }")
+    log("vectors: " + ", ".join(f"0x{3 + 8 * n:x} {isr[n] if n in isr else 'reti'}{' [required]' if n in required else ''}" for n in range(VEC_COUNT)))
 
 
 def parse_ihx(p: Path) -> dict:
