@@ -7,7 +7,7 @@ usage: unit_log.py follow --unit N [--interval S] [--once]     poll the ring, ap
 - Dedupe by ring sequence: the ring entry at (last seq - 1) must still equal the saved raw bytes, else a gap marker and every
   entry is saved again (cold power-up restarted the ring, or N or more lines came between two polls: not told apart).
   A warm reset keeps the ring (RL6449_Project.h AWTO_SYNC_ADDR), so it continues; its new "boot:" line is the boundary.
-- Line = ISO host time (event time when the unit has a host sync, else the read time marked '~'), ring seq, decoded text.
+- Line = ISO host time (host-sync event time, else poll join: read time - fw ms since the entry, marked '~'; read time only without fw clock), ring seq, decoded text.
 - Host notes: host_note.py appends its own line (text at write time) + a notes registry; the ring entry of that note is skipped.
 - Poll interval: the ring takes 80 lines, a boot makes ~40 in ~2 s and idle ~1 line / min; 30 s keeps a burst of <= 80 lines whole
   and costs one debug-link swap (~100 ms) per poll. Expiry of a read: dev.py's own limit; a failed poll is logged and retried.
@@ -98,7 +98,7 @@ class Store:
                 out.append(f"# {read} ---- gap: unit ring restarted (cold power-up or a ring that was not kept) ----")
         noted = self._noted()
         for e in new:
-            when = e["wall"] or read
+            when = e["wall"] or e.get("poll_wall") or read
             mark = " " if e["wall"] and e["sure"] else "~"
             if e["id"] == NOTE_EV and e["val"] in noted:
                 continue                                   # host_note.py logged its text at write time

@@ -64,3 +64,13 @@ Existing sync lines stay (C1 / C6 / C2 / F0..F4 / FC / system machine); the new 
 - `PHY` time and `scan ok` belong to the port the search visited last before ACTIVE.
 - DP trainings count TP1 starts: a source that retrains with a new TP1 write counts each; one counted by the EXINT even before the main loop saw it.
 - A wake search that ends in POWER SAVING writes no FAILED line: the system line `wake search found no source` states it (a FAILED line there splits the system transition from its LED line: panel_sim LED gate).
+
+## Gap lines (#284: where the time goes; no behaviour change)
+- `INITIAL:first exit check at Nms` / `longest gap between checks Nms` / `SDK <source|mode|OSD|other> flag set until Nms` (id 93, ms since INITIAL began, 4 ms steps): INITIAL ends when no SDK change flag is set at a judge pass; a flag line is written only for a flag seen set; a long gap = the main loop was blocked between passes (see the slow-wait / long-block lines).
+- `search reached Dn: predetect on|off, cable detected|no cable` and `search left Dn after Nms: no signal|predetect seen, N edges[, dwell re-armed]|port disabled, skipped` (F3, fmt `visit`): the edge count is a per-visit counter (the repeated C1 / C4 lines collapse in the ring). Visit lines stop after `AWTO_SCAN_LOG_MAX` visits per episode (counted at reached).
+- `Dn search dwell re-armed, N after reaching` (id 95, warning): predetect on a searched port cancelled the SDK dwell and armed the reactive time (SDK: 4.5 s TMDS, 4 s DP, `SysSourceSearchTimeInitial`), written from `SysSourceJudge`. This is the #290 mechanism.
+- `ACTIVE wait:timer Nms, panel ready Nms` (id 94, both since the display setting ended): the SDK ACTIVE timer (`_WAIT_TIME_TO_ACTIVE_*`, 100 ms) and the first pass the panel video was ready; written before `sync DONE`.
+- `EDID load start:HPD mask N` / `EDID load end:took Nms` (FA 03 / 04, around `UserCommonInterfaceLoadEmbeddedEdidData` at boot, #289) next to `EDID channels on` and the HPD lines.
+- HPD edges (FA 00 / 01) are sampled every main-loop pass, now also in power saving; they are written without repeat collapse and carry the ring ms.
+- Host join (#284): `synclog --json` carries `fw_now` and per entry `fw` / `poll_wall` (read time of the fw clock minus the ms since the entry); `unit_log` lines without a host sync use it (marked `~`). A warm reset restarts the fw clock, so host-synced time needs `host_time.py` after the reset.
+- Cost: XDATA 18 B (visit 3, INITIAL 8, tail 5, EDID 2), no new delay; per pass: one compare in `AwtoSyncDetect`, one call in the INITIAL judge pass.

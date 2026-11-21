@@ -158,8 +158,8 @@ E7	*	port	EDID read
 FA	00	vport	% HPD low	timing
 FA	01	vport	% HPD high	timing
 FA	02	n	EDID channels on:HPD pin mask % (bit0 = D1)	timing
-FA	03	x	EDID SRAM load start:HPD pin mask % (bit0 = D1)	timing
-FA	04	ms	EDID SRAM load end:took %	timing
+FA	03	n	EDID load start:HPD mask %	timing
+FA	04	ms	EDID load end:took %	timing
 E8	01	n	OSD SRAM probe done:% addresses written and read back from M1 / M2 on the MCU, results in g_stAwtoOsdProbe
 E8	03	-	OSD SRAM probe refused:the OSD is on	warning
 EA	*	mon	monitor: %
@@ -401,13 +401,14 @@ FB	11	rms	EXPIRED poll of register (hex) + took:%	error
 FB	02	rms	slow wait for event (hex) + took:%	warning
 FB	12	rms	EXPIRED wait for event (hex) + took:%	error
 FC	01	pms	DP link trained:% after the loop first saw it training	timing
-93	00	ms	INITIAL:first exit check % after it began	timing
-93	01	ms	INITIAL:held by the SDK source change flag, last seen set % after it began	timing
-93	02	ms	INITIAL:held by the SDK mode change flag, last seen set % after it began	timing
-93	03	ms	INITIAL:held by the SDK OSD change flag, last seen set % after it began	timing
-93	04	ms	INITIAL:held by the SDK others change flag, last seen set % after it began	timing
-94	00	ms2	ACTIVE wait after display set:SDK ACTIVE timer ran out %, panel video ready %	timing
-95	*	portms	search dwell re-armed by predetect to the SDK reactive time, % after reaching the port	warning
+93	00	ms	INITIAL:first exit check at %	timing
+93	05	ms	INITIAL:longest gap between checks %	timing
+93	01	ms	INITIAL:SDK source flag set until %	timing
+93	02	ms	INITIAL:SDK mode flag set until %	timing
+93	03	ms	INITIAL:SDK OSD flag set until %	timing
+93	04	ms	INITIAL:SDK other flag set until %	timing
+94	00	ms2	ACTIVE wait:timer %, panel ready %	timing
+95	*	portms	search dwell re-armed, % after reaching	warning
 EF	*	sdone	sync DONE %
 FF	*	slink	sync link %	timing
 FE	00	pms	sync FAILED:nothing detected on the input, no clock or link (%)	error
@@ -524,6 +525,19 @@ FE	*	pms	sync FAILED:last scan outcome not listed, see the scan lines above (%)	
 19	07	-	 for 
 19	08	-	ms->
 19	09	-	:
+19	10	-	reached 
+19	11	-	left 
+19	12	-	: predetect on, 
+19	13	-	: predetect off, 
+19	14	-	cable detected
+19	15	-	no cable
+19	16	-	 after 
+19	17	-	ms: 
+19	18	-	port disabled, skipped
+19	19	-	predetect seen, 
+19	1A	-	no signal, 
+19	1B	-	 edges
+19	1C	-	, dwell re-armed
 1A	00	-	monitor off, inputs not searched
 1A	01	-	monitor off, inputs not searched
 1A	02	-	scaler input side reset for a new search

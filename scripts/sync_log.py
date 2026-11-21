@@ -129,13 +129,13 @@ def sync_link(a: int, v: int) -> str:
 
 def sync_visit(a: int, v: int) -> str:
     """fmt visit (firmware copy: fw/osd/console.c AwtoPutVisit): arg bit 7 = reached (bit 0 predetect on, bit 1 cable detected), else left
-    (bit 2 predetect seen, bit 1 port disabled, bit 3 dwell re-armed by predetect); value = predetect edges << 24 | port << 16 | ms on the port"""
+    (bit 2 predetect seen, bit 1 port disabled, bit 3 dwell re-armed); value = predetect edges << 24 | port << 16 | ms on the port"""
     port = f"D{((v >> 16) & 0xFF) - D0}"
     if a & 0x80:
         return f"reached {port}: predetect {'on' if a & 1 else 'off'}, {'cable detected' if a & 2 else 'no cable'}"
     out = f"left {port} after {v & 0xFFFF}ms: " + ("port disabled, skipped" if a & 2 else
                                                  f"{'predetect seen' if a & 4 else 'no signal'}, {_sat(v >> 24, 255)} edges")
-    return out + (", dwell re-armed by predetect" if a & 8 else "")
+    return out + (", dwell re-armed" if a & 8 else "")
 
 
 def value(fmt: str, arg: int, v: int) -> str:
@@ -263,6 +263,7 @@ def iso(t: float, ofs15: int, ms: bool = False) -> str:
 
 # ---- #157 host time: g_stAwtoHt (RL6449_Project.h StAwtoHt, BE words) ----------------------------------------------------
 HT_SIZE = 16
+T2_READ_AT = None                                        # host datetime right after read_ht read usT2Isr (snapshot poll join)
 DIAG_T2 = 0x16                                           # StAwtoDiag.usT2Isr (docs/diag-block.md)
 
 
@@ -438,12 +439,17 @@ def decode(raw: bytes, rows: list[dict], whole: bool = False, note: bytes | None
 def snapshot(h: dict, lines: list[str], ht: dict | None, t2: int | None, serial: str | None = None) -> dict:
     """machine form of one ring read (decode(..., whole=True)): per entry ring seq, raw bytes, decoded line, host time when synced"""
     evs = h.get("events", [])
-    ts = unwrap(evs, fw_now(ht, t2)) if ht and ht["syncs"] and t2 is not None else [(None, False)] * len(evs)
+    now32 = fw_now(ht, t2) if ht and t2 is not None else None
+    ts = unwrap(evs, now32) if now32 is not None else [(None, False)] * len(evs)
+    read_at = T2_READ_AT or dt.datetime.now().astimezone()
+    synced = bool(ht and ht["syncs"])
     ents = []
     for s, r, ln, ev, (t, sure) in zip(h["seqs"], h["raws"], lines, evs, ts):
-        ents.append({"seq": s, "raw": r.hex(), "text": ln, "id": ev[0],
-                     "val": int.from_bytes(r[4:8], "big"), "wall": None if t is None else host_time(ht, t), "sure": bool(sure)})
-    return {"serial": serial, "read": dt.datetime.now().astimezone().isoformat(timespec="milliseconds"), "seq": h["seq"], "n": h["n"],
+        # poll join (#284): host time of the read minus the fw ms elapsed since the entry; exact to the read latency, needs no host sync
+        poll = None if t is None else (read_at - dt.timedelta(milliseconds=now32 - t)).isoformat(timespec="milliseconds")
+        ents.append({"seq": s, "raw": r.hex(), "text": ln, "id": ev[0], "fw": t, "poll_wall": poll,
+                     "val": int.from_bytes(r[4:8], "big"), "wall": host_time(ht, t) if synced and t is not None else None, "sure": bool(sure)})
+    return {"serial": serial, "read": read_at.isoformat(timespec="milliseconds"), "fw_now": now32, "seq": h["seq"], "n": h["n"],
             "wrap": h["wrap"], "ep_seq": h["ep_seq"], "kind": KINDS.get(h["kind"], h["kind"]), "lost": h.get("lost", 0), "entries": ents}
 
 
@@ -474,6 +480,8 @@ def read_ht(io, map_path: Path):
     d = X.read_blocks(io, 0xF6D0, DIAG_T2 + 2)           # diag block: fixed address (RL6449_Project.h)
     if b is None or d is None:
         return None, None
+    global T2_READ_AT
+    T2_READ_AT = dt.datetime.now().astimezone()          # host time right after the fw clock read: the join point of the poll
     return ht_decode(bytes(b)), int.from_bytes(bytes(d[DIAG_T2:DIAG_T2 + 2]), "big")
 
 

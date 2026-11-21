@@ -151,6 +151,8 @@ def main():
         r.check(h["magic"] == b"SY" and h["kind"] == 1, "ring: power-on episode", f"magic {h['magic']!r} kind {h['kind']}")
         for want in ("power on", "->ACTIVE:", "backlight on at once", "timing ", "console opened"):
             r.check(want in txt, f"power-on log has '{want}'")
+        for want in ("INITIAL:first exit check", "INITIAL:longest gap", "search reached D2", "ACTIVE wait:timer", "EDID load start", "EDID load end"):
+            r.check(want in txt, f"power-on gap log has '{want}'")      # #284
         r.sync_summary(lines, "power-on", 1, 0)
         r.check(con_open, "console opened by itself after power-on")
         r.shot("poweron_console")

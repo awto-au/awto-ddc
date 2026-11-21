@@ -112,9 +112,7 @@ void SysPowerInitial(void)
 
 #if(_EMBEDDED_EDID_SUPPORT == _ON)
     AWTO_BPROF(0x37);
-    AWTO_SYNC_EDID_LOAD(0);
-    UserCommonInterfaceLoadEmbeddedEdidData();
-    AWTO_SYNC_EDID_LOAD(1);
+    AWTO_SYNC_EDID_LOAD(0); UserCommonInterfaceLoadEmbeddedEdidData(); AWTO_SYNC_EDID_LOAD(1);
 #endif
 
 #if(_HDMI_MULTI_EDID_SUPPORT == _ON)

@@ -82,3 +82,20 @@ def test_fmts_known_to_generator(fmt):
 def test_link_scdc_zero_is_raw_evidence_not_a_verdict():
     out = S.sync_link(1 | (2 << 2) | (4 << 4), 147 << 24)           # PHY 1:40, scrambled data seen, SCDC bits left 0 by the source
     assert out.startswith("D2 HDMI 2.0 (1:40): scrambled data seen, SCDC 20h as the source left it: ratio bit 0 scrambling bit 0")
+
+
+def test_visit_reached_and_left():
+    d2 = 5 << 16                                          # _D2_INPUT_PORT = 5
+    assert S.sync_visit(0x80 | 1 | 2, d2) == "reached D2: predetect on, cable detected"
+    assert S.sync_visit(0x80, d2) == "reached D2: predetect off, no cable"
+    assert S.sync_visit(0x04 | 0x08, (6 << 24) | d2 | 4975) == "left D2 after 4975ms: predetect seen, 6 edges, dwell re-armed"
+    assert S.sync_visit(0, d2 | 12) == "left D2 after 12ms: no signal, 0 edges"
+    assert S.sync_visit(0x02, d2 | 1) == "left D2 after 1ms: port disabled, skipped"
+
+
+def test_gap_rows_decode():
+    line = S.line(ROWS, (0xF3, 0x80 | 3, 500, 6 << 16), 0)
+    assert line == "  500:search reached D3: predetect on, cable detected"
+    assert S.line(ROWS, (0x94, 0, 700, (102 << 16) | 100), 0) == "  700:ACTIVE wait:timer 100ms, panel ready 102ms"
+    assert S.line(ROWS, (0x93, 3, 400, 120 << 2), 0).endswith("SDK OSD flag set until 480ms")
+    assert S.line(ROWS, (0x95, 5, 900, 4025), 0).startswith("  900:D2 search dwell re-armed")

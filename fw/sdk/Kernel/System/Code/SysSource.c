@@ -1417,8 +1417,7 @@ void SysSourceJudge(void)
             else if(GET_SOURCE_PREDETECT(g_ucSearchIndex) == _TRUE)
             {
                 if(GET_SOURCE_SEARCH_TIME_REACTIVE() == _TRUE)
-                {
-                    AwtoSyncDwell();
+                { AwtoSyncDwell();
 #if(_SOURCE_AUTO_SEARCH_STYLE == _SOURCE_POLLING_EIZO_STYLE)
                     SET_SOURCE_EIZO_EVENT_TIME(ScalerTimerGetEventRemainTime(_SYSTEM_TIMER_EVENT_SOURCE_CLEAR_DETECTING));
 #endif

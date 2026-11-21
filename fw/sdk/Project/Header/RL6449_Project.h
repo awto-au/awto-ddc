@@ -1549,7 +1549,7 @@ extern void AwtoSyncFreq(void);
 #define AWTO_SYNC_EV_SDONE                                      0xEF    // sync DONE at ACTIVE: arg = port idx | kind << 2 | scan retries << 4 | PHY set-ups / DP trainings << 6 (each 0..3), value = scan ok ms << 20 | timing ms << 8 | PHY / link ms (docs/sync-log-design.md)
 #define AWTO_SYNC_EV_SFAIL                                      0xFE    // sync FAILED: arg = reason (AWTO_SD_WHY_* or the last scan code), value port << 16 | ms
 #define AWTO_SYNC_EV_SLINK                                      0xFF    // link health once after ACTIVE: arg = port idx | kind << 2 | flags << 4, value = ms << 24 | HDMI errors ch0 / 1 / 2 or DP rate / DPCD 202 / 203
-#define AWTO_SYNC_EV_INITX                                      0x93    // INITIAL exit: arg 0 = first check, 1..4 = SDK change flag (source, mode, OSD, others) that held it; value = ms since INITIAL began
+#define AWTO_SYNC_EV_INITX                                      0x93    // INITIAL exit: arg 0 = first check, 5 = longest gap between checks, 1..4 = SDK change flag (source, mode, OSD, others) that held it; value = ms since INITIAL began
 #define AWTO_SYNC_EV_ATAIL                                      0x94    // display setting done -> ACTIVE: value = panel video ready ms << 16 | ACTIVE timer ms, both since the display setting ended
 #define AWTO_SYNC_EV_DWELL                                      0x95    // arg = port: predetect re-armed the search dwell (SDK reactive time); value = ms since the search reached the port
 #define AWTO_VISIT_REACHED                                      0x80    // F3 arg: search reached a port (bit 0 predetect on, bit 1 cable detected); else it left: flaps in value
