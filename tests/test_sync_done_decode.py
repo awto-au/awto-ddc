@@ -20,13 +20,13 @@ def done_value(scan, timing, phy):
 def test_done_hdmi_first_try():
     arg = 1 | (2 << 2) | (0 << 4) | (1 << 6)             # D2, HDMI 2.0, no retry, 1 PHY set-up
     assert S.sync_done(arg, done_value(120, 380, 34), 452) == \
-        "D2 HDMI 2.0 (1:40), first try: PHY 34ms (1 set-up), scan ok 120ms, timing 380ms, ACTIVE 452ms"
+        "D2 HDMI 2.0 (1:40), first try: PHY 34ms (1 set-up), scan ok +120ms, timing +380ms, ACTIVE 452ms"
 
 
 def test_done_retries_and_unseen_stamps():
     arg = 1 | (2 << 2) | (3 << 4) | (3 << 6)
     out = S.sync_done(arg, done_value(0xFFF, 0xFFE, 0xFF), 9000)
-    assert out == "D2 HDMI 2.0 (1:40), after 3+ retries: PHY - (3+ set-ups), scan ok -, timing 4094+ms, ACTIVE 9000ms"
+    assert out == "D2 HDMI 2.0 (1:40), after 3+ retries: PHY - (3+ set-ups), scan ok -, timing +4094+ms, ACTIVE 9000ms"
     assert "after 1 retry:" in S.sync_done(1 | (1 << 4), 0, 5)
 
 
@@ -54,7 +54,7 @@ def test_link_not_available_is_said():
 
 def test_rows_and_line_decode():
     line = S.line(ROWS, (SDONE, 1 | (2 << 2) | (1 << 6), 452, done_value(120, 380, 34)), 0)
-    assert line == "  452:sync DONE D2 HDMI 2.0 (1:40), first try: PHY 34ms (1 set-up), scan ok 120ms, timing 380ms, ACTIVE 452ms"
+    assert line == "  452:sync DONE D2 HDMI 2.0 (1:40), first try: PHY 34ms (1 set-up), scan ok +120ms, timing +380ms, ACTIVE 452ms"
     assert "sync link D2" in S.line(ROWS, (SLINK, 1 | (2 << 2) | (3 << 4), 552, 100 << 24), 0)
     fail = S.line(ROWS, (SFAIL, 0x12, 3012, (5 << 16) | 3012), 0)
     assert fail == " 3012:sync FAILED:CDR not locked at 1:10, retry 1:40 not done (D2, 3012ms)"

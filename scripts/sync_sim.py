@@ -102,7 +102,7 @@ class Run:
         self.check(len(done) == want_done and len(fail) == want_fail, f"{title}: {want_done} 'sync DONE', {want_fail} 'sync FAILED' line(s)",
                    f"{len(done)} / {len(fail)}")
         for ln in done:
-            m = re.search(r"scan ok (\d+)ms, timing (\d+)ms, ACTIVE (\d+)ms", ln)
+            m = re.search(r"scan ok \+(\d+)ms, timing \+(\d+)ms, ACTIVE (\d+)ms", ln)
             if m:
                 s, ti, ac = map(int, m.groups())
                 self.check(s <= ti <= ac, f"{title}: DONE times in order (scan ok <= timing <= ACTIVE)", ln.strip())

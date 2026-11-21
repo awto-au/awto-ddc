@@ -90,7 +90,7 @@ SD_NA = 0x80
 
 
 def _t12(x: int) -> str:
-    return "-" if x == SD_NONE12 else (f"{x}+ms" if x == SD_MAX12 else f"{x}ms")
+    return "-" if x == SD_NONE12 else (f"+{x}+ms" if x == SD_MAX12 else f"+{x}ms")
 
 
 def _sat(x: int, mx: int) -> str:
@@ -99,7 +99,7 @@ def _sat(x: int, mx: int) -> str:
 
 def sync_done(a: int, v: int, ms: int) -> str:
     """fmt sdone (firmware copy: fw/osd/console.c AwtoPutSdone): arg = port idx | kind << 2 | scan retries << 4 | set-ups / trainings << 6,
-    value = scan ok ms << 20 | timing ms << 8 | PHY / link ms (0xFF = none); ms = the line's own time since the episode start"""
+    value = scan ok ms << 20 | timing ms << 8 | PHY / link ms (0xFF = none); scan ok / timing are ms since the search reached the port (+N), ms = the line's own time since the episode start (ACTIVE)"""
     kind, r, n, phy = (a >> 2) & 3, (a >> 4) & 3, a >> 6, v & 0xFF
     tries = "first try" if r == 0 else f"after {_sat(r, 3)} retr{'y' if r == 1 else 'ies'}"
     if kind == 3:

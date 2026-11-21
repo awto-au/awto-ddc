@@ -3395,6 +3395,7 @@ static void AwtoPutT12(WORD usT)                // 12-bit stamp: "-" = not seen,
         AwtoPutChar('-');
         return;
     }
+    AwtoPutChar('+');
     AwtoPutNum(usT, 1);
     if(usT == 0xFFE)
     {

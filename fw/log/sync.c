@@ -411,7 +411,7 @@ void AwtoHtSync(BYTE *puc)                          // unix s BE x4, ms BE x2, U
     }
 }
 
-// Sync DONE / FAILED / link health (docs/sync-log-design.md): stamps in ms from the episode start (T0 of the ring header), 0xFFFF = not seen.
+// Sync DONE / FAILED / link health (docs/sync-log-design.md): scan ok / timing stamps in ms since the search reached the port, FAILED / ACTIVE since the episode start; 0xFFFF = not seen.
 #define AWTO_SD_SCRAMBLED               0x04    // LINK flags bit 2 (bits 1:0 are the SCDC 20h bits as read)
 #define AWTO_SD_NONE                    0xFFFF
 #define AWTO_SD_F_DONE                  0x01    // g_ucAwtoSdFlags: DONE written since the last ACTIVE
@@ -436,6 +436,11 @@ static __xdata BYTE s_ucSdPhyMs, s_ucSdPhyN, s_ucSdRetry, s_ucSdLast;
 static WORD AwtoSdRel(void)                         // ms since the episode start
 {
     return (WORD)AwtoMs() - (((WORD)g_stAwtoSync.ucT0Hi << 8) | g_stAwtoSync.ucT0Lo);
+}
+
+static WORD AwtoSdVisit(void)                       // ms since the search reached this port (the episode start for a fixed port)
+{
+    return (WORD)AwtoMs() - s_usAwtoVisitT0;
 }
 
 static void AwtoSdClear(void)                       // search left a port: the next sync starts clean (flags kept: FAILED stays once per episode)
@@ -800,7 +805,7 @@ void AwtoSyncScan(BYTE ucPort, BYTE ucType)         // SysSourceDetectPort: a pr
 
     if(ucWhy == AWTO_SCAN_OK)
     {
-        s_usSdScan = (s_usSdScan == AWTO_SD_NONE) ? AwtoSdRel() : s_usSdScan;
+        s_usSdScan = (s_usSdScan == AWTO_SD_NONE) ? AwtoSdVisit() : s_usSdScan;
     }
     else if(ucWhy != 0)
     {
@@ -873,7 +878,7 @@ void AwtoSyncTiming(void)                           // SysModeHandler: timing co
     BYTE ucPort = SysSourceGetInputPort();
 
     AwtoSyncPush(AWTO_SYNC_EV_TIMING, ucPort, ((DWORD)GET_INPUT_TIMING_HWIDTH() << 16) | GET_INPUT_TIMING_VHEIGHT());
-    s_usSdTiming = (s_usSdTiming == AWTO_SD_NONE) ? AwtoSdRel() : s_usSdTiming;
+    s_usSdTiming = (s_usSdTiming == AWTO_SD_NONE) ? AwtoSdVisit() : s_usSdTiming;
     AwtoSyncFormat(AwtoSdKind(ucPort));
 }
 

@@ -375,7 +375,7 @@ def value_segs(f: str, r: list, port: list) -> list:
         "pms": [port, [", "], num(5), ["ms"]], "psrc": [port, [" "], ["HDMI", "DP", "DVI", "999"]],
         "rms": [["FFFF "], num(5), ["ms"]], "dly": [num(2), [":"], num(4), [" took "], num(5), [" us +15 more"]], "lim": [num(5), [" of "], num(5), [" px"]],
         "sdone": [port, [" "], ["DVI", "HDMI 1.4 (1:10)", "HDMI 2.0 (1:40)", "DP"], [", "], ["first try", "after 3+ retries"], [": "],
-                  ["PHY 254ms (3+ set-ups)", "link trained 254ms (3+ trainings)"], [", scan ok "], ["4094+ms"], [", timing "], ["4094+ms"], [", ACTIVE "], num(5), ["ms"]],
+                  ["PHY 254ms (3+ set-ups)", "link trained 254ms (3+ trainings)"], [", scan ok "], ["+4094+ms"], [", timing "], ["+4094+ms"], [", ACTIVE "], num(5), ["ms"]],
         "slink": [port, [" "], ["HDMI 2.0 (1:40): SCDC ratio 1:40, scrambling off, no scrambled data, errors 255+/255+/255+, 255ms after ACTIVE",
                                "DP HBR3 x4: lanes CR 4/4, EQ 4/4, symbol lock 4/4, 255ms after ACTIVE"]],
         "pc": [["STALL TEST, PC ", "STALL, PC "], ["FF", "C"], [":"], num(4)],

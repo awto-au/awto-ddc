@@ -18,7 +18,7 @@ Existing sync lines stay (C1 / C6 / C2 / F0..F4 / FC / system machine); the new 
 - `sync FAILED:signal lost, the picture was up; time = since ACTIVE (D2, 5000ms)`
 
 ## Fields
-- Times: ms from the episode start (switch / wake / power-on, the same zero the console time column uses). The line's own time column = ACTIVE.
+- Times: `scan ok` and `timing` are `+N ms` since the search reached the port (the episode start for a fixed port; the F3 `search left the port` line shows the dwell on earlier ports). `ACTIVE` is ms since the episode start (the console time column), FAILED ms too.
 - `first try` / `after N retries`: N = failed scan calls this port visit (F2 fail codes 12..17, 20..24, 31..37; waits 10 / 11 / 30 not counted). 0 = the first ratio worked (1:10 vs 1:40 retry shown by the F2 fail lines above).
 - `PHY N ms (M set-ups)`: span of `ScalerTMDSPhySetDeferred` calls that had work (last span; M counts them, 3+ saturates). `-` = no PHY set-up in this sync (fast path / wake hold).
 - DP: `link trained N ms (M trainings)`: N = the FC line's ms; M = training-pattern-1 starts counted in the DP EXINT (`isr_g_ucAwtoDpLtN`), per episode / visit.
