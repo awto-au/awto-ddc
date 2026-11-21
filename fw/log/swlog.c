@@ -115,6 +115,7 @@ void AwtoSwPoll(void)                           // once per main-loop pass: the 
 {
     AWTO_SYNC_POLL();
     AWTO_EDID_POLL();
+    AWTO_SD_TICK();
 }
 
 #if(_AWTO_TMDS_HPD_RECOVER == _ON)

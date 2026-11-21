@@ -1546,6 +1546,14 @@ extern void AwtoSyncFreq(void);
 #define AWTO_SYNC_EV_WAITSLOW                                   0xFB    // slow / expired wait: arg kind | 0x10 expired, value = register / event << 16 | ms
 #define AWTO_SYNC_EV_DLYLONG                                    0xFD    // micro-delay over its limit: arg bank | (N - 1) << 4, value = caller PC << 16 | us (fw/timer/delay.c)
 #define AWTO_SYNC_EV_DPLT                                       0xFC    // DP link trained: value port << 16 | ms since the main loop first saw the training under way
+#define AWTO_SYNC_EV_SDONE                                      0xEF    // sync DONE at ACTIVE: arg = port idx | kind << 2 | scan retries << 4 | PHY set-ups / DP trainings << 6 (each 0..3), value = scan ok ms << 20 | timing ms << 8 | PHY / link ms (docs/sync-log-design.md)
+#define AWTO_SYNC_EV_SFAIL                                      0xFE    // sync FAILED: arg = reason (AWTO_SD_WHY_* or the last scan code), value port << 16 | ms
+#define AWTO_SYNC_EV_SLINK                                      0xFF    // link health once after ACTIVE: arg = port idx | kind << 2 | flags << 4, value = ms << 24 | HDMI errors ch0 / 1 / 2 or DP rate / DPCD 202 / 203
+#define AWTO_SD_WHY_NONE                                        0x00    // nothing detected on the input
+#define AWTO_SD_WHY_NOSUPPORT                                   0x40    // SDK mode NO SUPPORT
+#define AWTO_SD_WHY_LOST                                        0x41    // signal lost after ACTIVE (value ms = since ACTIVE)
+#define AWTO_SD_F_HEALTH                                        0x08    // g_ucAwtoSdFlags bit: link health read pending
+#define AWTO_SD_HEALTH_MS                                       100     // link health read this long after ACTIVE: ~6 frames at 60 Hz, a non-blocking check from the main loop (no wait)
 #define AWTO_SEL_WHY_FIXED                                      0
 #define AWTO_SEL_WHY_AUTO_LAST                                  1
 #define AWTO_SEL_WHY_AUTO_OTHER                                 2
@@ -1590,6 +1598,13 @@ extern unsigned char AwtoTmdsRx3Hs(void);
 extern unsigned char AwtoFbRegCount(void);
 extern unsigned char AwtoDpRx1LtBusy(void);
 extern void AwtoSyncPoll(void);
+extern void AwtoSdPhy(unsigned char ucEnd);
+extern void AwtoSdTick(void);
+extern __xdata unsigned char g_ucAwtoSdFlags;
+extern volatile __xdata unsigned char isr_g_ucAwtoDpLtN;
+#define AWTO_SD_PHY_BEGIN()                                     { if((isr_g_ucTMDSRx2PhyPend | isr_g_ucTMDSRx3PhyPend) != 0) { AwtoSdPhy(0); } }
+#define AWTO_SD_PHY_END()                                       AwtoSdPhy(1)
+#define AWTO_SD_TICK()                                          { if((g_ucAwtoSdFlags & AWTO_SD_F_HEALTH) != 0) { AwtoSdTick(); } }
 extern unsigned int AwtoSyncRow(unsigned char ucId, unsigned char ucArg);
 extern unsigned char AwtoSyncStage(unsigned char ucPort);
 extern unsigned char AwtoDdcLive(unsigned char ucI);

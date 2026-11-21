@@ -172,6 +172,8 @@ void ScalerTMDSIntHandler_EXINT0(void)
 //--------------------------------------------------
 void ScalerTMDSPhySetDeferred(void)
 {
+    AWTO_SD_PHY_BEGIN();                    // sync DONE line: PHY set-up span (docs/sync-log-design.md)
+
 #if(_D2_TMDS_SUPPORT == _ON)
     ScalerTMDSRx2PhySetDeferred();
 #endif
@@ -179,6 +181,8 @@ void ScalerTMDSPhySetDeferred(void)
 #if(_D3_TMDS_SUPPORT == _ON)
     ScalerTMDSRx3PhySetDeferred();
 #endif
+
+    AWTO_SD_PHY_END();
 }
 
 //--------------------------------------------------

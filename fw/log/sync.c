@@ -22,9 +22,9 @@ static bit d_s_bAwtoStageOn;
 static __xdata BYTE s_pucAwtoDdcAge[3];           // D1..D3: DDC polls left in which the port counts as live
 
 // GENERATED-BEGIN awto_sync_rows
-#define AWTO_SYNC_ROWS 380
+#define AWTO_SYNC_ROWS 406
 #pragma place bank(11)
-static const __code BYTE tAwtoSyncRowId[380] = {
+static const __code BYTE tAwtoSyncRowId[406] = {
     0xD0, 0xD0, 0xD0, 0xD0, 0xD0, 0xD1, 0xD1, 0xD1, 0xD1, 0xD1, 0xD2, 0xD2, 0xD2, 0xD4, 0xD4, 0xD4,
     0xD4, 0xD4, 0xD4, 0xD4, 0xD4, 0xD4, 0xD4, 0xD4, 0xD4, 0xD4, 0xD4, 0xD4, 0xD5, 0xD6, 0xD7, 0xD8,
     0xD8, 0xD9, 0xC0, 0xC0, 0xC0, 0xC0, 0x10, 0x10, 0x10, 0x10, 0x10, 0x10, 0x10, 0x10, 0x10, 0x10,
@@ -47,10 +47,12 @@ static const __code BYTE tAwtoSyncRowId[380] = {
     0xF4, 0xF4, 0xF4, 0xF4, 0xF4, 0xF4, 0xF4, 0xF4, 0xF4, 0xF4, 0xF4, 0xF4, 0xF4, 0xF5, 0xF5, 0xF5,
     0xF5, 0xF5, 0xF5, 0xF5, 0xF5, 0xF5, 0xF5, 0xF6, 0xF6, 0xF6, 0xF6, 0xF6, 0xF6, 0xF7, 0xF7, 0xF7,
     0xF7, 0xF7, 0xF7, 0xF7, 0xF8, 0xF8, 0xF8, 0xF8, 0xF8, 0xF8, 0xF8, 0xF8, 0xF8, 0xF9, 0xF9, 0xF9,
-    0xFB, 0xFB, 0xFB, 0xFB, 0xFB, 0xFB, 0xFC, 0xE6, 0xE6, 0xE6, 0xEB, 0xED, 0xED, 0xED, 0xED, 0xED,
-    0xED, 0xED, 0xED, 0xED, 0xED, 0xED, 0xED, 0xED, 0xED, 0xED, 0xEE, 0xFD};
+    0xFB, 0xFB, 0xFB, 0xFB, 0xFB, 0xFB, 0xFC, 0xEF, 0xFF, 0xFE, 0xFE, 0xFE, 0xFE, 0xFE, 0xFE, 0xFE,
+    0xFE, 0xFE, 0xFE, 0xFE, 0xFE, 0xFE, 0xFE, 0xFE, 0xFE, 0xFE, 0xFE, 0xFE, 0xFE, 0xFE, 0xFE, 0xFE,
+    0xFE, 0xE6, 0xE6, 0xE6, 0xEB, 0xED, 0xED, 0xED, 0xED, 0xED, 0xED, 0xED, 0xED, 0xED, 0xED, 0xED,
+    0xED, 0xED, 0xED, 0xED, 0xEE, 0xFD};
 #pragma place bank(11)
-static const __code BYTE tAwtoSyncRowArg[380] = {
+static const __code BYTE tAwtoSyncRowArg[406] = {
     0x01, 0x02, 0x03, 0x04, 0x05, 0x01, 0x02, 0x03, 0x04, 0x06, 0x01, 0x02, 0x03, 0x01, 0x02, 0x03,
     0x04, 0x05, 0x11, 0x12, 0x13, 0x14, 0x15, 0x16, 0x21, 0x17, 0x20, 0x0C, 0xFF, 0xFF, 0xFF, 0x01,
     0x02, 0xFF, 0x01, 0x02, 0x03, 0x04, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0x0A, 0x0B, 0x0C, 0x0E,
@@ -73,8 +75,10 @@ static const __code BYTE tAwtoSyncRowArg[380] = {
     0x08, 0x09, 0x0A, 0x0B, 0x10, 0x11, 0x12, 0x13, 0x18, 0x19, 0x1A, 0x1B, 0xFF, 0x00, 0x01, 0x02,
     0x03, 0x04, 0x10, 0x11, 0x12, 0x13, 0x14, 0x00, 0x11, 0x12, 0x13, 0x14, 0xFF, 0x00, 0x01, 0x02,
     0x03, 0x04, 0x05, 0x06, 0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x00, 0x01, 0x02,
-    0x00, 0x10, 0x01, 0x11, 0x02, 0x12, 0x01, 0x01, 0x02, 0x03, 0xFF, 0x00, 0x14, 0x3A, 0x3C, 0x0A,
-    0x0B, 0x0C, 0x0D, 0x0E, 0x0F, 0x10, 0x11, 0x39, 0x81, 0x82, 0xFF, 0xFF};
+    0x00, 0x10, 0x01, 0x11, 0x02, 0x12, 0x01, 0xFF, 0xFF, 0x00, 0x10, 0x11, 0x12, 0x13, 0x14, 0x15,
+    0x16, 0x17, 0x20, 0x21, 0x22, 0x24, 0x30, 0x31, 0x32, 0x33, 0x34, 0x35, 0x36, 0x37, 0x40, 0x41,
+    0xFF, 0x01, 0x02, 0x03, 0xFF, 0x00, 0x14, 0x3A, 0x3C, 0x0A, 0x0B, 0x0C, 0x0D, 0x0E, 0x0F, 0x10,
+    0x11, 0x39, 0x81, 0x82, 0xFF, 0xFF};
 #pragma place bank(11)
 static const __code WORD tAwtoSyncIdRow[256] = {
     0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
@@ -91,8 +95,8 @@ static const __code WORD tAwtoSyncIdRow[256] = {
     103, 104, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
     35, 105, 107, 108, 109, 110, 106, 111, 112, 0, 113, 114, 115, 176, 177, 266,
     1, 6, 11, 178, 14, 29, 30, 31, 32, 34, 181, 182, 179, 180, 183, 184,
-    186, 197, 230, 237, 248, 208, 360, 116, 120, 137, 122, 363, 123, 364, 379, 0,
-    272, 276, 280, 303, 304, 318, 328, 334, 341, 350, 117, 353, 359, 380, 0, 0};
+    186, 197, 230, 237, 248, 208, 386, 116, 120, 137, 122, 389, 123, 390, 405, 360,
+    272, 276, 280, 303, 304, 318, 328, 334, 341, 350, 117, 353, 359, 406, 362, 361};
 #pragma place bank(11)
 WORD AwtoSyncRow(BYTE ucId, BYTE ucArg)           // row + 1 of the first match (arg 0xFF = any), 0 = not logged
 {
@@ -407,6 +411,210 @@ void AwtoHtSync(BYTE *puc)                          // unix s BE x4, ms BE x2, U
     }
 }
 
+// Sync DONE / FAILED / link health (docs/sync-log-design.md): stamps in ms from the episode start (T0 of the ring header), 0xFFFF = not seen.
+#define AWTO_SD_SCRAMBLED               0x04    // LINK flags bit 2 (bits 1:0 are the SCDC 20h bits as read)
+#define AWTO_SD_NONE                    0xFFFF
+#define AWTO_SD_F_DONE                  0x01    // g_ucAwtoSdFlags: DONE written since the last ACTIVE
+#define AWTO_SD_F_FAIL                  0x02    // FAILED written since the last DONE / episode start
+#define AWTO_SD_F_PHY                   0x04    // a PHY set-up span is open
+#define AWTO_SD_KIND_DP                 3
+#define AWTO_SD_ARG_PORT                0x03    // DONE / LINK arg: port index
+#define AWTO_SD_ARG_KIND                2       // shift
+#define AWTO_SD_ARG_RETRY               4       // DONE shift
+#define AWTO_SD_ARG_N                   6       // DONE shift
+#define AWTO_SD_ARG_FLAGS               4       // LINK shift: HDMI bit 0 scrambling on, 1 ratio 1:40 (SCDC 20h), 2 scrambled data seen; DP lane count
+#define AWTO_SD_ARG_NA                  0x80    // LINK: no link health on this input
+#define AWTO_SD_CED_MSB                 0x7F    // regdb HDMI_CTRL_0C / 0E / 10 err_cnt_chN [6:0]; bit 7 of 0C is the popup
+#define AWTO_SD_T12_MAX                 0xFFE   // 12-bit stamp field, 0xFFF = not seen
+extern BYTE ScalerDpRx1GetDpcdInfo(BYTE ucH, BYTE ucM, BYTE ucL);
+extern BYTE ScalerGetDataPortBit(WORD usAddr, BYTE ucValue, BYTE ucAnd);
+__xdata BYTE g_ucAwtoSdFlags;
+volatile __xdata BYTE isr_g_ucAwtoDpLtN;        // DP_INT.c: training pattern 1 starts since the episode / visit start
+static __xdata WORD s_usSdScan, s_usSdTiming, s_usSdPhy0, s_usSdAct;
+static __xdata BYTE s_ucSdPhyMs, s_ucSdPhyN, s_ucSdRetry, s_ucSdLast;
+
+static WORD AwtoSdRel(void)                         // ms since the episode start
+{
+    return (WORD)AwtoMs() - (((WORD)g_stAwtoSync.ucT0Hi << 8) | g_stAwtoSync.ucT0Lo);
+}
+
+static void AwtoSdClear(void)                       // search left a port: the next sync starts clean (flags kept: FAILED stays once per episode)
+{
+    s_usSdScan = AWTO_SD_NONE;
+    s_usSdTiming = AWTO_SD_NONE;
+    s_ucSdPhyMs = 0xFF;
+    s_ucSdPhyN = 0;
+    s_ucSdRetry = 0;
+    s_ucSdLast = 0;
+    isr_g_ucAwtoDpLtN = 0;
+}
+
+static void AwtoSdReset(void)                       // new episode, or the picture was lost
+{
+    AwtoSdClear();
+    g_ucAwtoSdFlags = 0;
+}
+
+void AwtoSdPhy(BYTE ucEnd)                          // ScalerTMDSPhySetDeferred: 0 = a pending set-up is about to run, 1 = the call returned
+{
+    WORD usD;
+
+    if(ucEnd == 0)
+    {
+        s_usSdPhy0 = (WORD)AwtoMs();
+        g_ucAwtoSdFlags |= AWTO_SD_F_PHY;
+        return;
+    }
+    if((g_ucAwtoSdFlags & AWTO_SD_F_PHY) == 0)
+    {
+        return;
+    }
+    g_ucAwtoSdFlags &= ~AWTO_SD_F_PHY;
+    usD = (WORD)AwtoMs() - s_usSdPhy0;
+    s_ucSdPhyMs = (usD > 254) ? 254 : (BYTE)usD;
+    s_ucSdPhyN += (s_ucSdPhyN < 3) ? 1 : 0;
+}
+
+static BYTE AwtoSdKind(BYTE ucPort)                 // 0 DVI, 1 HDMI 1.4 (TMDS 1:10), 2 HDMI 2.0 (1:40), 3 DP
+{
+    BYTE ucKind = 0;
+
+    if(SysSourceGetSourceType() == _SOURCE_DP)
+    {
+        ucKind = AWTO_SD_KIND_DP;
+    }
+    else if(SysSourceGetSourceType() == _SOURCE_HDMI)
+    {
+        ucKind = 1;
+#if(_D2_HDMI_2_0_SUPPORT == _ON)
+        if((ucPort == _D2_INPUT_PORT) && (AwtoTmdsRx2Hs() != 0))
+        {
+            ucKind = 2;
+        }
+#endif
+#if(_D3_HDMI_2_0_SUPPORT == _ON)
+        if((ucPort == _D3_INPUT_PORT) && (AwtoTmdsRx3Hs() != 0))
+        {
+            ucKind = 2;
+        }
+#endif
+    }
+    return ucKind;
+}
+
+static DWORD AwtoSd12(WORD usT)                     // 12-bit stamp field
+{
+    return (usT == AWTO_SD_NONE) ? 0xFFF : ((usT > AWTO_SD_T12_MAX) ? AWTO_SD_T12_MAX : usT);
+}
+
+static void AwtoSdArmHealth(void)
+{
+    s_usSdAct = (WORD)AwtoMs();
+    g_ucAwtoSdFlags |= AWTO_SD_F_HEALTH;
+}
+
+// Mode ACTIVE: the DONE line (once until the picture is lost); NO SIGNAL / NO SUPPORT: FAILED (once per episode, LOST once after a DONE).
+static void AwtoSdMode(BYTE ucMode)
+{
+    BYTE ucPort = SysSourceGetInputPort();
+    BYTE ucKind = AwtoSdKind(ucPort);
+    BYTE ucN;
+
+    if(ucMode == _MODE_STATUS_ACTIVE)
+    {
+        if((g_ucAwtoSdFlags & AWTO_SD_F_DONE) != 0)
+        {
+            return;
+        }
+        ucN = (ucKind == AWTO_SD_KIND_DP) ? isr_g_ucAwtoDpLtN : s_ucSdPhyN;
+        AwtoSyncPush(AWTO_SYNC_EV_SDONE, (ucPort - _D1_INPUT_PORT) | (ucKind << AWTO_SD_ARG_KIND) | (((s_ucSdRetry > 3) ? 3 : s_ucSdRetry) << AWTO_SD_ARG_RETRY) |
+                     (((ucN > 3) ? 3 : ucN) << AWTO_SD_ARG_N), (AwtoSd12(s_usSdScan) << 20) | (AwtoSd12(s_usSdTiming) << 8) | s_ucSdPhyMs);
+        g_ucAwtoSdFlags = (g_ucAwtoSdFlags & ~AWTO_SD_F_FAIL) | AWTO_SD_F_DONE;
+        AwtoSdArmHealth();
+        return;
+    }
+    if((g_ucAwtoSdFlags & AWTO_SD_F_DONE) != 0)
+    {
+        AwtoSyncPush(AWTO_SYNC_EV_SFAIL, AWTO_SD_WHY_LOST, ((DWORD)ucPort << 16) | (WORD)((WORD)AwtoMs() - s_usSdAct));
+        AwtoSdReset();                              // the next ACTIVE is a new DONE with fresh stamps
+        return;
+    }
+    if((g_ucAwtoSdFlags & AWTO_SD_F_FAIL) == 0)
+    {
+        g_ucAwtoSdFlags |= AWTO_SD_F_FAIL;
+        AwtoSyncPush(AWTO_SYNC_EV_SFAIL, (ucMode == _MODE_STATUS_NOSUPPORT) ? AWTO_SD_WHY_NOSUPPORT : s_ucSdLast, ((DWORD)ucPort << 16) | AwtoSdRel());
+    }
+}
+
+// AWTO_SD_HEALTH_MS after ACTIVE (AwtoSwPoll, every pass while a check is pending): SCDC ratio / scrambling + the character error counters (HDMI)
+// or the lane status the sink holds (DP). Registers: regdb HDMI_CTRL_0B..11 (CED), SCDC 20h / 21h; DPCD 100h / 101h / 202h / 203h.
+static const __code WORD tAwtoSdCed[2][6] = {       // per port D2 / D3: ch0 / 1 / 2 counter MSB, LSB
+    {AWTO_R_P71_HDMI_CTRL_0C, AWTO_R_P71_HDMI_CTRL_0D, AWTO_R_P71_HDMI_CTRL_0E, AWTO_R_P71_HDMI_CTRL_0F, AWTO_R_P71_HDMI_CTRL_10, AWTO_R_P71_HDMI_CTRL_11},
+    {AWTO_R_P72_HDMI_CTRL_0C, AWTO_R_P72_HDMI_CTRL_0D, AWTO_R_P72_HDMI_CTRL_0E, AWTO_R_P72_HDMI_CTRL_0F, AWTO_R_P72_HDMI_CTRL_10, AWTO_R_P72_HDMI_CTRL_11}};
+
+void AwtoSdTick(void)
+{
+    BYTE ucPort;
+    BYTE ucArg;
+    BYTE ucKind;
+    WORD usAge = (WORD)AwtoMs() - s_usSdAct;
+    DWORD ulV;
+    BYTE ucI;
+    bit bEx0;
+
+    if(GET_MODE_STATE() != _MODE_STATUS_ACTIVE)
+    {
+        g_ucAwtoSdFlags &= ~AWTO_SD_F_HEALTH;       // the picture went; its FAILED line states it
+        return;
+    }
+    if(usAge < AWTO_SD_HEALTH_MS)
+    {
+        return;
+    }
+    g_ucAwtoSdFlags &= ~AWTO_SD_F_HEALTH;
+    ucPort = SysSourceGetInputPort();
+    ucKind = AwtoSdKind(ucPort);
+    ucArg = (ucPort - _D1_INPUT_PORT) | (ucKind << AWTO_SD_ARG_KIND);
+    ulV = ((usAge > 255) ? 255 : usAge);
+    ulV <<= 24;
+#if(_DP_SUPPORT == _ON)
+    if(ucKind == AWTO_SD_KIND_DP)
+    {
+        ucArg |= (BYTE)(ScalerDpGetLaneCount(ucPort) << AWTO_SD_ARG_FLAGS);
+        ulV |= ((DWORD)ScalerDpGetLinkRate(ucPort) << 16) | ((WORD)ScalerDpRx1GetDpcdInfo(0x00, 0x02, 0x02) << 8) | ScalerDpRx1GetDpcdInfo(0x00, 0x02, 0x03);
+        AwtoSyncPush(AWTO_SYNC_EV_SLINK, ucArg, ulV);
+        return;
+    }
+#endif
+    if((ucKind == 0) || ((ucPort != _D2_INPUT_PORT) && (ucPort != _D3_INPUT_PORT)))
+    {
+        AwtoSyncPush(AWTO_SYNC_EV_SLINK, ucArg | AWTO_SD_ARG_NA, ulV);      // DVI or a port without SCDC / CED: said, not skipped
+        return;
+    }
+    bEx0 = EX0;
+    EX0 = 0;                                        // the TMDS ISR uses the same SCDC / CED ports
+    if(ucPort == _D2_INPUT_PORT)
+    {
+        ucArg |= ((ScalerGetDataPortBit(AWTO_R_P71_HDMI_CTRL_39, AWTO_I_PORT_PAGE71_HDMI_SCDC_20, (AWTO_F_PORT_PAGE71_HDMI_SCDC_20_TMDS_CLK_RATIO | AWTO_F_PORT_PAGE71_HDMI_SCDC_20_SCRAM_EN)) << AWTO_SD_ARG_FLAGS) |
+                  ((ScalerGetBit(AWTO_R_P71_HDMI_CTRL_01, AWTO_F_P71_HDMI_CTRL_01_SCRAM_DET) != 0) ? (AWTO_SD_SCRAMBLED << AWTO_SD_ARG_FLAGS) : 0));
+        ScalerSetBit(AWTO_R_P71_HDMI_CTRL_0C, (BYTE)~AWTO_F_P71_HDMI_CTRL_0C_ERR_POPUP, AWTO_F_P71_HDMI_CTRL_0C_ERR_POPUP);
+    }
+    else
+    {
+        ucArg |= ((ScalerGetDataPortBit(AWTO_R_P72_HDMI_CTRL_39, AWTO_I_PORT_PAGE72_HDMI_SCDC_20, (AWTO_F_PORT_PAGE72_HDMI_SCDC_20_TMDS_CLK_RATIO | AWTO_F_PORT_PAGE72_HDMI_SCDC_20_SCRAM_EN)) << AWTO_SD_ARG_FLAGS) |
+                  ((ScalerGetBit(AWTO_R_P72_HDMI_CTRL_01, AWTO_F_P72_HDMI_CTRL_01_SCRAM_DET) != 0) ? (AWTO_SD_SCRAMBLED << AWTO_SD_ARG_FLAGS) : 0));
+        ScalerSetBit(AWTO_R_P72_HDMI_CTRL_0C, (BYTE)~AWTO_F_P72_HDMI_CTRL_0C_ERR_POPUP, AWTO_F_P72_HDMI_CTRL_0C_ERR_POPUP);
+    }
+    for(ucI = 0; ucI < 3; ucI++)
+    {
+        WORD usN = ((WORD)(ScalerGetByte(tAwtoSdCed[ucPort - _D2_INPUT_PORT][2 * ucI]) & AWTO_SD_CED_MSB) << 8) | ScalerGetByte(tAwtoSdCed[ucPort - _D2_INPUT_PORT][2 * ucI + 1]);
+
+        ulV |= (DWORD)((usN > 255) ? 255 : usN) << (16 - 8 * ucI);
+    }
+    EX0 = bEx0;
+    AwtoSyncPush(AWTO_SYNC_EV_SLINK, ucArg, ulV);
+}
+
 // New episode: time base, per-port detect state, console request. A switch inside a power-on / wake that has not settled
 // is one more line of that episode (the SDK switches to the stored port during boot).
 void AwtoSyncBegin(BYTE ucKind, BYTE ucPort)
@@ -443,6 +651,7 @@ void AwtoSyncBegin(BYTE ucKind, BYTE ucPort)
     s_ucAwtoVisitN = 0;
     s_ucAwtoWaitN = 0;
     s_usAwtoVisitT0 = usNow;
+    AwtoSdReset();
     if(ucKind == AWTO_SYNC_K_POWER_ON)
     {
         AwtoSyncPush(AWTO_SYNC_EV_BOOT, AwtoBootReason(), AwtoBootValue());     // first line: why it is running (#29)
@@ -502,6 +711,10 @@ void AwtoSyncSw(BYTE ucId, BYTE ucArg)
        (ucArg == _MODE_STATUS_NOSUPPORT) || (ucArg == _MODE_STATUS_POWER_SAVING)))
     {
         g_stAwtoSync.ucDone = 1;
+        if(ucArg != _MODE_STATUS_POWER_SAVING)
+        {
+            AwtoSdMode(ucArg);
+        }
 #if(_AWTO_PS_WAKE == _ON)
         if(ucArg == _MODE_STATUS_ACTIVE)
         {
@@ -558,6 +771,7 @@ void AwtoSyncDetect(BYTE ucPort, BYTE ucKind, BYTE ucPre, BYTE ucType)
         {
             AwtoSyncPush(AWTO_SYNC_EV_DP, ucPort, ((DWORD)ScalerDpGetLinkRate(ucPort) << 8) | ScalerDpGetLaneCount(ucPort));
             AwtoSyncPush(AWTO_SYNC_EV_DPLT, 1, ((DWORD)ucPort << 16) | ((s_usAwtoDpLtT0 == 0) ? 0 : (WORD)((WORD)AwtoMs() - s_usAwtoDpLtT0)));   // 0: training finished before the loop saw it
+            s_ucSdPhyMs = (s_usAwtoDpLtT0 == 0) ? 0 : (((WORD)AwtoMs() - s_usAwtoDpLtT0) > 254) ? 254 : (BYTE)((WORD)AwtoMs() - s_usAwtoDpLtT0);
             s_usAwtoDpLtT0 = 0;
         }
         else
@@ -583,6 +797,16 @@ void AwtoSyncScan(BYTE ucPort, BYTE ucType)         // SysSourceDetectPort: a pr
 {
     BYTE ucI = ucPort - _D1_INPUT_PORT;
     BYTE ucWhy = (ucType != _SOURCE_NONE) ? AWTO_SCAN_OK : g_ucAwtoScanStage;
+
+    if(ucWhy == AWTO_SCAN_OK)
+    {
+        s_usSdScan = (s_usSdScan == AWTO_SD_NONE) ? AwtoSdRel() : s_usSdScan;
+    }
+    else if(ucWhy != 0)
+    {
+        s_ucSdLast = ucWhy;
+        s_ucSdRetry += ((ucWhy >= AWTO_SCAN_TMDS_LOCK) && (ucWhy != AWTO_SCAN_DP_LT) && (s_ucSdRetry < 255)) ? 1 : 0;    // a failed scan attempt (waits 10 / 11 / 30 are not)
+    }
 
 #if(_AWTO_TMDS_MODE_MEM == _ON)
     BYTE ucMem = (ucPort == _D2_INPUT_PORT) ? AWTO_TMDS_MEM_D2 : ((ucPort == _D3_INPUT_PORT) ? AWTO_TMDS_MEM_D3 : 0);
@@ -616,6 +840,8 @@ void AwtoSyncVisit(BYTE ucOldPort)                  // SysSourceHandler: the sea
 {
     WORD usNow = (WORD)AwtoMs();
 
+    AwtoSdClear();
+
     if(s_ucAwtoVisitN < AWTO_SCAN_LOG_MAX)
     {
         s_ucAwtoVisitN++;
@@ -646,30 +872,9 @@ void AwtoSyncTiming(void)                           // SysModeHandler: timing co
 {
     BYTE ucPort = SysSourceGetInputPort();
 
-    BYTE ucKind = 0;                                  // 0 DVI, 1 HDMI 1.4 (TMDS 1:10), 2 HDMI 2.0 (1:40), 3 DP
-
     AwtoSyncPush(AWTO_SYNC_EV_TIMING, ucPort, ((DWORD)GET_INPUT_TIMING_HWIDTH() << 16) | GET_INPUT_TIMING_VHEIGHT());
-    if(SysSourceGetSourceType() == _SOURCE_DP)
-    {
-        ucKind = 3;
-    }
-    else if(SysSourceGetSourceType() == _SOURCE_HDMI)
-    {
-        ucKind = 1;
-#if(_D2_HDMI_2_0_SUPPORT == _ON)
-        if((ucPort == _D2_INPUT_PORT) && (AwtoTmdsRx2Hs() != 0))
-        {
-            ucKind = 2;
-        }
-#endif
-#if(_D3_HDMI_2_0_SUPPORT == _ON)
-        if((ucPort == _D3_INPUT_PORT) && (AwtoTmdsRx3Hs() != 0))
-        {
-            ucKind = 2;
-        }
-#endif
-    }
-    AwtoSyncFormat(ucKind);
+    s_usSdTiming = (s_usSdTiming == AWTO_SD_NONE) ? AwtoSdRel() : s_usSdTiming;
+    AwtoSyncFormat(AwtoSdKind(ucPort));
 }
 
 void AwtoSyncFreq(void)                             // SysModeHandler: display setting done; exact values (#34) when counted
@@ -694,7 +899,6 @@ static __xdata BYTE s_ucWakeCable;                  // bit i = port D1 + i cable
 static __xdata BYTE s_ucWakeDpcd;                   // DPCD 600h at the last poll (1 = D0, 2 = D3)
 static __xdata BYTE s_pucWakeUsed[AWTO_WAKE_T_N];   // per trigger: bit i = port D1 + i woke the monitor this sleep episode
 static __xdata BYTE s_pucWakeSaid[AWTO_WAKE_T_N];   // per trigger: suppression already logged since the sleep began
-extern BYTE ScalerDpRx1GetDpcdInfo(BYTE ucH, BYTE ucM, BYTE ucL);
 extern bit SysSourceGetCableDetect(BYTE ucInputPort);           // SysInterface.h (not in this translation unit)
 static const __code WORD tAwtoWakeDdc[3] = {AWTO_DDC_IRQ_D1, AWTO_DDC_IRQ_D2, AWTO_DDC_IRQ_D3};
 

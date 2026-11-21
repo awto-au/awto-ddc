@@ -701,7 +701,7 @@ BYTE ScalerDpAuxJudgeHandler_EXINT0(void)
             {
                 case _DP_TRAINING_PATTERN_1:
 
-                    CLR_DP_RX1_BACKUP_PD_LINK_STATUS_FLG();
+                    CLR_DP_RX1_BACKUP_PD_LINK_STATUS_FLG(); isr_g_ucAwtoDpLtN++;
 
                     // Check Source Only Write 0x102 without 0x103~0x106
                     if((g_ucDpRx1LTPatternSet & (_BIT7 | _BIT5)) == _BIT7)
