@@ -1959,7 +1959,6 @@ fn	_ScalerIOSCTrimming	4	0x6b50	600
 fn	_ScalerSyncActiveProc	4	0x6da8	16
 fn	_ScalerSyncTMDSHPDToggleProc	4	0x6db8	1340
 fn	_ScalerSyncTMDSRx3HdmiVideoSetting	4	0x72f4	316
-fn	_ScalerSyncTMDSScanInitial	4	0x7430	24
 fn	_ScalerDpRx1ChangeHdcpDpcdCapability	4	0x7448	64
 fn	_ScalerDpRx1PhyInitial	4	0x7488	128
 fn	_ScalerDpRx1SinkStatusSet	4	0x7508	124
@@ -1972,6 +1971,7 @@ fn	_ScalerPLLSetDDR2PLLWritePhase	4	0x7eb0	528
 fn	_ScalerPLLSetMPLLFreq	4	0x80c0	1324
 fn	_ScalerPLLSetMPLLOffset	4	0x85ec	40
 fn	_ScalerScalingUpdateFIFOScalingSize	4	0x8614	2848
+fn	_ScalerSyncTMDSScanInitial	4	0x9134	36
 fn	_ScalerTMDSRx2HotPlugHighProc	4	0x9224	80
 fn	_ScalerTMDSRx2HotPlugLowProc	4	0x9274	60
 fn	_ScalerTMDSRx3DviVideoSetting	4	0x92b0	68
@@ -2791,6 +2791,7 @@ fn	_ScalerMcuDdcInitial	9	0x2140	276
 fn	_ScalerMcuSetISPChannel	9	0x2254	108
 fn	_ScalerMeasureAutoFuncVBoundInitial	9	0x22c0	108
 fn	_AwtoT0EvIsr	9	0x232c	252
+fn	_ScalerTMDSRx2PowerSavingProc	9	0x2428	80
 fn	_ScalerMeasureCheckInterlaceVst	9	0x24a8	432
 fn	_ScalerMeasureCheckVsBypass	9	0x2658	20
 fn	_ScalerMeasureFinalSetting	9	0x266c	56
@@ -2826,9 +2827,7 @@ fn	_ScalerTMDSInterruptInitial	9	0x3dd4	20
 fn	_ScalerTMDSYUV420SupportCheck	9	0x3de8	20
 fn	_ScalerTMDSRx2FreqDetectDisable	9	0x3dfc	100
 fn	_ScalerMeasureUpdateInputTimingPolarity	9	0x3e60	516
-fn	_ScalerTMDSRx2PowerSavingProc	9	0x40fc	68
 fn	_ScalerTMDSRx3FreqDetectDisable	9	0x4140	100
-fn	_ScalerTMDSRx3PowerSavingProc	9	0x4440	68
 fn	_ScalerVgipInputInitial	9	0x4484	92
 fn	_UserInterfaceGetDpLaneCount	9	0x44e0	16
 fn	_UserInterfaceGetFreeSyncEnable	9	0x44f0	8
@@ -2942,6 +2941,7 @@ fn	_AwtoTmdsStuck	9	0x9344	104
 fn	_AwtoSyncMark	9	0x93ac	48
 fn	_AwtoSyncT2Start	9	0x93dc	272
 fn	_ScalerDpRx1GetDpcdInfo_WDINT	9	0x94ec	32
+fn	_ScalerTMDSRx3PowerSavingProc	9	0x950c	80
 fn	_AwtoT0EvFire	9	0x95a0	64
 fn	_AwtoT0EvTest	9	0x96cc	1112
 fn	_ScalerTimerWDInitial	9	0x9b24	100
