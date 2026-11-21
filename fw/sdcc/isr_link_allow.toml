@@ -25,3 +25,4 @@
 "g_stDpMarginLink" = "class A: DP link-training state, EXINT0 only (no main user, nothing preempts EXINT0 in its own code)"
 "g_ucDpRx1AuxModeBackup_EXINT" = "class A: T2 HPD IRQ event only (T2 is the top priority, no other user)"
 "isr_g_stModeInfo" = "class A: read once by the watchdog ISR for the crash snapshot, reset follows; no wait loop"
+"isr_g_pstTimerEvent" = "class A: EXINT0 only clears an entry id (1 B store); main writes id + time in __critical; every access is one fresh read, volatile costs cycles per main pass"

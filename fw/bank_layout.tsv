@@ -1658,16 +1658,13 @@ fn	_ScalerSyncDpFakeLTProtect	3	0x2124	8
 fn	_ScalerSyncDpVersionChange	3	0x212c	64
 fn	_ScalerSyncHdcpCheckEnabled	3	0x216c	84
 fn	_ScalerSyncResetProc	3	0x21c0	48
-fn	_ScalerTimerActiveTimerEvent	3	0x21f0	156
 fn	_ScalerTimerCheckEventValid	3	0x228c	28
-fn	_ScalerTimerCheckTimerEvent	3	0x22a8	216
 fn	_ScalerTimerClrEventValid	3	0x2380	24
 fn	_ScalerTimerDelayXmsQuiet	3	0x2398	152
 fn	_ScalerTimerEventProc	3	0x2430	168
 fn	_ScalerTimerGetEventID	3	0x24d8	24
 fn	_ScalerTimerGetEventTime	3	0x24f0	28
 fn	_ScalerTimerGetTimerCounter	3	0x250c	60
-fn	_ScalerTimerReactiveTimerEvent	3	0x2548	204
 fn	_ScalerDpRx1AVMute	3	0x2614	60
 fn	_ScalerDpRx1AdjustVsyncDelay	3	0x2650	704
 fn	_ScalerDpRx1AfterHpdToggleProc	3	0x2910	108
@@ -1816,6 +1813,7 @@ fn	_set_veto	3	0x8d44	200
 fn	_AwtoUserRgb	3	0x8e0c	84
 fn	_set_ap_dp_version	3	0x8e60	84
 fn	_set_ap_input_mode	3	0x8eb4	24
+fn	_ScalerTimerActiveTimerEvent	3	0x8ecc	180
 fn	_AwtoPanelPinLog	3	0x8f84	124
 fn	_AwtoSwArm	3	0x9000	44
 fn	_AwtoSwEvent	3	0x902c	24
@@ -1848,6 +1846,8 @@ fn	_AwtoTmdsIdleKhz	3	0xa7dc	544
 fn	_ScalerTimerWDCancelTimerEvent	3	0xa9fc	44
 fn	_AwtoSyncPush	3	0xaa28	612
 fn	_set_status	3	0xac8c	248
+fn	_ScalerTimerCheckTimerEvent	3	0xad84	228
+fn	_ScalerTimerReactiveTimerEvent	3	0xae68	228
 const	_tDDR2_PLL_PHASE	4	0x0000	16
 const	_tAwtoAudioTestAmp	4	0x0010	12
 const	_tAwtoAudioTestGain	4	0x001c	16
@@ -2790,6 +2790,7 @@ fn	_ScalerMcuDdcISPChannelCtrl	9	0x2094	172
 fn	_ScalerMcuDdcInitial	9	0x2140	276
 fn	_ScalerMcuSetISPChannel	9	0x2254	108
 fn	_ScalerMeasureAutoFuncVBoundInitial	9	0x22c0	108
+fn	_AwtoT0EvIsr	9	0x232c	252
 fn	_ScalerMeasureCheckInterlaceVst	9	0x24a8	432
 fn	_ScalerMeasureCheckVsBypass	9	0x2658	20
 fn	_ScalerMeasureFinalSetting	9	0x266c	56
@@ -2942,7 +2943,6 @@ fn	_AwtoSyncMark	9	0x93ac	48
 fn	_AwtoSyncT2Start	9	0x93dc	272
 fn	_ScalerDpRx1GetDpcdInfo_WDINT	9	0x94ec	32
 fn	_AwtoT0EvFire	9	0x95a0	64
-fn	_AwtoT0EvIsr	9	0x95e0	236
 fn	_AwtoT0EvTest	9	0x96cc	1112
 fn	_ScalerTimerWDInitial	9	0x9b24	100
 fn	_AwtoWdtProbe	9	0x9b88	156

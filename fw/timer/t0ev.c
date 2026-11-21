@@ -11,8 +11,8 @@
 #error "awto_t0ev: Type-C PD WD events (re-armed from their handler) are not ported"
 #endif
 
-static __xdata WORD isr_s_pusAwtoT0Ms[_SCALER_WD_TIMER_EVENT_COUNT];   // ms left per event ID (0 = idle; ID 0 is INVALID)
-static __xdata WORD isr_s_usAwtoT0Rl;                                   // reload (RCAP2) of the running tick
+static __xdata volatile WORD isr_s_pusAwtoT0Ms[_SCALER_WD_TIMER_EVENT_COUNT];   // ms left per event ID (0 = idle; ID 0 is INVALID)
+static __xdata volatile WORD isr_s_usAwtoT0Rl;                                   // reload (RCAP2) of the running tick
 __xdata volatile BYTE isr_g_ucAwtoT0Pos;                                         // 0 = Timer0 ISR not running; else the next ID it decrements
 
 // Timer0 = one 1 ms tick from now at the current clock (Timer2's reload)
@@ -72,7 +72,7 @@ void ScalerTimerWDCancelTimerEvent_EXINT0(EnumScalerWDTimerEventID enumEventID)
 {
     if(enumEventID < _SCALER_WD_TIMER_EVENT_COUNT)
     {
-        isr_s_pusAwtoT0Ms[enumEventID] = 0;
+        isr_s_pusAwtoT0Ms[enumEventID] = 0;     // no guard: Timer0 only touches the table with EA off, main cancels in __critical
     }
 }
 #endif

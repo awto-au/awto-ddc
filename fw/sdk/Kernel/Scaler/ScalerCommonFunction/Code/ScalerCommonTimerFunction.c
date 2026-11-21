@@ -2317,8 +2317,12 @@ void ScalerTimerActiveTimerEvent(WORD usTime, EnumScalerTimerEventID enumEventID
     {
         if(GET_EVENT_VALID(ucEventIndex) == _FALSE)
         {
-            SET_EVENT_ID(ucEventIndex, enumEventID);
-            SET_EVENT_TIME(ucEventIndex, (WORD)((DWORD)(ScalerTimerCheckTimerEvent(usTime)) + usTime));
+            usTime = (WORD)((DWORD)(ScalerTimerCheckTimerEvent(usTime)) + usTime);
+            __critical      // EXINT0 cancel scans this table: it sees the entry whole
+            {
+                SET_EVENT_ID(ucEventIndex, enumEventID);
+                SET_EVENT_TIME(ucEventIndex, usTime);
+            }
             return;
         }
     }
@@ -2356,8 +2360,12 @@ void ScalerTimerReactiveTimerEvent(WORD usTime, EnumScalerTimerEventID enumEvent
     {
         if(GET_EVENT_VALID(ucEventIndex) == _FALSE)
         {
-            SET_EVENT_ID(ucEventIndex, enumEventID);
-            SET_EVENT_TIME(ucEventIndex, (WORD)((DWORD)(ScalerTimerCheckTimerEvent(usTime)) + usTime));
+            usTime = (WORD)((DWORD)(ScalerTimerCheckTimerEvent(usTime)) + usTime);
+            __critical      // EXINT0 cancel scans this table: it sees the entry whole
+            {
+                SET_EVENT_ID(ucEventIndex, enumEventID);
+                SET_EVENT_TIME(ucEventIndex, usTime);
+            }
             return;
         }
     }
