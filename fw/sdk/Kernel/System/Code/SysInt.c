@@ -38,7 +38,6 @@
 // Backup for Burst Write Bug
 volatile BYTE g_ucBackup_EXINT0;
 volatile BYTE g_ucBackup_EXINT1;
-volatile BYTE g_ucBackup_SERIAL;
 
 //****************************************************************************
 // FUNCTION DECLARATIONS
@@ -48,7 +47,6 @@ void SysEXINT1(void) __interrupt(2);
 #if(_USB3_RETIMER_SUPPORT == _ON)
 void SysEXINT3(void) __interrupt(9);
 #endif
-void SysUartSerialPortIntProc(void) __interrupt(4);
 
 //****************************************************************************
 // FUNCTION DEFINITIONS
@@ -210,27 +208,4 @@ void SysEXINT3(void) __interrupt(9)
     MCU_FFC2_IRQ_PRIORITY_1 = ((MCU_FFC2_IRQ_PRIORITY_1 & ~(_BIT7 | _BIT6)) | _BIT7);
 }
 #endif
-
-//--------------------------------------------------
-// Description  : Serial Port0 Interrupt Process
-// Input Value  : None
-// Output Value : None
-//--------------------------------------------------
-void SysUartSerialPortIntProc(void) __interrupt(4)
-{
-    // Backup for Burst Write Bug
-    g_ucBackup_SERIAL = MCU_FFF4_SCA_INF_ADDR;
-
-#if(_UART_SUPPORT == _ON)
-    if(GET_UART_TRANSMIT_STATUS() == _TRUE)
-    {
-        CLR_UART_TRANSMIT_STATUS();
-    }
-
-    UserInterfaceUartIntHandler_SERIALPORT();
-#endif
-
-    // Reload Backup for Burst Write Bug
-    MCU_FFF4_SCA_INF_ADDR = g_ucBackup_SERIAL;
-}
 

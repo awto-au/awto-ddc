@@ -41,7 +41,6 @@
 //****************************************************************************
 // Backup for Burst Write Bug
 volatile BYTE g_ucBackup_TIMER0;
-volatile BYTE g_ucBackup_TIMER1;
 volatile BYTE g_ucBackup_TIMER2;
 volatile BYTE g_ucBackup_WDTIMER;
 
@@ -51,7 +50,9 @@ volatile BYTE g_ucBackup_WDTIMER;
 void SysTimerHandler(void);
 void SysTimerEventProc(EnumScalerTimerEventID enumEventID);
 void SysTimerIntProc0(void) __interrupt(1);
+#ifdef _AWTO_CPU_SUITE
 void SysTimerIntProc1(void) __interrupt(3);
+#endif
 void SysTimerIntProc2(void) __interrupt(5);
 void SysTimerWDIntProc(void) __interrupt(8);
 
@@ -412,40 +413,13 @@ void SysTimerIntProc0(void) __interrupt(1)
 }
 #pragma restore
 
-//--------------------------------------------------
-// Description  : Timer1 Int Function
-// Input Value  : None
-// Output Value : None
-//--------------------------------------------------
-#pragma save
-// dropped pragma (Keil only)
+#ifdef _AWTO_CPU_SUITE
+// Timer1 vector: only the CPU suite image enables it; every other image gets a bare reti (fw_build write_vectors)
 void SysTimerIntProc1(void) __interrupt(3)
 {
     AWTO_CPUS_ISR(3);
-    // Backup for Burst Write Bug
-    g_ucBackup_TIMER1 = MCU_FFF4_SCA_INF_ADDR;
-
-#if(_INSTANT_TIMER_EVENT_1 == _ON)
-    // Clear Timer1 flag
-    TF1 = 0;
-
-    TL1 = g_ucTimerCountLByte1;
-    TH1 = g_ucTimerCountHByte1;
-
-    TR1 = _ON;
-
-    if(++g_usTimerAxisCnt1 == g_usTimerEventPeriod1)
-    {
-        g_usTimerAxisCnt1 = 0;
-        UserInterfaceTimer1InstantAccess_EXINT();
-    }
-
-#endif
-
-    // Reload Backup for Burst Write Bug
-    MCU_FFF4_SCA_INF_ADDR = g_ucBackup_TIMER1;
 }
-#pragma restore
+#endif
 
 //--------------------------------------------------
 // Description  : Timer2 Int Function

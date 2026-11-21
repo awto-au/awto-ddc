@@ -646,7 +646,6 @@ stub	_SysDpDcOffHPDToggleProc	C	0x27c8	8
 stub	_SysDpRxHandler	C	0x27d0	8
 fn	_SysEXINT0	C	0x27d8	152
 fn	_SysEXINT1	C	0x2870	112
-fn	_SysUartSerialPortIntProc	C	0x28e0	44
 stub	_SysJudgeCheckStatus	C	0x290c	8
 stub	_SysJudgeGetActiveWaitTime	C	0x2914	8
 stub	_SysMachineCheck	C	0x291c	8
@@ -706,7 +705,6 @@ stub	_SysTMDSRxSetPsWakeupHpdToggle	C	0x2bb8	8
 stub	_SysTimerEventProc	C	0x2bc0	8
 stub	_SysTimerHandler	C	0x2bc8	8
 fn	_SysTimerIntProc0	C	0x2bd0	88
-fn	_SysTimerIntProc1	C	0x2c28	44
 fn	_SysTimerIntProc2	C	0x2c54	284
 fn	_SysTimerWDIntProc	C	0x2d70	124
 stub	_UserCommonAdjustPercentToRealValue	C	0x2dec	8

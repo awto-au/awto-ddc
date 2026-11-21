@@ -1547,7 +1547,6 @@ SysDP:SysDpRxHandler
 SysDP:SysDpSourceKeepDetectingCheck
 SysInt:SysEXINT0
 SysInt:SysEXINT1
-SysInt:SysUartSerialPortIntProc
 SysJudge:SysJudgeCheckStatus
 SysJudge:SysJudgeGetActiveWaitTime
 SysJudge:SysMachineCheck
@@ -1634,7 +1633,6 @@ SysTMDS:SysTMDSRxSetPsWakeupHpdToggle
 SysTimer:SysTimerEventProc
 SysTimer:SysTimerHandler
 SysTimer:SysTimerIntProc0
-SysTimer:SysTimerIntProc1
 SysTimer:SysTimerIntProc2
 SysTimer:SysTimerWDIntProc
 UserCommonAdjust:UserAdjustZoomRatio
