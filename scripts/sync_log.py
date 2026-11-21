@@ -84,6 +84,49 @@ def tenths(v: int) -> str:
     return f"{v // 10}.{v % 10}"
 
 
+SD_KIND = ("DVI", "HDMI 1.4 (1:10)", "HDMI 2.0 (1:40)", "DP")     # sdone / slink arg bits 3:2 (RL6449_Project.h AWTO_SD_*)
+SD_NONE12, SD_MAX12, SD_NONE8 = 0xFFF, 0xFFE, 0xFF
+SD_NA = 0x80
+
+
+def _t12(x: int) -> str:
+    return "-" if x == SD_NONE12 else (f"{x}+ms" if x == SD_MAX12 else f"{x}ms")
+
+
+def _sat(x: int, mx: int) -> str:
+    return f"{x}+" if x >= mx else str(x)
+
+
+def sync_done(a: int, v: int, ms: int) -> str:
+    """fmt sdone (firmware copy: fw/osd/console.c AwtoPutSdone): arg = port idx | kind << 2 | scan retries << 4 | set-ups / trainings << 6,
+    value = scan ok ms << 20 | timing ms << 8 | PHY / link ms (0xFF = none); ms = the line's own time since the episode start"""
+    kind, r, n, phy = (a >> 2) & 3, (a >> 4) & 3, a >> 6, v & 0xFF
+    tries = "first try" if r == 0 else f"after {_sat(r, 3)} retr{'y' if r == 1 else 'ies'}"
+    if kind == 3:
+        what = f"link trained {'-' if phy == SD_NONE8 else f'{phy}ms'} ({_sat(n, 3)} training{'' if n == 1 else 's'})"
+    else:
+        what = f"PHY {'-' if phy == SD_NONE8 else f'{phy}ms'} ({_sat(n, 3)} set-up{'' if n == 1 else 's'})"
+    return (f"D{(a & 3) + 1} {SD_KIND[kind]}, {tries}: {what}, scan ok {_t12(v >> 20)}, timing {_t12((v >> 8) & 0xFFF)}, ACTIVE {ms}ms")
+
+
+def sync_link(a: int, v: int) -> str:
+    """fmt slink: arg = port idx | kind << 2 | flags << 4 (HDMI bit 0 scrambling on, 1 ratio 1:40, 2 scrambled data seen; DP bits 2:0 lanes) | 0x80 n/a,
+    value = ms after ACTIVE << 24 | HDMI errors ch0 / 1 / 2 (each 255 max) or DP rate / DPCD 202h / 203h"""
+    kind, f, after = (a >> 2) & 3, (a >> 4) & 7, f"{v >> 24}ms after ACTIVE"
+    head = f"D{(a & 3) + 1} {SD_KIND[kind]}"
+    if a & SD_NA:
+        return f"{head}: no link health on this input, {after}"
+    if kind == 3:
+        st = (v >> 8) & 0xFF, v & 0xFF                   # DPCD 202h lanes 0 / 1, 203h lanes 2 / 3: bit 0 CR, 1 EQ, 2 symbol lock per lane
+        bits = [(st[i // 2] >> (4 * (i % 2))) for i in range(f)]
+        cnt = [sum((b >> k) & 1 for b in bits) for k in range(3)]
+        r = (v >> 16) & 0xFF
+        return f"{head} {DP_RATE.get(r, f'{r:02X}')} x{f}: lanes CR {cnt[0]}/{f}, EQ {cnt[1]}/{f}, symbol lock {cnt[2]}/{f}, {after}"
+    e = [_sat((v >> s) & 0xFF, 255) for s in (16, 8, 0)]
+    return (f"{head}: SCDC ratio {'1:40' if f & 2 else '1:10'}, scrambling {'on' if f & 1 else 'off'}, "
+            f"{'scrambled data seen' if f & 4 else 'no scrambled data'}, errors {e[0]}/{e[1]}/{e[2]}, {after}")
+
+
 def value(fmt: str, arg: int, v: int) -> str:
     if fmt == "vport":
         return "auto" if (v & 0xFF) == 0xFF else f"D{(v & 0xFF) - D0}"
@@ -320,7 +363,8 @@ def line(rows: list[dict], ev: tuple, t0: int) -> str:
         p0, p1, p2 = row["text"].split("%")
         return head + pre + f"{p0}{v & 0xFFFF}ms{p1}{v >> 16}ms{p2}"
     before, _, after = row["text"].partition("%")
-    val = (v if row["fmt"] == "note" else sys_value(rows, row["fmt"], a, v) if row["fmt"] in ("sys", "sysreq") else
+    val = (sync_done(a, v, dt) if row["fmt"] == "sdone" else sync_link(a, v) if row["fmt"] == "slink" else
+           v if row["fmt"] == "note" else sys_value(rows, row["fmt"], a, v) if row["fmt"] in ("sys", "sysreq") else
            name(rows, PNL_BY, v & 0xFF) if row["fmt"] == "pby" else
            name(rows, SYS_STATE, v & 0xFF) if row["fmt"] == "sname" else value(row["fmt"], a, v))     # sname: #95 LED line
     return head + pre + before + val + after

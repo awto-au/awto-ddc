@@ -12,6 +12,8 @@
 #   -     no value          port  "Dn " prefix from arg (port byte, D0 = 3)     vport  value = port byte -> "Dn" (0xFF = auto)
 #   res   value = H << 16 | V -> "3840x2160"          mhz1  value in 0.1 MHz -> "594.0 MHz"     hz1  value in 0.1 Hz -> "60.0 Hz"
 #   hz3   value in mHz -> "59.997 Hz"                 mhz3  value in kHz -> "594.000 MHz"       dp   value = rate << 8 | lanes -> "HBR2 x4"
+#   sdone sync DONE (EF): arg = port idx | kind << 2 | scan retries << 4 | PHY set-ups or DP trainings << 6, value = scan ok ms << 20 | timing ms << 8 | PHY / link ms; the line prints the ACTIVE ms itself (docs/sync-log-design.md)
+#   slink link health (FF): HDMI = SCDC ratio / scrambling + CED error counters, DP = rate / lanes / DPCD 202 203 (docs/sync-log-design.md)
 #   pms   value = port << 16 | ms -> "D2, 188ms"   psrc  value = port << 8 | source type -> "D2 HDMI"   rms  value = register << 16 | ms -> "71A4 40ms"
 #   lim   value = width << 16 | limit -> "3840 of 4096 px"
 #   src   value = SDK source type -> "HDMI"           harg  arg in hex
@@ -396,6 +398,32 @@ FB	11	rms	EXPIRED poll of register (hex) + took:%	error
 FB	02	rms	slow wait for event (hex) + took:%	warning
 FB	12	rms	EXPIRED wait for event (hex) + took:%	error
 FC	01	pms	DP link trained:% after the loop first saw it training	timing
+EF	*	sdone	sync DONE %
+FF	*	slink	sync link %	timing
+FE	00	pms	sync FAILED:nothing detected on the input, no clock or link (%)	error
+FE	10	pms	sync FAILED:HPD event was still running (%)	error
+FE	11	pms	sync FAILED:PHY never set, freq detect never stable (%)	error
+FE	12	pms	sync FAILED:CDR not locked at 1:10, retry 1:40 not done (%)	error
+FE	13	pms	sync FAILED:DFE not ready at 1:10, retry 1:40 not done (%)	error
+FE	14	pms	sync FAILED:no video at 1:10, retry 1:40 not done (%)	error
+FE	15	pms	sync FAILED:CDR not locked at 1:40, retry 1:10 not done (%)	error
+FE	16	pms	sync FAILED:DFE not ready at 1:40, retry 1:10 not done (%)	error
+FE	17	pms	sync FAILED:no video at 1:40, retry 1:10 not done (%)	error
+FE	20	pms	sync FAILED:no RGBHV video (%)	error
+FE	21	pms	sync FAILED:DE only video (%)	error
+FE	22	pms	sync FAILED:deep colour PLL not locked (%)	error
+FE	24	pms	sync FAILED:timing measure failed (%)	error
+FE	30	pms	sync FAILED:DP link not trained (%)	error
+FE	31	pms	sync FAILED:DP HDCP check (%)	error
+FE	32	pms	sync FAILED:DP no video stream (%)	error
+FE	33	pms	sync FAILED:DP MSA check (%)	error
+FE	34	pms	sync FAILED:DP video info (%)	error
+FE	35	pms	sync FAILED:DP display format (%)	error
+FE	36	pms	sync FAILED:DP stream clock (%)	error
+FE	37	pms	sync FAILED:DP FIFO delay (%)	error
+FE	40	pms	sync FAILED:timing not supported (%)	error
+FE	41	pms	sync FAILED:signal lost, the picture was up; time = since ACTIVE (%)	error
+FE	*	pms	sync FAILED:last scan outcome not listed, see the scan lines above (%)	error
 # #162 step 3 name tables 15..1B (looked up by row index, never logged): at the end, so the per-event row scan stops before them
 15	00	-	AC ON
 15	01	-	OFF

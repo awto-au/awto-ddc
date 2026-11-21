@@ -15,6 +15,7 @@ PNGs: <out>/poweron_console.png, selector_status.png, switch_d3_console.png, swi
 Log: tmp/logs/sync_sim.log
 """
 import argparse
+import re
 import sys
 from pathlib import Path
 
@@ -94,6 +95,20 @@ class Run:
             say(f"    {ln}")
         return h, lines
 
+    def sync_summary(self, lines, title, want_done, want_fail):
+        """docs/sync-log-design.md: one 'sync DONE' per episode at ACTIVE, 'sync FAILED' when the episode ends in NO SIGNAL / NO SUPPORT; times in order"""
+        done = [ln for ln in lines if "sync DONE" in ln]
+        fail = [ln for ln in lines if "sync FAILED" in ln]
+        self.check(len(done) == want_done and len(fail) == want_fail, f"{title}: {want_done} 'sync DONE', {want_fail} 'sync FAILED' line(s)",
+                   f"{len(done)} / {len(fail)}")
+        for ln in done:
+            m = re.search(r"scan ok (\d+)ms, timing (\d+)ms, ACTIVE (\d+)ms", ln)
+            if m:
+                s, ti, ac = map(int, m.groups())
+                self.check(s <= ti <= ac, f"{title}: DONE times in order (scan ok <= timing <= ACTIVE)", ln.strip())
+            else:
+                self.check("ACTIVE " in ln, f"{title}: DONE line has the ACTIVE time (unseen stamps print '-')", ln.strip())
+
     def console(self):
         return self.m.rd(self.gpio + 3)[0] | self.m.rd(self.key + 3)[0]
 
@@ -136,6 +151,7 @@ def main():
         r.check(h["magic"] == b"SY" and h["kind"] == 1, "ring: power-on episode", f"magic {h['magic']!r} kind {h['kind']}")
         for want in ("power on", "->ACTIVE:", "backlight on at once", "timing ", "console opened"):
             r.check(want in txt, f"power-on log has '{want}'")
+        r.sync_summary(lines, "power-on", 1, 0)
         r.check(con_open, "console opened by itself after power-on")
         r.shot("poweron_console")
         r.cmd(CON_CLOSE, 1.0)
@@ -157,6 +173,7 @@ def main():
             txt = "\n".join(lines)
             r.check(h["kind"] == 2 and h["port"] == port + 3, f"switch episode for D{port}", f"kind {h['kind']} port {h['port']}")
             r.check(want in txt and "console opened" in txt, f"D{port} log has '{want}' and the console opened")
+            r.sync_summary(lines, f"switch to D{port}", 1, int(port == 3))     # D3: no source in the sim, FAILED, then the auto search lands on D2
             r.check(r.console() != 0, f"console open after the switch to D{port}")
             r.shot(f"{name}_console")
             r.cmd(CON_CLOSE, 0.5)
