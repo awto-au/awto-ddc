@@ -17,3 +17,8 @@
 ## C. Regression
 - `./dev.py health` on the unit after the locks (headroom row, input row), ACTIVE 1080p60 and 4K59.940 sources.
 - Rest mode left per memory rule (unit 3 at 4K59.940 / 1080p60).
+
+## D. PHY set-up now runs in the main loop (EX0 masked)
+- `SetPhy_EXINT0` is called only from `ScalerTMDSRx{2,3}PhySetDeferred`: main context, EX0 masked for the whole call (up to 5.5 ms).
+- Timer2 keeps ticking (not masked); the cost now is EXINT0 latency (DP AUX, CEC, other TMDS port), not tick loss.
+- Follow-ups: blind-wait table, 2.9 ms retry branch, polled waits, EX0 unmasked in the pure delays: see the PHY issue draft / `docs/delays.md` (TMDS PHY row).

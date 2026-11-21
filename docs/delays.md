@@ -102,7 +102,7 @@ Abbreviations in the table:
 | TMDSRx2.c:3183,3192,3197 and TMDSRx3.c:3186,3195,3200; ScalerTMDSRx2_SeptPhy.c:3630 and TMDSRx3_SeptPhy.c:3633 | deep-colour PLL set / PHY stable | 2 ms each | SDK-lit | no spec | no spec | no spec | continues |
 | ScalerTMDSRx2_SeptPhy.c:815 and ScalerTMDSRx3_SeptPhy.c:815 `HotPlugHighProc` | HDMI HPD low time | user setting x 100 ms; SDK NVRAM default 5 = 500 ms (`UserCommonNVRamSystem.c:52`). **Skipped:** `_AWTO_HDMI_HPD_TOGGLE == _OFF` (`RL6449_Project.h:1164`). | NVRAM | SDK default | n/a | n/a | continues |
 | ScalerCommonSyncInclude.h:118-120 | HDMI HPD times when toggling: HDCP 2.2 1000 / Acer 130 / EDID switch 600 ms | as listed | SDK | SDK constants | n/a | n/a | n/a |
-| `ScalerTMDS*FLD / SetPhy_EXINT0` (interrupt context): ScalerTMDSRx2.c:1362-1920 and Rx3.c:1365-1923 | EXINT0 PHY set blind steps | **5545 us per call** (50 + 3x360 + 5x150 + 2x290 + 2x1000 + 900 + 25 + 2x80 us) | SDK | SDK numbers, no stated reason -> no spec | no spec | no spec | continues |
+| `ScalerTMDSRx{2,3}SetPhy_EXINT0` (main context from `ScalerTMDSRx{2,3}PhySetDeferred`, EX0 masked, #256): TMDSRx2.c:758-1930 and Rx3.c | PHY set blind steps | **5545 us = sum over all branches**; DCDR (<= 200 MHz) ~1.2 ms, ACDR > 340 MHz ~4.3 ms (2.9 ms block at Rx2.c:1618) (50 + 3x360 + 5x150 + 2x290 + 2x1000 + 900 + 25 + 2x80 us) | SDK | SDK numbers, no stated reason -> no spec | no spec | no spec | continues |
 | `*MeasureClk`, `FLDBandFineTune_EXINT0`: TMDSRx2.c:691,728,2850,2906 and Rx3.c:694,731,2853,2909 | 5 us steps | 5 us each | SDK | no spec | no spec | no spec | continues |
 | TMDS timer events: TMDSRx2.c:3994,4200 and Rx3.c:3997,4203 | format reset wait | 130 ms | SDK-lit | no spec | no spec | no spec | event fires |
 | ScalerTMDSRx2_SeptPhy.c:191 and ScalerTMDSRx3_SeptPhy.c:191 | video-detect re-arm | 45 ms | SDK | "1 frame" comment | no spec | no spec | re-poll |
@@ -286,9 +286,9 @@ All of these are `ScalerTimerDelayXms` or a poll, which spin and poke the watchd
   - Settings boot-recovery hold up to 1000 ms (`awto-rtdfw settings.c:271`).
   - Watchdog probe spin 1500 ms (test command only, `fw/diag/wdt.c:222-229`).
   - `fw/timer/t0ev.c:238-269` test delays.
+- **Main-context blind spin, EX0 masked (since #256)**: `ScalerTMDSRx{2,3}SetPhy_EXINT0` via `PhySetDeferred`, up to 5.5 ms.
 - **Non-blocking since #162**: the panel T1..T6 machine, the HDMI HPD recovery pulse, and the source/judge timer events. None of these block.
 - **Interrupt-context blind spins over 1 ms**
-  - `ScalerTMDSRx2SetPhy_EXINT0` and `ScalerTMDSRx3SetPhy_EXINT0`: 5.5 ms per call.
   - `ScalerDpRx1RebuildPhy_WDINT`: 0.85 ms.
   - `ScalerDpRx1Tp2SetPhy_EXINT0`: 0.71 ms.
 
