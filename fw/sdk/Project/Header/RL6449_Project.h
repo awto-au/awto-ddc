@@ -683,6 +683,10 @@ extern volatile unsigned char isr_g_ucDdcciCommandNumber;
     if(ucAwtoCh == 0x03) { MCU_FE66_DDC2_DDC_CONTROL_2 op; } else if(ucAwtoCh == 0x04) { MCU_FE6F_DDC3_DDC_CONTROL_2 op; } \
     else if(ucAwtoCh == 0x02) { MCU_FF2E_DDC1_DDC_CONTROL_2 op; } else if(ucAwtoCh == 0x01) { MCU_FF20_DDC0_DDC_CONTROL_2 op; } } while(0)
 extern void AwtoDbgSelectChannel(unsigned char ucInputPort);   // ScalerMcuDdcciSwitchPort's debug branch
+// DDC/CI (0x37) and debug (0x35) move to the selected port's DDC at the select, not only at ACTIVE (a port with no signal).
+#define AWTO_DDC_SELECT(port)                                   AwtoDbgSelectChannel(port)
+#else
+#define AWTO_DDC_SELECT(port)
 #endif
 // M-domain set-up phases of the first set-up per boot (start, IVS wait 1, DCLK final offset, memory check, check OK): one sync log
 // line each (AWTO_SYNC_EV_MSTEP, value = arg << 16 | val), every build; the other steps only in the ring below (#165).

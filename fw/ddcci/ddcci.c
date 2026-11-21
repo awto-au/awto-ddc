@@ -22,6 +22,7 @@ void AwtoInputSelect(BYTE ucPort, BYTE ucWhy)  // main-loop context only; ucWhy 
         return;
     }
     AwtoNoCableHold(0);
+    AWTO_DDC_SELECT(ucPort);
     AwtoPortSelect(ucPort, AWTO_PORT_WHY_SELECT);   // #81: selecting a disabled port enables it (stored), then the switch
     if((ucWhy == 0x60) && (ucPort == SysSourceGetInputPort()) && (SysModeGetModeState() == _MODE_STATUS_ACTIVE))
     {

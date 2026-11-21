@@ -2,6 +2,7 @@
 
 - Transport: DDC/CI 0x37 on the spare IIC engine IIC_1, polled from the main loop (`fw/ddcci/ddcci.c`, #60);
   the debug slave 0x35 stays on the main engine. kvm2e config: `-D _AWTO_DDCCI_FIXCH=2 -D _AWTO_DBG_FOLLOW=_OFF`.
+- DDC/CI and the debug slave sit on the DDC channel of the selected port (D1 = DDC1 = DP AUX I2C, D2 = DDC2, D3 = DDC3); the channel moves at the input select (VCP 0x60, test cmds, selector), and again at ACTIVE. DP AUX I2C reaches 0x37 / 0x35 the same as an HDMI DDC bus (unit 2, Intel DP-1).
 - Content: the settings registry (#67). `AwtoDdcRegistry` hands get / set / save / capabilities to awto-rtdfw `vcp.c`.
   Codes, values and the capabilities string: [settings.md](settings.md) (generated, column VCP).
 - Requests answered in the main-loop pass that sees them; set has no reply (MCCS). Save (0x0C) writes the NVRAM record.

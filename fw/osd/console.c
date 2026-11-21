@@ -1910,6 +1910,7 @@ static void AwtoSourceTake(BYTE ucWho)
         {
             AwtoNoCableHold(0);
         }
+        AWTO_DDC_SELECT(ucPort);
         AwtoPortSelect(ucPort, AWTO_PORT_WHY_SELECTOR);     // #81: a disabled port is enabled (stored), then the switch
         SET_FORCE_POW_SAV_STATUS(_FALSE);
         SysSourceSwitchInputPort(ucPort);
