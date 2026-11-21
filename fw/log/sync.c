@@ -446,12 +446,12 @@ static void AwtoSdClear(void)                       // search left a port: the n
     s_ucSdPhyN = 0;
     s_ucSdRetry = 0;
     s_ucSdLast = 0;
-    isr_g_ucAwtoDpLtN = 0;
 }
 
 static void AwtoSdReset(void)                       // new episode, or the picture was lost
 {
     AwtoSdClear();
+    isr_g_ucAwtoDpLtN = 0;                          // trainings happen before the visit lines: only a new episode clears them
     g_ucAwtoSdFlags = 0;
 }
 
