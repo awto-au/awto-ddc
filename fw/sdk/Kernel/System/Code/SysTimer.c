@@ -382,7 +382,7 @@ void SysTimerEventProc(EnumScalerTimerEventID enumEventID)
 //--------------------------------------------------
 void SysTimerIntProc0(void) __interrupt(1)
 {
-    static BYTE ucFff4;                     // own storage: an overlaid ISR local broke the stall test (frame shared with main code)
+    static BYTE ucFff4 [[awto::isr_shared("private to this ISR: burst-write backup, own storage (an overlaid local broke the stall test)")]];
 
     AWTO_CPUS_ISR(1);
     // Backup for Burst Write Bug
@@ -407,7 +407,7 @@ void SysTimerIntProc1(void) __interrupt(3)
 //--------------------------------------------------
 void SysTimerIntProc2(void) __interrupt(5)
 {
-    static BYTE ucFff4;                     // own storage: an overlaid ISR local broke the stall test (frame shared with main code)
+    static BYTE ucFff4 [[awto::isr_shared("private to this ISR: burst-write backup, own storage (an overlaid local broke the stall test)")]];
 
     // Backup for Burst Write Bug
     ucFff4 = MCU_FFF4_SCA_INF_ADDR;
@@ -437,7 +437,7 @@ void SysTimerIntProc2(void) __interrupt(5)
 //--------------------------------------------------
 void SysTimerWDIntProc(void) __interrupt(8)
 {
-    static BYTE ucFff4;                     // own storage: an overlaid ISR local broke the stall test (frame shared with main code)
+    static BYTE ucFff4 [[awto::isr_shared("private to this ISR: burst-write backup, own storage (an overlaid local broke the stall test)")]];
 
     // Backup for Burst Write Bug
     ucFff4 = MCU_FFF4_SCA_INF_ADDR;

@@ -55,7 +55,7 @@ void SysEXINT3(void) __interrupt(9);
 //--------------------------------------------------
 void SysEXINT0(void) __interrupt(0)
 {
-    static BYTE ucFff4;                     // own storage: an overlaid ISR local broke the stall test (frame shared with main code)
+    static BYTE ucFff4 [[awto::isr_shared("private to this ISR: burst-write backup, own storage (an overlaid local broke the stall test)")]];
 
 #if((_DVI_SUPPORT == _ON) || (_HDMI_SUPPORT == _ON))
     BYTE ucPowerStatus;
@@ -164,7 +164,7 @@ void SysEXINT0(void) __interrupt(0)
 //--------------------------------------------------
 void SysEXINT1(void) __interrupt(2)
 {
-    static BYTE ucFff4;                     // own storage: an overlaid ISR local broke the stall test (frame shared with main code)
+    static BYTE ucFff4 [[awto::isr_shared("private to this ISR: burst-write backup, own storage (an overlaid local broke the stall test)")]];
 
     // Backup for Burst Write Bug
     AWTO_DIAG_EX1ISR();
