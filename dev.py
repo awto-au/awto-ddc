@@ -93,6 +93,8 @@ STEPS: dict[str, tuple[str, list[str], bool]] = {
                   [sys.executable, "scripts/san_test.py"], True),
     "speed":     ("offline cycle bench of fw images (fw_profile, docs/speed-bench.tsv)",
                   [sys.executable, "scripts/speed_bench.py"], True),
+    "stats":     ("build + test statistics table of fw images (flash, IRAM, XDATA, stack, cycles/pass, busy %, free-run estimate; scripts/stats.py)",
+                  [sys.executable, "scripts/stats.py"], True),
 }
 
 # gate = fail-fast, blocks a commit. First failure wins; fix that.
