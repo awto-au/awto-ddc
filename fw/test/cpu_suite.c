@@ -833,9 +833,10 @@ static void CaseMs32(void)
     CpuBegin();
     EA = 0;
     usLo = isr_g_stAwtoDiag.usT2Isr;
-    usHi = isr_g_stAwtoHt.usUpHi;
+    usHi = g_stAwtoHt.usUpHi;
     isr_g_stAwtoDiag.usT2Isr = AWTO_CPU_MS_START_LO;
-    isr_g_stAwtoHt.usUpHi = 0xFFFF;
+    g_usAwtoLoSeen = AWTO_CPU_MS_START_LO;
+    g_stAwtoHt.usUpHi = 0xFFFF;
     EA = 1;
     ulPrev = AwtoMs();
     while(ucSeen < AWTO_CPU_MS_TICKS)
@@ -857,7 +858,8 @@ static void CaseMs32(void)
     ulNew = (((unsigned long)usHi << 16) | usLo) + ucSeen;
     EA = 0;
     isr_g_stAwtoDiag.usT2Isr = (WORD)ulNew;
-    isr_g_stAwtoHt.usUpHi = (WORD)(ulNew >> 16);
+    g_usAwtoLoSeen = (WORD)ulNew;
+    g_stAwtoHt.usUpHi = (WORD)(ulNew >> 16);
     EA = 1;
     CpuEnd();
 }

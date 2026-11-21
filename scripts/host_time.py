@@ -6,7 +6,7 @@ usage: host_time.py [--unit N] --once
 - Carrier: MCCS table write (op 0xE7) to manufacturer VCP 0xE9, offset 0000, 7 data bytes: unix s BE x4, ms BE x2, UTC offset
   in 15 min units (signed). 51 8B E7 E9 00 00 t3 t2 t1 t0 mH mL ofs chk. No reply (MCCS table write). docs/ddcci.md.
 - Read back: get VCP 0xE9 -> max = syncs since boot, cur = drift of this sync (host - fw tick, ms, int16).
-- Debug link on (0x37 silent): the same 7 bytes go over 0x35 into isr_g_stAwtoHt.aucPend, then test cmd 0x0E applies
+- Debug link on (0x37 silent): the same 7 bytes go over 0x35 into g_stAwtoHt.aucPend, then test cmd 0x0E applies
   them (AwtoHtSync); a few ms older than over DDC/CI. Needs the running image's map (tmp/fw/<serial>-flash-state.json).
 - Unit guard: the devices.json test unit only (default; another --unit is refused); bus = the one with the unit's EDID serial that ACKs DDC/CI 0x37
   (kvm.find_bus), EDID serial checked before every send. Debug link on (0x35 on the port) = no DDC/CI: logged, next round.
@@ -115,7 +115,7 @@ def send_dbg(u: dict, bus: int) -> bool:
     import rtd_i2c_bridge as B
     from sync_log import sym
     st = json.loads((ROOT / f"tmp/fw/{u['serial']}-flash-state.json").read_text())
-    ht = sym(ROOT / f"tmp/fw/{st['image']}.map", "isr_g_stAwtoHt")
+    ht = sym(ROOT / f"tmp/fw/{st['image']}.map", "g_stAwtoHt")
     i2cbus.require_unit(bus, u["serial"])
     io = B.Real(bus, allow_write=True, regread=True)
     try:

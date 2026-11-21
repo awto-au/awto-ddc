@@ -3386,7 +3386,7 @@ void AwtoDiagTestCmd(void)
     }
     else if(ucCmd == AWTO_TC_HOST_TIME)                // #157 host time over the debug link (DDC/CI is off while it is on)
     {
-        AwtoHtSync(isr_g_stAwtoHt.aucPend);
+        AwtoHtSync(g_stAwtoHt.aucPend);
     }
     else if(ucCmd == AWTO_TC_HOST_NOTE)                 // #273 host note: text slot written over 0x35
     {

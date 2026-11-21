@@ -842,6 +842,7 @@ stub	_AwtoClkField	C	0x3478	8
 stub	_AwtoClkMhz10	C	0x3480	8
 stub	_AwtoPllUnits	C	0x3488	8
 stub	_ui_timing	C	0x3490	8
+fn	_AwtoMs	C	0x3498	128
 stub	_AwtoDbgLinkPoll	C	0x3608	8
 stub	_AwtoDbgLinkStart	C	0x3610	8
 stub	_AwtoDdcPortToVcp	C	0x3618	8
@@ -922,7 +923,6 @@ stub	_AwtoPanelForeign	C	0x3894	8
 stub	_AwtoSwArm	C	0x389c	8
 stub	_AwtoSwEvent	C	0x38a4	8
 stub	_AwtoSwPoll	C	0x38ac	8
-fn	_AwtoMs	C	0x38b4	84
 stub	_AstRad	C	0x3908	8
 stub	_AwtoPsWakeAux	C	0x3910	8
 stub	_AwtoPsWakePoll	C	0x3918	8

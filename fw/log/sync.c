@@ -301,9 +301,10 @@ void AwtoSyncPush(BYTE ucId, BYTE ucArg, DWORD ulVal)
     }
 }
 
-// One time base for all our code: Timer2 ISR count (usT2Isr = low word, isr_g_stAwtoHt.usUpHi = high word, both bumped in the ISR).
+// One time base for all our code: usT2Isr (Timer2 ISR) = low word, g_stAwtoHt.usUpHi = high word, bumped by AwtoMs on a usT2Isr wrap (main only, called at least every 65 s).
 // Before Timer2 runs it is the WDT-counter time (ring lines are re-based at the Timer2 start). SDK event table (d_isr_g_usTimerCounter) is separate.
-__xdata StAwtoHt isr_g_stAwtoHt;
+__xdata StAwtoHt g_stAwtoHt;
+__xdata WORD g_usAwtoLoSeen;
 
 unsigned long AwtoMs(void)
 {
@@ -316,10 +317,15 @@ unsigned long AwtoMs(void)
         return AwtoSyncWdtMs();
     }
     bEa = EA;
-    EA = 0;                                         // ISR bumps lo then hi: a read between them would be 65536 ms short
+    EA = 0;
     usLo = isr_g_stAwtoDiag.usT2Isr;
-    usHi = isr_g_stAwtoHt.usUpHi;
     EA = bEa;
+    if(usLo < g_usAwtoLoSeen)
+    {
+        g_stAwtoHt.usUpHi++;
+    }
+    g_usAwtoLoSeen = usLo;
+    usHi = g_stAwtoHt.usUpHi;
     return ((DWORD)usHi << 16) | usLo;
 }
 
@@ -368,26 +374,26 @@ void AwtoHtSync(BYTE *puc)                          // unix s BE x4, ms BE x2, U
     {
         return;                                     // not a ms field: not ours
     }
-    if(isr_g_stAwtoHt.ucSyncs != 0)
+    if(g_stAwtoHt.ucSyncs != 0)
     {
-        lS = (long)(ulE - isr_g_stAwtoHt.ulEpoch);
+        lS = (long)(ulE - g_stAwtoHt.ulEpoch);
         lD = ((lS > AWTO_HT_GAP_S) || (lS < -AWTO_HT_GAP_S)) ? 0x7FFFFFFFL :
-             (lS * 1000 + (long)usF - (long)isr_g_stAwtoHt.usFrac - (long)(ulNow - isr_g_stAwtoHt.ulFwMs));
+             (lS * 1000 + (long)usF - (long)g_stAwtoHt.usFrac - (long)(ulNow - g_stAwtoHt.ulFwMs));
         ucWhy = ((lD > AWTO_HT_DRIFT_MS) || (lD < -AWTO_HT_DRIFT_MS)) ? 2 : 0;
-        if(isr_g_stAwtoHt.ucSyncs != 0xFF)
+        if(g_stAwtoHt.ucSyncs != 0xFF)
         {
-            isr_g_stAwtoHt.ucSyncs++;
+            g_stAwtoHt.ucSyncs++;
         }
     }
     else
     {
-        isr_g_stAwtoHt.ucSyncs = 1;
+        g_stAwtoHt.ucSyncs = 1;
     }
-    isr_g_stAwtoHt.ulEpoch = ulE;
-    isr_g_stAwtoHt.usFrac = usF;
-    isr_g_stAwtoHt.cOfs = (signed char)puc[6];
-    isr_g_stAwtoHt.ulFwMs = ulNow;
-    isr_g_stAwtoHt.iDrift = (lD > 32767) ? 32767 : ((lD < -32767) ? -32767 : (int)lD);
+    g_stAwtoHt.ulEpoch = ulE;
+    g_stAwtoHt.usFrac = usF;
+    g_stAwtoHt.cOfs = (signed char)puc[6];
+    g_stAwtoHt.ulFwMs = ulNow;
+    g_stAwtoHt.iDrift = (lD > 32767) ? 32767 : ((lD < -32767) ? -32767 : (int)lD);
     if(ucWhy != 0)
     {
         AwtoSyncPush(AWTO_SYNC_EV_HOST, puc[6], ulE);

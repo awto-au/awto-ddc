@@ -555,14 +555,14 @@ static void AwtoConTitle(BYTE ucAll)            // compose; draw the runs of 2-c
     AwtoPutClocks();
     AwtoPutStr("  ");
     AwtoPutInput();
-    AwtoPutStr(((isr_g_stAwtoHt.ucSyncs != 0) && ((ulUp - isr_g_stAwtoHt.ulFwMs) > AWTO_HT_STALE_MS)) ? " STALE " : " HOST ");
-    if(isr_g_stAwtoHt.ucSyncs == 0)
+    AwtoPutStr(((g_stAwtoHt.ucSyncs != 0) && ((ulUp - g_stAwtoHt.ulFwMs) > AWTO_HT_STALE_MS)) ? " STALE " : " HOST ");
+    if(g_stAwtoHt.ucSyncs == 0)
     {
         AwtoPutStr("--:--:--");
     }
     else
     {
-        s_ulAwtoT = (isr_g_stAwtoHt.ulEpoch + (long)isr_g_stAwtoHt.cOfs * 900 + (ulUp - isr_g_stAwtoHt.ulFwMs + isr_g_stAwtoHt.usFrac) / 1000) % 86400;
+        s_ulAwtoT = (g_stAwtoHt.ulEpoch + (long)g_stAwtoHt.cOfs * 900 + (ulUp - g_stAwtoHt.ulFwMs + g_stAwtoHt.usFrac) / 1000) % 86400;
         AwtoPutClock();
     }
     AwtoPutCol(AWTO_TITLE_N);
@@ -1371,7 +1371,7 @@ static void AwtoLnAbs(void)                     // s_ulLnAbs / s_ucLnSure for th
 
 static void AwtoPutWall(void)                   // s_ulLnAbs -> "HH:MM:SS.mmm" (host clock, s_ulAwtoT = its seconds of the day)
 {
-    s_lLnD = (long)(s_ulLnAbs - isr_g_stAwtoHt.ulFwMs) + (long)isr_g_stAwtoHt.usFrac;    // ms after the sync's host second
+    s_lLnD = (long)(s_ulLnAbs - g_stAwtoHt.ulFwMs) + (long)g_stAwtoHt.usFrac;    // ms after the sync's host second
     s_lLnS = s_lLnD / 1000;
     s_lLnR = s_lLnD % 1000;
     if(s_lLnR < 0)
@@ -1379,7 +1379,7 @@ static void AwtoPutWall(void)                   // s_ulLnAbs -> "HH:MM:SS.mmm" (
         s_lLnR += 1000;
         s_lLnS--;
     }
-    s_lLnS = (s_lLnS + (long)isr_g_stAwtoHt.ulEpoch + (long)isr_g_stAwtoHt.cOfs * 900) % 86400;
+    s_lLnS = (s_lLnS + (long)g_stAwtoHt.ulEpoch + (long)g_stAwtoHt.cOfs * 900) % 86400;
     s_ulAwtoT = (s_lLnS < 0) ? (DWORD)(s_lLnS + 86400) : (DWORD)s_lLnS;
     AwtoPutClock();
     AwtoPutChar('.');
@@ -1448,7 +1448,7 @@ static void AwtoSyncLine(BYTE ucSeq)
         s_ucLnCur = ucSeq;
         AwtoLnAbs();
     }
-    if((s_ucLnWide != 0) && (ucFmt != 0) && (isr_g_stAwtoHt.ucSyncs != 0))
+    if((s_ucLnWide != 0) && (ucFmt != 0) && (g_stAwtoHt.ucSyncs != 0))
     {
         AwtoPutWall();
         AwtoPutChar((s_ucLnSure != 0) ? ':' : '~');

@@ -102,7 +102,7 @@ SKIP_IF_MISSING = {      # gate -> map symbols the image must define, else SKIP 
     "bootsim": ("_g_stAwtoSync",),
     "bootsim_always": ("_g_stAwtoSync",),
     "wake": ("_AwtoPsWakeFire",),
-    "htime": ("_isr_g_stAwtoHt",),
+    "htime": ("_g_stAwtoHt",),
     "conmode": ("_g_ucAwtoConAuto",),
     "conwrap": ("_AwtoConWrapLine",),
     "conkeep": ("_g_stAwtoSync", "_AwtoConWrapLine"),

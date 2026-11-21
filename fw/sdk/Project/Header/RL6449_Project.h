@@ -658,7 +658,7 @@ extern void AwtoGpioConSet(unsigned char ucOn);
 extern void AwtoKeyConSet(unsigned char ucOn);
 #define AWTO_GPIO_TEST_ON()                                     (g_stAwtoGpio.ucOpen != 0)
 extern void AwtoDiagT3Mark(unsigned char ucEnd);
-#define AWTO_DIAG_T2ISR()                                       do { if(++isr_g_stAwtoDiag.usT2Isr == 0) { isr_g_stAwtoHt.usUpHi++; } AWTO_LED_T2ISR(); } while(0)
+#define AWTO_DIAG_T2ISR()                                       do { isr_g_stAwtoDiag.usT2Isr++; AWTO_LED_T2ISR(); } while(0)
 #define AWTO_DIAG_EX1ISR()                                      (isr_g_stAwtoDiag.usEx1Isr++)
 // Debug slave 0x35 answers 0x3A / 0x3C in the EXINT1 ISR (#38, docs/diag-block.md); diag version 2 = this is on.
 #define _AWTO_DBGISR                                            _ON
@@ -1225,7 +1225,7 @@ extern void AwtoOsdRoll(unsigned char ucOn);    // FRAME_CTRL_18 roll-up on / of
 extern void AwtoOsdBlend(void);                                // OSD blend + osd_transparency, every awto screen (fw/osd/text_layer.c)
 #define AWTO_TC_MEM_FRAME                                       0x0C    // test cmd: force memory work mode (frame buffer) for the current timing
 #define AWTO_TC_MEM_SDK                                         0x0D    // test cmd: back to the SDK's choice (line buffer at 4K60)
-#define AWTO_TC_HOST_TIME                                       0x0E    // test cmd: AwtoHtSync(isr_g_stAwtoHt.aucPend) (#157 over 0x35)
+#define AWTO_TC_HOST_TIME                                       0x0E    // test cmd: AwtoHtSync(g_stAwtoHt.aucPend) (#157 over 0x35)
 extern __xdata unsigned char g_ucAwtoMemForce;  // 1 = ScalerMDomainMemoryConfig returns _MEMORY_WORK_MODE (FRC builds); RAM only, 0 at boot
 #define AWTO_SYNC_EV_WAKE_TMDS                                  0xDC    // arg = port: a TMDS clock woke the monitor, value = clock 0.1 MHz (IOSC ref)
 #define AWTO_SYNC_EV_OSDP                                       0xE8    // #226 OSD SRAM probe (test cmd 0x0F): arg 1 done (value = addresses written), 3 refused (OSD on)
@@ -1384,11 +1384,12 @@ typedef struct                                  // host-read (sync_log.py): nati
     unsigned long ulEpoch;                      // host unix s at the sync
     unsigned long ulFwMs;                       // AwtoMs() at the sync
     int iDrift;                                 // host - local tick at the last sync, ms (clamped)
-    volatile unsigned int usUpHi;                      // AwtoMs bits 31..16, bumped by the Timer2 ISR (bits 15..0 = isr_g_stAwtoDiag.usT2Isr)
+    unsigned int usUpHi;                        // AwtoMs bits 31..16, bumped by AwtoMs when usT2Isr (bits 15..0) wraps
     unsigned char aucPend[7];                   // host time written over 0x35 (debug link on: no DDC/CI), applied by AWTO_TC_HOST_TIME
 } StAwtoHt;
-extern __xdata StAwtoHt isr_g_stAwtoHt;
+extern __xdata StAwtoHt g_stAwtoHt;
 extern unsigned long AwtoMs(void);
+extern __xdata unsigned int g_usAwtoLoSeen;       // usT2Isr at the last AwtoMs
 extern void AwtoHtSync(unsigned char *puc);
 // #144 power-saving wake triggers (fw/log/sync.c AwtoPsWakePoll), each once per port per sleep episode
 #ifndef _AWTO_PS_WAKE
