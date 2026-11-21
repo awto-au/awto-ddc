@@ -33,9 +33,9 @@ static __xdata BYTE s_ucTailTimer;                 // ms after the tail start wh
 static __xdata BYTE s_ucTailReady;                 // ms after the tail start when the panel video was ready (same)
 
 // GENERATED-BEGIN awto_sync_rows
-#define AWTO_SYNC_ROWS 416
+#define AWTO_SYNC_ROWS 418
 #pragma place bank(11)
-static const __code BYTE tAwtoSyncRowId[416] = {
+static const __code BYTE tAwtoSyncRowId[418] = {
     0xD0, 0xD0, 0xD0, 0xD0, 0xD0, 0xD1, 0xD1, 0xD1, 0xD1, 0xD1, 0xD2, 0xD2, 0xD2, 0xD4, 0xD4, 0xD4,
     0xD4, 0xD4, 0xD4, 0xD4, 0xD4, 0xD4, 0xD4, 0xD4, 0xD4, 0xD4, 0xD4, 0xD4, 0xD5, 0xD6, 0xD7, 0xD8,
     0xD8, 0xD9, 0xC0, 0xC0, 0xC0, 0xC0, 0x10, 0x10, 0x10, 0x10, 0x10, 0x10, 0x10, 0x10, 0x10, 0x10,
@@ -59,11 +59,12 @@ static const __code BYTE tAwtoSyncRowId[416] = {
     0xF5, 0xF5, 0xF5, 0xF5, 0xF5, 0xF5, 0xF5, 0xF5, 0xF5, 0xF6, 0xF6, 0xF6, 0xF6, 0xF6, 0xF6, 0xF7,
     0xF7, 0xF7, 0xF7, 0xF7, 0xF7, 0xF7, 0xF8, 0xF8, 0xF8, 0xF8, 0xF8, 0xF8, 0xF8, 0xF8, 0xF8, 0xF9,
     0xF9, 0xF9, 0xFB, 0xFB, 0xFB, 0xFB, 0xFB, 0xFB, 0xFC, 0x93, 0x93, 0x93, 0x93, 0x93, 0x93, 0x94,
-    0x95, 0xEF, 0xFF, 0xFE, 0xFE, 0xFE, 0xFE, 0xFE, 0xFE, 0xFE, 0xFE, 0xFE, 0xFE, 0xFE, 0xFE, 0xFE,
-    0xFE, 0xFE, 0xFE, 0xFE, 0xFE, 0xFE, 0xFE, 0xFE, 0xFE, 0xFE, 0xFE, 0xE6, 0xE6, 0xE6, 0xEB, 0xED,
-    0xED, 0xED, 0xED, 0xED, 0xED, 0xED, 0xED, 0xED, 0xED, 0xED, 0xED, 0xED, 0xED, 0xED, 0xEE, 0xFD};
+    0x95, 0x96, 0x97, 0xEF, 0xFF, 0xFE, 0xFE, 0xFE, 0xFE, 0xFE, 0xFE, 0xFE, 0xFE, 0xFE, 0xFE, 0xFE,
+    0xFE, 0xFE, 0xFE, 0xFE, 0xFE, 0xFE, 0xFE, 0xFE, 0xFE, 0xFE, 0xFE, 0xFE, 0xFE, 0xE6, 0xE6, 0xE6,
+    0xEB, 0xED, 0xED, 0xED, 0xED, 0xED, 0xED, 0xED, 0xED, 0xED, 0xED, 0xED, 0xED, 0xED, 0xED, 0xED,
+    0xEE, 0xFD};
 #pragma place bank(11)
-static const __code BYTE tAwtoSyncRowArg[416] = {
+static const __code BYTE tAwtoSyncRowArg[418] = {
     0x01, 0x02, 0x03, 0x04, 0x05, 0x01, 0x02, 0x03, 0x04, 0x06, 0x01, 0x02, 0x03, 0x01, 0x02, 0x03,
     0x04, 0x05, 0x11, 0x12, 0x13, 0x14, 0x15, 0x16, 0x21, 0x17, 0x20, 0x0C, 0xFF, 0xFF, 0xFF, 0x01,
     0x02, 0xFF, 0x01, 0x02, 0x03, 0x04, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0x0A, 0x0B, 0x0C, 0x0E,
@@ -87,9 +88,10 @@ static const __code BYTE tAwtoSyncRowArg[416] = {
     0x01, 0x02, 0x03, 0x04, 0x10, 0x11, 0x12, 0x13, 0x14, 0x00, 0x11, 0x12, 0x13, 0x14, 0xFF, 0x00,
     0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x00,
     0x01, 0x02, 0x00, 0x10, 0x01, 0x11, 0x02, 0x12, 0x01, 0x00, 0x05, 0x01, 0x02, 0x03, 0x04, 0x00,
-    0xFF, 0xFF, 0xFF, 0x00, 0x10, 0x11, 0x12, 0x13, 0x14, 0x15, 0x16, 0x17, 0x20, 0x21, 0x22, 0x24,
-    0x30, 0x31, 0x32, 0x33, 0x34, 0x35, 0x36, 0x37, 0x40, 0x41, 0xFF, 0x01, 0x02, 0x03, 0xFF, 0x00,
-    0x14, 0x3A, 0x3C, 0x0A, 0x0B, 0x0C, 0x0D, 0x0E, 0x0F, 0x10, 0x11, 0x39, 0x81, 0x82, 0xFF, 0xFF};
+    0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0x00, 0x10, 0x11, 0x12, 0x13, 0x14, 0x15, 0x16, 0x17, 0x20, 0x21,
+    0x22, 0x24, 0x30, 0x31, 0x32, 0x33, 0x34, 0x35, 0x36, 0x37, 0x40, 0x41, 0xFF, 0x01, 0x02, 0x03,
+    0xFF, 0x00, 0x14, 0x3A, 0x3C, 0x0A, 0x0B, 0x0C, 0x0D, 0x0E, 0x0F, 0x10, 0x11, 0x39, 0x81, 0x82,
+    0xFF, 0xFF};
 #pragma place bank(11)
 static const __code WORD tAwtoSyncIdRow[256] = {
     0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
@@ -101,13 +103,13 @@ static const __code WORD tAwtoSyncIdRow[256] = {
     0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
     0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
     0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-    94, 0, 0, 362, 368, 369, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    94, 0, 0, 362, 368, 369, 370, 371, 0, 0, 0, 0, 0, 0, 0, 0,
     98, 0, 0, 0, 0, 0, 0, 0, 102, 0, 0, 0, 0, 0, 0, 0,
     103, 104, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
     35, 105, 107, 108, 109, 110, 106, 111, 112, 0, 113, 114, 115, 178, 179, 268,
     1, 6, 11, 180, 14, 29, 30, 31, 32, 34, 183, 184, 181, 182, 185, 186,
-    188, 199, 232, 239, 250, 210, 396, 116, 122, 139, 124, 399, 125, 400, 415, 370,
-    274, 278, 282, 305, 306, 320, 330, 336, 343, 352, 117, 355, 361, 416, 372, 371};
+    188, 199, 232, 239, 250, 210, 398, 116, 122, 139, 124, 401, 125, 402, 417, 372,
+    274, 278, 282, 305, 306, 320, 330, 336, 343, 352, 117, 355, 361, 418, 374, 373};
 #pragma place bank(11)
 WORD AwtoSyncRow(BYTE ucId, BYTE ucArg)           // row + 1 of the first match (arg 0xFF = any), 0 = not logged
 {
@@ -548,6 +550,7 @@ static void AwtoSdMode(BYTE ucMode)
             g_ucAwtoSdFlags &= ~AWTO_SD_F_TAIL;
         }
         ucN = (ucKind == AWTO_SD_KIND_DP) ? isr_g_ucAwtoDpLtN : s_ucSdPhyN;
+        AwtoPassReport();
         AwtoSyncPush(AWTO_SYNC_EV_SDONE, (ucPort - _D1_INPUT_PORT) | (ucKind << AWTO_SD_ARG_KIND) | (((s_ucSdRetry > 3) ? 3 : s_ucSdRetry) << AWTO_SD_ARG_RETRY) |
                      (((ucN > 3) ? 3 : ucN) << AWTO_SD_ARG_N), (AwtoSd12(s_usSdScan) << 20) | (AwtoSd12(s_usSdTiming) << 8) | s_ucSdPhyMs);
         g_ucAwtoSdFlags = (g_ucAwtoSdFlags & ~AWTO_SD_F_FAIL) | AWTO_SD_F_DONE;
@@ -956,6 +959,88 @@ void AwtoSyncTail(BYTE ucWhat)
     else if((ucWhat == 2) && (s_ucTailReady == 0))
     {
         s_ucTailReady = (ucD == 0) ? 1 : ucD;
+    }
+}
+
+// #311 main-loop stage timing (AWTO_PS in SysMain.c): a segment >= AWTO_PSTG_NOTE_MS ends at stage ucId. Longest pass per state is kept in
+// 4 ms units; a segment >= AWTO_PSTG_SLOW_MS writes a line (count in the value: never collapses). Report: AwtoPassReport, after the first ACTIVE.
+__xdata WORD g_usAwtoPsLast;
+__xdata WORD g_usAwtoPsT0;
+static __xdata BYTE s_ucPsSeg;                      // longest segment of this pass, 4 ms units
+static __xdata BYTE s_ucPsSegId;
+static __xdata BYTE s_ucPsSlowN;                    // slow-stage lines this boot (bit 7 = boot passes reported)
+static __xdata BYTE s_pucPsLong[2 * AWTO_PSTG_STATES];    // per state: longest pass (4 ms units), stage that owned its longest segment
+
+static BYTE AwtoPs4(WORD usMs)
+{
+    return (usMs >= 4 * 255) ? 255 : (BYTE)(usMs >> 2);
+}
+
+void AwtoPassStamp(BYTE ucId)                       // after a main-loop stage; in common (fw_build --pin-common)
+{
+    WORD usNow;
+
+    AWTO_PSTG_NOW(usNow);
+    if((WORD)(usNow - g_usAwtoPsLast) >= AWTO_PSTG_NOTE_MS)
+    {
+        AwtoPassSlow(ucId);
+        return;
+    }
+    g_usAwtoPsLast = usNow;
+}
+
+void AwtoPassSlow(BYTE ucId)
+{
+    WORD usNow;
+    WORD usD;
+
+    AWTO_PSTG_NOW(usNow);
+    usD = usNow - g_usAwtoPsLast;
+    if(AwtoPs4(usD) > s_ucPsSeg)
+    {
+        s_ucPsSeg = AwtoPs4(usD);
+        s_ucPsSegId = ucId;
+    }
+    if(usD >= AWTO_PSTG_SLOW_MS)
+    {
+        if((s_ucPsSlowN & 0x7F) != 0x7F)
+        {
+            s_ucPsSlowN++;
+        }
+        AwtoSyncPush(AWTO_SYNC_EV_PASSSLOW, ucId, ((DWORD)AwtoSysStateNow() << 24) | ((DWORD)(s_ucPsSlowN & 0x7F) << 16) | usD);
+        AWTO_PSTG_NOW(usNow);                         // the line's own cost is not the next stage's
+    }
+    g_usAwtoPsLast = usNow;
+}
+
+void AwtoPassEnd(void)                              // pass >= AWTO_PSTG_NOTE_MS: longest of its state
+{
+    BYTE ucS = AwtoSysStateNow() - AWTO_SYS_INITIAL;
+    BYTE ucQ = AwtoPs4(g_usAwtoPsLast - g_usAwtoPsT0);
+
+    if((ucS < AWTO_PSTG_STATES) && (ucQ > s_pucPsLong[2 * ucS]))
+    {
+        s_pucPsLong[2 * ucS] = ucQ;
+        s_pucPsLong[2 * ucS + 1] = s_ucPsSegId;
+    }
+    s_ucPsSeg = 0;
+}
+
+void AwtoPassReport(void)                           // once per boot: INITIAL .. ACTIVE rows that had a pass >= AWTO_PSTG_NOTE_MS
+{
+    BYTE ucS;
+
+    if((s_ucPsSlowN & 0x80) != 0)
+    {
+        return;
+    }
+    s_ucPsSlowN |= 0x80;
+    for(ucS = 0; ucS < AWTO_PSTG_STATES; ucS++)
+    {
+        if(s_pucPsLong[2 * ucS] != 0)
+        {
+            AwtoSyncPush(AWTO_SYNC_EV_PASSBOOT, s_pucPsLong[2 * ucS + 1], ((DWORD)(ucS + AWTO_SYS_INITIAL) << 24) | ((WORD)s_pucPsLong[2 * ucS] << 2));
+        }
     }
 }
 

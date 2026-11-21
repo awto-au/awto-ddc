@@ -329,6 +329,29 @@ def name(rows: list[dict], i: int, a: int) -> str:
     return row["text"] if row else f"{a:02X}"
 
 
+PASS_SLOW = 0x96
+
+
+def pass_names(header: Path | None = None) -> list[str]:
+    """AWTO_PSTG_NAMES of RL6449_Project.h: stage names by id, then the line words from AWTO_PSTG_WORD0 (firmware: fw/osd/console.c tAwtoPassName)"""
+    h = header or Path(__file__).resolve().parents[1] / "fw/sdk/Project/Header/RL6449_Project.h"
+    txt = h.read_text()
+    m = re.search(r"^#define AWTO_PSTG_NAMES\s+(.*)$", txt, re.MULTILINE)
+    w = re.search(r"^#define AWTO_PSTG_WORD0\s+(\d+)", txt, re.MULTILINE)
+    if not m or not w:
+        raise SystemExit(f"AWTO_PSTG_NAMES / AWTO_PSTG_WORD0 not in {h.name}")
+    return re.findall(r'"((?:[^"\\]|\\.)*)\\0"', m.group(1)), int(w.group(1))
+
+
+def pass_value(rows: list[dict], i: int, a: int, v: int) -> str:
+    """fmt pass (firmware copy: fw/osd/console.c AwtoPutPass): 96 slow stage (value = state << 24 | count << 16 | ms), 97 boot passes (state << 24 | ms)"""
+    names, w0 = pass_names()
+    st, stage, ms = name(rows, SYS_STATE, v >> 24), names[a] if a < w0 else f"{a:02X}", v & 0xFFFF
+    if i == PASS_SLOW:
+        return f"{names[w0]}{stage}{names[w0 + 1]}{ms}{names[w0 + 2]}{st}{names[w0 + 3]}{(v >> 16) & 0xFF})"
+    return f"{names[w0 + 5]}{st}{names[w0 + 4]}{ms}{names[w0 + 2]}{names[w0 + 6]}{stage}"
+
+
 def sys_value(rows: list[dict], fmt: str, a: int, v: int) -> str:
     """#162 step 3 system machine: transition (arg old << 4 | new, value why << 24 | ms) / request (value who << 8 | outcome)"""
     if fmt == "sys":
@@ -378,7 +401,7 @@ def line(rows: list[dict], ev: tuple, t0: int) -> str:
         return head + pre + f"{p0}{v & 0xFFFF}ms{p1}{v >> 16}ms{p2}"
     before, _, after = row["text"].partition("%")
     val = (sync_done(a, v, dt) if row["fmt"] == "sdone" else sync_link(a, v) if row["fmt"] == "slink" else
-           v if row["fmt"] == "note" else sys_value(rows, row["fmt"], a, v) if row["fmt"] in ("sys", "sysreq") else
+           v if row["fmt"] == "note" else pass_value(rows, i, a, v) if row["fmt"] == "pass" else sys_value(rows, row["fmt"], a, v) if row["fmt"] in ("sys", "sysreq") else
            name(rows, PNL_BY, v & 0xFF) if row["fmt"] == "pby" else
            name(rows, SYS_STATE, v & 0xFF) if row["fmt"] == "sname" else value(row["fmt"], a, v))     # sname: #95 LED line
     return head + pre + before + val + after

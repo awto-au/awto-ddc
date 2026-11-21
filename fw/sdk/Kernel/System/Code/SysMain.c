@@ -67,6 +67,167 @@ void SysMainStartUserCode(BYTE ucBankAddress);
 // FUNCTION DEFINITIONS
 //****************************************************************************
 //--------------------------------------------------
+// Description  : One main-loop pass. Its own function (banked): the 22 stage stamps (AWTO_PSTG, #311) do not fit main() in common.
+// Input Value  : None
+// Output Value : None
+//--------------------------------------------------
+static void SysMainPass(void)
+{
+    AwtoStackCheck();
+    AWTO_PSTG_BEGIN();
+    AWTO_LP(0);
+    AWTO_SW_MARK(0);
+    AwtoSwPoll();
+    AWTO_PSTG(AWTO_PSTG_SWPOLL);
+    AwtoDiagMainPass();
+    AWTO_PSTG(AWTO_PSTG_DIAG);
+    AWTO_PS_POLL_SITE();
+    AwtoGpioPoll();
+    AWTO_PSTG(AWTO_PSTG_GPIO);
+    AWTO_PS_POLL_SITE();
+    AwtoKeyPoll();
+    AWTO_PSTG(AWTO_PSTG_KEY);
+    AWTO_PS_POLL_SITE();
+    AwtoDiagTestCmd();
+    AWTO_PSTG(AWTO_PSTG_TESTCMD);
+    AWTO_LP(1);
+    AWTO_SW_MARK(1);
+    AWTO_PS_POLL_SITE();
+    SysMachineHandler();                    // #162 step 3: power + mode transitions (was SysPowerHandler + SysJudgeHandler)
+    AWTO_PSTG(AWTO_PSTG_SYSM);
+    UserCommonInterfacePanelPowerTick();    // #162 panel machine: right after the power switch (PHY needs power NORMAL)
+    AWTO_PSTG(AWTO_PSTG_PNL1);
+    AWTO_SW_FAST_POLL();
+    AWTO_LP(2);
+    AWTO_SW_MARK(2);
+    AWTO_PS_POLL_SITE();
+
+#if(_ALS_TYPE != _SENSER_NONE)
+    SysMainAlsHandler();            
+#endif
+
+#if((_BACKLIGHT_SENSOR == _ON) || (_NEW_BACKLIGHT_SENSOR_FUN_EN == _ON))
+    SysMainBackLightSensorHandler();
+#endif
+
+#if(_AUDIO_SUPPORT == _ON)
+    SysAudioHandler();
+#endif
+    AWTO_PSTG(AWTO_PSTG_AUDIO);
+    AWTO_SW_POLL_MARKS();
+    AWTO_LP(3);
+    AWTO_SW_MARK(3);
+    AWTO_PS_POLL_SITE();
+    SysTimerHandler();
+    AWTO_PSTG(AWTO_PSTG_TIMER);
+    AWTO_LP(4);
+    AWTO_SW_MARK(4);
+    AWTO_PS_POLL_SITE();
+    SysSourceHandler();
+    AWTO_PSTG(AWTO_PSTG_SOURCE);
+    AWTO_LP(5);
+    AWTO_SW_MARK(5);
+    AWTO_PS_POLL_SITE();
+    SysMachineWork();                       // #162 step 3: the state's scaler work (was SysModeHandler)
+    AWTO_PSTG(AWTO_PSTG_WORK);
+
+#if(_MHL_SUPPORT == _ON)
+    SysMHLMscHandler();
+#endif
+
+#if(_DP_TYPE_C_PORT_CTRL_SUPPORT == _ON)
+    SysTypeCHandler();
+
+#endif
+
+#if(_DP_SUPPORT == _ON)
+    AWTO_SW_POLL_MARKS();
+    AWTO_LP(6);
+    AWTO_SW_MARK(6);
+    AWTO_PS_POLL_SITE();
+    SysDpRxHandler();
+    AWTO_PSTG(AWTO_PSTG_DPRX);
+#endif
+
+#if((_DVI_SUPPORT == _ON) || (_HDMI_SUPPORT == _ON))
+    AWTO_LP(7);
+    AWTO_SW_MARK(7);
+    AWTO_PS_POLL_SITE();
+    SysTMDSRxHandler();
+
+#if(_HDMI_CEC_SUPPORT == _ON)
+    if(AWTO_CEC_DUE())
+    {
+        SysCecHandler();
+    }
+#endif
+    AWTO_PSTG(AWTO_PSTG_TMDS);
+#endif
+
+#if(_DP_TX_SUPPORT == _ON)
+    SysDpTxHandler();
+#endif
+
+#if(_EMBEDDED_DP_TX_SUPPORT == _ON)
+    SysDpEmbeddedTxHandler();
+#endif
+
+#if(_DP_MST_SUPPORT == _ON)
+    SysDpMstHandler();
+#endif
+
+#if(_HDMI_TX_SUPPORT == _ON)
+    SysHdmiTxHandler();
+#endif
+
+#if(_HDCP_2_2_SUPPORT == _ON)
+    AWTO_LP(8);
+    AWTO_SW_MARK(8);
+    AWTO_PS_POLL_SITE();
+    ScalerHdcp2Handler();
+    AWTO_PSTG(AWTO_PSTG_HDCP);
+#endif
+
+#if(_BILLBOARD_SCALER_SUPPORT == _ON)
+    ScalerBBHandler();
+#endif
+
+#if(_AUTO_TEST_SUPPORT == _ON)
+    SysAutotestHandler();
+#endif
+
+    AWTO_LP(9);
+    AWTO_SW_MARK(9);
+    AWTO_PS_POLL_SITE();
+    AWTO_SET_LOOP();
+    AWTO_PSTG(AWTO_PSTG_SETLOOP);
+    UserCommonInterfacePanelPowerTick();    // before the OSD handler's long draws (boot console): T3 / PWM steps due now
+    AWTO_PSTG(AWTO_PSTG_PNL2);
+    AWTO_LP(12);                            // profile: the panel tick has its own slot (#216)
+    UserCommonInterfaceOsdHandler();
+    AWTO_PSTG(AWTO_PSTG_OSD);
+
+#if(_DDCCI_CODE_REDUCTION == _OFF)
+    if(AWTO_DDCCI_POLL_ON()) AWTO_DDCCI_POLL();
+    AWTO_NET_POLL();
+    AWTO_PSTG(AWTO_PSTG_DDCPOLL);
+    AWTO_LP(10);
+    AWTO_SW_MARK(10);
+    AWTO_PS_POLL_SITE();
+    UserCommonDdcciHandler();
+    AWTO_PSTG(AWTO_PSTG_DDCCI);
+#endif
+    AWTO_PS_POLL_SITE();
+    SysColorHandler();
+    AWTO_PSTG(AWTO_PSTG_COLOR);
+    ScalerDebug();
+    AWTO_PSTG(AWTO_PSTG_DEBUG);
+    AWTO_PSTG_END();
+    AWTO_LOOP_PACE();
+
+}
+
+//--------------------------------------------------
 // Description  : The main function
 // Input Value  : None
 // Output Value : None
@@ -84,139 +245,12 @@ void main(void)
         AwtoDiagInit();
         AwtoMeasInit();
         AwtoSyncInit();
+        AWTO_PSTG_BEGIN();                  // stage stamps inside the initial flow (console open) count from here
         SysMainSystemInitial();
 
         while(SysMainSytemPowerDetect() == _TRUE)
         {
-            AwtoStackCheck();
-            AWTO_LP(0);
-            AWTO_SW_MARK(0);
-            AwtoSwPoll();
-            AwtoDiagMainPass();
-            AWTO_PS_POLL_SITE();
-            AwtoGpioPoll();
-            AWTO_PS_POLL_SITE();
-            AwtoKeyPoll();
-            AWTO_PS_POLL_SITE();
-            AwtoDiagTestCmd();
-            AWTO_LP(1);
-            AWTO_SW_MARK(1);
-            AWTO_PS_POLL_SITE();
-            SysMachineHandler();                    // #162 step 3: power + mode transitions (was SysPowerHandler + SysJudgeHandler)
-            UserCommonInterfacePanelPowerTick();    // #162 panel machine: right after the power switch (PHY needs power NORMAL)
-            AWTO_SW_FAST_POLL();
-            AWTO_LP(2);
-            AWTO_SW_MARK(2);
-            AWTO_PS_POLL_SITE();
-
-#if(_ALS_TYPE != _SENSER_NONE)
-            SysMainAlsHandler();            
-#endif
-
-#if((_BACKLIGHT_SENSOR == _ON) || (_NEW_BACKLIGHT_SENSOR_FUN_EN == _ON))
-            SysMainBackLightSensorHandler();
-#endif
-
-#if(_AUDIO_SUPPORT == _ON)
-            SysAudioHandler();
-#endif
-            AWTO_SW_POLL_MARKS();
-            AWTO_LP(3);
-            AWTO_SW_MARK(3);
-            AWTO_PS_POLL_SITE();
-            SysTimerHandler();
-            AWTO_LP(4);
-            AWTO_SW_MARK(4);
-            AWTO_PS_POLL_SITE();
-            SysSourceHandler();
-            AWTO_LP(5);
-            AWTO_SW_MARK(5);
-            AWTO_PS_POLL_SITE();
-            SysMachineWork();                       // #162 step 3: the state's scaler work (was SysModeHandler)
-
-#if(_MHL_SUPPORT == _ON)
-            SysMHLMscHandler();
-#endif
-
-#if(_DP_TYPE_C_PORT_CTRL_SUPPORT == _ON)
-            SysTypeCHandler();
-
-#endif
-
-#if(_DP_SUPPORT == _ON)
-            AWTO_SW_POLL_MARKS();
-            AWTO_LP(6);
-            AWTO_SW_MARK(6);
-            AWTO_PS_POLL_SITE();
-            SysDpRxHandler();
-#endif
-
-#if((_DVI_SUPPORT == _ON) || (_HDMI_SUPPORT == _ON))
-            AWTO_LP(7);
-            AWTO_SW_MARK(7);
-            AWTO_PS_POLL_SITE();
-            SysTMDSRxHandler();
-
-#if(_HDMI_CEC_SUPPORT == _ON)
-            if(AWTO_CEC_DUE())
-            {
-                SysCecHandler();
-            }
-#endif
-#endif
-
-#if(_DP_TX_SUPPORT == _ON)
-            SysDpTxHandler();
-#endif
-
-#if(_EMBEDDED_DP_TX_SUPPORT == _ON)
-            SysDpEmbeddedTxHandler();
-#endif
-
-#if(_DP_MST_SUPPORT == _ON)
-            SysDpMstHandler();
-#endif
-
-#if(_HDMI_TX_SUPPORT == _ON)
-            SysHdmiTxHandler();
-#endif
-
-#if(_HDCP_2_2_SUPPORT == _ON)
-            AWTO_LP(8);
-            AWTO_SW_MARK(8);
-            AWTO_PS_POLL_SITE();
-            ScalerHdcp2Handler();
-#endif
-
-#if(_BILLBOARD_SCALER_SUPPORT == _ON)
-            ScalerBBHandler();
-#endif
-
-#if(_AUTO_TEST_SUPPORT == _ON)
-            SysAutotestHandler();
-#endif
-
-            AWTO_LP(9);
-            AWTO_SW_MARK(9);
-            AWTO_PS_POLL_SITE();
-            AWTO_SET_LOOP();
-            UserCommonInterfacePanelPowerTick();    // before the OSD handler's long draws (boot console): T3 / PWM steps due now
-            AWTO_LP(12);                            // profile: the panel tick has its own slot (#216)
-            UserCommonInterfaceOsdHandler();
-
-#if(_DDCCI_CODE_REDUCTION == _OFF)
-            if(AWTO_DDCCI_POLL_ON()) AWTO_DDCCI_POLL();
-            AWTO_NET_POLL();
-            AWTO_LP(10);
-            AWTO_SW_MARK(10);
-            AWTO_PS_POLL_SITE();
-            UserCommonDdcciHandler();
-#endif
-            AWTO_PS_POLL_SITE();
-            SysColorHandler();
-            ScalerDebug();
-            AWTO_LOOP_PACE();
-
+            SysMainPass();
         }
     }
     while(_TRUE);

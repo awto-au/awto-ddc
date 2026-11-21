@@ -99,3 +99,24 @@ def test_gap_rows_decode():
     assert S.line(ROWS, (0x94, 0, 700, (102 << 16) | 100), 0) == "  700:ACTIVE wait:timer 100ms, panel ready 102ms"
     assert S.line(ROWS, (0x93, 3, 400, 120 << 2), 0).endswith("SDK OSD flag set until 480ms")
     assert S.line(ROWS, (0x95, 5, 900, 4025), 0).startswith("  900:D2 search dwell re-armed")
+
+
+def test_pass_rows_decode():
+    """#311 main-loop stage timing: slow stage line (96) and boot passes line (97); names / words from RL6449_Project.h AWTO_PSTG_NAMES"""
+    names = S.pass_names()[0]
+    osd, sub = names.index("OSD handler"), names.index("console: panel tick (open)")
+    initial = 2                                                    # AWTO_SYS_INITIAL
+    assert S.line(ROWS, (0x96, osd, 500, (initial << 24) | (4 << 16) | 214), 0) == "  500:slow pass stage OSD handler took 214ms in INITIAL (#4)"
+    assert S.line(ROWS, (0x97, sub, 700, (initial << 24) | 268), 0) == "  700:boot passes:INITIAL longest 268ms in stage console: panel tick (open)"
+
+
+def test_pass_stage_ids_match_names():
+    """every AWTO_PSTG_* stage id of the header indexes its own name; the line words start at AWTO_PSTG_WORD0"""
+    import re
+    txt = (ROOT / "fw/sdk/Project/Header/RL6449_Project.h").read_text()
+    names, w0 = S.pass_names()
+    ids = {m.group(1): int(m.group(2)) for m in re.finditer(r"^#define AWTO_PSTG_([A-Z0-9_]+)\s+(\d+)\b", txt, re.MULTILINE)}
+    stages = {k: v for k, v in ids.items() if k not in ("SLOW_MS", "NOTE_MS", "STATES", "WORD0")}
+    assert len(stages) == len(set(stages.values())) and max(stages.values()) < w0
+    assert all(names[v] for v in stages.values()), "a stage id without a name"
+    assert len(names) == w0 + 7

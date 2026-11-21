@@ -1549,6 +1549,65 @@ extern void AwtoSyncFreq(void);
 #define AWTO_SYNC_EV_INITX                                      0x93    // INITIAL exit: arg 0 = first check, 5 = longest gap between checks, 1..4 = SDK change flag (source, mode, OSD, others) that held it; value = ms since INITIAL began
 #define AWTO_SYNC_EV_ATAIL                                      0x94    // display setting done -> ACTIVE: value = panel video ready ms << 16 | ACTIVE timer ms, both since the display setting ended
 #define AWTO_SYNC_EV_DWELL                                      0x95    // arg = port: predetect re-armed the search dwell (SDK reactive time); value = ms since the search reached the port
+#define AWTO_SYNC_EV_PASSSLOW                                   0x96    // arg = stage AWTO_PS_*; value = state << 24 | per-boot count << 16 | ms: one main-loop segment >= AWTO_PS_SLOW_MS (#311)
+#define AWTO_SYNC_EV_PASSBOOT                                   0x97    // arg = stage that owned the longest pass of a state; value = state << 24 | ms (count byte 0), once per boot after ACTIVE (#311)
+// #311 main-loop stage timing: AWTO_PSTG(id) after each stage; Timer2 ms (usT2Isr). Names: sync.tsv table 19 args 0x20 + id.
+#ifndef AWTO_PSTG_SLOW_MS
+#define AWTO_PSTG_SLOW_MS                                         20      // a segment this long writes a line (7x a 4K60 pass); constant, no registry row (XDATA / NVRAM)
+#endif
+#define AWTO_PSTG_NOTE_MS                                         4       // shorter segments cost one compare; from here the longest pass per state is tracked
+#define AWTO_PSTG_STATES                                          4       // INITIAL, SEARCH, DISPLAY SETTING, ACTIVE (AWTO_SYS_INITIAL + n)
+#define AWTO_PSTG_MAIN                                            0       // stage ids: names in sync.tsv (table 19), max 31
+#define AWTO_PSTG_SWPOLL                                          1
+#define AWTO_PSTG_DIAG                                            2
+#define AWTO_PSTG_GPIO                                            3
+#define AWTO_PSTG_KEY                                             4
+#define AWTO_PSTG_TESTCMD                                         5
+#define AWTO_PSTG_SYSM                                            6
+#define AWTO_PSTG_PNL1                                            7
+#define AWTO_PSTG_AUDIO                                           8
+#define AWTO_PSTG_TIMER                                           9
+#define AWTO_PSTG_SOURCE                                          10
+#define AWTO_PSTG_WORK                                            11
+#define AWTO_PSTG_DPRX                                            12
+#define AWTO_PSTG_TMDS                                            13
+#define AWTO_PSTG_HDCP                                            14
+#define AWTO_PSTG_SETLOOP                                         15
+#define AWTO_PSTG_PNL2                                            16
+#define AWTO_PSTG_OSD                                             17
+#define AWTO_PSTG_DDCPOLL                                         18
+#define AWTO_PSTG_DDCCI                                           19
+#define AWTO_PSTG_COLOR                                           20
+#define AWTO_PSTG_DEBUG                                           21
+#define AWTO_PSTG_CON_OFF                                       22      // sub stages inside the OSD handler: the console open (fw/osd/console.c AwtoDiagConsole)
+#define AWTO_PSTG_CON_OPEN                                      23
+#define AWTO_PSTG_CON_TITLE                                     24
+#define AWTO_PSTG_CON_LOG                                       25
+#define AWTO_PSTG_CON_PNL                                       26
+#define AWTO_PSTG_CON_SHOW                                      27
+#define AWTO_PSTG_CON_MAP                                       28
+#define AWTO_PSTG_CON_ORIENT                                    29
+#define AWTO_PSTG_CON_PAL                                       30
+#define AWTO_PSTG_CON_FONT                                      31
+#define AWTO_PSTG_CON_PNL1                                      32
+#define AWTO_PSTG_CON_WIN                                       33
+#define AWTO_PSTG_CON_VIEW                                      34
+#define AWTO_PSTG_CON_FRAME                                     35
+#define AWTO_PSTG_CON_SURF                                      36
+#define AWTO_PSTG_CON_TBAR                                      37
+#define AWTO_PSTG_WORD0                                         40      // names[40..]: slow pass stage, took, ms in, (#, longest, boot passes:, stage
+#define AWTO_PSTG_NAMES                                         "-\0" "sw poll\0" "diag pass\0" "GPIO poll\0" "key poll\0" "test cmd\0" "system machine\0" "panel tick\0" "audio / ALS\0" "timer events\0" "source handler\0" "machine work\0" "DP rx\0" "TMDS rx\0" "HDCP 2\0" "set loop\0" "panel tick 2\0" "OSD handler\0" "DDC/CI poll\0" "DDC/CI handler\0" "colour handler\0" "debug\0" "console: menu close, OSD off\0" "console: text open\0" "console: title bar\0" "console: log backfill\0" "console: panel tick\0" "console: show\0" "console: map apply\0" "console: OSD orient\0" "console: palette\0" "console: font load\0" "console: panel tick (open)\0" "console: place corner\0" "console: viewport\0" "console: frame window\0" "console: surface window\0" "console: title window\0" "\0" "\0" "slow pass stage \0" " took \0" "ms in \0" " (#\0" " longest \0" "boot passes:\0" "stage \0"
+extern __xdata unsigned int g_usAwtoPsLast;     // usT2Isr at the previous stamp (main only)
+extern __xdata unsigned int g_usAwtoPsT0;       // usT2Isr at the pass start
+extern void AwtoPassStamp(unsigned char ucId);
+extern void AwtoPassSlow(unsigned char ucId);
+extern void AwtoPassEnd(void);
+extern void AwtoPassReport(void);
+extern unsigned char AwtoSysStateNow(void);
+#define AWTO_PSTG_NOW(v)                                          { do { (v) = isr_g_stAwtoDiag.usT2Isr; } while((v) != isr_g_stAwtoDiag.usT2Isr); }   // 16-bit read torn by the ISR: read again
+#define AWTO_PSTG_BEGIN()                                         { unsigned int usPs_; AWTO_PSTG_NOW(usPs_); g_usAwtoPsLast = g_usAwtoPsT0 = usPs_; }
+#define AWTO_PSTG(id)                                           AwtoPassStamp(id)    // pinned common (main is there): one lcall per stage
+#define AWTO_PSTG_END()                                           { if((unsigned int)(g_usAwtoPsLast - g_usAwtoPsT0) >= AWTO_PSTG_NOTE_MS) { AwtoPassEnd(); } }
 #define AWTO_VISIT_REACHED                                      0x80    // F3 arg: search reached a port (bit 0 predetect on, bit 1 cable detected); else it left: flaps in value
 #define AWTO_VISIT_DWELL                                        0x08    // F3 left: the dwell was re-armed by predetect (AWTO_SYNC_EV_DWELL)
 #define AWTO_VISIT_SEEN                                         0x04    // F3 left: predetect was on at some point

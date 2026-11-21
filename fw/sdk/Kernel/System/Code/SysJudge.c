@@ -703,6 +703,11 @@ static void SysMachineJudge(void)
                  ((s_ucSysState != AWTO_SYS_NOSIGNAL) && (s_ucSysState != AWTO_SYS_WAKE) && (s_ucSysState != AWTO_SYS_SAVING)));
 }
 
+BYTE AwtoSysStateNow(void)                      // AWTO_SYS_*: main-loop stage timing (AWTO_PS_BEGIN, #311)
+{
+    return s_ucSysState;
+}
+
 //--------------------------------------------------
 // Description  : System machine step, once per main-loop pass (slot of SysPowerHandler + SysJudgeHandler): power first,
 //                then the mode transitions

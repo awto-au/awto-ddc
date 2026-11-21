@@ -15,6 +15,7 @@
 #   sdone sync DONE (EF): arg = port idx | kind << 2 | scan retries << 4 | PHY set-ups or DP trainings << 6, value = scan ok ms << 20 | timing ms << 8 | PHY / link ms; the line prints the ACTIVE ms itself (docs/sync-log-design.md)
 #   slink link health (FF): HDMI = SCDC ratio / scrambling + CED error counters, DP = rate / lanes / DPCD 202 203 (docs/sync-log-design.md)
 #   visit search visit (F3): arg bit 7 = reached (bit 0 predetect on, bit 1 cable), else left (bit 2 predetect seen, bit 1 port disabled, bit 3 dwell re-armed), value = predetect edges << 24 | port << 16 | ms on the port
+#   pass  main-loop stage timing (#311), the fmt prints the whole line (words + stage names: RL6449_Project.h AWTO_PSTG_NAMES): 96 slow: arg = stage id, value = state << 24 | count << 16 | ms -> "slow pass stage OSD handler took 268ms in INITIAL (#1)"; 97 boot passes: arg = stage, value = state << 24 | ms -> "boot passes:INITIAL longest 268ms in stage OSD handler"
 #   pms   value = port << 16 | ms -> "D2, 188ms"   psrc  value = port << 8 | source type -> "D2 HDMI"   rms  value = register << 16 | ms -> "71A4 40ms"
 #   lim   value = width << 16 | limit -> "3840 of 4096 px"
 #   src   value = SDK source type -> "HDMI"           harg  arg in hex
@@ -409,6 +410,8 @@ FC	01	pms	DP link trained:% after the loop first saw it training	timing
 93	04	ms	INITIAL:SDK other flag set until %	timing
 94	00	ms2	ACTIVE wait:timer %, panel ready %	timing
 95	*	portms	search dwell re-armed, % after reaching	warning
+96	*	pass	%	warning
+97	*	pass	%	timing
 EF	*	sdone	sync DONE %
 FF	*	slink	sync link %	timing
 FE	00	pms	sync FAILED:nothing detected on the input, no clock or link (%)	error

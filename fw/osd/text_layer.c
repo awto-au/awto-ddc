@@ -80,7 +80,9 @@ void osd_tc_open(BYTE ucChars, BYTE ucLines, BYTE ucFont)
     OsdFuncCloseWindow(_OSD_WINDOW_ALL);
     SET_OSD_DOUBLE_SIZE(GET_OSD_NVRAM_DOUBLE_SIZE());
     OsdFuncApplyMap(WIDTH(ucChars), HEIGHT(ucLines), COLOR(0, 0), osd_font_cw(ucFont));
+    AWTO_PSTG(AWTO_PSTG_CON_MAP);
     AwtoOsdOrient(HEIGHT(ucLines));                                                            // also: roll-up (viewport scroll) off
+    AWTO_PSTG(AWTO_PSTG_CON_ORIENT);
     s_ucVpRows = 0;
     s_ucVpFirst = 0;
     s_ucVpEnd = ucLines;
@@ -90,7 +92,9 @@ void osd_tc_open(BYTE ucChars, BYTE ucLines, BYTE ucFont)
     {
         ScalerOsdSetColorPalette(ucI + AWTO_PAL_FIRST, tAwtoPal[ucI][0], tAwtoPal[ucI][1], tAwtoPal[ucI][2]);
     }
+    AWTO_PSTG(AWTO_PSTG_CON_PAL);
     osd_font_load(ucFont);
+    AWTO_PSTG(AWTO_PSTG_CON_FONT);
 }
 
 extern BYTE __xdata osd_cw;

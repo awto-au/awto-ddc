@@ -74,3 +74,11 @@ Existing sync lines stay (C1 / C6 / C2 / F0..F4 / FC / system machine); the new 
 - HPD edges (FA 00 / 01) are sampled every main-loop pass, now also in power saving; they are written without repeat collapse and carry the ring ms.
 - Host join (#284): `synclog --json` carries `fw_now` and per entry `fw` / `poll_wall` (read time of the fw clock minus the ms since the entry); `unit_log` lines without a host sync use it (marked `~`). A warm reset restarts the fw clock, so host-synced time needs `host_time.py` after the reset.
 - Cost: XDATA 18 B (visit 3, INITIAL 8, tail 5, EDID 2), no new delay; per pass: one compare in `AwtoSyncDetect`, one call in the INITIAL judge pass.
+
+## Main-loop stage timing (#311: where a slow pass goes; no behaviour change)
+- `AWTO_PSTG(id)` (RL6449_Project.h) after each stage of `SysMainPass` (SysMain.c; the pass body moved out of `main()`: common bank full) and after the sub-calls of the console open (`AwtoDiagConsole`, `osd_tc_open`, `AwtoTextOpen`). `AwtoPassStamp` (sync.c, pinned common) reads the Timer2 ms counter (`usT2Isr`, re-read when torn); under `AWTO_PSTG_NOTE_MS` (4 ms) it only stores the stamp.
+- A segment >= `AWTO_PSTG_SLOW_MS` (20 ms, `#ifndef` constant, `-D` overrides; no registry row: XDATA / NVRAM) writes `slow pass stage <name> took Nms in <STATE> (#C)` (id 96, arg = stage id, value = state << 24 | per-boot count << 16 | ms). The count makes every line unique: it never collapses. State = system state when the segment ended.
+- Longest pass per state (INITIAL, SEARCH, DISPLAY SETTING, ACTIVE; passes >= 4 ms, 4 ms units) and its longest segment: `boot passes:<STATE> longest Nms in stage <name>` (id 97), once per boot before the first `sync DONE` (ACTIVE row not yet filled then).
+- Names and line words: `AWTO_PSTG_NAMES` (RL6449_Project.h, ids < `AWTO_PSTG_WORD0`, then the words); firmware table `tAwtoPassName` + reader in bank 6 (bank 11 sync text and common are full), host `sync_log.pass_names()`, fmt `pass` (34, `AwtoPutPass` / `pass_value`).
+- A pass is attributed to its state at the end: the pass that moves AC ON -> INITIAL is an INITIAL pass.
+- Cost: XDATA 15 B (+4 B layout), flash common -185 B (main shrank), cycles/pass +25 (sim, `./dev.py stats`). Findings and boot table: awto-ddc#311.
