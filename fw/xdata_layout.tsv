@@ -19,7 +19,7 @@ ScalerCommonTimerFunction	0xd700	1727	64
 awto_nvram_nvram	0xd700	1791	64
 RTDFactoryFunction	0xd700	1855	63
 RL6449_Series_FRC	0xd700	1918	62
-RL6449_Series_TMDSRx3	0xd700	2038	57
+RL6449_Series_TMDSRx3	0xd700	2038	4
 diag	0xd700	2095	54
 awto_arith_arith	0xd700	2149	50
 ScalerSync	0xd700	2199	48
