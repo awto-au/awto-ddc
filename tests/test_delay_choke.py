@@ -57,19 +57,24 @@ def test_clean_image_passes():
     assert rc == 0, out[-1200:]
 
 
+def dsym(name):
+    return int(re.search(rf"^\s+([0-9A-F]{{8}})\s+_{name}\s", IMG.with_suffix(".map").read_text(errors="replace"), re.MULTILINE).group(1), 16)
+
+
 def test_loop_removed_from_delay_loops_fails(tmp_path):
     a = sym("AwtoDelayLoops")
-    rc, out = run_gate(mutated(tmp_path, [(a + 3, bytes.fromhex("d50bfd"), b"\x00\x00\x00")]))      # djnz -> 3 nops: no wait
+    rc, out = run_gate(mutated(tmp_path, [(a + 4, bytes.fromhex("dffe"), b"\x00\x00")]))        # djnz R7 -> 2 nops: no wait
     assert rc != 0 and "FAIL" in out, out[-800:]
 
 
 def test_outer_loop_removed_from_delay_xus_fails(tmp_path):
     a = sym("AwtoDelayXus")
-    rc, out = run_gate(mutated(tmp_path, [(a + 6, bytes.fromhex("d50df7"), b"\x00\x00\x00")]))      # outer djnz -> 3 nops: one pass only
+    rc, out = run_gate(mutated(tmp_path, [(a + 17, bytes.fromhex("d506f9"), b"\x00\x00\x00")]))   # outer djnz R6 -> 3 nops: one pass only
     assert rc != 0 and "FAIL" in out, out[-800:]
 
 
 def test_wrong_base_count_in_delay_xus_fails(tmp_path):
     a = sym("AwtoDelayXus")
-    rc, out = run_gate(mutated(tmp_path, [(a, bytes.fromhex("85090b"), bytes.fromhex("85080b"))]))   # reads the 5 us count (109) not the 4 us one (87): +25 %
+    good, wrong = dsym("d_isr_g_ucDelayXusN_Base"), dsym("d_g_ucDelay5usN_Base")
+    rc, out = run_gate(mutated(tmp_path, [(a + 13, bytes([0xAF, good]), bytes([0xAF, wrong]))]))     # reads the 5 us count (146) not the 4 us one (116): +26 %
     assert rc != 0 and "FAIL" in out, out[-800:]

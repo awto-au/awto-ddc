@@ -1471,7 +1471,7 @@ extern void AwtoHtSync(unsigned char *puc);
 // DDC live: HDCP 1.4 Ri checks run every 2 s (the slowest regular DDC traffic) x 1.25 = 2.5 s -> 3 s = 12 polls; expiry = "ddc-"
 #define AWTO_SRC_DDC_POLLS                                      12
 // Micro-delay long-block record (fw/timer/delay.c): written by AwtoDelayLong in any context, read and cleared by AwtoDelayLongPoll (main)
-#define AWTO_DLY_SLACK_TICKS                                    2       // TH2 ticks (256 counts) a delay may exceed its expected ticks by: sampling floor + call overhead
+#define AWTO_DLY_SLACK_TICKS                                    8       // TH2 ticks (256 counts, 8.7 us at 350.8 MHz) a delay may exceed its expected ticks by: a Timer2 tick inside it (3 ticks) + sampling floor + call overhead
 #define AWTO_DLY_PASS_CNT                                       4       // counts per AwtoDelayXus pass besides the base loop, for the expected ticks
 typedef struct
 {

@@ -68,6 +68,12 @@
 - Default caps: ISR function / handler tree and any function that clears EX0 or EA: 100 us; main-context function: 1000 us. Above the cap = FAIL unless `docs/delay-budget.tsv` has a row for it: `budget_us` (the new cap), `extra_us` (blocking the inventory cannot see: flash erase, AUX retries, the HPD-IRQ loop), `reason` (one line, required), `review` (ok / unreviewed).
 - A new wait that pushes a function over its cap fails the gate; raising a cap is a reviewed edit of that TSV. `delay_audit.py --write-budget` adds rows (unreviewed) for functions over their default.
 
+## Waits the inventory cannot see (rows with `extra_us` in `docs/delay-budget.tsv`)
+- Timer2 HPD-IRQ loop (`ScalerSyncDpHpdIrqAssertTimer2EventProc_EXINT`, `DP_RX_HPD_IRQ_ASSERT_T2_DELAY`): passes of the 4 us base through `AwtoDelayXus`, in the Timer2 ISR; the 1190 us cap is the maximum count. Fix proposal: HPD low for the IRQ pulse width from a Timer0 event (non-blocking) instead of a busy loop. DP timing change: hardware test first (unit 2 DP-1 or unit 3 DP-4).
+- `ScalerDisplayDPTx1AuxRead` / `AuxWrite`: 7 retries of the AUX reply wait (805 us each, 5635 us per call, main context). Fix proposal: shorten the retry bound to what a DP sink needs (AUX reply timeout in the DP spec) or yield to the main loop between tries. DP timing change: hardware test first.
+- Flash sector erase (`ScalerFlashErasePage`): the MCU halts until the flash finishes; capped at the flash datasheet worst case, not shortened by software.
+- Interrupt-masked sections: a function that clears EX0 or EA gets the ISR cap (100 us); PhySetDeferred (EX0 masked) is allowed 5545 us by row until the tmds-phy work shortens it.
+
 ## Run
 - Gate: `scripts/fw_gates.py <stem> --only delays` (about 55 s with both images): panel_sim scenario (cold boot, POWER off / on, signal loss, power saving = IOSC, wake) at the image's clock, class A wall time vs argument, Timer2 / wall, every executed loop site >= 99 % of nominal, image counts = formula, DDC debounce, `delay_audit.py --check`. A sibling image `<stem minus -be>-clk87-be` (`-D AWTO_CLOCK_MHZ=87`) is measured too and compared.
 - Manual: `scripts/delay_sim.py BIN MAP --other BIN87 MAP87 --audit`; regenerate the inventory after a build: `scripts/delay_audit.py --write`; counts: `scripts/delay_audit.py --counts`. Logs `tmp/logs/delay_sim.log`, `tmp/logs/delay_audit.log`.

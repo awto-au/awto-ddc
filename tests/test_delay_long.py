@@ -16,7 +16,7 @@ sys.path.insert(0, str(ROOT / "scripts"))
 os.environ.setdefault("AWTO_SIM_CORE", "fast")
 
 TH2 = 0xCD
-JUMP_TICKS = 40                     # TH2 ticks added at the tail: far over expected + AWTO_DLY_SLACK_TICKS
+START_TH2, JUMP_TICKS = 0x90, 40   # TH2 at entry and the elapsed ticks injected: no Timer2 reload inside, far over expected + AWTO_DLY_SLACK_TICKS
 
 
 def _image():
@@ -48,7 +48,9 @@ def test_injected_stall_is_recorded():
         def jump(m_, r):
             if not fired:
                 fired.append(1)
-                m_.wr(TH2, bytes([(m_.rd(TH2, 1, "sfr")[0] + JUMP_TICKS) & 0xFF]), "sfr")
+                m_.wr(0xE0, bytes([START_TH2]), "sfr")                 # ACC = TH2 at entry, R7 = expected ticks: a clean no-wrap case
+                m_.wr(7, bytes([0]), "iram")
+                m_.wr(TH2, bytes([START_TH2 + JUMP_TICKS]), "sfr")
 
         m.stubs.setdefault(end, []).append((None, "probe", jump))
         m.core.pch[end] |= 0xFFFF
@@ -59,4 +61,4 @@ def test_injected_stall_is_recorded():
     finally:
         run.bus.close()
     assert fired, "AwtoDelayEnd never ran"
-    assert seen[0] >= 1 and seen[1] >= JUMP_TICKS - 2, rec_bytes.hex()
+    assert seen[0] >= 1 and seen[1] == JUMP_TICKS, rec_bytes.hex()

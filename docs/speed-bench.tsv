@@ -102,3 +102,5 @@ date	commit	image	label	passes	cycles_pass	work	stub_entries	stub_cyc	instr_pass
 2026-11-21T16:50:12+11:00	935dafc8	AWT26110003-d2-be	d2-long-block-log													0	350	18.8	0.69
 2026-11-21T17:04:56+11:00	3e2a3d8b	AWT26110003-d4-be	d4-stall-classes	12	163340	126775	49.5	2236	105204	174.9			756165		
 2026-11-21T17:04:57+11:00	3e2a3d8b	AWT26110003-d4-be	d4-stall-classes													0	350	19.1	0.69
+2026-11-21T17:12:03+11:00	8ff7cb43	AWT26110003-d5-be	d5-final	12	163340	126775	49.5	2236	105204	174.9			756165		
+2026-11-21T17:12:04+11:00	8ff7cb43	AWT26110003-d5-be	d5-final													0	350	19.1	0.69
