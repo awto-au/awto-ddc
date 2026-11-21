@@ -47,7 +47,11 @@
 //****************************************************************************
 // VARIABLE DECLARATIONS
 //****************************************************************************
-StructTMDSCtrlInfo isr_g_stTMDSRx3CtrlInfo;
+StructTMDSCtrlInfo g_stTMDSRx3CtrlInfo;
+volatile bit d_g_bTMDSRx3HDMI2RREnable = _FALSE;
+volatile bit d_isr_g_bTMDSRx3HDMI2HighSpeedMode = _FALSE;
+volatile bit d_isr_g_bTMDSRx3TMDSPhySet = _FALSE;
+volatile bit d_isr_g_bTMDSRx3TMDSDdcDetected = _FALSE;
 volatile WORD isr_g_usTMDSRx3ClkCount;
 volatile WORD isr_g_usTMDSRx3PhyCount;
 volatile WORD isr_g_usTMDSRx3PhyClk;

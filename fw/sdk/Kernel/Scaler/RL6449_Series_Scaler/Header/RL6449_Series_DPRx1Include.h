@@ -177,7 +177,9 @@ extern BYTE g_ucDpRx1LinkRequest01;
 extern BYTE g_ucDpRx1LinkRequest23;
 extern BYTE g_pucDpRx1Backup[3];
 
-extern BYTE isr_g_ucDpRx1Info;
+extern BYTE g_ucDpRx1Info;
+extern volatile bit d_isr_g_bDpRx1FakeLinkTraining;
+extern volatile bit d_isr_g_bDpRx1CrcCalculate;
 extern BYTE g_ucDpRx1LinkRate;
 extern volatile BYTE g_ucDpRx1LaneCount;
 extern BYTE g_ucDpRx1TrainingPatternSet;

@@ -50,7 +50,9 @@ BYTE g_ucDpRx1LinkStatus23;
 BYTE g_ucDpRx1LinkRequest01;
 BYTE g_ucDpRx1LinkRequest23;
 BYTE g_pucDpRx1Backup[3];
-BYTE isr_g_ucDpRx1Info;
+BYTE g_ucDpRx1Info;                                // bit6 only (main); bit7 / bit5 are the two flags below
+volatile bit d_isr_g_bDpRx1FakeLinkTraining = _FALSE;   // main writes, EXINT0 reads
+volatile bit d_isr_g_bDpRx1CrcCalculate = _FALSE;       // EXINT0 sets, main reads / clears
 BYTE g_ucDpRx1LinkRate;
 volatile BYTE g_ucDpRx1LaneCount;
 BYTE g_ucDpRx1TrainingPatternSet;

@@ -14,11 +14,11 @@
 # Reviewed 2026-11-05 (#26): optimizer-fold 110 / unreachable 126. 16 BUG sites (non-volatile ISR flags) fixed by the volatile bit rule of scripts/sdk_import.py, no entry
 ^unreachable code$	Kernel/Scaler/RL6449_Series_Scaler/Code/RL6449_Series_DisplayDPTx.c	725	ok	OK-CONFIG: _PANEL_DPTX_LINK_RATE==HBR2 (AWTO_M280DCA_E3B panel) is constant; RBR/HBR table else-branch dead
 ^conditional flow changed by optimizer	Kernel/Scaler/RL6449_Series_Scaler/Code/RL6449_Series_DP_INT.c	868	ok	OK-CONFIG: bReturnValueD0 is a local bit only assigned in D0-DP code that is compiled out; D0==_TRUE folds false, D1 term still tested
-^conditional flow changed by optimizer	Kernel/Scaler/RL6449_Series_Scaler/Code/RL6449_Series_DPRx1.c	2129	ok	OK-HARMLESS: local ucpllo is set to 1 on the only path reaching it; fold is correct (no ISR/HW involvement)
-^unreachable code$	Kernel/Scaler/RL6449_Series_Scaler/Code/RL6449_Series_DPRx1.c	466	ok	OK-CONFIG: _D1_DP_LINK_CLK_RATE is constant (=0x14 HBR2); one arm of the link-rate if/else is dead
-^unreachable code$	Kernel/Scaler/RL6449_Series_Scaler/Code/RL6449_Series_DPRx1.c	564	ok	OK-CONFIG: _D1_DP_LINK_CLK_RATE is constant (=0x14 HBR2); one arm of the link-rate if/else is dead
-^unreachable code$	Kernel/Scaler/RL6449_Series_Scaler/Code/RL6449_Series_DPRx1.c	670	ok	OK-CONFIG: _D1_DP_LINK_CLK_RATE is constant (=0x14 HBR2); one arm of the link-rate if/else is dead
-^conditional flow changed by optimizer	Kernel/Scaler/RL6449_Series_Scaler/Code/RL6449_Series_DPRx1.c	823	ok	OK-HARMLESS: switch(ucDpcdLane&0x1F): case _DP_FOUR_LANE shares body with default, SDCC drops the redundant compare; same dispatch
+^conditional flow changed by optimizer	Kernel/Scaler/RL6449_Series_Scaler/Code/RL6449_Series_DPRx1.c	2131	ok	OK-HARMLESS: local ucpllo is set to 1 on the only path reaching it; fold is correct (no ISR/HW involvement)
+^unreachable code$	Kernel/Scaler/RL6449_Series_Scaler/Code/RL6449_Series_DPRx1.c	468	ok	OK-CONFIG: _D1_DP_LINK_CLK_RATE is constant (=0x14 HBR2); one arm of the link-rate if/else is dead
+^unreachable code$	Kernel/Scaler/RL6449_Series_Scaler/Code/RL6449_Series_DPRx1.c	566	ok	OK-CONFIG: _D1_DP_LINK_CLK_RATE is constant (=0x14 HBR2); one arm of the link-rate if/else is dead
+^unreachable code$	Kernel/Scaler/RL6449_Series_Scaler/Code/RL6449_Series_DPRx1.c	672	ok	OK-CONFIG: _D1_DP_LINK_CLK_RATE is constant (=0x14 HBR2); one arm of the link-rate if/else is dead
+^conditional flow changed by optimizer	Kernel/Scaler/RL6449_Series_Scaler/Code/RL6449_Series_DPRx1.c	825	ok	OK-HARMLESS: switch(ucDpcdLane&0x1F): case _DP_FOUR_LANE shares body with default, SDCC drops the redundant compare; same dispatch
 ^conditional flow changed by optimizer	Kernel/Scaler/RL6449_Series_Scaler/Code/RL6449_Series_DPRx1_INT.c	104	ok	OK-HARMLESS: switch(g_ucDpRx1LaneCount): FOUR_LANE and default share body; compare dropped, same dispatch
 ^conditional flow changed by optimizer	Kernel/Scaler/RL6449_Series_Scaler/Code/RL6449_Series_LDO.c	57	ok	OK-CONFIG: all cases of switch(enumPorStatus) are empty for this config; whole switch folds to nothing
 ^conditional flow changed by optimizer	Kernel/Scaler/RL6449_Series_Scaler/Code/RL6449_Series_Mcu.c	1342	ok	OK-CONFIG: _DEBUG_MESSAGE_SUPPORT==_ON (awto bring-up, Debug.h) forces enumMode=_DEBUG_MODE so enumMode==_DDCCI_MODE is false; main debug engine stays in debug mode
@@ -49,8 +49,8 @@
 ^conditional flow changed by optimizer	Kernel/Scaler/RL6449_Series_Scaler/Code/RL6449_Series_PLL.c	303	ok	OK-CONFIG: usFCode=ulCMUFreq%(_EXT_XTAL*2) is compile-time constant from constant link rate and xtal
 ^conditional flow changed by optimizer	Kernel/Scaler/RL6449_Series_Scaler/Code/RL6449_Series_TimerFunction.c	166	ok	OK-CONFIG: _OD_SUPPORT/_FRC_SUPPORT off: _EVENT_DEN_START arm equals the default arm (ByReg), compare removed
 ^conditional flow changed by optimizer	Kernel/Scaler/RL6449_Series_Scaler/Code/RL6449_Series_TimerFunction.c	65	ok	OK-CONFIG: _OD_SUPPORT/_FRC_SUPPORT off: _EVENT_DEN_START arm equals the default arm (ByReg), compare removed
-^conditional flow changed by optimizer	Kernel/Scaler/RL6449_Series_Scaler/Code/RL6449_Series_TMDSRx2.c	3166	ok	OK-HARMLESS: local ucDivS is only assigned just before break, so ucDivS==0 is always true when tested; pData[15]==254 guard stays
-^conditional flow changed by optimizer	Kernel/Scaler/RL6449_Series_Scaler/Code/RL6449_Series_TMDSRx3.c	3169	ok	OK-HARMLESS: same as TMDSRx2: ucDivS is only set immediately before break
+^conditional flow changed by optimizer	Kernel/Scaler/RL6449_Series_Scaler/Code/RL6449_Series_TMDSRx2.c	3170	ok	OK-HARMLESS: local ucDivS is only assigned just before break, so ucDivS==0 is always true when tested; pData[15]==254 guard stays
+^conditional flow changed by optimizer	Kernel/Scaler/RL6449_Series_Scaler/Code/RL6449_Series_TMDSRx3.c	3173	ok	OK-HARMLESS: same as TMDSRx2: ucDivS is only set immediately before break
 ^conditional flow changed by optimizer	Kernel/Scaler/ScalerCommonFunction/Code/ScalerCommonDPRx1.c	511	ok	OK-HARMLESS: switch(enumDpMeasurePeriod): 2000_CYCLE shares body with default; same dispatch
 ^conditional flow changed by optimizer	Kernel/Scaler/ScalerCommonFunction/Code/ScalerCommonDPRx1.c	588	ok	OK-HARMLESS: switch(ucDpcdLane): default and _DP_FOUR_LANE share body; same dispatch
 ^conditional flow changed by optimizer	Kernel/Scaler/ScalerCommonFunction/Code/ScalerCommonDPRx1.c	656	ok	OK-HARMLESS: switch(ucDpcdLane): default and _DP_FOUR_LANE share body; same dispatch

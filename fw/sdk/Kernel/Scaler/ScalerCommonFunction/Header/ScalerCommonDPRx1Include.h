@@ -35,20 +35,20 @@
 //----------------------------------------------------------------------------
 // Macro of Dp Link Training Information
 //----------------------------------------------------------------------------
-#define GET_DP_RX1_FAKE_LINK_TRAINING()                 ((isr_g_ucDpRx1Info & _BIT7) >> 7)
-#define SET_DP_RX1_FAKE_LINK_TRAINING()                 (isr_g_ucDpRx1Info |= _BIT7)
-#define CLR_DP_RX1_FAKE_LINK_TRAINING()                 (isr_g_ucDpRx1Info &= ~_BIT7)
+#define GET_DP_RX1_FAKE_LINK_TRAINING()                 (d_isr_g_bDpRx1FakeLinkTraining)
+#define SET_DP_RX1_FAKE_LINK_TRAINING()                 (d_isr_g_bDpRx1FakeLinkTraining = _TRUE)
+#define CLR_DP_RX1_FAKE_LINK_TRAINING()                 (d_isr_g_bDpRx1FakeLinkTraining = _FALSE)
 
-#define GET_DP_RX1_VALID_VIDEO_CHECK()                  ((isr_g_ucDpRx1Info & _BIT6) >> 6)
-#define SET_DP_RX1_VALID_VIDEO_CHECK()                  (isr_g_ucDpRx1Info |= _BIT6)
+#define GET_DP_RX1_VALID_VIDEO_CHECK()                  ((g_ucDpRx1Info & _BIT6) >> 6)
+#define SET_DP_RX1_VALID_VIDEO_CHECK()                  (g_ucDpRx1Info |= _BIT6)
 #define CLR_DP_RX1_VALID_VIDEO_CHECK()                  {\
                                                             ScalerTimerCancelTimerEvent(_SCALER_TIMER_EVENT_DP_RX1_VALID_SIGNAL_DETECT_CHECK);\
-                                                            (isr_g_ucDpRx1Info &= ~_BIT6);\
+                                                            (g_ucDpRx1Info &= ~_BIT6);\
                                                         }
 
-#define GET_DP_RX1_CRC_CALCULATE()                      ((isr_g_ucDpRx1Info & _BIT5) >> 5)
-#define SET_DP_RX1_CRC_CALCULATE()                      (isr_g_ucDpRx1Info |= _BIT5)
-#define CLR_DP_RX1_CRC_CALCULATE()                      (isr_g_ucDpRx1Info &= ~_BIT5)
+#define GET_DP_RX1_CRC_CALCULATE()                      (d_isr_g_bDpRx1CrcCalculate)
+#define SET_DP_RX1_CRC_CALCULATE()                      (d_isr_g_bDpRx1CrcCalculate = _TRUE)
+#define CLR_DP_RX1_CRC_CALCULATE()                      (d_isr_g_bDpRx1CrcCalculate = _FALSE)
 
 #define GET_DP_RX1_PS_AUX_TOGGLE()                      (d_isr_g_bDpRx1PSAuxToggle)
 #define SET_DP_RX1_PS_AUX_TOGGLE()                      (d_isr_g_bDpRx1PSAuxToggle = _TRUE)

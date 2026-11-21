@@ -3,7 +3,8 @@
 so this raises EX0 with the P71 registers set and stubs the clock measure, CDR check and PHY set-up).
 
 usage: tmds_phy_defer_test.py BIN [MAP]
-- isr:   stable IRQ -> handler only sets the pending flag; SetPhy_EXINT0 not called, PHY_SET and the unstable IRQ enable still off.
+- isr:   stable IRQ -> handler only sets the pending flag; SetPhy_EXINT0 not called, the unstable IRQ enable still off.
+         (PHY_SET is a `bit` since #281 step 2: not in the map, not read here.)
 - main:  next main-loop pass (SysTMDSRxHandler) -> set-up runs once with EX0 masked, unstable IRQ enabled first, pending cleared,
          EX0 restored. The scan-start call is the same function (not reached in sim: scan is stubbed).
 - once:  no second set-up without a new IRQ.
@@ -22,7 +23,6 @@ import fw_sim as S
 
 LOG = ROOT / "tmp/logs/tmds_phy_defer_test.log"
 EF, E6, E8, E9, EA_, EB = 0x71EF, 0x71E6, 0x71E8, 0x71E9, 0x71EA, 0x71EB
-PHY_SET_MASK = 0x40                  # StructTMDSCtrlInfo.b1TMDSPhySet (7th bit field of the first byte)
 COUNT = 0x0A00
 fails = 0
 
@@ -49,7 +49,7 @@ def main() -> int:
         say("FAIL never reached ACTIVE")
         return 1
     m = bus.m
-    pend, info, clk_irq = m.addr("isr_g_ucTMDSRx2PhyPend"), m.addr("isr_g_stTMDSRx2CtrlInfo"), m.addr("isr_g_ucTMDSRx2ClkIRQ")
+    pend, info, clk_irq = m.addr("isr_g_ucTMDSRx2PhyPend"), m.addr("g_stTMDSRx2CtrlInfo"), m.addr("isr_g_ucTMDSRx2ClkIRQ")
     ev = {"phy": [], "cdr": []}
 
     def ex0():
@@ -78,8 +78,8 @@ def main() -> int:
     m.wr(0x88, bytes([m.rd(0x88, 1, "sfr")[0] | 0x02]), "sfr")      # TCON.IE0: EXINT0
     bus.wait(0.0005)
     b = ev["phy"]
-    check("isr", m.rd(pend)[0] == 1 and not b and (m.rd(info)[0] & PHY_SET_MASK) == 0 and (m.rd(E6)[0] & 0x02) == 0,
-          f"pend {m.rd(pend)[0]} (1), SetPhy calls {len(b)} (0), PHY_SET {bool(m.rd(info)[0] & PHY_SET_MASK)} (False), "
+    check("isr", m.rd(pend)[0] == 1 and not b and (m.rd(E6)[0] & 0x02) == 0,
+          f"pend {m.rd(pend)[0]} (1), SetPhy calls {len(b)} (0), "
           f"E6 {m.rd(E6)[0]:02x} unstable enable {(m.rd(E6)[0] >> 1) & 1} (0)")
     bus.wait(0.3)                                # SysTMDSRxHandler runs the deferred set-up
     b = ev["phy"]
