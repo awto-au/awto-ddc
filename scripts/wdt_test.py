@@ -1200,7 +1200,7 @@ class Runner:
         txt = f"Timer2 ISR {min(t2)}..{max(t2)} cycles, mean {sum(t2) / len(t2):.0f} (n {len(t2)})"
         mp = self._cycles("AwtoDiagMainPass", 50)
         txt += f"; AwtoDiagMainPass {min(mp)}..{max(mp)} (pass bookkeeping + poke)"
-        if self.has("AwtoT0EvIsr"):
+        if self.has("AwtoT0EvIsr") and self.has("AwtoT0EvTest"):      # the 0x2A test cmd needs the -D _AWTO_T0EV_TEST image
             self._arm_cmd(0x2A) if getattr(self, "_hooked", False) else self.t.cmd(0x2A)
             t0 = self._cycles("SysTimerIntProc0", 30)
             txt += f"; Timer0 ISR {min(t0)}..{max(t0)} over the {len(t0)} ticks of a 30 ms rebuild event (the last fires it)"
