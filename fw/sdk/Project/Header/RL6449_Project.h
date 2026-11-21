@@ -897,19 +897,26 @@ extern __xdata unsigned char g_ucPhyProbeSkip;
 extern void AwtoPhyProbeStart(unsigned char ucPort, unsigned char ucPath);
 extern void AwtoPhyProbeWait(unsigned char ucKind);
 extern bit AwtoPhyProbeSkip(void);
+extern bit AwtoPhyProbePlain(void);
 extern void AwtoPhyProbeMark(void);
 extern void AwtoPhyProbeRetry(void);
+extern void AwtoPhyProbeStamp(unsigned char ucN);
+#define AWTO_PHY_STAMP(n)                                       AwtoPhyProbeStamp(n)
+extern void AwtoPhyProbeFld(unsigned char ucLoop, unsigned char ucCount);
+#define AWTO_PHY_FLD(loop, cnt)                                 AwtoPhyProbeFld((loop), (cnt))
 extern void AwtoPhyProbeEnd(unsigned char ucCdrOk);
 #define AWTO_PHY_START(port, path)                              AwtoPhyProbeStart((port), (path))
 #define AWTO_PHY_MARK()                                         AwtoPhyProbeMark()
 #define AWTO_PHY_END(cdr)                                       AwtoPhyProbeEnd(cdr)
-#define AWTO_PHY_FLD_WAIT(us)                                   AwtoPhyProbeWait(0)
-#define AWTO_PHY_CMU_WAIT(us)                                   AwtoPhyProbeWait(1)
+#define AWTO_PHY_FLD_WAIT(us)                                   { if(AwtoPhyProbePlain()) { DELAY_XUS_EXINT(us); } else { AwtoPhyProbeWait(0); } }
+#define AWTO_PHY_CMU_WAIT(us)                                   { if(AwtoPhyProbePlain()) { DELAY_XUS_EXINT(us); } else { AwtoPhyProbeWait(1); } }
 #define AWTO_PHY_LONG_BLOCK()                                   ((g_ucTMDSPhyLong != _FALSE) || (AwtoPhyProbeSkip() == _FALSE))
 #define AWTO_PHY_RETRY()                                        AwtoPhyProbeRetry()
 #else
 #define AWTO_PHY_START(port, path)
 #define AWTO_PHY_MARK()
+#define AWTO_PHY_FLD(loop, cnt)
+#define AWTO_PHY_STAMP(n)
 #define AWTO_PHY_END(cdr)
 #define AWTO_PHY_FLD_WAIT(us)                                   DELAY_XUS_EXINT(us)
 #define AWTO_PHY_CMU_WAIT(us)                                   DELAY_XUS_EXINT(us)

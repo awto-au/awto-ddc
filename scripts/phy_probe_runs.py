@@ -125,7 +125,11 @@ def main() -> int:
         adp, ck = e1[2] >> 16, e1[2] & 0xFFFF
         ck2, low = e2[2] >> 16, e2[2] & 0xFFFF
         mask, win = ((rec['ec'][3][2] >> 16, rec['ec'][3][2] & 0xFFFF) if 3 in rec['ec'] else ('-', '-'))
-        row = [a.label, k, f"D{e0[3]}", clk, tot, adp, ck, ck2, (low >> 8) & 3, f"{(low >> 4) & 7:x}", f"cdr{low & 1}/ckend{(low >> 2) & 1}/skip{(low >> 1) & 1}/retry{(low >> 3) & 1}", mask, win]
+        fld = '/'.join(str((rec['ec'][4][2] >> sh) & 0xFF) for sh in (24, 16, 8, 0)) if 4 in rec['ec'] else '-'
+        if {5, 6, 7} <= rec['ec'].keys():
+            st = [rec['ec'][5][2] >> 16, rec['ec'][5][2] & 0xFFFF, rec['ec'][6][2] >> 16, rec['ec'][6][2] & 0xFFFF, rec['ec'][7][2] >> 16]
+            fld += ' ' + '/'.join(map(str, st))
+        row = [a.label, k, f"D{e0[3]}", clk, tot, adp, ck, ck2, (low >> 8) & 3, f"{(low >> 4) & 7:x}", f"cdr{low & 1}/ckend{(low >> 2) & 1}/skip{(low >> 1) & 1}/retry{(low >> 3) & 1}", mask, win, fld]
         rows.append(row)
         say("lock %d: " % k + " ".join(map(str, row[2:])) + f" active@{rec['t_active']}ms")
         seen.update(x[0] for x in rec["ec"].values())

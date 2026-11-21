@@ -710,6 +710,7 @@ void ScalerTMDSRx2FLDBandFineTune_EXINT0(void)
                 break;
             }
         }
+        AWTO_PHY_FLD(ucLaneCount, ucCount);
     }
 
     // For 3 Lane Cal Best Band
@@ -744,6 +745,7 @@ void ScalerTMDSRx2FLDBandFineTune_EXINT0(void)
             break;
         }
     }
+    AWTO_PHY_FLD(3, ucCount);
 
     // Set Stable Count
     ScalerSetByte_EXINT(P71_EC_HDMI_FREQDET_STABLE, ucBacksetting2);
@@ -1615,6 +1617,7 @@ void ScalerTMDSRx2SetPhy_EXINT0(void)
 
         // Waiting for VCO Stable & DFE Adaptation
         AWTO_PHY_FLD_WAIT(360);
+        AWTO_PHY_STAMP(0);
 
 #if(_INPUTCLOCK_RANG_DVI >= 3400)
         // Delay 2.9ms due to RLE0638 is unscrambled source.
@@ -1625,6 +1628,7 @@ void ScalerTMDSRx2SetPhy_EXINT0(void)
             DELAY_XUS_EXINT(900);
         }
 #endif
+        AWTO_PHY_STAMP(1);
 
         // Start to Record Tap0/Tap1 Max/Min
         ScalerSetBit_EXINT(P7B_F2_COEF_3, ~_BIT0, _BIT0);
@@ -1905,11 +1909,14 @@ void ScalerTMDSRx2SetPhy_EXINT0(void)
             ScalerSetBit_EXINT(P7B_24_KOFFSET_00, ~_BIT6, 0x00);
             ScalerSetBit_EXINT(P7B_24_KOFFSET_00, ~_BIT6, _BIT6);
 
+            AWTO_PHY_STAMP(2);
             // Waiting for K Offset
             DELAY_XUS_EXINT(150);
+            AWTO_PHY_STAMP(3);
 
             // Set Manual FLD Fine Tune OK
             ScalerTMDSRx2FLDBandFineTune_EXINT0();
+            AWTO_PHY_STAMP(4);
 
             // [3:0] reg_cdr_cp_in --> Double Icp to Enlarge Locking Range
             if(ucIcp > 7)

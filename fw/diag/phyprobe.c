@@ -33,6 +33,8 @@ static void PhySnap(__xdata StPhyT2 *p)
     EA = ucEa;
 }
 
+static __xdata unsigned char s_ucFld[4];
+static __xdata unsigned int s_usStamp[5];
 static __xdata unsigned char s_ucPort, s_ucRetry, s_ucSeq;     // s_ucSeq: lock counter, keeps the ring from collapsing equal lines
 static __xdata unsigned int s_usRegWd, s_usRegCk, s_usRegAdp, s_usT, s_usPer;
 static __xdata unsigned long s_ulC;
@@ -63,6 +65,8 @@ void AwtoPhyProbeStart(unsigned char ucPort, unsigned char ucPath)
     s_ucAdpEnd = 0;
     s_ucPath = ucPath;
     s_ucRetry = 0;
+    s_usStamp[0] = s_usStamp[1] = s_usStamp[2] = s_usStamp[3] = s_usStamp[4] = 0xFFFF;
+    s_ucFld[0] = s_ucFld[1] = s_ucFld[2] = s_ucFld[3] = 0xFF;
     s_ucSeq++;
     PhySnap(&s_stBegin);
 }
@@ -96,14 +100,32 @@ void AwtoPhyProbeWait(unsigned char ucKind)
     }
 }
 
+// knob bit 1: plain blind waits, no polling (timing reference)
+bit AwtoPhyProbePlain(void)
+{
+    return ((g_ucPhyProbeSkip & 2) != 0) ? _TRUE : _FALSE;
+}
+
 bit AwtoPhyProbeSkip(void)
 {
-    return (g_ucPhyProbeSkip != 0) ? _TRUE : _FALSE;
+    return ((g_ucPhyProbeSkip & 1) != 0) ? _TRUE : _FALSE;
 }
 
 void AwtoPhyProbeMark(void)
 {
     s_usTot = PhyUsSince(&s_stBegin);
+}
+
+// us since the set-up start at a checkpoint
+void AwtoPhyProbeStamp(unsigned char ucN)
+{
+    s_usStamp[ucN] = PhyUsSince(&s_stBegin);
+}
+
+// band fine-tune poll loops: iterations used (61 = timed out, 0xFF = loop not run)
+void AwtoPhyProbeFld(unsigned char ucLoop, unsigned char ucCount)
+{
+    s_ucFld[ucLoop] = ucCount;
 }
 
 void AwtoPhyProbeRetry(void)
@@ -116,6 +138,10 @@ void AwtoPhyProbeEnd(unsigned char ucCdrOk)
     ScalerSetBit_EXINT(s_usRegWd, ~_BIT0, (s_ucWdOld != 0) ? _BIT0 : 0x00);
     AwtoSyncPush(AWTO_SYNC_EV_PHYT, s_ucPort, ((unsigned long)s_usTot << 16) | ((unsigned int)(s_ucSeq & 7) << 13) | isr_g_usInputPixelClk);
     AwtoSyncPush(AWTO_SYNC_EV_PHYT, 0x10 | s_ucPort, ((unsigned long)s_usAdp << 16) | s_usCk);
-    AwtoSyncPush(AWTO_SYNC_EV_PHYT, 0x20 | s_ucPort, ((unsigned long)s_usCk2 << 16) | ((unsigned int)(s_ucSeq & 0x3F) << 10) | ((unsigned int)s_ucPath << 8) | (s_ucAdpEnd << 4) | (s_ucRetry << 3) | (s_ucCkEnd << 2) | (g_ucPhyProbeSkip << 1) | ucCdrOk);
+    AwtoSyncPush(AWTO_SYNC_EV_PHYT, 0x40 | s_ucPort, ((unsigned long)s_ucFld[0] << 24) | ((unsigned long)s_ucFld[1] << 16) | ((unsigned int)s_ucFld[2] << 8) | s_ucFld[3]);
+    AwtoSyncPush(AWTO_SYNC_EV_PHYT, 0x50 | s_ucPort, ((unsigned long)s_usStamp[0] << 16) | s_usStamp[1]);
+    AwtoSyncPush(AWTO_SYNC_EV_PHYT, 0x60 | s_ucPort, ((unsigned long)s_usStamp[2] << 16) | s_usStamp[3]);
+    AwtoSyncPush(AWTO_SYNC_EV_PHYT, 0x70 | s_ucPort, ((unsigned long)s_usStamp[4] << 16) | s_usTot);
+    AwtoSyncPush(AWTO_SYNC_EV_PHYT, 0x20 | s_ucPort, ((unsigned long)s_usCk2 << 16) | ((unsigned int)(s_ucSeq & 0x3F) << 10) | ((unsigned int)s_ucPath << 8) | (s_ucAdpEnd << 4) | (s_ucRetry << 3) | (s_ucCkEnd << 2) | ((g_ucPhyProbeSkip & 1) << 1) | ucCdrOk);
 }
 #endif
