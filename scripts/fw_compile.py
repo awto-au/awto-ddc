@@ -244,7 +244,7 @@ def compile_one(c: Path, uv2dir: Path, defines, incs, model):
     """One `ccache sdcc` per file (-S: .asm for the overlay pass, else -c: .rel). sdcc >= awto-sdcc#122 runs sdcpp to
     completion first, so cpp and compiler warnings no longer interleave. AWTO_SDCC_CACHE=off: plain sdcc."""
     rel_dir = uv2dir.relative_to(SRC)
-    out = WORK / ("asm" if ASM_MODE else "obj") / rel_dir / (c.stem + (".asm" if ASM_MODE else ".rel"))
+    out = WORK / ("asm" if ASM_MODE else "obj") / rel_dir / (obj_name(c) + (".asm" if ASM_MODE else ".rel"))
     out.parent.mkdir(parents=True, exist_ok=True)
     cmd = sdcc_cmd(c, uv2dir, defines, incs, model) + (["-S"] if ASM_MODE else ["-c"]) + ["-o", str(out), str(c)]
     off = os.environ.get("AWTO_SDCC_CACHE") == "off"
@@ -258,11 +258,27 @@ def compile_one(c: Path, uv2dir: Path, defines, incs, model):
 SHIM_C = ROOT / "fw" / "awto" / "awto_shim" / "sdk_boundary.c"   # integrator-owned SDK<->clean bridge
 
 
+def awto_mod(p: Path) -> str:
+    """Group key of a clean-tree source: first dir under awto/, or "core" for awto/*.c."""
+    return p.relative_to(CLEAN / "awto").parts[0] if p.parent != CLEAN / "awto" else "core"
+
+
+def obj_name(c: Path) -> str:
+    """Object / .asm / .rst / module stem the build uses for a source (san_names matches statics by it).
+    SDK and plain project sources: c.stem. awto sources: awto_<mod>_<stem>. SHIM_C: awto_shim_sdk_boundary.
+    awto_vectors (scripts/fw_build.py write_vectors) is generated, has no C statics, not named here."""
+    if c == SHIM_C:
+        return f"awto_shim_{c.stem}"
+    if c.is_relative_to(CLEAN / "awto") and awto_mod(c) != "include":
+        return f"awto_{awto_mod(c)}_{c.stem}"
+    return c.stem
+
+
 def awto_sources():
     """{module: [.c]} of the clean tree: awto/<mod>/**/*.c (awto/include excluded). Empty = SDK-only build."""
     out = {}
     for p in sorted((CLEAN / "awto").glob("*/**/*.c")) + sorted((CLEAN / "awto").glob("*.c")):
-        mod = p.relative_to(CLEAN / "awto").parts[0] if p.parent != CLEAN / "awto" else "core"
+        mod = awto_mod(p)
         if mod != "include":
             out.setdefault(mod, []).append(p)
     return out
@@ -300,16 +316,16 @@ def cmd_awto(jobs):
     uv2 = SRC / "STD_FW_1P.Uv2"
     _, defines, incs, model = parse_uv2(uv2, "RL6449_Project")
     jobs_l = []                                              # (src, out, cmd)
-    for mod, cs in srcs.items():
+    for cs in srcs.values():
         for c in cs:
             cmd = [x for x in sdcc_cmd(c, uv2.parent, [], [], model) if not x.startswith(("-Wp-include", "-I"))]   # no Keil shim
             cmd += [f"-I{CLEAN / 'awto' / 'include'}", f"-I{CLEAN / 'facts'}", f"-I{c.parent}"]
             cmd += ["-D__data=__xdata"]            # direct RAM is full on this board (#8): clean DATA working sets live in XDATA
-            jobs_l.append((c, WORK / "asm" / f"awto_{mod}_{c.stem}.asm", cmd))
+            jobs_l.append((c, WORK / "asm" / f"{obj_name(c)}.asm", cmd))
     if SHIM_C.exists():                                      # may name SDK symbols: full project flags
         cmd = sdcc_cmd(SHIM_C, uv2.parent, defines, incs, model) + [f"-I{CLEAN / 'awto' / 'include'}", f"-I{SHIM_C.parent}"] \
             + [f"-I{CLEAN / 'awto' / m}" for m in srcs]
-        jobs_l.append((SHIM_C, WORK / "asm" / "awto_shim_sdk_boundary.asm", cmd))
+        jobs_l.append((SHIM_C, WORK / "asm" / f"{obj_name(SHIM_C)}.asm", cmd))
 
     def one(j):
         c, out, cmd = j
@@ -382,7 +398,7 @@ def cmd_compile(uv2_rel, jobs, only, target):
     seg = Counter()                                          # area sizes summed over ok files
     for f, _, _ in ok:
         if ASM_MODE:                                         # XSEG split: globals vs fn locals/params
-            asm = WORK / "asm" / uv2.parent.relative_to(SRC) / (Path(f).stem + ".asm")
+            asm = WORK / "asm" / uv2.parent.relative_to(SRC) / (obj_name(Path(f)) + ".asm")
             area, label = None, None
             for line in asm.read_text(errors="replace").splitlines():
                 if line.startswith("\t.area"):
@@ -394,7 +410,7 @@ def cmd_compile(uv2_rel, jobs, only, target):
                             "sloc" if "sloc" in label else "local")
                     seg[f"{area}_{kind}"] += int(line.split()[1], 0)
             continue
-        rel = WORK / "obj" / uv2.parent.relative_to(SRC) / (Path(f).stem + ".rel")
+        rel = WORK / "obj" / uv2.parent.relative_to(SRC) / (obj_name(Path(f)) + ".rel")
         for m in re.finditer(r"^A (\w+) size (\w+)", rel.read_text(errors="replace"), re.MULTILINE):
             seg[m.group(1)] += int(m.group(2), 16)
     rep = {"uv2": uv2_rel, "when": isostamp.now(), "ok": len(ok), "fail": len(bad),
