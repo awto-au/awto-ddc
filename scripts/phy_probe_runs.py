@@ -32,7 +32,7 @@ def say(s: str) -> None:
 
 
 def dev(*a: str) -> str:
-    r = subprocess.run([str(ROOT / "dev.py"), *a], capture_output=True, text=True, cwd=ROOT)
+    r = subprocess.run([str(ROOT / "dev.py"), *a], capture_output=True, text=True, cwd=ROOT, check=False)
     return r.stdout + r.stderr
 
 
@@ -90,8 +90,8 @@ def main() -> int:
     import re
     m = re.search(r"@0x([0-9a-f]+)", dev("dbg-read", "--unit", UNIT, "_g_ucPhyProbeSkip"))
     for _ in range(3):                          # the first debug-link write can NAK while the link comes up
-        dev("dbg-write", "--unit", UNIT, "%s=%02X" % (m.group(1), a.skip))
-        if re.search(r"@0x[0-9a-f]+: %02X" % a.skip, dev("dbg-read", "--unit", UNIT, "_g_ucPhyProbeSkip")):
+        dev("dbg-write", "--unit", UNIT, f"{m.group(1)}={a.skip:02X}")
+        if re.search(rf"@0x[0-9a-f]+: {a.skip:02X}", dev("dbg-read", "--unit", UNIT, "_g_ucPhyProbeSkip")):
             break
     say(f"skip knob = {a.skip}; {a.n} locks, away input {a.away}, label {a.label}")
     seen: set = set()
@@ -131,7 +131,7 @@ def main() -> int:
             fld += ' ' + '/'.join(map(str, st))
         row = [a.label, k, f"D{e0[3]}", clk, tot, adp, ck, ck2, (low >> 8) & 3, f"{(low >> 4) & 7:x}", f"cdr{low & 1}/ckend{(low >> 2) & 1}/skip{(low >> 1) & 1}/retry{(low >> 3) & 1}", mask, win, fld]
         rows.append(row)
-        say("lock %d: " % k + " ".join(map(str, row[2:])) + f" active@{rec['t_active']}ms")
+        say(f"lock {k}: " + " ".join(map(str, row[2:])) + f" active@{rec['t_active']}ms")
         seen.update(x[0] for x in rec["ec"].values())
     with TSV.open("a") as f:
         for r in rows:
