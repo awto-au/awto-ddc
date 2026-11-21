@@ -24,6 +24,8 @@ CLS = {1: "A-conflict", 2: "B-lost-update", 3: "C-torn", 4: "D-clobber"}
 CTX = ["main", "EXINT0", "T0", "EXINT1", "T1", "SERIAL", "T2", "WDT"]       # fallback names; ISR function names come from the vectors
 VEC = [None, 0x03, 0x0B, 0x13, 0x1B, 0x23, 0x2B, 0x43]
 MARKS_HDR = "# awto-sdcc isr-marks v1"
+MARKS_HDR11 = "# awto-sdcc isr-marks v1.1"
+SPACES = ("data", "idata", "xdata", "pdata", "bit", "code")
 SUPPRESS_ALL = {"attr"}                    # class -> nothing reported
 SUPPRESS_A = {"volatile", "marked"}        # class -> only (b) lost update and (c) torn
 LOG = HERE.parent / "tmp/logs/sdcc_san.log"
@@ -35,46 +37,32 @@ class Cand(ctypes.Structure):
                 ("did", ctypes.c_uint8), ("_p", ctypes.c_uint8 * 3), ("n", ctypes.c_uint32)]
 
 
-def read_marks(path: Path) -> dict[str, dict]:
-    """awto-sdcc isr-marks v1 TSV -> {symbol: {module, size, cls, contexts, reason}}; an unknown version is rejected."""
+def read_marks(path: Path) -> dict[tuple[str, str], dict]:
+    """awto-sdcc isr-marks v1 / v1.1 TSV -> {(symbol, module): {size, cls, contexts, reason, space}}; v1.1 adds the last column `space`."""
     lines = Path(path).read_text().splitlines()
-    if not lines or lines[0].strip() != MARKS_HDR:
-        raise SystemExit(f"{path}: first line must be {MARKS_HDR!r} (unknown mark-list version)")
+    ver = {MARKS_HDR: 1, MARKS_HDR11: 2}.get(lines[0].strip() if lines else "")
+    if not ver:
+        raise SystemExit(f"{path}: first line must be {MARKS_HDR!r} or {MARKS_HDR11!r} (unknown mark-list version)")
     out = {}
     for ln in lines[1:]:
         if not ln.strip() or ln.startswith(("#", "symbol\t")):
             continue
         f = ln.split("\t")
-        if len(f) < 6 or f[3] not in ("attr", "volatile", "marked", "exempt", "unmarked"):
+        if len(f) < 5 + ver or f[3] not in ("attr", "volatile", "marked", "exempt", "unmarked") or (ver == 2 and f[6] not in SPACES):
             raise SystemExit(f"{path}: bad row {ln!r}")
-        out[f[0] if f[1] == "-" else f"{f[0]}@{f[1]}"] = {"symbol": f[0], "module": f[1], "size": int(f[2]), "cls": f[3], "contexts": f[4], "reason": f[5]}
+        out[(f[0], f[1])] = {"symbol": f[0], "module": f[1], "size": int(f[2]), "cls": f[3], "contexts": f[4], "reason": f[5],
+                             "space": f[6] if ver == 2 else ""}
     return out
 
 
-def iram_syms(map_text: str) -> tuple[list[int], list[str]]:
-    """Sorted direct-IRAM globals (placed ABS rows below 0x80, e.g. the overlay base __dovl0)."""
-    rows = sorted({(int(m.group(1), 16), m.group(2)) for m in re.finditer(r"^ +([0-9A-F]{8})  (\w+) +\S+$", map_text, re.MULTILINE)
-                   if 0x08 <= int(m.group(1), 16) < 0x80})
-    return [r[0] for r in rows], [r[1] for r in rows]
-
-
-def xdata_syms(map_text: str) -> tuple[list[int], list[str]]:
-    """Sorted XDATA globals: map 'D:' lines + the placed (ABS) rows."""
-    rows = {(int(m.group(1), 16), m.group(2)) for m in re.finditer(r"^D:\s+([0-9A-F]{8})\s+(\w+)", map_text, re.MULTILINE)}
-    rows |= {(int(m.group(1), 16), m.group(2)) for m in re.finditer(r"^ +([0-9A-F]{8})  (\w+) +\S+$", map_text, re.MULTILINE)      # ABS-area globals (placed objects)
-             if 0xD000 <= int(m.group(1), 16) < 0xF800}
-    rows = sorted(rows)
-    return [r[0] for r in rows], [r[1] for r in rows]
-
-
 class Namer:
-    """Index / pc -> names. Symbols are the map's globals (statics are not in it: `~sym+off` = nearest global below)."""
+    """Index / pc -> names. Objects from san_names.Placed (map, + linked listings when AWTO_SIM_SAN_RST matches this build)."""
 
-    def __init__(self, m):
-        import bisect
-        self.m, self.bisect = m, bisect
-        self.av, self.an = xdata_syms(m.map_text)
-        self.iv, self.inm = iram_syms(m.map_text)
+    def __init__(self, m, marks: dict | None = None):
+        from san_names import Placed
+        self.m = m
+        rst = os.environ.get("AWTO_SIM_SAN_RST")
+        self.pl = Placed(m.map_text, Path(rst) if rst else None)
         self.cend = getattr(m.where, "cend", 0)
         self.ctx = list(CTX)
         code = m.core.code
@@ -83,33 +71,42 @@ class Namer:
             if code[v] == 0x02:
                 t = code[v + 1] << 8 | code[v + 2]
                 self.ctx[i] = m.where(0, t).lstrip("_")
+        self.mark_at: dict[tuple[str, int], dict] = {}          # (xdata|iram|bit, address) -> mark row
+        self.unresolved = []
+        for (sym, mod), mk in (marks or {}).items():
+            r = self.pl.by_name.get((sym, mod))
+            if not r:
+                self.unresolved.append(f"{sym}@{mod}")
+                continue
+            sp, a, _ = r
+            k = "xdata" if sp == "xdata" else "bit" if sp == "bit" else "iram"
+            for x in range(a, a + max(1, mk["size"] if k != "bit" else 1)):
+                self.mark_at[(k, x)] = mk
 
-    def addr(self, idx: int) -> tuple[int, str]:
-        if idx < NX:
-            a = 0xD000 + idx
-            k = self.bisect.bisect_right(self.av, a) - 1
-            if k < 0:
-                return a, f"xdata:0x{a:04x}"
-            off = a - self.av[k]
-            nxt = self.av[k + 1] if k + 1 < len(self.av) else a + 1
-            exact = off < max(1, nxt - self.av[k])
-            return a, f"{'' if exact else '~'}{self.an[k]}{f'+{off}' if off else ''}"
-        if idx < NX + NIR:
-            a = idx - NX
-            k = self.bisect.bisect_right(self.iv, a) - 1
-            return a, f"iram:0x{a:02x}" + (f" (~{self.inm[k]}+{a - self.iv[k]})" if k >= 0 else "")
-        return idx - NX - NIR, f"bit:0x{idx - NX - NIR:02x}"
+    def space(self, idx: int) -> tuple[str, int]:
+        return ("xdata", 0xD000 + idx) if idx < NX else ("iram", idx - NX) if idx < NX + NIR else ("bit", idx - NX - NIR)
 
-    def sym(self, idx: int) -> tuple[str, int, int]:
-        """(symbol, offset, extent) of an index; extent = bytes to the next global."""
-        if idx >= NX:
-            return self.addr(idx)[1], 0, 1
-        a = 0xD000 + idx
-        k = self.bisect.bisect_right(self.av, a) - 1
-        if k < 0:
-            return f"xdata:0x{a:04x}", 0, 1
-        nxt = self.av[k + 1] if k + 1 < len(self.av) else a + 1
-        return self.an[k], a - self.av[k], nxt - self.av[k]
+    def obj(self, idx: int) -> tuple[str, int, int]:
+        """(name, offset in it, object size) of an index; bits are named by their bit object, else byte + bit."""
+        sp, a = self.space(idx)
+        if sp == "bit":
+            n, off, _ = self.pl.find("bit", a)
+            if not n.startswith("["):
+                return n, off, 1
+            n, off, _ = self.pl.find("iram", 0x20 + (a >> 3))
+            return f"{n}+{off}.bit{a & 7}", 0, 1
+        n, off, md = self.pl.find(sp, a)
+        sz = next((o[1] for o in self.pl.objs[sp] if o[2] == n and o[3] == md), 1)
+        return n, off, sz
+
+    def label(self, idx: int) -> str:
+        n, off, _ = self.obj(idx)
+        return n + (f"+{off}" if off and "bit" not in n.rsplit(".", 1)[-1] else "")
+
+    def mark(self, idx: int) -> str:
+        sp, a = self.space(idx)
+        mk = self.mark_at.get((sp, a))
+        return mk["cls"] if mk else "unlisted"
 
     def norm(self, pc: int) -> int:
         """Code in the common area is the same in every bank: drop the bank so one site is one pc."""
@@ -131,9 +128,9 @@ def finalise(m, marks: dict | None) -> list[dict]:
     tab = (Cand * n[4]).from_address(L.core_san_ptr(core.h, 0))
     evr = (ctypes.c_uint8 * NIDX).from_address(L.core_san_ptr(core.h, 1))
     evw = (ctypes.c_uint8 * NIDX).from_address(L.core_san_ptr(core.h, 2))
-    nm = Namer(m)
-    rows, seen = [], {}
     marks = marks or {}
+    nm = Namer(m, marks)
+    rows, seen = [], {}
     for e in tab:
         if not e.cls:
             continue
@@ -148,31 +145,36 @@ def finalise(m, marks: dict | None) -> list[dict]:
         did = e.did & ~(1 << e.ctx)
         if not (could or did):
             continue
-        sym, _, ext = nm.sym(i)
-        mk = marks.get(sym)
-        mc = mk["cls"] if mk else "unlisted"
+        sym, _, ext = nm.obj(i)
+        mc = nm.mark(i)
         if mc in SUPPRESS_ALL or mc == "exempt" or (e.cls == 1 and mc in SUPPRESS_A):
             continue
-        if e.cls == 3 and (ext < 2 or nm.sym(j)[0] != sym):
+        if e.cls == 3 and (ext < 2 or nm.obj(j)[0] != sym):
             continue                       # adjacent bytes of two objects, not one multi-byte access
-        a, an = nm.addr(i)
+        an = nm.label(i)
+        a = nm.space(i)[1]
         e.pc1, e.pc2 = nm.norm(e.pc1), nm.norm(e.pc2) if e.pc2 else 0
-        rows.append({"level": "did" if did else "could", "cls": CLS[e.cls], "symbol": an, "addr": a if i < NX else an, "mark": mc,
+        rows.append({"level": "did" if did else "could", "cls": CLS[e.cls], "symbol": an, "addr": f"{nm.space(i)[0]}:{a:#x}", "mark": mc,
                      "victim": nm.ctx[e.ctx], "could": names(could, nm.ctx), "did": names(did, nm.ctx), "rw": "W" if w else "R",
                      "func": nm.func(e.pc2 or e.pc1), "pc1": f"{e.pc1:#07x}", "func1": nm.func(e.pc1), "pc2": f"{e.pc2:#07x}" if e.pc2 else "",
                      "func2": nm.func(e.pc2) if e.pc2 else "", "n": e.n, "tag": m.tag})
     # exempt objects that the run saw from two contexts: a miss in the static analysis
     for mk in marks.values():
-        if mk["cls"] != "exempt" or mk["module"] != "-" or mk["symbol"] not in m.sym_data():
+        r = nm.pl.by_name.get((mk["symbol"], mk["module"]))
+        if mk["cls"] != "exempt" or not r or r[0] == "bit":
             continue
-        a0 = m.sym_data()[mk["symbol"]]
+        base = 0 if r[0] == "xdata" else NX
+        lo = r[1] - (0xD000 if r[0] == "xdata" else 0)
         ctxs = 0
-        for a in range(a0, a0 + max(1, mk["size"])):
-            if 0xD000 <= a < 0xF800:
-                ctxs |= evr[a - 0xD000] | evw[a - 0xD000]
+        for x in range(lo, lo + max(1, mk["size"])):
+            ctxs |= evr[base + x] | evw[base + x]
         if ctxs.bit_count() >= 2:
-            rows.append({"level": "did", "cls": "MISS", "symbol": mk["symbol"], "addr": a0, "mark": "exempt", "victim": "", "could": "",
+            rows.append({"level": "did", "cls": "MISS", "symbol": mk["symbol"], "addr": f"{r[0]}:{r[1]:#x}", "mark": "exempt", "victim": "", "could": "",
                          "did": names(ctxs, nm.ctx), "rw": "", "func": "", "pc1": "", "func1": "", "pc2": "", "func2": "", "n": 1, "tag": m.tag})
+    if nm.unresolved:
+        LOG.parent.mkdir(parents=True, exist_ok=True)
+        LOG.open("a").write(f"{m.tag}: {len(nm.unresolved)} mark rows not resolved to an address (statics need AWTO_SIM_SAN_RST): {nm.unresolved[:5]}\n")
+    LOG.open("a").write(f"{m.tag}: names from {nm.pl.source}\n")
     for r in rows:
         k = (r["level"], r["cls"], r["symbol"], r["victim"], r["pc1"], r["pc2"])
         if k not in seen:
@@ -207,10 +209,6 @@ def attach(m):
     out.mkdir(parents=True, exist_ok=True)
     _N[0] += 1
     n = _N[0]
-    av, an = xdata_syms(m.map_text)
-    syms = dict(zip(an, av))
-    m.sym_data = lambda: syms
-
     done = []
 
     def dump():

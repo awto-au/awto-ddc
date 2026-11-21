@@ -15,7 +15,7 @@ Design: awto-sdcc#176. Self-test: `./dev.py san` (`scripts/san_test.py`, snippet
 - Preemptor mask, at each instruction boundary (before the IRQ poll): source s can preempt if EA, its enable bit and priority > running level (IP / EIP), and the instruction was not RETI / an IE write.
   - `__critical`, EX0/ET* masking and the IP=0x81 window need no special case.
 - Shadow: per context x byte, last read and last write (tick, instance id, pc). Spaces: XDATA pool 0xD000..0xF7FF, IRAM direct + `@Ri`, bit space 0x00..0x7F (bit instructions only).
-  - Not tracked: SFRs, registers R0-R7, stack pushes/pops, host writes (`Machine.wr`), stubbed functions.
+  - Not tracked: SFRs, registers R0-R7, stack pushes/pops, `push direct` / `pop direct` (ISR context save of e.g. the BIT_BANK byte), host writes (`Machine.wr`), stubbed functions.
   - Bit accesses and byte accesses to 0x20..0x2F do not alias.
 - `could` = mask allowed a preemptor that is also seen touching the byte somewhere in the run; `did` = it really ran an access inside the window.
   - Window of a pair = boundaries between the two own accesses of one ISR/main instance (per-instance last-open stamps).
@@ -26,10 +26,14 @@ Design: awto-sdcc#176. Self-test: `./dev.py san` (`scripts/san_test.py`, snippet
   - D clobber: own write, then own read within 512 ticks, preemptor wrote between. Overlaps A for any state variable; ranked below B and C.
 - Joined at exit: a candidate counts only when the preemptor context ever accessed the byte (`evr` / `evw`), so a `could` needs the ISR to have run once.
 
-## Mark list (awto-sdcc isr-marks v1)
-- TSV, first line `# awto-sdcc isr-marks v1`, columns `symbol module size class contexts reason`; unknown version rejected.
-- Classes: `attr` drop everything; `volatile` / `marked` drop A only; `exempt` drop everything, report `MISS` when the run saw >= 2 contexts on it; `unmarked` / not listed: report all (`mark` column shows `unlisted` for absent symbols).
-- Resolution by `.map` global name; `module != -` (statics) not resolvable from the map: such rows are ignored (see open points).
+## Mark list (awto-sdcc isr-marks v1 and v1.1)
+- TSV, first line `# awto-sdcc isr-marks v1` or `v1.1`; columns `symbol module size class contexts reason` (+ `space` = data|idata|xdata|pdata|bit|code in v1.1); other versions rejected.
+- Classes: `attr` drop everything; `volatile` / `marked` drop A only; `exempt` drop everything, report `MISS` when the run saw >= 2 contexts on it; `unmarked` / not listed: report all (`mark` column shows `unlisted`).
+- Address resolution is ours (`scripts/san_names.py`): (symbol, module) -> linked address of this build.
+  - globals: `.map`; statics (module = file stem, long linker names such as `_isr0_sv_65536_12`): the linked listings `tmp/sdcc-port/asm_bank/*.rst`, set `AWTO_SIM_SAN_RST=<dir>`.
+  - listings are used only if the map's globals have the same addresses (a listing of another build is ignored, `tmp/logs/sdcc_san.log` says which source was used).
+  - `__at` hardware registers (scaler / MCU registers outside 0xD000..0xF7FF) are not tracked and their rows stay unresolved by design.
+- Report names: objects with their extent (`_isr_g_stAwtoDiag+22`), bits by their bit object (`_d_isr_g_bNotifyTimer2Int`), else area (`[BIT_BANK]`, `[BSEG_BYTES]+4.bit4`).
 - Reader: `sdcc_san.read_marks`.
 
 ## Cost

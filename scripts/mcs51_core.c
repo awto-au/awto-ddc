@@ -1036,7 +1036,7 @@ static int step(core_t *c)
         a = FETCH(); b = FETCH(); cyc = 2; d = ird(c, RN(op & 1)); setc(c, d < a); if (d != a) REL(b); break;
     case 0xB8: case 0xB9: case 0xBA: case 0xBB: case 0xBC: case 0xBD: case 0xBE: case 0xBF:
         a = FETCH(); b = FETCH(); cyc = 2; d = RN(op & 7); setc(c, d < a); if (d != a) REL(b); break;
-    case 0xC0: a = FETCH(); push(c, dread(c, a)); cyc = 2; break;
+    case 0xC0: a = FETCH(); push(c, a < 0x80 ? c->iram[a] : dread(c, a)); cyc = 2; break;     /* push / pop direct = context save / restore: not a data access for the sanitizer */
     case 0xC2: a = FETCH(); bit_write(c, a, 0); break;
     case 0xC3: PSW &= 0x7F; break;
     case 0xC4: a = ACC; set_acc(c, a << 4 | a >> 4); break;
@@ -1044,7 +1044,7 @@ static int step(core_t *c)
     case 0xC6: case 0xC7: d = ird(c, RN(op & 1)); iwr(c, RN(op & 1), ACC); set_acc(c, d); break;
     case 0xC8: case 0xC9: case 0xCA: case 0xCB: case 0xCC: case 0xCD: case 0xCE: case 0xCF:
         d = RN(op & 7); RN(op & 7) = ACC; set_acc(c, d); break;
-    case 0xD0: a = FETCH(); d = pop(c); dwrite(c, a, d); cyc = 2; break;
+    case 0xD0: a = FETCH(); d = pop(c); if (a < 0x80) c->iram[a] = d; else dwrite(c, a, d); cyc = 2; break;
     case 0xD2: a = FETCH(); bit_write(c, a, 1); break;
     case 0xD3: PSW |= 0x80; break;
     case 0xD4:

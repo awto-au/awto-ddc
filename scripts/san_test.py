@@ -39,9 +39,10 @@ CASES = {
     "b_lost+attr": ([], [("B-lost-update", "_g_cnt"), ("A-conflict", "_g_cnt")]),
     "e_guarded+exempt": ([("MISS", "_g_two", "did")], []),
 }
+H11 = sdcc_san.MARKS_HDR11 + "\nsymbol\tmodule\tsize\tclass\tcontexts\treason\tspace\n"
 MARKS = {
     "a_conflict+marked": H + "_g_flag\t-\t1\tmarked\tmain:r,t0_isr:w\t-\n",
-    "b_lost+marked": H + "_g_cnt\t-\t1\tmarked\tmain:rw,t0_isr:rw\t-\n",
+    "b_lost+marked": H11 + "_g_cnt\t-\t1\tmarked\tmain:rw,t0_isr:rw\t-\txdata\n",
     "b_lost+attr": H + "_g_cnt\t-\t1\tattr\tmain:rw,t0_isr:rw\tshared on purpose\n",
     "e_guarded+exempt": H + "_g_two\t-\t1\texempt\tmain:rw\t-\n",
 }
@@ -70,8 +71,6 @@ class Rig:
         self.core.reset()
         self.core.iram[:] = FM.ucsim_iram()
         self.core.san_enable()
-        av, an = sdcc_san.xdata_syms(map_text)
-        self.sym_data = lambda: dict(zip(an, av))
 
 
 def build(name: str) -> Path:
