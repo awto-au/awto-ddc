@@ -13,13 +13,15 @@
 /********************************************************************************/
 
 //----------------------------------------------------------------------------------------------------
-// ID Code      : RL6449_Series_TMDSRx2.c No.0000
+// ID Code      : RL6449_Series_TMDSRx2.c No.0000 (shared Rx2/Rx3 body, port = isr_g_ucTMDSRxPort; Rx3 wrappers: RL6449_Series_TMDSRx3.c)
 // Update Note  :
 //----------------------------------------------------------------------------------------------------
 
 #define __RL6449_SERIES_TMDSRX2__
+#define RX_SHARE_BODY
 
 #include "ScalerFunctionInclude.h"
+#include "RL6449_Series_TMDSRxCheck.h"
 
 #if(_D2_TMDS_SUPPORT == _ON)
 
@@ -47,26 +49,27 @@
 //****************************************************************************
 // VARIABLE DECLARATIONS
 //****************************************************************************
+volatile BYTE __data isr_g_ucTMDSRxPort;
 StructTMDSCtrlInfo g_stTMDSRx2CtrlInfo;
 volatile bit d_g_bTMDSRx2HDMI2RREnable = _FALSE;
 volatile bit d_isr_g_bTMDSRx2HDMI2HighSpeedMode = _FALSE;
 volatile bit d_isr_g_bTMDSRx2TMDSPhySet = _FALSE;
 volatile bit d_isr_g_bTMDSRx2TMDSDdcDetected = _FALSE;
-volatile WORD isr_g_usTMDSRx2ClkCount;
-volatile WORD isr_g_usTMDSRx2PhyCount;
-volatile WORD isr_g_usTMDSRx2PhyClk;
-volatile BYTE isr_g_ucTMDSRx2PhyPend;
+volatile WORD isr_g_usTMDSRxClkCount[2];
+volatile WORD isr_g_usTMDSRxPhyCount[2];
+volatile WORD isr_g_usTMDSRxPhyClk[2];
+volatile BYTE isr_g_ucTMDSRxPhyPend[2];
 BYTE g_ucTMDSPhyLong;
 
-volatile BYTE g_pucTMDSRx2LEMax[3];
-volatile BYTE g_pucTMDSRx2LEMin[3];
-BYTE g_pucTMDSRx2Tap0Min[3];
-BYTE g_pucTMDSRx2Tap0Max[3];
-BYTE g_ucTMDSRx2Tap0Init;
-BYTE g_pucTMDSRx2Tap1Max[3];
-volatile BYTE isr_g_ucTMDSRx2ClkIRQ;
-BYTE g_ucTMDSRx2Z0Status;
-BYTE g_ucTMDSRx2SlaveAddr;
+volatile BYTE g_pucTMDSRxLEMax[2][3];
+volatile BYTE g_pucTMDSRxLEMin[2][3];
+BYTE g_pucTMDSRxTap0Min[2][3];
+BYTE g_pucTMDSRxTap0Max[2][3];
+BYTE g_ucTMDSRxTap0Init[2];
+BYTE g_pucTMDSRxTap1Max[2][3];
+volatile BYTE isr_g_ucTMDSRxClkIRQ[2];
+BYTE g_ucTMDSRxZ0Status[2];
+BYTE g_ucTMDSRxSlaveAddr[2];
 
 #if(_D2_INPUT_PORT_TYPE == _D2_MHL_PORT)
 BYTE g_ucTMDSRx2ClkMode = _TMDS_24BIT_PHY_SETTING;
@@ -79,248 +82,284 @@ BYTE g_pucTmdsRx2Caps[3];
 //****************************************************************************
 // FUNCTION DECLARATIONS
 //****************************************************************************
-void ScalerTMDSRx2Initial(void);
-void ScalerTMDSRx2InterruptInitial(void);
-void ScalerTMDSRx2SetDFEInitial_EXINT0(void);
-void ScalerTMDSRx2FLDBandFineTune_EXINT0(void);
-void ScalerTMDSRx2SetPhy_EXINT0(void);
-void ScalerTMDSRx2PhySetDeferred(void);
-void ScalerTMDSRx2IntHandler_EXINT0(void);
-bit ScalerTMDSRx2CheckCDRStable(WORD usClkCount);
-BYTE ScalerTMDSRx2CheckCDRStable_EXINT0(WORD usClkCount);
-WORD ScalerTMDSRx2MeasureClk(BYTE ucMeasureClk);
-WORD ScalerTMDSRx2MeasureClk_EXINT0(BYTE ucMeasureClk);
-void ScalerTMDSRx2SetPorchColor(EnumColorSpace enumColorFormat);
+void ScalerTMDSRxInitial(void);
+void ScalerTMDSRxInterruptInitial(void);
+void ScalerTMDSRxSetDFEInitial_EXINT0(void);
+void ScalerTMDSRxFLDBandFineTune_EXINT0(void);
+void ScalerTMDSRxSetPhy_EXINT0(void);
+void ScalerTMDSRxPhySetDeferred(void);
+void ScalerTMDSRxIntHandler_EXINT0(void);
+bit ScalerTMDSRxCheckCDRStable(WORD usClkCount);
+BYTE ScalerTMDSRxCheckCDRStable_EXINT0(WORD usClkCount);
+WORD ScalerTMDSRxMeasureClk(BYTE ucMeasureClk);
+WORD ScalerTMDSRxMeasureClk_EXINT0(BYTE ucMeasureClk);
+void ScalerTMDSRxSetPorchColor(EnumColorSpace enumColorFormat);
 
 #if(_D2_HDMI_SUPPORT == _ON)
 
 #if(_D2_INPUT_PORT_TYPE != _D2_DUAL_DVI_PORT)
-bit ScalerTMDSRx2HdmiSetDeepColorPll(WORD usTMDSClkCount, BYTE ucColorDepth);
+bit ScalerTMDSRxHdmiSetDeepColorPll(WORD usTMDSClkCount, BYTE ucColorDepth);
 #endif // End of #if(_D2_INPUT_PORT_TYPE != _D2_DUAL_DVI_PORT)
 
-void ScalerTMDSRx2HdmiPacketDetect(bit bWait);
-void ScalerTMDSRx2HdmiAVMuteProc(void);
-void ScalerTMDSRx2HdmiWatchDog(BYTE ucWDType, bit bEnable);
+void ScalerTMDSRxHdmiPacketDetect(bit bWait);
+void ScalerTMDSRxHdmiAVMuteProc(void);
+void ScalerTMDSRxHdmiWatchDog(BYTE ucWDType, bit bEnable);
 
 #endif
 
-void ScalerTMDSRx2PowerSavingProc(void);
-void ScalerTMDSRx2FreqDetectDisable(void);
+void ScalerTMDSRxPowerSavingProc(void);
+void ScalerTMDSRxFreqDetectDisable(void);
 
 #if(_D2_INPUT_PORT_TYPE != _D2_DUAL_DVI_PORT)
-BYTE ScalerTMDSRx2TMDSScanInputPort(BYTE ucInputType);
-BYTE ScalerTMDSRx2FormatDetect(void);
-bit ScalerTMDSRx2HdcpEnabled(void);
+BYTE ScalerTMDSRxTMDSScanInputPort(BYTE ucInputType);
+BYTE ScalerTMDSRxFormatDetect(void);
+bit ScalerTMDSRxHdcpEnabled(void);
 #endif // End of #if(_D2_INPUT_PORT_TYPE != _D2_DUAL_DVI_PORT)
-bit ScalerTMDSRx2CheckDataDFE(void);
+bit ScalerTMDSRxCheckDataDFE(void);
 
-bit ScalerTMDSRx2TMDSStableDetect(BYTE ucSourceType);
-void ScalerTMDSRx2HotPlugEvent(void);
-void ScalerTMDSRx2SwitchSlaveAddr(void);
-void ScalerTMDSRx2BeforeHotPlugEventProc(void);
-void ScalerTMDSRx2AfterHotPlugEventProc(void);
-void ScalerTMDSRx2Hdcp1p4AksvClear(void);
+bit ScalerTMDSRxTMDSStableDetect(BYTE ucSourceType);
+void ScalerTMDSRxHotPlugEvent(void);
+void ScalerTMDSRxSwitchSlaveAddr(void);
+void ScalerTMDSRxBeforeHotPlugEventProc(void);
+void ScalerTMDSRxAfterHotPlugEventProc(void);
+void ScalerTMDSRxHdcp1p4AksvClear(void);
 
 //****************************************************************************
 // FUNCTION DEFINITIONS
+//****************************************************************************
+//--------------------------------------------------
+// Description  : Register access of the port pages (P71/P7B/P76/P2D, +0x100 for D3: RX_CHK_REG); pinned to common (register-only, ISR-safe)
+// Input Value  : usAddr = D2 address
+// Output Value : value
+//--------------------------------------------------
+BYTE RxRegGetByte(WORD usAddr)
+{
+    return *((volatile BYTE xdata *)RXA(usAddr));
+}
+
+BYTE RxRegGetBit(WORD usAddr, BYTE ucAnd)
+{
+    return (*((volatile BYTE xdata *)RXA(usAddr)) & ucAnd);
+}
+
+void RxRegSetByte(WORD usAddr, BYTE ucValue)
+{
+    *((volatile BYTE xdata *)RXA(usAddr)) = ucValue;
+}
+
+void RxRegSetBit(WORD usAddr, BYTE ucAnd, BYTE ucOr)
+{
+    volatile BYTE xdata *pucReg = (volatile BYTE xdata *)RXA(usAddr);
+
+    *pucReg = (*pucReg & ucAnd) | ucOr;
+}
+
 //****************************************************************************
 //--------------------------------------------------
 // Description  : Initialize TMDS setting for search
 // Input Value  : Current Search Port
 // Output Value : None
 //--------------------------------------------------
-void ScalerTMDSRx2Initial(void)
+void ScalerTMDSRxInitial(void)
 {
     // Disable TMDS output
-    ScalerSetBit(P71_A6_TMDS_OUTCTL, ~(_BIT7 | _BIT6 | _BIT5 | _BIT4 | _BIT3), 0x00);
+    RxSetBit(P71_A6_TMDS_OUTCTL, ~(_BIT7 | _BIT6 | _BIT5 | _BIT4 | _BIT3), 0x00);
 
     // Set HS Width(DE only) and HDCP Reference VS
-    ScalerSetBit(P71_AB_TMDS_ACC2, ~(_BIT7 | _BIT6), 0x00);
+    RxSetBit(P71_AB_TMDS_ACC2, ~(_BIT7 | _BIT6), 0x00);
 
     // Set TMDS Hsync/Vsync Polarity as Input Raw Polarity
-    ScalerSetBit(P71_AF_TMDS_WDC, ~(_BIT3 | _BIT2), 0x00);
+    RxSetBit(P71_AF_TMDS_WDC, ~(_BIT3 | _BIT2), 0x00);
 
     // Disable C9/CA Port Auto-Inc
-    ScalerSetBit(P71_C8_HDMI_APC, ~_BIT0, 0x00);
+    RxSetBit(P71_C8_HDMI_APC, ~_BIT0, 0x00);
 
 #if(_D2_HDMI_SUPPORT == _ON)
 
-    ScalerTMDSRx2HdmiWatchDog((_HDMI_AVI_INFO_VARIATION_WD | _HDMI_AV_MUTE_WD), _DISABLE);
+    ScalerTMDSRxHdmiWatchDog((_HDMI_AVI_INFO_VARIATION_WD | _HDMI_AV_MUTE_WD), _DISABLE);
 
     // Deep Color Mode clock and detection auto
-    ScalerSetBit(P71_B8_TMDS_DPC1, ~(_BIT3 | _BIT2), _BIT2);
+    RxSetBit(P71_B8_TMDS_DPC1, ~(_BIT3 | _BIT2), _BIT2);
 
     // Enable BCH Detection
-    ScalerSetDataPortBit(P71_C9_HDMI_AP, _P71_CA_PT_02_PORT_PAGE71_HDMI_BCHCR, ~(_BIT6 | _BIT3 | _BIT2 | _BIT1), (_BIT6 | _BIT3 | _BIT2 | _BIT1));
+    ScalerSetDataPortBit(RXA(P71_C9_HDMI_AP), _P71_CA_PT_02_PORT_PAGE71_HDMI_BCHCR, ~(_BIT6 | _BIT3 | _BIT2 | _BIT1), (_BIT6 | _BIT3 | _BIT2 | _BIT1));
 
     // DVI mode don't disable Audio Clk
-    ScalerSetDataPortBit(P71_C9_HDMI_AP, _P71_CA_PT_00_PORT_PAGE71_HDMI_SCR, ~(_BIT7 | _BIT6 | _BIT5), _BIT5);
+    ScalerSetDataPortBit(RXA(P71_C9_HDMI_AP), _P71_CA_PT_00_PORT_PAGE71_HDMI_SCR, ~(_BIT7 | _BIT6 | _BIT5), _BIT5);
 
     // Set Video Watch Dog New Mode
-    ScalerSetDataPortBit(P71_C9_HDMI_AP, _P71_CA_PT_32_PORT_PAGE71_HDMI_WDCR1, ~_BIT5, _BIT5);
+    ScalerSetDataPortBit(RXA(P71_C9_HDMI_AP), _P71_CA_PT_32_PORT_PAGE71_HDMI_WDCR1, ~_BIT5, _BIT5);
 
     // Specify Packet Detect Type
-    ScalerSetDataPortByte(P71_C9_HDMI_AP, _P71_CA_PT_43_PORT_PAGE71_HDMI_PTRSV0, _HDMI_AVI_INFO_TYPE);
-    ScalerSetDataPortByte(P71_C9_HDMI_AP, _P71_CA_PT_44_PORT_PAGE71_HDMI_PTRSV1, _HDMI_GENERAL_CONTROL_TYPE);
+    ScalerSetDataPortByte(RXA(P71_C9_HDMI_AP), _P71_CA_PT_43_PORT_PAGE71_HDMI_PTRSV0, _HDMI_AVI_INFO_TYPE);
+    ScalerSetDataPortByte(RXA(P71_C9_HDMI_AP), _P71_CA_PT_44_PORT_PAGE71_HDMI_PTRSV1, _HDMI_GENERAL_CONTROL_TYPE);
 
 #if((_HDMI_FREESYNC_SUPPORT == _ON) || (_HDMI_FREESYNC_II_SUPPORT == _ON))
-    ScalerSetDataPortByte(P71_C9_HDMI_AP, _P71_CA_PT_A4_PORT_PAGE71_HDMI_PTRSV_2, _SPD_INFO_TYPE);
+    ScalerSetDataPortByte(RXA(P71_C9_HDMI_AP), _P71_CA_PT_A4_PORT_PAGE71_HDMI_PTRSV_2, _SPD_INFO_TYPE);
 #endif
 
 #if(_HDMI_HDR10_SUPPORT == _ON)
-    ScalerSetDataPortByte(P71_C9_HDMI_AP, _P71_CA_PT_A5_PORT_PAGE71_HDMI_PTRSV_3, _HDR_INFO_TYPE);
+    ScalerSetDataPortByte(RXA(P71_C9_HDMI_AP), _P71_CA_PT_A5_PORT_PAGE71_HDMI_PTRSV_3, _HDR_INFO_TYPE);
 #endif
 
     // Packet Variation Detect Disable
-    ScalerSetDataPortByte(P71_C9_HDMI_AP, _P71_CA_PT_45_PORT_PAGE71_HDMI_PVGCR0, 0x00);
-    ScalerSetDataPortByte(P71_C9_HDMI_AP, _P71_CA_PT_46_PORT_PAGE71_HDMI_PVGCR1, 0x00);
-    ScalerSetDataPortBit(P71_C9_HDMI_AP, _P71_CA_PT_47_PORT_PAGE71_HDMI_PVGCR2, ~(_BIT3 | _BIT2 | _BIT1 | _BIT0), 0x00);
-    ScalerSetDataPortBit(P71_C9_HDMI_AP, _P71_CA_PT_A9_PORT_PAGE71_HDMI_PVSR_4, ~(_BIT7 | _BIT6 | _BIT5), 0x00);
-    ScalerSetDataPortByte(P71_C9_HDMI_AP, _P71_CA_PT_AA_PORT_PAGE71_HDMI_PVGCR3, 0x00);
-    ScalerSetDataPortBit(P71_C9_HDMI_AP, _P71_CA_PT_AB_PORT_PAGE71_HDMI_PVGCR4, ~(_BIT7 | _BIT6 | _BIT5), 0x00);
+    ScalerSetDataPortByte(RXA(P71_C9_HDMI_AP), _P71_CA_PT_45_PORT_PAGE71_HDMI_PVGCR0, 0x00);
+    ScalerSetDataPortByte(RXA(P71_C9_HDMI_AP), _P71_CA_PT_46_PORT_PAGE71_HDMI_PVGCR1, 0x00);
+    ScalerSetDataPortBit(RXA(P71_C9_HDMI_AP), _P71_CA_PT_47_PORT_PAGE71_HDMI_PVGCR2, ~(_BIT3 | _BIT2 | _BIT1 | _BIT0), 0x00);
+    ScalerSetDataPortBit(RXA(P71_C9_HDMI_AP), _P71_CA_PT_A9_PORT_PAGE71_HDMI_PVSR_4, ~(_BIT7 | _BIT6 | _BIT5), 0x00);
+    ScalerSetDataPortByte(RXA(P71_C9_HDMI_AP), _P71_CA_PT_AA_PORT_PAGE71_HDMI_PVGCR3, 0x00);
+    ScalerSetDataPortBit(RXA(P71_C9_HDMI_AP), _P71_CA_PT_AB_PORT_PAGE71_HDMI_PVGCR4, ~(_BIT7 | _BIT6 | _BIT5), 0x00);
 
 #if(_D2_HDMI_2_0_SUPPORT == _ON)
 
-    if(ScalerGetBit(P71_E6_HDMI_FREQDET_CTRL, _BIT1) == 0x00)
+    if(RxGetBit(P71_E6_HDMI_FREQDET_CTRL, _BIT1) == 0x00)
     {
         // Disable HDMI 2.0 SCDC Function
 #if(_AWTO_SCDC_KEEP == _OFF)
-        ScalerSetBit(P71_19_HDMI_CTRL_19, ~_BIT7, 0x00);
+        RxSetBit(P71_19_HDMI_CTRL_19, ~_BIT7, 0x00);
 #endif
 
-        CLR_TMDS_RX2_HIGH_SPEED_MODE();
+        RXSEL((CLR_TMDS_RX2_HIGH_SPEED_MODE()), (CLR_TMDS_RX3_HIGH_SPEED_MODE()));
     }
 
     // Disable SCDC Scrambling Status
-    ScalerSetDataPortBit(P71_39_HDMI_CTRL_39, _P71_3A_PT_21_PORT_PAGE71_HDMI_SCDC_21, ~_BIT0, 0x00);
+    ScalerSetDataPortBit(RXA(P71_39_HDMI_CTRL_39), _P71_3A_PT_21_PORT_PAGE71_HDMI_SCDC_21, ~_BIT0, 0x00);
 
     // Set Scrambling detection SSCP Number = 8, Enable HW Auto Detect Scrambling Control Symbol
-    ScalerSetBit(P71_01_HDMI_CTRL_01, ~(_BIT5 | _BIT3 | _BIT2 | _BIT1 | _BIT0), (_BIT5 | _BIT2 | _BIT1 | _BIT0));
+    RxSetBit(P71_01_HDMI_CTRL_01, ~(_BIT5 | _BIT3 | _BIT2 | _BIT1 | _BIT0), (_BIT5 | _BIT2 | _BIT1 | _BIT0));
 
     // Set SCDC Port not auto increase
-    ScalerSetBit(P71_38_HDMI_CTRL_38, ~(_BIT4 | _BIT0), _BIT4);
+    RxSetBit(P71_38_HDMI_CTRL_38, ~(_BIT4 | _BIT0), _BIT4);
 
     // Disable Ignore Source Transimit Read Request Enable
-    ScalerSetBit(P71_1C_HDMI_CTRL_1C, ~_BIT2, 0x00);
+    RxSetBit(P71_1C_HDMI_CTRL_1C, ~_BIT2, 0x00);
 
     // Set Read Request 1ms reference clock to XTAL
-    ScalerSetBit(P71_1A_HDMI_CTRL_1A, ~_BIT3, 0x00);
+    RxSetBit(P71_1A_HDMI_CTRL_1A, ~_BIT3, 0x00);
 
     // Set time interval form bus free to Read Request(4.7us~500us)
-    ScalerSetBit(P71_1B_HDMI_CTRL_1B, ~(_BIT5 | _BIT4 | _BIT3 | _BIT2 | _BIT1 | _BIT0), (_BIT3 | _BIT0));
+    RxSetBit(P71_1B_HDMI_CTRL_1B, ~(_BIT5 | _BIT4 | _BIT3 | _BIT2 | _BIT1 | _BIT0), (_BIT3 | _BIT0));
 
     // Enable HDMI 2.0 Function
-    ScalerSetBit(P71_00_HDMI_CTRL_00, ~_BIT0, _BIT0);
+    RxSetBit(P71_00_HDMI_CTRL_00, ~_BIT0, _BIT0);
 
     // Enable HDMI 2.0 SCDC Module
-    ScalerSetBit(P71_19_HDMI_CTRL_19, ~_BIT7, _BIT7);
+    RxSetBit(P71_19_HDMI_CTRL_19, ~_BIT7, _BIT7);
 
 #else
 
     // Disable HDMI 2.0 Function
-    ScalerSetBit(P71_00_HDMI_CTRL_00, ~_BIT0, 0x00);
+    RxSetBit(P71_00_HDMI_CTRL_00, ~_BIT0, 0x00);
 
     // Disable HDMI 2.0 SCDC Function
-    ScalerSetBit(P71_19_HDMI_CTRL_19, ~_BIT7, 0x00);
+    RxSetBit(P71_19_HDMI_CTRL_19, ~_BIT7, 0x00);
 
 #endif
 
 #endif // End of #if(_D2_HDMI_SUPPORT == _ON)
 
     // Set HDCP DDC Channel
-    ScalerSetBit(P71_C2_HDCP_PCR, ~(_BIT2 | _BIT1), 0x00);
+    RxSetBit(P71_C2_HDCP_PCR, ~(_BIT2 | _BIT1), 0x00);
 
     // Set HDCP DDC Debounce, TMDS Function
-    ScalerSetBit(P71_AC_TMDS_Z0CC2, ~(_BIT7 | _BIT6 | _BIT5), (_BIT7 | _BIT6 | _BIT5));
+    RxSetBit(P71_AC_TMDS_Z0CC2, ~(_BIT7 | _BIT6 | _BIT5), (_BIT7 | _BIT6 | _BIT5));
 
 #if(_AWTO_HDCP == _ON)
     // Set D2 Port HDCP Address is 0x74
-    ScalerSetDataPortBit(P71_C3_HDCP_AP, _P71_C4_PT_C2_PORT_PAGE71_HDCP_SLAVE_ADD, ~(_BIT6 | _BIT5 | _BIT4 | _BIT3 | _BIT2 | _BIT1 | _BIT0), 0x3A);
+    ScalerSetDataPortBit(RXA(P71_C3_HDCP_AP), _P71_C4_PT_C2_PORT_PAGE71_HDCP_SLAVE_ADD, ~(_BIT6 | _BIT5 | _BIT4 | _BIT3 | _BIT2 | _BIT1 | _BIT0), 0x3A);
 #else
     // awto: HDCP off (#44): HDCP slave on the SDK's HPD-low parking address, DDC 0x74 unanswered = no HDCP receiver
-    ScalerTMDSRx2SwitchSlaveAddr();
+    ScalerTMDSRxSwitchSlaveAddr();
 #endif
 
     // Set HDCP Feature
 #if(_D2_HDMI_SUPPORT == _ON)
 
 #if(_TMDS_HDCP_FEATURE == _HDCP_FEATURE_1_0)
-    ScalerSetDataPortByte(P71_C3_HDCP_AP, _P71_C4_PT_40_PORT_PAGE71_BCAPS, 0x81);
+    ScalerSetDataPortByte(RXA(P71_C3_HDCP_AP), _P71_C4_PT_40_PORT_PAGE71_BCAPS, 0x81);
 #elif(_TMDS_HDCP_FEATURE == _HDCP_FEATURE_1_1)
-    ScalerSetDataPortByte(P71_C3_HDCP_AP, _P71_C4_PT_40_PORT_PAGE71_BCAPS, 0x83);
+    ScalerSetDataPortByte(RXA(P71_C3_HDCP_AP), _P71_C4_PT_40_PORT_PAGE71_BCAPS, 0x83);
 #else
-    ScalerSetDataPortByte(P71_C3_HDCP_AP, _P71_C4_PT_40_PORT_PAGE71_BCAPS, 0x81);
+    ScalerSetDataPortByte(RXA(P71_C3_HDCP_AP), _P71_C4_PT_40_PORT_PAGE71_BCAPS, 0x81);
 #endif
 
 #else // Else of #if(_D2_HDMI_SUPPORT == _ON)
 
 #if(_TMDS_HDCP_FEATURE == _HDCP_FEATURE_1_0)
-    ScalerSetDataPortByte(P71_C3_HDCP_AP, _P71_C4_PT_40_PORT_PAGE71_BCAPS, 0x01);
+    ScalerSetDataPortByte(RXA(P71_C3_HDCP_AP), _P71_C4_PT_40_PORT_PAGE71_BCAPS, 0x01);
 #elif(_TMDS_HDCP_FEATURE == _HDCP_FEATURE_1_1)
-    ScalerSetDataPortByte(P71_C3_HDCP_AP, _P71_C4_PT_40_PORT_PAGE71_BCAPS, 0x03);
+    ScalerSetDataPortByte(RXA(P71_C3_HDCP_AP), _P71_C4_PT_40_PORT_PAGE71_BCAPS, 0x03);
 #else
-    ScalerSetDataPortByte(P71_C3_HDCP_AP, _P71_C4_PT_40_PORT_PAGE71_BCAPS, 0x01);
+    ScalerSetDataPortByte(RXA(P71_C3_HDCP_AP), _P71_C4_PT_40_PORT_PAGE71_BCAPS, 0x01);
 #endif
 
 #endif // End of #if(_D2_HDMI_SUPPORT == _ON)
 
     // Enable New Advance Cipher Mode
-    ScalerSetBit(P71_C0_HDCP_CR, ~_BIT7, _BIT7);
+    RxSetBit(P71_C0_HDCP_CR, ~_BIT7, _BIT7);
 
     // Disable HDMI MAC Global Power Down
-    ScalerSetBit(P71_AD_TMDS_CPS, ~_BIT1, 0x00);
+    RxSetBit(P71_AD_TMDS_CPS, ~_BIT1, 0x00);
 
     // Enable MAC Input
-    ScalerSetBit(P71_A7_TMDS_PWDCTL, ~(_BIT4 | _BIT3 | _BIT2 | _BIT1 | _BIT0), (_BIT3 | _BIT2 | _BIT1 | _BIT0));
+    RxSetBit(P71_A7_TMDS_PWDCTL, ~(_BIT4 | _BIT3 | _BIT2 | _BIT1 | _BIT0), (_BIT3 | _BIT2 | _BIT1 | _BIT0));
 
     // Set MAC Signal Swap
-    ScalerSetBit(P71_A7_TMDS_PWDCTL, ~(_BIT6 | _BIT5), ((_D2_TMDS_BR_SWAP << 6) | (_D2_TMDS_PN_SWAP << 5)));
+    RxSetBit(P71_A7_TMDS_PWDCTL, ~(_BIT6 | _BIT5), ((_D2_TMDS_BR_SWAP << 6) | (_D2_TMDS_PN_SWAP << 5)));
 
     // Auto switch to DVI when no signal
-    ScalerSetBit(P71_AD_TMDS_CPS, ~_BIT2, _BIT2);
+    RxSetBit(P71_AD_TMDS_CPS, ~_BIT2, _BIT2);
 
     // Detect TMDS Format by Data Island Packet Preamble & Guard Band
-    ScalerSetDataPortBit(P71_C9_HDMI_AP, _P71_CA_PT_00_PORT_PAGE71_HDMI_SCR, ~(_BIT7 | _BIT6 | _BIT4 | _BIT1), _BIT1);
+    ScalerSetDataPortBit(RXA(P71_C9_HDMI_AP), _P71_CA_PT_00_PORT_PAGE71_HDMI_SCR, ~(_BIT7 | _BIT6 | _BIT4 | _BIT1), _BIT1);
 
     // Enable TMDS MAC Error Correction
-    ScalerSetBit(P71_B7_TMDS_UDC2, ~(_BIT7 | _BIT6 | _BIT5), (_BIT6 | _BIT5));
+    RxSetBit(P71_B7_TMDS_UDC2, ~(_BIT7 | _BIT6 | _BIT5), (_BIT6 | _BIT5));
 
 #if(_D2_INPUT_PORT_TYPE == _D2_MHL_PORT)
-    if(GET_D2_TMDS_MODE() == _TMDS_MHL_MODE)
+    if(RXSEL((GET_D2_TMDS_MODE()), (GET_D3_TMDS_MODE())) == _TMDS_MHL_MODE)
     {
         // Enable MHL Mac and Set MHL MAC Signal Swap
-        ScalerSetBit(P76_A0_MHL_CTRL_00, ~(_BIT5 | _BIT0), ((_D2_TMDS_PN_SWAP << 5) | _BIT0));
+        RxSetBit(P76_A0_MHL_CTRL_00, ~(_BIT5 | _BIT0), ((_D2_TMDS_PN_SWAP << 5) | _BIT0));
 
         // Enable New Algorithm for Packed Pixel Mode
-        ScalerSetBit(P76_A1_MHL_CTRL_01, ~_BIT7, _BIT7);
+        RxSetBit(P76_A1_MHL_CTRL_01, ~_BIT7, _BIT7);
 
         // Guard Band reference enable for __data remapping
-        ScalerSetBit(P76_B2_MHL_CTRL_12, ~_BIT7, _BIT7);
+        RxSetBit(P76_B2_MHL_CTRL_12, ~_BIT7, _BIT7);
 
         // Set 24Bit Mode Threshold
-        ScalerSetByte(P76_AA_MHL_CTRL_0A, 0x00);
-        ScalerSetByte(P76_AB_MHL_CTRL_0B, 0x09);
+        RxSetByte(P76_AA_MHL_CTRL_0A, 0x00);
+        RxSetByte(P76_AB_MHL_CTRL_0B, 0x09);
 
         // Set PP Mode Threshold
-        ScalerSetByte(P76_AC_MHL_CTRL_0C, 0x00);
-        ScalerSetByte(P76_AD_MHL_CTRL_0D, 0x09);
+        RxSetByte(P76_AC_MHL_CTRL_0C, 0x00);
+        RxSetByte(P76_AD_MHL_CTRL_0D, 0x09);
 
         // Set Detection Period
-        ScalerSetByte(P76_A8_MHL_CTRL_08, 0x69);
-        ScalerSetByte(P76_A9_MHL_CTRL_09, 0x78);
+        RxSetByte(P76_A8_MHL_CTRL_08, 0x69);
+        RxSetByte(P76_A9_MHL_CTRL_09, 0x78);
 
         // Set Detection by Video Leading and Detection Period by Xtal
-        ScalerSetBit(P76_A7_MHL_CTRL_07, ~(_BIT4 | _BIT3 | _BIT2 | _BIT0), _BIT2);
+        RxSetBit(P76_A7_MHL_CTRL_07, ~(_BIT4 | _BIT3 | _BIT2 | _BIT0), _BIT2);
     }
     else
 #endif
     {
         // Disable MHL Mac and Revert CDR Data Polarity
-        ScalerSetBit(P76_A0_MHL_CTRL_00, ~(_BIT5 | _BIT0), 0x00);
+        RxSetBit(P76_A0_MHL_CTRL_00, ~(_BIT5 | _BIT0), 0x00);
 
         // Guard Band reference disable for __data remapping
-        ScalerSetBit(P76_B2_MHL_CTRL_12, ~_BIT7, 0x00);
+        RxSetBit(P76_B2_MHL_CTRL_12, ~_BIT7, 0x00);
     }
+}
+void ScalerTMDSRx2Initial(void)
+{
+    BYTE ucOld = RX_CUR;
+
+    RX_CUR = 0;
+    ScalerTMDSRxInitial();
+    RX_CUR = ucOld;
 }
 
 //--------------------------------------------------
@@ -328,68 +367,68 @@ void ScalerTMDSRx2Initial(void)
 // Input Value  : None
 // Output Value : None
 //--------------------------------------------------
-void ScalerTMDSRx2InterruptInitial(void)
+void ScalerTMDSRxInterruptInitial(void)
 {
     // Enable INT Clock Check
-    isr_g_ucTMDSRx2ClkIRQ = _ENABLE;
+    isr_g_ucTMDSRxClkIRQ[RX_CUR] = _ENABLE;
 
-    if(ScalerGetBit(P71_E6_HDMI_FREQDET_CTRL, _BIT1) == 0x00)
+    if(RxGetBit(P71_E6_HDMI_FREQDET_CTRL, _BIT1) == 0x00)
     {
-        CLR_TMDS_RX2_PHY_SET();
+        RXSEL((CLR_TMDS_RX2_PHY_SET()), (CLR_TMDS_RX3_PHY_SET()));
     }
 
     // Enable Rx_En for Clk pair Z0
-    ScalerSetBit(P7B_1A_CMU_00, ~_BIT7, _BIT7);
+    RxSetBit(P7B_1A_CMU_00, ~_BIT7, _BIT7);
 
     // Choose Measure Clk to TMDS Clk
-    ScalerSetBit(P71_E6_HDMI_FREQDET_CTRL, ~(_BIT7 | _BIT5 | _BIT4), 0x00);
+    RxSetBit(P71_E6_HDMI_FREQDET_CTRL, ~(_BIT7 | _BIT5 | _BIT4), 0x00);
 
     // Set Freq. Reference Counter = 2000
-    ScalerSetBit(P71_F6_HDMI_FREQDET_BOUND_H, ~(_BIT1 | _BIT0), _BIT0);
+    RxSetBit(P71_F6_HDMI_FREQDET_BOUND_H, ~(_BIT1 | _BIT0), _BIT0);
 
     // Set Online Measure Input Clock Divider = /2 (No Matter if Input Clock >300Mhz or <=300Mhz)
-    ScalerSetBit(P71_E7_HDMI_FREQDET_OFFSET, ~_BIT6, _BIT6);
+    RxSetBit(P71_E7_HDMI_FREQDET_OFFSET, ~_BIT6, _BIT6);
 
     // Settings for IRQ set PHY
     // Consider using table to fill all required initial settings
     // Set pre-set threshold (225MHz * 0.01 / 26.8KHz = 0x54)
 
 #if(_D2_INPUT_PORT_TYPE == _D2_MHL_PORT)
-    if(GET_D2_TMDS_MODE() == _TMDS_MHL_MODE)
+    if(RXSEL((GET_D2_TMDS_MODE()), (GET_D3_TMDS_MODE())) == _TMDS_MHL_MODE)
     {
         // Set TMDS Offset = 1/32
-        ScalerSetBit(P71_E7_HDMI_FREQDET_OFFSET, ~(_BIT2 | _BIT1 | _BIT0), _BIT1);
+        RxSetBit(P71_E7_HDMI_FREQDET_OFFSET, ~(_BIT2 | _BIT1 | _BIT0), _BIT1);
 
         // Set Upper Bound
-        ScalerSetByte(P71_E8_HDMI_FREQDET_UPPER_M, HIBYTE(_TMDS_MHL_FREQ_NORMAL_UPPER_BOUND));
-        ScalerSetByte(P71_E9_HDMI_FREQDET_UPPER_L, LOBYTE(_TMDS_MHL_FREQ_NORMAL_UPPER_BOUND));
+        RxSetByte(P71_E8_HDMI_FREQDET_UPPER_M, HIBYTE(_TMDS_MHL_FREQ_NORMAL_UPPER_BOUND));
+        RxSetByte(P71_E9_HDMI_FREQDET_UPPER_L, LOBYTE(_TMDS_MHL_FREQ_NORMAL_UPPER_BOUND));
     }
     else
 #endif
     {
         // Set TMDS Offset = 1/32
-        ScalerSetBit(P71_E7_HDMI_FREQDET_OFFSET, ~(_BIT2 | _BIT1 | _BIT0), _BIT1);
+        RxSetBit(P71_E7_HDMI_FREQDET_OFFSET, ~(_BIT2 | _BIT1 | _BIT0), _BIT1);
 
         // Set Upper Bound
-        ScalerSetByte(P71_E8_HDMI_FREQDET_UPPER_M, HIBYTE(_TMDS_FREQ_NORMAL_HIGH_SPEED_UPPER_BOUND));
-        ScalerSetByte(P71_E9_HDMI_FREQDET_UPPER_L, LOBYTE(_TMDS_FREQ_NORMAL_HIGH_SPEED_UPPER_BOUND));
+        RxSetByte(P71_E8_HDMI_FREQDET_UPPER_M, HIBYTE(_TMDS_FREQ_NORMAL_HIGH_SPEED_UPPER_BOUND));
+        RxSetByte(P71_E9_HDMI_FREQDET_UPPER_L, LOBYTE(_TMDS_FREQ_NORMAL_HIGH_SPEED_UPPER_BOUND));
     }
 
     // Set Lower Bound
-    ScalerSetByte(P71_EA_HDMI_FREQDET_LOWER_M, HIBYTE(_TMDS_FREQ_NORMAL_LOWER_BOUND));
-    ScalerSetByte(P71_EB_HDMI_FREQDET_LOWER_L, LOBYTE(_TMDS_FREQ_NORMAL_LOWER_BOUND));
+    RxSetByte(P71_EA_HDMI_FREQDET_LOWER_M, HIBYTE(_TMDS_FREQ_NORMAL_LOWER_BOUND));
+    RxSetByte(P71_EB_HDMI_FREQDET_LOWER_L, LOBYTE(_TMDS_FREQ_NORMAL_LOWER_BOUND));
 
     // Set Stable Time (0x3F = about 5ms)
-    ScalerSetByte(P71_EC_HDMI_FREQDET_STABLE, 0x3F);
+    RxSetByte(P71_EC_HDMI_FREQDET_STABLE, 0x3F);
 
     // Disable Freq. Unstable IRQ
-    ScalerSetBit(P71_E6_HDMI_FREQDET_CTRL, ~_BIT1, 0x00);
+    RxSetBit(P71_E6_HDMI_FREQDET_CTRL, ~_BIT1, 0x00);
 
     // Enable Freq. Stable IRQ
-    ScalerSetBit(P71_EF_HDMI_ERROR_TH, ~(_BIT7 | _BIT6), (_BIT7 | _BIT6));
+    RxSetBit(P71_EF_HDMI_ERROR_TH, ~(_BIT7 | _BIT6), (_BIT7 | _BIT6));
 
     // Clear IRQ Pending Flag
-    ScalerSetDataPortBit(P71_C9_HDMI_AP, _P71_CA_PT_60_PORT_PAGE71_HDMI_INTCR, ~_BIT7, _BIT7);
+    ScalerSetDataPortBit(RXA(P71_C9_HDMI_AP), _P71_CA_PT_60_PORT_PAGE71_HDMI_INTCR, ~_BIT7, _BIT7);
 
     // Internal IRQ Enable (Global)
     ScalerGlobalIRQControl(_ENABLE);
@@ -397,7 +436,15 @@ void ScalerTMDSRx2InterruptInitial(void)
     EX0 = 1;
 
     // Start Freq. Detection
-    ScalerSetBit(P71_E6_HDMI_FREQDET_CTRL, ~_BIT7, _BIT7);
+    RxSetBit(P71_E6_HDMI_FREQDET_CTRL, ~_BIT7, _BIT7);
+}
+void ScalerTMDSRx2InterruptInitial(void)
+{
+    BYTE ucOld = RX_CUR;
+
+    RX_CUR = 0;
+    ScalerTMDSRxInterruptInitial();
+    RX_CUR = ucOld;
 }
 
 //--------------------------------------------------
@@ -405,7 +452,7 @@ void ScalerTMDSRx2InterruptInitial(void)
 // Input Value  : None
 // Output Value : None
 //--------------------------------------------------
-void ScalerTMDSRx2SetDFEInitial_EXINT0(void)
+void ScalerTMDSRxSetDFEInitial_EXINT0(void)
 {
     WORD usPixClk = isr_g_usInputPixelClk;   // one read: EX0 is masked / we are in EXINT0, nothing else writes it here
 
@@ -413,131 +460,131 @@ void ScalerTMDSRx2SetDFEInitial_EXINT0(void)
     // [5:4] Reduce Gain to 1/4
     // [3] Disable Running Length Detection
     // [2] bypass Blank out Case-3 Symbol
-    ScalerSetBit_EXINT(P7B_A0_L0_DFE_EN_1, ~(_BIT6 | _BIT5 | _BIT4 | _BIT3 | _BIT2), (_BIT6 | _BIT5));
-    ScalerSetBit_EXINT(P7B_B0_L1_DFE_EN_1, ~(_BIT6 | _BIT5 | _BIT4 | _BIT3 | _BIT2), (_BIT6 | _BIT5));
-    ScalerSetBit_EXINT(P7B_C0_L2_DFE_EN_1, ~(_BIT6 | _BIT5 | _BIT4 | _BIT3 | _BIT2), (_BIT6 | _BIT5));
+    RxSetBit(P7B_A0_L0_DFE_EN_1, ~(_BIT6 | _BIT5 | _BIT4 | _BIT3 | _BIT2), (_BIT6 | _BIT5));
+    RxSetBit(P7B_B0_L1_DFE_EN_1, ~(_BIT6 | _BIT5 | _BIT4 | _BIT3 | _BIT2), (_BIT6 | _BIT5));
+    RxSetBit(P7B_C0_L2_DFE_EN_1, ~(_BIT6 | _BIT5 | _BIT4 | _BIT3 | _BIT2), (_BIT6 | _BIT5));
 
-    if(ScalerGetBit_EXINT(P7B_1B_CMU_01, _BIT0) == _BIT0) // DCDR
+    if(RxGetBit(P7B_1B_CMU_01, _BIT0) == _BIT0) // DCDR
     {
         if(usPixClk <= 1000)
         {
             // [7:6] adapt_mode[1:0] = 2'b10 --> Amplitude-based Adaptation with Independent LE Loop
-            ScalerSetBit_EXINT(P7B_E0_MODE_TIMER, ~(_BIT7 | _BIT6), _BIT7);
+            RxSetBit(P7B_E0_MODE_TIMER, ~(_BIT7 | _BIT6), _BIT7);
         }
         else
         {
             // [7:6] adapt_mode[1:0] = 2'b11 --> Amplitude-based Adaptation without Independent LE Loop
-            ScalerSetBit_EXINT(P7B_E0_MODE_TIMER, ~(_BIT7 | _BIT6), (_BIT7 | _BIT6));
+            RxSetBit(P7B_E0_MODE_TIMER, ~(_BIT7 | _BIT6), (_BIT7 | _BIT6));
         }
     }
     else  // ACDR
     {
         // [7:6] adapt_mode[1:0] = 2'b11 --> Amplitude-based Adaptation without Independent LE Loop
-        ScalerSetBit_EXINT(P7B_E0_MODE_TIMER, ~(_BIT7 | _BIT6), (_BIT7 | _BIT6));
+        RxSetBit(P7B_E0_MODE_TIMER, ~(_BIT7 | _BIT6), (_BIT7 | _BIT6));
     }
 
     // [5] edge_det_mode = 1 --> Edge Lag Data
     // [4] transition_only = 1 --> Only Transition Bit is Effective
     // [3] le_auto_reload = 0 --> Disable Auto-reload LE Coefficient
     // [2:0] tap1_delay[2:0] = 3'b010 --> Tap1+LE Delay 2us after Tap0
-    ScalerSetBit_EXINT(P7B_E0_MODE_TIMER, ~(_BIT5 | _BIT4 | _BIT3 | _BIT2 | _BIT1 | _BIT0), (_BIT5 | _BIT4 | _BIT1));
+    RxSetBit(P7B_E0_MODE_TIMER, ~(_BIT5 | _BIT4 | _BIT3 | _BIT2 | _BIT1 | _BIT0), (_BIT5 | _BIT4 | _BIT1));
 
     // Set DFE Delay Time
     // Turn On LE/Tap1~6 Simultaneously
-    ScalerSetByte_EXINT(P7B_E1_TIMER, 0x01);
+    RxSetByte(P7B_E1_TIMER, 0x01);
 
     // Tap0_Gain = 1/256, Tap1_Gain = 1/512
-    ScalerSetBit_EXINT(P7B_E2_GAIN_1, ~(_BIT7 | _BIT6 | _BIT5 | _BIT4 | _BIT3 | _BIT2), (_BIT6 | _BIT2));
+    RxSetBit(P7B_E2_GAIN_1, ~(_BIT7 | _BIT6 | _BIT5 | _BIT4 | _BIT3 | _BIT2), (_BIT6 | _BIT2));
 
     // Tap2_Gain = 1/512; Tap3_Gain = 1/512
-    ScalerSetBit_EXINT(P7B_E3_GAIN_2, ~(_BIT7 | _BIT6 | _BIT5 | _BIT4 | _BIT3 | _BIT2), (_BIT5 | _BIT2));
+    RxSetBit(P7B_E3_GAIN_2, ~(_BIT7 | _BIT6 | _BIT5 | _BIT4 | _BIT3 | _BIT2), (_BIT5 | _BIT2));
 
     // Tap4_Gain = 1/512; Servo_Gain = 1/256
-    ScalerSetBit_EXINT(P7B_E4_GAIN_3, ~(_BIT7 | _BIT6 | _BIT5 | _BIT4 | _BIT3 | _BIT2), (_BIT5 | _BIT3));
+    RxSetBit(P7B_E4_GAIN_3, ~(_BIT7 | _BIT6 | _BIT5 | _BIT4 | _BIT3 | _BIT2), (_BIT5 | _BIT3));
 
     // LE_Gain1 = 1/256, LE_Gain2 = 0
-    ScalerSetBit_EXINT(P7B_E5_GAIN_4, ~(_BIT7 | _BIT6 | _BIT5 | _BIT4 | _BIT3 | _BIT2), (_BIT6 | _BIT4 | _BIT3));
-    ScalerSetBit_EXINT(P7B_FA_GAIN_PREC, ~(_BIT3 | _BIT2 | _BIT1 | _BIT0), (_BIT2 | _BIT1));
+    RxSetBit(P7B_E5_GAIN_4, ~(_BIT7 | _BIT6 | _BIT5 | _BIT4 | _BIT3 | _BIT2), (_BIT6 | _BIT4 | _BIT3));
+    RxSetBit(P7B_FA_GAIN_PREC, ~(_BIT3 | _BIT2 | _BIT1 | _BIT0), (_BIT2 | _BIT1));
 
     // Tap0 = 0~21
     // Vth_Threshold = 1
-    ScalerSetByte_EXINT(P7B_E6_LIMIT_1, 0x35);
+    RxSetByte(P7B_E6_LIMIT_1, 0x35);
 
-    if(ScalerGetBit_EXINT(P7B_1B_CMU_01, _BIT0) == _BIT0) // DCDR
+    if(RxGetBit(P7B_1B_CMU_01, _BIT0) == _BIT0) // DCDR
     {
         // LE = 0~24
         if(usPixClk <= 1000)
         {
             // Tap1 = 0~31 in Mode2
-            ScalerSetBit_EXINT(P7B_E7_LIMIT_2, ~(_BIT5 | _BIT4 | _BIT3 | _BIT2 | _BIT1 | _BIT0), (_BIT4 | _BIT3 | _BIT2 | _BIT1 | _BIT0));
+            RxSetBit(P7B_E7_LIMIT_2, ~(_BIT5 | _BIT4 | _BIT3 | _BIT2 | _BIT1 | _BIT0), (_BIT4 | _BIT3 | _BIT2 | _BIT1 | _BIT0));
         }
         else
         {
             // Tap1 = 0~55 in Mode3
-            ScalerSetBit_EXINT(P7B_E7_LIMIT_2, ~(_BIT5 | _BIT4 | _BIT3 | _BIT2 | _BIT1 | _BIT0), (_BIT5 | _BIT4 | _BIT2 | _BIT1 | _BIT0));
+            RxSetBit(P7B_E7_LIMIT_2, ~(_BIT5 | _BIT4 | _BIT3 | _BIT2 | _BIT1 | _BIT0), (_BIT5 | _BIT4 | _BIT2 | _BIT1 | _BIT0));
         }
     }
     else   // ACDR
     {
         // Tap1 = 0~55 in Mode3
-        ScalerSetBit_EXINT(P7B_E7_LIMIT_2, ~(_BIT5 | _BIT4 | _BIT3 | _BIT2 | _BIT1 | _BIT0), (_BIT5 | _BIT4 | _BIT2 | _BIT1 | _BIT0));
+        RxSetBit(P7B_E7_LIMIT_2, ~(_BIT5 | _BIT4 | _BIT3 | _BIT2 | _BIT1 | _BIT0), (_BIT5 | _BIT4 | _BIT2 | _BIT1 | _BIT0));
     }
 
     // Tap2 Max is 10, Min is -6
-    ScalerSetBit_EXINT(P7B_E8_LIMIT_3, ~(_BIT7 | _BIT6 | _BIT5 | _BIT4 | _BIT3), (_BIT6 | _BIT4));
-    ScalerSetBit_EXINT(P7B_E8_LIMIT_3, ~(_BIT2 | _BIT1 | _BIT0), _BIT0);
-    ScalerSetBit_EXINT(P7B_E9_LIMIT_4, ~(_BIT7 | _BIT6), _BIT7);
+    RxSetBit(P7B_E8_LIMIT_3, ~(_BIT7 | _BIT6 | _BIT5 | _BIT4 | _BIT3), (_BIT6 | _BIT4));
+    RxSetBit(P7B_E8_LIMIT_3, ~(_BIT2 | _BIT1 | _BIT0), _BIT0);
+    RxSetBit(P7B_E9_LIMIT_4, ~(_BIT7 | _BIT6), _BIT7);
 
     // Tap3 Max is 0, Min is -3
-    ScalerSetBit_EXINT(P7B_E9_LIMIT_4, ~(_BIT4 | _BIT3 | _BIT2 | _BIT1 | _BIT0), 0x00);
-    ScalerSetBit_EXINT(P7B_EA_LIMIT_5, ~(_BIT7 | _BIT6 | _BIT5 | _BIT4 | _BIT3), (_BIT4 | _BIT3));
+    RxSetBit(P7B_E9_LIMIT_4, ~(_BIT4 | _BIT3 | _BIT2 | _BIT1 | _BIT0), 0x00);
+    RxSetBit(P7B_EA_LIMIT_5, ~(_BIT7 | _BIT6 | _BIT5 | _BIT4 | _BIT3), (_BIT4 | _BIT3));
 
     // Tap4 Max is 0, Min is -3
-    ScalerSetBit_EXINT(P7B_EA_LIMIT_5, ~(_BIT2 | _BIT1 | _BIT0), 0x00);
-    ScalerSetBit_EXINT(P7B_EB_LIMIT_6, ~(_BIT7 | _BIT6), 0x00);
-    ScalerSetBit_EXINT(P7B_EB_LIMIT_6, ~(_BIT4 | _BIT3 | _BIT2 | _BIT1 | _BIT0), (_BIT1 | _BIT0));
+    RxSetBit(P7B_EA_LIMIT_5, ~(_BIT2 | _BIT1 | _BIT0), 0x00);
+    RxSetBit(P7B_EB_LIMIT_6, ~(_BIT7 | _BIT6), 0x00);
+    RxSetBit(P7B_EB_LIMIT_6, ~(_BIT4 | _BIT3 | _BIT2 | _BIT1 | _BIT0), (_BIT1 | _BIT0));
 
     // Tap0_Threshold = 10
-    ScalerSetBit_EXINT(P7B_EF_RESET_1, ~(_BIT7 | _BIT6 | _BIT5 | _BIT4), (_BIT7 | _BIT5));
+    RxSetBit(P7B_EF_RESET_1, ~(_BIT7 | _BIT6 | _BIT5 | _BIT4), (_BIT7 | _BIT5));
 
     // Vth_max = 6
     // Vth_min = 0
-    ScalerSetByte_EXINT(P7B_F9_LIMIT_10, 0x60);
+    RxSetByte(P7B_F9_LIMIT_10, 0x60);
 
     // Set Vth/Tap Divider
     // Servo_Divider = 40
     // Vth_Divider = 15
     // Tap_Divider = 10
-    ScalerSetByte_EXINT(P7B_EC_LOOP_DIV_1, 0xA3);
-    ScalerSetByte_EXINT(P7B_ED_LOOP_DIV_2, 0xCA);
+    RxSetByte(P7B_EC_LOOP_DIV_1, 0xA3);
+    RxSetByte(P7B_ED_LOOP_DIV_2, 0xCA);
 
     // [5] servo_notrans = 1'b1 --> Transition Bits are not Effective in Servo
     // [4] tap0_notrans = 1'b1 --> Transition Bits are not Effective in Tap0
-    ScalerSetBit_EXINT(P7B_F8_GRAY_DEC_2, ~(_BIT5 | _BIT4), (_BIT5 | _BIT4));
+    RxSetBit(P7B_F8_GRAY_DEC_2, ~(_BIT5 | _BIT4), (_BIT5 | _BIT4));
 
     // [0] tap0_trans = 1'b0 --> Nontransition Bits are Effective in Tap0
-    ScalerSetBit_EXINT(P7B_E3_GAIN_2, ~_BIT0, 0x00);
+    RxSetBit(P7B_E3_GAIN_2, ~_BIT0, 0x00);
 
     // over 3.4Gbps, __data has scramble, use Run length = 4
     if(usPixClk >= 3400)
     {
         // [1:0] trans_rlength = 2'b10 --> Tap0 Run Length = 4
-        ScalerSetBit_EXINT(P7B_E4_GAIN_3, ~(_BIT1 | _BIT0), _BIT1);
+        RxSetBit(P7B_E4_GAIN_3, ~(_BIT1 | _BIT0), _BIT1);
     }
     else
     {
         // [1:0] trans_rlength = 2'b00 --> Tap0 Run Length = 2
-        ScalerSetBit_EXINT(P7B_E4_GAIN_3, ~(_BIT1 | _BIT0), 0x00);
+        RxSetBit(P7B_E4_GAIN_3, ~(_BIT1 | _BIT0), 0x00);
     }
 
     // [1] tap1_trans = 1'b1 --> Nontransition Bits are not Effective in LE/Tap1
-    ScalerSetBit_EXINT(P7B_E3_GAIN_2, ~_BIT1, _BIT1);
+    RxSetBit(P7B_E3_GAIN_2, ~_BIT1, _BIT1);
 
     // [1] De_inverse = 1'b0 --> Adapation Only for Blanking Area (Transition Maximum)
     // [0] De_brank_en = 1'b0 --> Disable Blank Function of gdi_de
-    ScalerSetBit_EXINT(P7B_AF_L0_GDI_DE, ~(_BIT1 | _BIT0), 0x00);
-    ScalerSetBit_EXINT(P7B_BF_L1_GDI_DE, ~(_BIT1 | _BIT0), 0x00);
-    ScalerSetBit_EXINT(P7B_CF_L2_GDI_DE, ~(_BIT1 | _BIT0), 0x00);
+    RxSetBit(P7B_AF_L0_GDI_DE, ~(_BIT1 | _BIT0), 0x00);
+    RxSetBit(P7B_BF_L1_GDI_DE, ~(_BIT1 | _BIT0), 0x00);
+    RxSetBit(P7B_CF_L2_GDI_DE, ~(_BIT1 | _BIT0), 0x00);
 
 
     /////////////////////////
@@ -545,112 +592,112 @@ void ScalerTMDSRx2SetDFEInitial_EXINT0(void)
     /////////////////////////
 
     // Initial DFE Code
-    if(ScalerGetBit_EXINT(P7B_1B_CMU_01, _BIT0) == _BIT0) // DCDR
+    if(RxGetBit(P7B_1B_CMU_01, _BIT0) == _BIT0) // DCDR
     {
         if(usPixClk <= 375)
         {
             // LE Max = 24, Initial = 4
-            ScalerSetByte_EXINT(P7B_A2_L0_LIMIT_INIT, 0x84);
-            ScalerSetByte_EXINT(P7B_B2_L1_LIMIT_INIT, 0x84);
-            ScalerSetByte_EXINT(P7B_C2_L2_LIMIT_INIT, 0x84);
+            RxSetByte(P7B_A2_L0_LIMIT_INIT, 0x84);
+            RxSetByte(P7B_B2_L1_LIMIT_INIT, 0x84);
+            RxSetByte(P7B_C2_L2_LIMIT_INIT, 0x84);
 
             // Tap1 Initial Value = 0 for Mode1 DFE
-            ScalerSetByte_EXINT(P7B_A5_L0_INIT_3, 0x00);
-            ScalerSetByte_EXINT(P7B_B5_L1_INIT_3, 0x00);
-            ScalerSetByte_EXINT(P7B_C5_L2_INIT_3, 0x00);
+            RxSetByte(P7B_A5_L0_INIT_3, 0x00);
+            RxSetByte(P7B_B5_L1_INIT_3, 0x00);
+            RxSetByte(P7B_C5_L2_INIT_3, 0x00);
         }
         else if(usPixClk <= 700)
         {
             // LE Max = 24, Initial = 6
-            ScalerSetByte_EXINT(P7B_A2_L0_LIMIT_INIT, 0x86);
-            ScalerSetByte_EXINT(P7B_B2_L1_LIMIT_INIT, 0x86);
-            ScalerSetByte_EXINT(P7B_C2_L2_LIMIT_INIT, 0x86);
+            RxSetByte(P7B_A2_L0_LIMIT_INIT, 0x86);
+            RxSetByte(P7B_B2_L1_LIMIT_INIT, 0x86);
+            RxSetByte(P7B_C2_L2_LIMIT_INIT, 0x86);
 
             // Tap1 Initial Value = 0 for Mode1 DFE
-            ScalerSetByte_EXINT(P7B_A5_L0_INIT_3, 0x00);
-            ScalerSetByte_EXINT(P7B_B5_L1_INIT_3, 0x00);
-            ScalerSetByte_EXINT(P7B_C5_L2_INIT_3, 0x00);
+            RxSetByte(P7B_A5_L0_INIT_3, 0x00);
+            RxSetByte(P7B_B5_L1_INIT_3, 0x00);
+            RxSetByte(P7B_C5_L2_INIT_3, 0x00);
         }
         else if(usPixClk <= 1000)
         {
             // LE Max = 24, Initial = 10
-            ScalerSetByte_EXINT(P7B_A2_L0_LIMIT_INIT, 0x8A);
-            ScalerSetByte_EXINT(P7B_B2_L1_LIMIT_INIT, 0x8A);
-            ScalerSetByte_EXINT(P7B_C2_L2_LIMIT_INIT, 0x8A);
+            RxSetByte(P7B_A2_L0_LIMIT_INIT, 0x8A);
+            RxSetByte(P7B_B2_L1_LIMIT_INIT, 0x8A);
+            RxSetByte(P7B_C2_L2_LIMIT_INIT, 0x8A);
 
             // Tap1 Initial Value = 0 for Mode1 DFE
-            ScalerSetByte_EXINT(P7B_A5_L0_INIT_3, 0x00);
-            ScalerSetByte_EXINT(P7B_B5_L1_INIT_3, 0x00);
-            ScalerSetByte_EXINT(P7B_C5_L2_INIT_3, 0x00);
+            RxSetByte(P7B_A5_L0_INIT_3, 0x00);
+            RxSetByte(P7B_B5_L1_INIT_3, 0x00);
+            RxSetByte(P7B_C5_L2_INIT_3, 0x00);
         }
         else
         {
             // LE Max = 24, Initial = 12
-            ScalerSetByte_EXINT(P7B_A2_L0_LIMIT_INIT, 0x8C);
-            ScalerSetByte_EXINT(P7B_B2_L1_LIMIT_INIT, 0x8C);
-            ScalerSetByte_EXINT(P7B_C2_L2_LIMIT_INIT, 0x8C);
+            RxSetByte(P7B_A2_L0_LIMIT_INIT, 0x8C);
+            RxSetByte(P7B_B2_L1_LIMIT_INIT, 0x8C);
+            RxSetByte(P7B_C2_L2_LIMIT_INIT, 0x8C);
 
             // Tap1 Initial Value = 12 for Mode3 DFE
-            ScalerSetByte_EXINT(P7B_A5_L0_INIT_3, 0x0C);
-            ScalerSetByte_EXINT(P7B_B5_L1_INIT_3, 0x0C);
-            ScalerSetByte_EXINT(P7B_C5_L2_INIT_3, 0x0C);
+            RxSetByte(P7B_A5_L0_INIT_3, 0x0C);
+            RxSetByte(P7B_B5_L1_INIT_3, 0x0C);
+            RxSetByte(P7B_C5_L2_INIT_3, 0x0C);
         }
     }
     else    // ACDR
     {
         // LE Max = 21, Initial = 12
-        ScalerSetByte_EXINT(P7B_A2_L0_LIMIT_INIT, 0x5C);
-        ScalerSetByte_EXINT(P7B_B2_L1_LIMIT_INIT, 0x5C);
-        ScalerSetByte_EXINT(P7B_C2_L2_LIMIT_INIT, 0x5C);
+        RxSetByte(P7B_A2_L0_LIMIT_INIT, 0x5C);
+        RxSetByte(P7B_B2_L1_LIMIT_INIT, 0x5C);
+        RxSetByte(P7B_C2_L2_LIMIT_INIT, 0x5C);
 
         // Tap1 Initial Value = 15 for Mode3 DFE
-        ScalerSetByte_EXINT(P7B_A5_L0_INIT_3, 0x0F);
-        ScalerSetByte_EXINT(P7B_B5_L1_INIT_3, 0x0F);
-        ScalerSetByte_EXINT(P7B_C5_L2_INIT_3, 0x0F);
+        RxSetByte(P7B_A5_L0_INIT_3, 0x0F);
+        RxSetByte(P7B_B5_L1_INIT_3, 0x0F);
+        RxSetByte(P7B_C5_L2_INIT_3, 0x0F);
     }
 
-    ScalerSetByte_EXINT(P7B_A3_L0_INIT_1, 0x90);
-    ScalerSetByte_EXINT(P7B_B3_L1_INIT_1, 0x90);
-    ScalerSetByte_EXINT(P7B_C3_L2_INIT_1, 0x90);
+    RxSetByte(P7B_A3_L0_INIT_1, 0x90);
+    RxSetByte(P7B_B3_L1_INIT_1, 0x90);
+    RxSetByte(P7B_C3_L2_INIT_1, 0x90);
 
-    ScalerSetByte_EXINT(P7B_A4_L0_INIT_2, 0x0F);
-    ScalerSetByte_EXINT(P7B_B4_L1_INIT_2, 0x0F);
-    ScalerSetByte_EXINT(P7B_C4_L2_INIT_2, 0x0F);
-    g_ucTMDSRx2Tap0Init = ScalerGetByte_EXINT(P7B_A4_L0_INIT_2);
+    RxSetByte(P7B_A4_L0_INIT_2, 0x0F);
+    RxSetByte(P7B_B4_L1_INIT_2, 0x0F);
+    RxSetByte(P7B_C4_L2_INIT_2, 0x0F);
+    g_ucTMDSRxTap0Init[RX_CUR] = RxGetByte(P7B_A4_L0_INIT_2);
 
-    ScalerSetByte_EXINT(P7B_A6_L0_INIT_4, 0x00);
-    ScalerSetByte_EXINT(P7B_B6_L1_INIT_4, 0x00);
-    ScalerSetByte_EXINT(P7B_C6_L2_INIT_4, 0x00);
+    RxSetByte(P7B_A6_L0_INIT_4, 0x00);
+    RxSetByte(P7B_B6_L1_INIT_4, 0x00);
+    RxSetByte(P7B_C6_L2_INIT_4, 0x00);
 
-    ScalerSetByte_EXINT(P7B_A7_L0_INIT_5, 0x00);
-    ScalerSetByte_EXINT(P7B_B7_L1_INIT_5, 0x00);
-    ScalerSetByte_EXINT(P7B_C7_L2_INIT_5, 0x00);
+    RxSetByte(P7B_A7_L0_INIT_5, 0x00);
+    RxSetByte(P7B_B7_L1_INIT_5, 0x00);
+    RxSetByte(P7B_C7_L2_INIT_5, 0x00);
 
-    ScalerSetByte_EXINT(P7B_A8_L0_INIT_6, 0x00);
-    ScalerSetByte_EXINT(P7B_B8_L1_INIT_6, 0x00);
-    ScalerSetByte_EXINT(P7B_C8_L2_INIT_6, 0x00);
+    RxSetByte(P7B_A8_L0_INIT_6, 0x00);
+    RxSetByte(P7B_B8_L1_INIT_6, 0x00);
+    RxSetByte(P7B_C8_L2_INIT_6, 0x00);
 
-    ScalerSetByte_EXINT(P7B_A9_L0_INIT_7, 0x04);
-    ScalerSetByte_EXINT(P7B_B9_L1_INIT_7, 0x04);
-    ScalerSetByte_EXINT(P7B_C9_L2_INIT_7, 0x04);
+    RxSetByte(P7B_A9_L0_INIT_7, 0x04);
+    RxSetByte(P7B_B9_L1_INIT_7, 0x04);
+    RxSetByte(P7B_C9_L2_INIT_7, 0x04);
 
     // Load Intial DFE Code
-    ScalerSetByte_EXINT(P7B_AA_L0_INIT_8, 0xFF);
-    ScalerSetByte_EXINT(P7B_BA_L1_INIT_8, 0xFF);
-    ScalerSetByte_EXINT(P7B_CA_L2_INIT_8, 0xFF);
+    RxSetByte(P7B_AA_L0_INIT_8, 0xFF);
+    RxSetByte(P7B_BA_L1_INIT_8, 0xFF);
+    RxSetByte(P7B_CA_L2_INIT_8, 0xFF);
 
-    ScalerSetByte_EXINT(P7B_AA_L0_INIT_8, 0x00);
-    ScalerSetByte_EXINT(P7B_BA_L1_INIT_8, 0x00);
-    ScalerSetByte_EXINT(P7B_CA_L2_INIT_8, 0x00);
+    RxSetByte(P7B_AA_L0_INIT_8, 0x00);
+    RxSetByte(P7B_BA_L1_INIT_8, 0x00);
+    RxSetByte(P7B_CA_L2_INIT_8, 0x00);
 
     // DFE Loop Normal
-    ScalerSetBit_EXINT(P7B_EF_RESET_1, ~(_BIT3 | _BIT2 | _BIT1 | _BIT0), 0x00);
-    ScalerSetBit_EXINT(P7B_EF_RESET_1, ~(_BIT3 | _BIT2 | _BIT1 | _BIT0), (_BIT3 | _BIT2 | _BIT1 | _BIT0));
+    RxSetBit(P7B_EF_RESET_1, ~(_BIT3 | _BIT2 | _BIT1 | _BIT0), 0x00);
+    RxSetBit(P7B_EF_RESET_1, ~(_BIT3 | _BIT2 | _BIT1 | _BIT0), (_BIT3 | _BIT2 | _BIT1 | _BIT0));
 
     // Disable All Adaptation Loop
-    ScalerSetByte_EXINT(P7B_A1_L0_DFE_EN_2, 0x00);
-    ScalerSetByte_EXINT(P7B_B1_L1_DFE_EN_2, 0x00);
-    ScalerSetByte_EXINT(P7B_C1_L2_DFE_EN_2, 0x00);
+    RxSetByte(P7B_A1_L0_DFE_EN_2, 0x00);
+    RxSetByte(P7B_B1_L1_DFE_EN_2, 0x00);
+    RxSetByte(P7B_C1_L2_DFE_EN_2, 0x00);
 }
 
 //--------------------------------------------------
@@ -658,7 +705,7 @@ void ScalerTMDSRx2SetDFEInitial_EXINT0(void)
 // Input Value  : None
 // Output Value : None
 //--------------------------------------------------
-void ScalerTMDSRx2FLDBandFineTune_EXINT0(void)
+void ScalerTMDSRxFLDBandFineTune_EXINT0(void)
 {
     WORD pusLaneFreq[3];
     BYTE ucCount = 0;
@@ -672,41 +719,41 @@ void ScalerTMDSRx2FLDBandFineTune_EXINT0(void)
     pusLaneFreq[2] = 0;
 
     // Get 3 Lane Auto Result
-    pucAutoVCOBand[0] = (ScalerGetByte_EXINT(P7B_35_ANA_CDR_11) & 0x7F);
-    pucAutoVCOBand[1] = (ScalerGetByte_EXINT(P7B_36_ANA_CDR_12) & 0x7F);
-    pucAutoVCOBand[2] = (ScalerGetByte_EXINT(P7B_37_ANA_CDR_13) & 0x7F);
+    pucAutoVCOBand[0] = (RxGetByte(P7B_35_ANA_CDR_11) & 0x7F);
+    pucAutoVCOBand[1] = (RxGetByte(P7B_36_ANA_CDR_12) & 0x7F);
+    pucAutoVCOBand[2] = (RxGetByte(P7B_37_ANA_CDR_13) & 0x7F);
 
     // Scan Lane
-    ScalerSetBit_EXINT(P7B_32_ANA_CDR_08, ~(_BIT6 | _BIT5 | _BIT4 | _BIT3 | _BIT2 | _BIT1 | _BIT0), pucAutoVCOBand[0]);
-    ScalerSetBit_EXINT(P7B_33_ANA_CDR_09, ~(_BIT6 | _BIT5 | _BIT4 | _BIT3 | _BIT2 | _BIT1 | _BIT0), pucAutoVCOBand[1]);
-    ScalerSetBit_EXINT(P7B_34_ANA_CDR_10, ~(_BIT6 | _BIT5 | _BIT4 | _BIT3 | _BIT2 | _BIT1 | _BIT0), pucAutoVCOBand[2]);
+    RxSetBit(P7B_32_ANA_CDR_08, ~(_BIT6 | _BIT5 | _BIT4 | _BIT3 | _BIT2 | _BIT1 | _BIT0), pucAutoVCOBand[0]);
+    RxSetBit(P7B_33_ANA_CDR_09, ~(_BIT6 | _BIT5 | _BIT4 | _BIT3 | _BIT2 | _BIT1 | _BIT0), pucAutoVCOBand[1]);
+    RxSetBit(P7B_34_ANA_CDR_10, ~(_BIT6 | _BIT5 | _BIT4 | _BIT3 | _BIT2 | _BIT1 | _BIT0), pucAutoVCOBand[2]);
 
-    ucBacksetting2 = ScalerGetByte_EXINT(P71_EC_HDMI_FREQDET_STABLE);
+    ucBacksetting2 = RxGetByte(P71_EC_HDMI_FREQDET_STABLE);
 
     // Set Open Loop
-    ScalerSetBit_EXINT(P7B_2B_ANA_CDR_01, ~(_BIT7 | _BIT6 | _BIT5), _BIT6);
+    RxSetBit(P7B_2B_ANA_CDR_01, ~(_BIT7 | _BIT6 | _BIT5), _BIT6);
 
     // Change Measure Count  64=>3
-    ScalerSetBit_EXINT(P71_EC_HDMI_FREQDET_STABLE, ~(_BIT6 | _BIT5 | _BIT4 | _BIT3 | _BIT2 | _BIT1 | _BIT0), _BIT1);
+    RxSetBit(P71_EC_HDMI_FREQDET_STABLE, ~(_BIT6 | _BIT5 | _BIT4 | _BIT3 | _BIT2 | _BIT1 | _BIT0), _BIT1);
 
     for(ucLaneCount = 0; ucLaneCount < 3; ucLaneCount++)
     {
         // Read Lane0 Result
-        ScalerSetBit_EXINT(P71_E6_HDMI_FREQDET_CTRL, ~_BIT7, 0x00);
-        ScalerSetBit_EXINT(P71_E6_HDMI_FREQDET_CTRL, ~(_BIT5 | _BIT4), ((ucLaneCount + 1) << 4));
-        ScalerSetBit_EXINT(P71_E6_HDMI_FREQDET_CTRL, ~_BIT7, _BIT7);
+        RxSetBit(P71_E6_HDMI_FREQDET_CTRL, ~_BIT7, 0x00);
+        RxSetBit(P71_E6_HDMI_FREQDET_CTRL, ~(_BIT5 | _BIT4), ((ucLaneCount + 1) << 4));
+        RxSetBit(P71_E6_HDMI_FREQDET_CTRL, ~_BIT7, _BIT7);
 
         // Waiting For Measure Done -> 300us
         for(ucCount = 0; ucCount <= 60; ucCount++)
         {
             DELAY_5US_EXINT();
 
-            if(ScalerGetBit_EXINT(P71_E6_HDMI_FREQDET_CTRL, _BIT6) == _BIT6)
+            if(RxGetBit(P71_E6_HDMI_FREQDET_CTRL, _BIT6) == _BIT6)
             {
                 // POP Result
-                ScalerSetBit_EXINT(P71_EC_HDMI_FREQDET_STABLE, ~_BIT7, _BIT7);
+                RxSetBit(P71_EC_HDMI_FREQDET_STABLE, ~_BIT7, _BIT7);
 
-                pusLaneFreq[ucLaneCount] = ((DWORD)((WORD)(ScalerGetByte_EXINT(P71_ED_HDMI_FREQDET_RESULT_M) << 8) | ScalerGetByte_EXINT(P71_EE_HDMI_FREQDET_RESULT_L))*27 / 100);
+                pusLaneFreq[ucLaneCount] = ((DWORD)((WORD)(RxGetByte(P71_ED_HDMI_FREQDET_RESULT_M) << 8) | RxGetByte(P71_EE_HDMI_FREQDET_RESULT_L))*27 / 100);
                 break;
             }
         }
@@ -727,44 +774,44 @@ void ScalerTMDSRx2FLDBandFineTune_EXINT0(void)
     }
 
     // Reload Best Band
-    ScalerSetBit_EXINT(P7B_32_ANA_CDR_08, ~(_BIT6 | _BIT5 | _BIT4 | _BIT3 | _BIT2 | _BIT1 | _BIT0), pucBestVCOBand[0]);
-    ScalerSetBit_EXINT(P7B_33_ANA_CDR_09, ~(_BIT6 | _BIT5 | _BIT4 | _BIT3 | _BIT2 | _BIT1 | _BIT0), pucBestVCOBand[1]);
-    ScalerSetBit_EXINT(P7B_34_ANA_CDR_10, ~(_BIT6 | _BIT5 | _BIT4 | _BIT3 | _BIT2 | _BIT1 | _BIT0), pucBestVCOBand[2]);
+    RxSetBit(P7B_32_ANA_CDR_08, ~(_BIT6 | _BIT5 | _BIT4 | _BIT3 | _BIT2 | _BIT1 | _BIT0), pucBestVCOBand[0]);
+    RxSetBit(P7B_33_ANA_CDR_09, ~(_BIT6 | _BIT5 | _BIT4 | _BIT3 | _BIT2 | _BIT1 | _BIT0), pucBestVCOBand[1]);
+    RxSetBit(P7B_34_ANA_CDR_10, ~(_BIT6 | _BIT5 | _BIT4 | _BIT3 | _BIT2 | _BIT1 | _BIT0), pucBestVCOBand[2]);
 
     // Reload Measure TMDS Clock & Clear Unsatble IRQ Flag & Dummy POP Out
-    ScalerSetBit_EXINT(P71_E6_HDMI_FREQDET_CTRL, ~(_BIT5 | _BIT4), 0x00);
-    ScalerSetBit_EXINT(P71_E6_HDMI_FREQDET_CTRL, ~(_BIT7), 0x00);
-    ScalerSetBit_EXINT(P71_E6_HDMI_FREQDET_CTRL, ~(_BIT7), _BIT7);
+    RxSetBit(P71_E6_HDMI_FREQDET_CTRL, ~(_BIT5 | _BIT4), 0x00);
+    RxSetBit(P71_E6_HDMI_FREQDET_CTRL, ~(_BIT7), 0x00);
+    RxSetBit(P71_E6_HDMI_FREQDET_CTRL, ~(_BIT7), _BIT7);
     for(ucCount = 0; ucCount <= 60; ucCount++)
     {
         DELAY_5US_EXINT();
-        if(ScalerGetBit_EXINT(P71_E6_HDMI_FREQDET_CTRL, _BIT6) == _BIT6)
+        if(RxGetBit(P71_E6_HDMI_FREQDET_CTRL, _BIT6) == _BIT6)
         {
             // POP result
-            ScalerSetBit_EXINT(P71_EC_HDMI_FREQDET_STABLE, ~_BIT7, _BIT7);
+            RxSetBit(P71_EC_HDMI_FREQDET_STABLE, ~_BIT7, _BIT7);
             break;
         }
     }
     AWTO_PHY_FLD(3, ucCount);
 
     // Set Stable Count
-    ScalerSetByte_EXINT(P71_EC_HDMI_FREQDET_STABLE, ucBacksetting2);
+    RxSetByte(P71_EC_HDMI_FREQDET_STABLE, ucBacksetting2);
 
     // Clear Unstable IRQ Flag
-    ScalerSetBit_EXINT(P71_E6_HDMI_FREQDET_CTRL, ~_BIT2, _BIT2);
+    RxSetBit(P71_E6_HDMI_FREQDET_CTRL, ~_BIT2, _BIT2);
 }
 //--------------------------------------------------
 // Description  : TMDS Set PHY Function (EXINT0 Only)
 // Input Value  : Measured Clk Count for PHY Setting
 // Output Value : None
 //--------------------------------------------------
-void ScalerTMDSRx2SetPhy_EXINT0(void)
+void ScalerTMDSRxSetPhy_EXINT0(void)
 {
     WORD usPixClk = isr_g_usInputPixelClk;   // one read: EX0 is masked / we are in EXINT0, nothing else writes it here
 
     BYTE ucIcp = 0;
 
-    AWTO_PHY_START(2, (usPixClk <= 2000) ? 0 : ((usPixClk <= 3400) ? 1 : 2));
+    AWTO_PHY_START(RX_CUR + 2, (usPixClk <= 2000) ? 0 : ((usPixClk <= 3400) ? 1 : 2));
 
     //////////////
     // CDR Mode //
@@ -773,29 +820,29 @@ void ScalerTMDSRx2SetPhy_EXINT0(void)
     if(usPixClk <= 2000)  // DCDR
     {
         // [3:0] reg_en_ana_cdr = 4'b0000 --> Disable Analog CDR
-        ScalerSetBit_EXINT(P7B_2A_ANA_CDR_00, ~(_BIT3 | _BIT2 | _BIT1 | _BIT0), 0x00);
+        RxSetBit(P7B_2A_ANA_CDR_00, ~(_BIT3 | _BIT2 | _BIT1 | _BIT0), 0x00);
 
         // [0] En_APLL_Lane2 = 1'b1 --> Enable Lane2 VCO as CMU
-        ScalerSetBit_EXINT(P7B_1B_CMU_01, ~_BIT0, _BIT0);
+        RxSetBit(P7B_1B_CMU_01, ~_BIT0, _BIT0);
 
-        if((usPixClk <= 1000) && (ScalerGetBit_EXINT(P7B_17_BANDGAP_03, _BIT1) == _BIT1))  // MHL mode
+        if((usPixClk <= 1000) && (RxGetBit(P7B_17_BANDGAP_03, _BIT1) == _BIT1))  // MHL mode
         {
             // [6:5] CMU_REFCK_SEL = 2'b10 --> Ref. TMDS Clock w/ Hysteresis OP
-            ScalerSetBit_EXINT(P7B_1B_CMU_01, ~(_BIT6 | _BIT5), _BIT6);
+            RxSetBit(P7B_1B_CMU_01, ~(_BIT6 | _BIT5), _BIT6);
         }
         else
         {
             // [6:5] CMU_REFCK_SEL = 2'b00 --> Ref. TMDS Clock w/o Hysteresis OP
-            ScalerSetBit_EXINT(P7B_1B_CMU_01, ~(_BIT6 | _BIT5), 0x00);
+            RxSetBit(P7B_1B_CMU_01, ~(_BIT6 | _BIT5), 0x00);
         }
     }
     else  // ACDR
     {
         // [3:0] reg_en_ana_cdr = 4'b0111 --> Enable Lane0~2 Analog CDR
-        ScalerSetBit_EXINT(P7B_2A_ANA_CDR_00, ~(_BIT3 | _BIT2 | _BIT1 | _BIT0), (_BIT2 | _BIT1 | _BIT0));
+        RxSetBit(P7B_2A_ANA_CDR_00, ~(_BIT3 | _BIT2 | _BIT1 | _BIT0), (_BIT2 | _BIT1 | _BIT0));
 
         // [0] En_APLL_Lane2 = 1'b0 --> Disable Lane2 VCO as CMU
-        ScalerSetBit_EXINT(P7B_1B_CMU_01, ~_BIT0, 0x00);
+        RxSetBit(P7B_1B_CMU_01, ~_BIT0, 0x00);
     }
 
     ///////////////
@@ -803,101 +850,101 @@ void ScalerTMDSRx2SetPhy_EXINT0(void)
     ///////////////
 
     // [7] cmu_en = 0 --> Disable CMU PLL
-    ScalerSetBit_EXINT(P7B_1B_CMU_01, ~_BIT7, 0x00);
+    RxSetBit(P7B_1B_CMU_01, ~_BIT7, 0x00);
 
 #if(_SOURCE_BACKGROUND_DETECT_SUPPORT == _ON)
     // [3:0] cdr_en = 4'b0000 --> Disable CDREN
-    ScalerSetBit_EXINT(P7B_1A_CMU_00, ~_BIT3, 0x00);
+    RxSetBit(P7B_1A_CMU_00, ~_BIT3, 0x00);
     DELAY_5US_EXINT();
-    ScalerSetBit_EXINT(P7B_1A_CMU_00, ~_BIT2, 0x00);
+    RxSetBit(P7B_1A_CMU_00, ~_BIT2, 0x00);
     DELAY_5US_EXINT();
-    ScalerSetBit_EXINT(P7B_1A_CMU_00, ~_BIT1, 0x00);
+    RxSetBit(P7B_1A_CMU_00, ~_BIT1, 0x00);
     DELAY_5US_EXINT();
-    ScalerSetBit_EXINT(P7B_1A_CMU_00, ~_BIT0, 0x00);
+    RxSetBit(P7B_1A_CMU_00, ~_BIT0, 0x00);
 
-    if(ScalerGetBit_EXINT(P7B_17_BANDGAP_03, _BIT1) == _BIT1)  // MHL Mode
+    if(RxGetBit(P7B_17_BANDGAP_03, _BIT1) == _BIT1)  // MHL Mode
     {
-        if(ScalerGetBit_EXINT(P7B_1B_CMU_01, _BIT0) == _BIT0) // DCDR
+        if(RxGetBit(P7B_1B_CMU_01, _BIT0) == _BIT0) // DCDR
         {
             // [7:4] rx_en = 4'b1101 --> Enable RXEN for Lane0, 2, 3
             // [3:0] cdr_en = 4'b0101 --> Enable CDREX for Lane0, 2
-            ScalerSetBit_EXINT(P7B_1A_CMU_00, ~_BIT7, _BIT7);
+            RxSetBit(P7B_1A_CMU_00, ~_BIT7, _BIT7);
             DELAY_5US_EXINT();
-            ScalerSetBit_EXINT(P7B_1A_CMU_00, ~_BIT6, _BIT6);
+            RxSetBit(P7B_1A_CMU_00, ~_BIT6, _BIT6);
             DELAY_5US_EXINT();
-            ScalerSetBit_EXINT(P7B_1A_CMU_00, ~_BIT5, 0x00);
+            RxSetBit(P7B_1A_CMU_00, ~_BIT5, 0x00);
             DELAY_5US_EXINT();
-            ScalerSetBit_EXINT(P7B_1A_CMU_00, ~_BIT4, _BIT4);
+            RxSetBit(P7B_1A_CMU_00, ~_BIT4, _BIT4);
             DELAY_5US_EXINT();
-            ScalerSetBit_EXINT(P7B_1A_CMU_00, ~_BIT2, _BIT2);
+            RxSetBit(P7B_1A_CMU_00, ~_BIT2, _BIT2);
             DELAY_5US_EXINT();
-            ScalerSetBit_EXINT(P7B_1A_CMU_00, ~_BIT0, _BIT0);
+            RxSetBit(P7B_1A_CMU_00, ~_BIT0, _BIT0);
         }
         else
         {
             // [7:4] rx_en = 4'b1001 --> Enable RXEN for Lane0, 3
             // [3:0] cdr_en = 4'b0001 --> Enable CDREX for Lane0
-            ScalerSetBit_EXINT(P7B_1A_CMU_00, ~_BIT7, _BIT7);
+            RxSetBit(P7B_1A_CMU_00, ~_BIT7, _BIT7);
             DELAY_5US_EXINT();
-            ScalerSetBit_EXINT(P7B_1A_CMU_00, ~_BIT6, 0x00);
+            RxSetBit(P7B_1A_CMU_00, ~_BIT6, 0x00);
             DELAY_5US_EXINT();
-            ScalerSetBit_EXINT(P7B_1A_CMU_00, ~_BIT5, 0x00);
+            RxSetBit(P7B_1A_CMU_00, ~_BIT5, 0x00);
             DELAY_5US_EXINT();
-            ScalerSetBit_EXINT(P7B_1A_CMU_00, ~_BIT4, _BIT4);
+            RxSetBit(P7B_1A_CMU_00, ~_BIT4, _BIT4);
             DELAY_5US_EXINT();
-            ScalerSetBit_EXINT(P7B_1A_CMU_00, ~_BIT0, _BIT0);
+            RxSetBit(P7B_1A_CMU_00, ~_BIT0, _BIT0);
         }
     }
     else
     {
         // [7:4] rx_en = 4'b1111 --> Enable RXEN
         // [3:0] cdr_en = 4'b0001 ~ 4'b0011 ~ 4'b0111
-        ScalerSetBit_EXINT(P7B_1A_CMU_00, ~_BIT7, _BIT7);
+        RxSetBit(P7B_1A_CMU_00, ~_BIT7, _BIT7);
         DELAY_5US_EXINT();
-        ScalerSetBit_EXINT(P7B_1A_CMU_00, ~_BIT6, _BIT6);
+        RxSetBit(P7B_1A_CMU_00, ~_BIT6, _BIT6);
         DELAY_5US_EXINT();
-        ScalerSetBit_EXINT(P7B_1A_CMU_00, ~_BIT5, _BIT5);
+        RxSetBit(P7B_1A_CMU_00, ~_BIT5, _BIT5);
         DELAY_5US_EXINT();
-        ScalerSetBit_EXINT(P7B_1A_CMU_00, ~_BIT4, _BIT4);
+        RxSetBit(P7B_1A_CMU_00, ~_BIT4, _BIT4);
         DELAY_5US_EXINT();
-        ScalerSetBit_EXINT(P7B_1A_CMU_00, ~_BIT2, _BIT2);
+        RxSetBit(P7B_1A_CMU_00, ~_BIT2, _BIT2);
         DELAY_5US_EXINT();
-        ScalerSetBit_EXINT(P7B_1A_CMU_00, ~_BIT1, _BIT1);
+        RxSetBit(P7B_1A_CMU_00, ~_BIT1, _BIT1);
         DELAY_5US_EXINT();
-        ScalerSetBit_EXINT(P7B_1A_CMU_00, ~_BIT0, _BIT0);
+        RxSetBit(P7B_1A_CMU_00, ~_BIT0, _BIT0);
     }
 #else
     // [3:0] cdr_en = 4'b0000 --> Disable CDREN
-    ScalerSetBit_EXINT(P7B_1A_CMU_00, ~(_BIT3 | _BIT2 | _BIT1 | _BIT0), 0x00);
+    RxSetBit(P7B_1A_CMU_00, ~(_BIT3 | _BIT2 | _BIT1 | _BIT0), 0x00);
 
-    if(ScalerGetBit_EXINT(P7B_17_BANDGAP_03, _BIT1) == _BIT1)  // MHL Mode
+    if(RxGetBit(P7B_17_BANDGAP_03, _BIT1) == _BIT1)  // MHL Mode
     {
-        if(ScalerGetBit_EXINT(P7B_1B_CMU_01, _BIT0) == _BIT0) // DCDR
+        if(RxGetBit(P7B_1B_CMU_01, _BIT0) == _BIT0) // DCDR
         {
             // [7:4] rx_en = 4'b1101 --> Enable RXEN for Lane0, 2, 3
-            ScalerSetBit_EXINT(P7B_1A_CMU_00, ~(_BIT7 | _BIT6 | _BIT5 | _BIT4), (_BIT7 | _BIT6 | _BIT4));
+            RxSetBit(P7B_1A_CMU_00, ~(_BIT7 | _BIT6 | _BIT5 | _BIT4), (_BIT7 | _BIT6 | _BIT4));
 
             // [3:0] cdr_en = 4'b0101 --> Enable CDREX for Lane0, 2
-            ScalerSetBit_EXINT(P7B_1A_CMU_00, ~(_BIT3 | _BIT2 | _BIT1 | _BIT0), (_BIT2 | _BIT0));
+            RxSetBit(P7B_1A_CMU_00, ~(_BIT3 | _BIT2 | _BIT1 | _BIT0), (_BIT2 | _BIT0));
         }
         else
         {
             // [7:4] rx_en = 4'b1001 --> Enable RXEN for Lane0, 3
-            ScalerSetBit_EXINT(P7B_1A_CMU_00, ~(_BIT7 | _BIT6 | _BIT5 | _BIT4), (_BIT7 | _BIT4));
+            RxSetBit(P7B_1A_CMU_00, ~(_BIT7 | _BIT6 | _BIT5 | _BIT4), (_BIT7 | _BIT4));
 
             // [3:0] cdr_en = 4'b0001 --> Enable CDREX for Lane0
-            ScalerSetBit_EXINT(P7B_1A_CMU_00, ~(_BIT3 | _BIT2 | _BIT1 | _BIT0), _BIT0);
+            RxSetBit(P7B_1A_CMU_00, ~(_BIT3 | _BIT2 | _BIT1 | _BIT0), _BIT0);
         }
     }
     else
     {
         // [7:4] rx_en = 4'b1111 --> Enable RXEN
-        ScalerSetBit_EXINT(P7B_1A_CMU_00, ~(_BIT7 | _BIT6 | _BIT5 | _BIT4), (_BIT7 | _BIT6 | _BIT5 | _BIT4));
+        RxSetBit(P7B_1A_CMU_00, ~(_BIT7 | _BIT6 | _BIT5 | _BIT4), (_BIT7 | _BIT6 | _BIT5 | _BIT4));
 
         // [3:0] cdr_en = 4'b0001 ~ 4'b0011 ~ 4'b0111
-        ScalerSetBit_EXINT(P7B_1A_CMU_00, ~(_BIT3 | _BIT2 | _BIT1 | _BIT0), _BIT0);
-        ScalerSetBit_EXINT(P7B_1A_CMU_00, ~(_BIT3 | _BIT2 | _BIT1 | _BIT0), (_BIT1 | _BIT0));
-        ScalerSetBit_EXINT(P7B_1A_CMU_00, ~(_BIT3 | _BIT2 | _BIT1 | _BIT0), (_BIT2 | _BIT1 | _BIT0));
+        RxSetBit(P7B_1A_CMU_00, ~(_BIT3 | _BIT2 | _BIT1 | _BIT0), _BIT0);
+        RxSetBit(P7B_1A_CMU_00, ~(_BIT3 | _BIT2 | _BIT1 | _BIT0), (_BIT1 | _BIT0));
+        RxSetBit(P7B_1A_CMU_00, ~(_BIT3 | _BIT2 | _BIT1 | _BIT0), (_BIT2 | _BIT1 | _BIT0));
     }
 #endif
 
@@ -907,26 +954,26 @@ void ScalerTMDSRx2SetPhy_EXINT0(void)
     //////////////////////
 
     // [1:0] reg_cdr_kvco = 2'b01 --> Analog CDR KVCO = 700M/v
-    ScalerSetBit_EXINT(P7B_2C_ANA_CDR_02, ~(_BIT1 | _BIT0), _BIT0);
+    RxSetBit(P7B_2C_ANA_CDR_02, ~(_BIT1 | _BIT0), _BIT0);
 
     // [4] reg_sel_cont3 = 1'b1 --> BBPD UP/DN Pulse Div 3
-    ScalerSetBit_EXINT(P7B_2D_ANA_CDR_03, ~_BIT4, _BIT4);
+    RxSetBit(P7B_2D_ANA_CDR_03, ~_BIT4, _BIT4);
 
     // [7] en_fld_ref_ecbuss = 0 --> FLD Reference Lane3 Clock
-    ScalerSetBit_EXINT(P7B_28_KOFFSET_04, ~_BIT7, 0x00);
+    RxSetBit(P7B_28_KOFFSET_04, ~_BIT7, 0x00);
 
-    if(ScalerGetBit_EXINT(P7B_1B_CMU_01, _BIT0) == _BIT0) // DCDR
+    if(RxGetBit(P7B_1B_CMU_01, _BIT0) == _BIT0) // DCDR
     {
 #if(_D2_INPUT_PORT_TYPE == _D2_MHL_PORT)
-        if(ScalerGetBit_EXINT(P7B_17_BANDGAP_03, _BIT1) == _BIT1)  // MHL Mode
+        if(RxGetBit(P7B_17_BANDGAP_03, _BIT1) == _BIT1)  // MHL Mode
         {
             // [5:4] reg_cmu_sel_cp = 2'b10 --> Analog CDR Cp = 2pF
             // [3] reg_en_largers_forcmu = 1'b1 --> Analog CDR Rs Increase 8K
             // [2:0] reg_cmu_sel_Rs = 3'b011 --> Analog CDR Rs = 12K + 8K
-            ScalerSetBit_EXINT(P7B_1E_CMU_04, ~(_BIT5 | _BIT4 | _BIT3 | _BIT2 | _BIT1 | _BIT0), (_BIT5 | _BIT3 | _BIT1 | _BIT0));
+            RxSetBit(P7B_1E_CMU_04, ~(_BIT5 | _BIT4 | _BIT3 | _BIT2 | _BIT1 | _BIT0), (_BIT5 | _BIT3 | _BIT1 | _BIT0));
 
             // [3:0] reg_cdr_cp_in = 4'b1010 --> Analog CDR Icp = 31.5uA
-            ScalerSetBit_EXINT(P7B_31_ANA_CDR_07, ~(_BIT3 | _BIT2 | _BIT1 | _BIT0), (_BIT3 | _BIT1));
+            RxSetBit(P7B_31_ANA_CDR_07, ~(_BIT3 | _BIT2 | _BIT1 | _BIT0), (_BIT3 | _BIT1));
         }
         else   // HDMI Mode
 #endif
@@ -934,83 +981,83 @@ void ScalerTMDSRx2SetPhy_EXINT0(void)
             // [5:4] reg_cmu_sel_cp = 2'b10 --> Analog CDR Cp = 2pF
             // [3] reg_en_largers_forcmu = 1'b1 --> Analog CDR Rs Increase 8K
             // [2:0] reg_cmu_sel_Rs = 3'b110 --> Analog CDR Rs = 16K + 8K
-            ScalerSetBit_EXINT(P7B_1E_CMU_04, ~(_BIT5 | _BIT4 | _BIT3 | _BIT2 | _BIT1 | _BIT0), (_BIT5 | _BIT3 | _BIT2 | _BIT1));
+            RxSetBit(P7B_1E_CMU_04, ~(_BIT5 | _BIT4 | _BIT3 | _BIT2 | _BIT1 | _BIT0), (_BIT5 | _BIT3 | _BIT2 | _BIT1));
 
             // [3:0] reg_cdr_cp_in = 4'b1100 --> Analog CDR Icp = 37.5uA
-            ScalerSetBit_EXINT(P7B_31_ANA_CDR_07, ~(_BIT3 | _BIT2 | _BIT1 | _BIT0), (_BIT3 | _BIT2));
+            RxSetBit(P7B_31_ANA_CDR_07, ~(_BIT3 | _BIT2 | _BIT1 | _BIT0), (_BIT3 | _BIT2));
         }
     }
     else
     {
         // [5:4] reg_cmu_sel_cp = 2'b00 --> Analog CDR Cp = 0pF
         // [3] reg_en_largers_forcmu = 1'b0 --> Analog CDR Rs Increase 0K
-        ScalerSetBit_EXINT(P7B_1E_CMU_04, ~(_BIT5 | _BIT4 | _BIT3), 0x00);
+        RxSetBit(P7B_1E_CMU_04, ~(_BIT5 | _BIT4 | _BIT3), 0x00);
 
         if(usPixClk <= 3000)
         {
             // [6:4] reg_sel_cdr_res = 3'b101 --> Analog CDR Rs = 6K
             // [3:0] reg_cdr_cp_in = 4'b0101 --> Analog CDR Icp = 16.5uA
-            ScalerSetBit_EXINT(P7B_31_ANA_CDR_07, ~(_BIT6 | _BIT5 | _BIT4 | _BIT3 | _BIT2 | _BIT1 | _BIT0), (_BIT6 | _BIT4 | _BIT2 | _BIT0));
+            RxSetBit(P7B_31_ANA_CDR_07, ~(_BIT6 | _BIT5 | _BIT4 | _BIT3 | _BIT2 | _BIT1 | _BIT0), (_BIT6 | _BIT4 | _BIT2 | _BIT0));
         }
         else
         {
             // [6:4] reg_sel_cdr_res = 3'b011 --> Analog CDR Rs = 2K
             // [3:0] reg_cdr_cp_in = 4'b0011 --> Analog CDR Icp = 10.5uA
-            ScalerSetBit_EXINT(P7B_31_ANA_CDR_07, ~(_BIT6 | _BIT5 | _BIT4 | _BIT3 | _BIT2 | _BIT1 | _BIT0), (_BIT5 | _BIT4 | _BIT1 | _BIT0));
+            RxSetBit(P7B_31_ANA_CDR_07, ~(_BIT6 | _BIT5 | _BIT4 | _BIT3 | _BIT2 | _BIT1 | _BIT0), (_BIT5 | _BIT4 | _BIT1 | _BIT0));
         }
     }
 
-    ucIcp = (ScalerGetByte_EXINT(P7B_31_ANA_CDR_07) & 0x0F);
+    ucIcp = (RxGetByte(P7B_31_ANA_CDR_07) & 0x0F);
 
     // [7:5] KD = 3'b000 --> KD = 0
-    ScalerSetBit_EXINT(P7B_4F_KD, ~(_BIT7 | _BIT6 | _BIT5), 0x00);
+    RxSetBit(P7B_4F_KD, ~(_BIT7 | _BIT6 | _BIT5), 0x00);
 
 #if(_D2_INPUT_PORT_TYPE == _D2_MHL_PORT)
-    if(ScalerGetBit_EXINT(P7B_17_BANDGAP_03, _BIT1) == _BIT1)  // MHL Mode
+    if(RxGetBit(P7B_17_BANDGAP_03, _BIT1) == _BIT1)  // MHL Mode
     {
         // KI = 3'b001 --> KI = 1/16
-        ScalerSetBit_EXINT(P7B_50_KI_L0, ~(_BIT2 | _BIT1 | _BIT0), _BIT0);
+        RxSetBit(P7B_50_KI_L0, ~(_BIT2 | _BIT1 | _BIT0), _BIT0);
 
         if(usPixClk <= 1000)
         {
             // KP = 0x23 --> KP = 8.75
-            ScalerSetByte_EXINT(P7B_53_KP_L0, 0x23);
+            RxSetByte(P7B_53_KP_L0, 0x23);
         }
         else
         {
             // KP = 0x2F --> KP = 11.75
-            ScalerSetByte_EXINT(P7B_53_KP_L0, 0x2F);
+            RxSetByte(P7B_53_KP_L0, 0x2F);
         }
     }
     else   // HDMI Mode
 #endif
     {
         // KI = 3'b000 --> KI = 0
-        ScalerSetBit_EXINT(P7B_50_KI_L0, ~(_BIT2 | _BIT1 | _BIT0), 0x00);
-        ScalerSetBit_EXINT(P7B_51_KI_L1, ~(_BIT2 | _BIT1 | _BIT0), 0x00);
-        ScalerSetBit_EXINT(P7B_52_KI_L2, ~(_BIT2 | _BIT1 | _BIT0), 0x00);
+        RxSetBit(P7B_50_KI_L0, ~(_BIT2 | _BIT1 | _BIT0), 0x00);
+        RxSetBit(P7B_51_KI_L1, ~(_BIT2 | _BIT1 | _BIT0), 0x00);
+        RxSetBit(P7B_52_KI_L2, ~(_BIT2 | _BIT1 | _BIT0), 0x00);
 
         if(usPixClk < 1500)
         {
             // KP = 0x20 --> KP = 8
-            ScalerSetByte_EXINT(P7B_53_KP_L0, 0x20);
-            ScalerSetByte_EXINT(P7B_54_KP_L1, 0x20);
-            ScalerSetByte_EXINT(P7B_55_KP_L2, 0x20);
+            RxSetByte(P7B_53_KP_L0, 0x20);
+            RxSetByte(P7B_54_KP_L1, 0x20);
+            RxSetByte(P7B_55_KP_L2, 0x20);
         }
         else
         {
             // KP = 0x0F --> KP = 3.75
-            ScalerSetByte_EXINT(P7B_53_KP_L0, 0x0F);
-            ScalerSetByte_EXINT(P7B_54_KP_L1, 0x0F);
-            ScalerSetByte_EXINT(P7B_55_KP_L2, 0x0F);
+            RxSetByte(P7B_53_KP_L0, 0x0F);
+            RxSetByte(P7B_54_KP_L1, 0x0F);
+            RxSetByte(P7B_55_KP_L2, 0x0F);
         }
     }
 
 #if(_D2_INPUT_PORT_TYPE == _D2_MHL_PORT)
-    if(ScalerGetBit_EXINT(P7B_17_BANDGAP_03, _BIT1) == _BIT1)  // MHL Mode
+    if(RxGetBit(P7B_17_BANDGAP_03, _BIT1) == _BIT1)  // MHL Mode
     {
         // Check if Packed Pixel Mode
-        if(GET_TMDS_RX2_CLK_MODE() == _TMDS_MHL_PPMODE_PHY_SETTING)
+        if(RXSEL((GET_TMDS_RX2_CLK_MODE()), (GET_TMDS_RX3_CLK_MODE())) == _TMDS_MHL_PPMODE_PHY_SETTING)
         {
             if(usPixClk <= 1500)
             {
@@ -1018,21 +1065,21 @@ void ScalerTMDSRx2SetPhy_EXINT0(void)
                 // ref_conuter = 30
                 // cdr_counter = 480
                 // 30/480 = 1/16 = 5*(1/80 clock rate)
-                ScalerSetBit_EXINT(P7B_2D_ANA_CDR_03, ~(_BIT1 | _BIT0), _BIT0);
-                ScalerSetByte_EXINT(P7B_2E_ANA_CDR_04, 0x1D);
-                ScalerSetByte_EXINT(P7B_2F_ANA_CDR_05, 0xDF);
+                RxSetBit(P7B_2D_ANA_CDR_03, ~(_BIT1 | _BIT0), _BIT0);
+                RxSetByte(P7B_2E_ANA_CDR_04, 0x1D);
+                RxSetByte(P7B_2F_ANA_CDR_05, 0xDF);
 
                 // [5:4] CMU_SELPREDIV = 2'b00 --> /1
-                ScalerSetBit_EXINT(P7B_1F_CMU_05, ~(_BIT5 | _BIT4), 0x00);
+                RxSetBit(P7B_1F_CMU_05, ~(_BIT5 | _BIT4), 0x00);
 
                 // [7:0] N_CODE = 8'b0100 1100 --> 76 + 4 = 80
-                ScalerSetByte_EXINT(P7B_20_CMU_06, 0x4C);
+                RxSetByte(P7B_20_CMU_06, 0x4C);
 
                 // [2:0] SEL_DIV = 3'b010 --> 750MHz ~ 1500MHz
-                ScalerSetBit_EXINT(P7B_21_CMU_07, ~(_BIT2 | _BIT1 | _BIT0), _BIT1);
+                RxSetBit(P7B_21_CMU_07, ~(_BIT2 | _BIT1 | _BIT0), _BIT1);
 
                 // [6:4] rate_sel = 3'b010 --> 750MHz ~ 1500MHz
-                ScalerSetBit_EXINT(P7B_3E_EN_01, ~(_BIT6 | _BIT5 | _BIT4), _BIT5);
+                RxSetBit(P7B_3E_EN_01, ~(_BIT6 | _BIT5 | _BIT4), _BIT5);
             }
             else
             {
@@ -1040,21 +1087,21 @@ void ScalerTMDSRx2SetPhy_EXINT0(void)
                 // ref_conuter = 50
                 // cdr_counter = 400
                 // 50/400 = 1/8 = 5*(1/40 clock rate)
-                ScalerSetBit_EXINT(P7B_2D_ANA_CDR_03, ~(_BIT1 | _BIT0), _BIT0);
-                ScalerSetByte_EXINT(P7B_2E_ANA_CDR_04, 0x31);
-                ScalerSetByte_EXINT(P7B_2F_ANA_CDR_05, 0x8F);
+                RxSetBit(P7B_2D_ANA_CDR_03, ~(_BIT1 | _BIT0), _BIT0);
+                RxSetByte(P7B_2E_ANA_CDR_04, 0x31);
+                RxSetByte(P7B_2F_ANA_CDR_05, 0x8F);
 
                 // [5:4] CMU_SELPREDIV = 2'b00 --> /1
-                ScalerSetBit_EXINT(P7B_1F_CMU_05, ~(_BIT5 | _BIT4), 0x00);
+                RxSetBit(P7B_1F_CMU_05, ~(_BIT5 | _BIT4), 0x00);
 
                 // [7:0] N_CODE = 8'b0010 0100 --> 36 + 4 = 40
-                ScalerSetByte_EXINT(P7B_20_CMU_06, 0x24);
+                RxSetByte(P7B_20_CMU_06, 0x24);
 
                 // [2:0] rate_sel = 3'b001 --> 1500MHz ~ 3000MHz
-                ScalerSetBit_EXINT(P7B_21_CMU_07, ~(_BIT2 | _BIT1 | _BIT0), _BIT0);
+                RxSetBit(P7B_21_CMU_07, ~(_BIT2 | _BIT1 | _BIT0), _BIT0);
 
                 // [6:4] SEL_DIV = 3'b001 --> 1500MHz ~ 3000MHz
-                ScalerSetBit_EXINT(P7B_3E_EN_01, ~(_BIT6 | _BIT5 | _BIT4), _BIT4);
+                RxSetBit(P7B_3E_EN_01, ~(_BIT6 | _BIT5 | _BIT4), _BIT4);
             }
         }
         else  // MHL 24bit Mode
@@ -1065,21 +1112,21 @@ void ScalerTMDSRx2SetPhy_EXINT0(void)
                 // ref_conuter = 20
                 // cdr_counter = 480
                 // 20/480 = 1/24 = 5*(1/120 clock rate)
-                ScalerSetBit_EXINT(P7B_2D_ANA_CDR_03, ~(_BIT1 | _BIT0), _BIT0);
-                ScalerSetByte_EXINT(P7B_2E_ANA_CDR_04, 0x13);
-                ScalerSetByte_EXINT(P7B_2F_ANA_CDR_05, 0xDF);
+                RxSetBit(P7B_2D_ANA_CDR_03, ~(_BIT1 | _BIT0), _BIT0);
+                RxSetByte(P7B_2E_ANA_CDR_04, 0x13);
+                RxSetByte(P7B_2F_ANA_CDR_05, 0xDF);
 
                 // [5:4] CMU_SELPREDIV = 2'b00 --> /1
-                ScalerSetBit_EXINT(P7B_1F_CMU_05, ~(_BIT5 | _BIT4), 0x00);
+                RxSetBit(P7B_1F_CMU_05, ~(_BIT5 | _BIT4), 0x00);
 
                 // [7:0] N_CODE = 8'b0111 0100 --> 116 + 4 = 120
-                ScalerSetByte_EXINT(P7B_20_CMU_06, 0x74);
+                RxSetByte(P7B_20_CMU_06, 0x74);
 
                 // [2:0] SEL_DIV = 3'b011 --> 375MHz ~ 750MHz
-                ScalerSetBit_EXINT(P7B_21_CMU_07, ~(_BIT2 | _BIT1 | _BIT0), (_BIT1 | _BIT0));
+                RxSetBit(P7B_21_CMU_07, ~(_BIT2 | _BIT1 | _BIT0), (_BIT1 | _BIT0));
 
                 // [6:4] rate_sel = 3'b011 --> 375MHz ~ 750MHz
-                ScalerSetBit_EXINT(P7B_3E_EN_01, ~(_BIT6 | _BIT5 | _BIT4), (_BIT5 | _BIT4));
+                RxSetBit(P7B_3E_EN_01, ~(_BIT6 | _BIT5 | _BIT4), (_BIT5 | _BIT4));
             }
             else if(usPixClk <= 1500)
             {
@@ -1087,21 +1134,21 @@ void ScalerTMDSRx2SetPhy_EXINT0(void)
                 // ref_conuter = 40
                 // cdr_counter = 480
                 // 40/480 = 1/12 = 5*(1/60 clock rate)
-                ScalerSetBit_EXINT(P7B_2D_ANA_CDR_03, ~(_BIT1 | _BIT0), _BIT0);
-                ScalerSetByte_EXINT(P7B_2E_ANA_CDR_04, 0x27);
-                ScalerSetByte_EXINT(P7B_2F_ANA_CDR_05, 0xDF);
+                RxSetBit(P7B_2D_ANA_CDR_03, ~(_BIT1 | _BIT0), _BIT0);
+                RxSetByte(P7B_2E_ANA_CDR_04, 0x27);
+                RxSetByte(P7B_2F_ANA_CDR_05, 0xDF);
 
                 // [5:4] CMU_SELPREDIV = 2'b00 --> /1
-                ScalerSetBit_EXINT(P7B_1F_CMU_05, ~(_BIT5 | _BIT4), 0x00);
+                RxSetBit(P7B_1F_CMU_05, ~(_BIT5 | _BIT4), 0x00);
 
                 // [7:0] N_CODE = 8'b0011 1000 --> 56 + 4 = 60
-                ScalerSetByte_EXINT(P7B_20_CMU_06, 0x38);
+                RxSetByte(P7B_20_CMU_06, 0x38);
 
                 // [2:0] SEL_DIV = 3'b010 --> 750MHz ~ 1500MHz
-                ScalerSetBit_EXINT(P7B_21_CMU_07, ~(_BIT2 | _BIT1 | _BIT0), _BIT1);
+                RxSetBit(P7B_21_CMU_07, ~(_BIT2 | _BIT1 | _BIT0), _BIT1);
 
                 // [6:4] rate_sel = 3'b010 --> 750MHz ~ 1500MHz
-                ScalerSetBit_EXINT(P7B_3E_EN_01, ~(_BIT6 | _BIT5 | _BIT4), _BIT5);
+                RxSetBit(P7B_3E_EN_01, ~(_BIT6 | _BIT5 | _BIT4), _BIT5);
             }
             else if(usPixClk <= 3000)
             {
@@ -1109,21 +1156,21 @@ void ScalerTMDSRx2SetPhy_EXINT0(void)
                 // ref_conuter = 80
                 // cdr_counter = 480
                 // 80/480 = 1/6 = 5*(1/30 clock rate)
-                ScalerSetBit_EXINT(P7B_2D_ANA_CDR_03, ~(_BIT1 | _BIT0), _BIT0);
-                ScalerSetByte_EXINT(P7B_2E_ANA_CDR_04, 0x4F);
-                ScalerSetByte_EXINT(P7B_2F_ANA_CDR_05, 0xDF);
+                RxSetBit(P7B_2D_ANA_CDR_03, ~(_BIT1 | _BIT0), _BIT0);
+                RxSetByte(P7B_2E_ANA_CDR_04, 0x4F);
+                RxSetByte(P7B_2F_ANA_CDR_05, 0xDF);
 
                 // [5:4] CMU_SELPREDIV = 2'b00 --> /1
-                ScalerSetBit_EXINT(P7B_1F_CMU_05, ~(_BIT5 | _BIT4), 0x00);
+                RxSetBit(P7B_1F_CMU_05, ~(_BIT5 | _BIT4), 0x00);
 
                 // [7:0] N_CODE = 8'b0001 1010 --> 26 + 4 = 30
-                ScalerSetByte_EXINT(P7B_20_CMU_06, 0x1A);
+                RxSetByte(P7B_20_CMU_06, 0x1A);
 
                 // [2:0] SEL_DIV = 3'b001 --> 1500MHz ~ 3000MHz
-                ScalerSetBit_EXINT(P7B_21_CMU_07, ~(_BIT2 | _BIT1 | _BIT0), _BIT0);
+                RxSetBit(P7B_21_CMU_07, ~(_BIT2 | _BIT1 | _BIT0), _BIT0);
 
                 // [6:4] rate_sel = 3'b001 --> 1500MHz ~ 3000MHz
-                ScalerSetBit_EXINT(P7B_3E_EN_01, ~(_BIT6 | _BIT5 | _BIT4), _BIT4);
+                RxSetBit(P7B_3E_EN_01, ~(_BIT6 | _BIT5 | _BIT4), _BIT4);
             }
             else
             {
@@ -1131,21 +1178,21 @@ void ScalerTMDSRx2SetPhy_EXINT0(void)
                 // ref_conuter = 160
                 // cdr_counter = 480
                 // 160/480 = 1/3 = 5*(1/15 clock rate)
-                ScalerSetBit_EXINT(P7B_2D_ANA_CDR_03, ~(_BIT1 | _BIT0), _BIT0);
-                ScalerSetByte_EXINT(P7B_2E_ANA_CDR_04, 0x9F);
-                ScalerSetByte_EXINT(P7B_2F_ANA_CDR_05, 0xDF);
+                RxSetBit(P7B_2D_ANA_CDR_03, ~(_BIT1 | _BIT0), _BIT0);
+                RxSetByte(P7B_2E_ANA_CDR_04, 0x9F);
+                RxSetByte(P7B_2F_ANA_CDR_05, 0xDF);
 
                 // [5:4] CMU_SELPREDIV = 2'b00 --> /1
-                ScalerSetBit_EXINT(P7B_1F_CMU_05, ~(_BIT5 | _BIT4), 0x00);
+                RxSetBit(P7B_1F_CMU_05, ~(_BIT5 | _BIT4), 0x00);
 
                 // [7:0] N_CODE = 8'b0000 1101 --> 11 + 4 = 30
-                ScalerSetByte_EXINT(P7B_20_CMU_06, 0x0B);
+                RxSetByte(P7B_20_CMU_06, 0x0B);
 
                 // [2:0] SEL_DIV = 3'b000 --> 3000MHz ~ 6000MHz
-                ScalerSetBit_EXINT(P7B_21_CMU_07, ~(_BIT2 | _BIT1 | _BIT0), 0x00);
+                RxSetBit(P7B_21_CMU_07, ~(_BIT2 | _BIT1 | _BIT0), 0x00);
 
                 // [6:4] rate_sel = 3'b000 --> 3000MHz ~ 6000MHz
-                ScalerSetBit_EXINT(P7B_3E_EN_01, ~(_BIT6 | _BIT5 | _BIT4), 0x00);
+                RxSetBit(P7B_3E_EN_01, ~(_BIT6 | _BIT5 | _BIT4), 0x00);
             }
         }
     }
@@ -1153,7 +1200,7 @@ void ScalerTMDSRx2SetPhy_EXINT0(void)
 #endif
     {
 #if(_D2_HDMI_2_0_SUPPORT == _ON)
-        if(GET_TMDS_RX2_HIGH_SPEED_MODE() == _FALSE)  // 1:10
+        if(RXSEL((GET_TMDS_RX2_HIGH_SPEED_MODE()), (GET_TMDS_RX3_HIGH_SPEED_MODE())) == _FALSE)  // 1:10
 #endif
         {
             if(usPixClk <= 375)
@@ -1162,21 +1209,21 @@ void ScalerTMDSRx2SetPhy_EXINT0(void)
                 // ref_conuter = 30
                 // cdr_counter = 480
                 // 30/480 = 1/16 = 5*(1/80 clock rate)
-                ScalerSetBit_EXINT(P7B_2D_ANA_CDR_03, ~(_BIT1 | _BIT0), _BIT0);
-                ScalerSetByte_EXINT(P7B_2E_ANA_CDR_04, 0x1D);
-                ScalerSetByte_EXINT(P7B_2F_ANA_CDR_05, 0xDF);
+                RxSetBit(P7B_2D_ANA_CDR_03, ~(_BIT1 | _BIT0), _BIT0);
+                RxSetByte(P7B_2E_ANA_CDR_04, 0x1D);
+                RxSetByte(P7B_2F_ANA_CDR_05, 0xDF);
 
                 // [5:4] CMU_SELPREDIV = 2'b00 --> /1
-                ScalerSetBit_EXINT(P7B_1F_CMU_05, ~(_BIT5 | _BIT4), 0x00);
+                RxSetBit(P7B_1F_CMU_05, ~(_BIT5 | _BIT4), 0x00);
 
                 // [7:0] N_CODE = 8'b0100 1100 --> 76 + 4 = 80
-                ScalerSetByte_EXINT(P7B_20_CMU_06, 0x4C);
+                RxSetByte(P7B_20_CMU_06, 0x4C);
 
                 // [2:0] SEL_DIV = 3'b100 --> 187.5MHz ~ 375MHz
-                ScalerSetBit_EXINT(P7B_21_CMU_07, ~(_BIT2 | _BIT1 | _BIT0), _BIT2);
+                RxSetBit(P7B_21_CMU_07, ~(_BIT2 | _BIT1 | _BIT0), _BIT2);
 
                 // [6:4] rate_sel = 3'b100 --> 187.5MHz ~ 375MHz
-                ScalerSetBit_EXINT(P7B_3E_EN_01, ~(_BIT6 | _BIT5 | _BIT4), _BIT6);
+                RxSetBit(P7B_3E_EN_01, ~(_BIT6 | _BIT5 | _BIT4), _BIT6);
             }
             else if(usPixClk <= 750)
             {
@@ -1184,21 +1231,21 @@ void ScalerTMDSRx2SetPhy_EXINT0(void)
                 // ref_conuter = 50
                 // cdr_counter = 400
                 // 50/400 = 1/8 = 5*(1/40 clock rate)
-                ScalerSetBit_EXINT(P7B_2D_ANA_CDR_03, ~(_BIT1 | _BIT0), _BIT0);
-                ScalerSetByte_EXINT(P7B_2E_ANA_CDR_04, 0x31);
-                ScalerSetByte_EXINT(P7B_2F_ANA_CDR_05, 0x8F);
+                RxSetBit(P7B_2D_ANA_CDR_03, ~(_BIT1 | _BIT0), _BIT0);
+                RxSetByte(P7B_2E_ANA_CDR_04, 0x31);
+                RxSetByte(P7B_2F_ANA_CDR_05, 0x8F);
 
                 // [5:4] CMU_SELPREDIV = 2'b00 --> /1
-                ScalerSetBit_EXINT(P7B_1F_CMU_05, ~(_BIT5 | _BIT4), 0x00);
+                RxSetBit(P7B_1F_CMU_05, ~(_BIT5 | _BIT4), 0x00);
 
                 // [7:0] N_CODE = 8'b0010 0100 --> 36 + 4 = 40
-                ScalerSetByte_EXINT(P7B_20_CMU_06, 0x24);
+                RxSetByte(P7B_20_CMU_06, 0x24);
 
                 // [2:0] SEL_DIV = 3'b011 --> 375MHz ~ 750MHz
-                ScalerSetBit_EXINT(P7B_21_CMU_07, ~(_BIT2 | _BIT1 | _BIT0), (_BIT1 | _BIT0));
+                RxSetBit(P7B_21_CMU_07, ~(_BIT2 | _BIT1 | _BIT0), (_BIT1 | _BIT0));
 
                 // [6:4] rate_sel = 3'b011 --> 375MHz ~ 750MHz
-                ScalerSetBit_EXINT(P7B_3E_EN_01, ~(_BIT6 | _BIT5 | _BIT4), (_BIT5 | _BIT4));
+                RxSetBit(P7B_3E_EN_01, ~(_BIT6 | _BIT5 | _BIT4), (_BIT5 | _BIT4));
             }
             else if(usPixClk <= 1500)
             {
@@ -1206,21 +1253,21 @@ void ScalerTMDSRx2SetPhy_EXINT0(void)
                 // ref_conuter = 125
                 // cdr_counter = 500
                 // 125/500 = 1/4 = 5*(1/20 clock rate)
-                ScalerSetBit_EXINT(P7B_2D_ANA_CDR_03, ~(_BIT1 | _BIT0), _BIT0);
-                ScalerSetByte_EXINT(P7B_2E_ANA_CDR_04, 0x7C);
-                ScalerSetByte_EXINT(P7B_2F_ANA_CDR_05, 0xF3);
+                RxSetBit(P7B_2D_ANA_CDR_03, ~(_BIT1 | _BIT0), _BIT0);
+                RxSetByte(P7B_2E_ANA_CDR_04, 0x7C);
+                RxSetByte(P7B_2F_ANA_CDR_05, 0xF3);
 
                 // [5:4] CMU_SELPREDIV = 2'b00 --> /1
-                ScalerSetBit_EXINT(P7B_1F_CMU_05, ~(_BIT5 | _BIT4), 0x00);
+                RxSetBit(P7B_1F_CMU_05, ~(_BIT5 | _BIT4), 0x00);
 
                 // [7:0] N_CODE = 8'b0001 0000 --> 16 + 4 = 20
-                ScalerSetByte_EXINT(P7B_20_CMU_06, 0x10);
+                RxSetByte(P7B_20_CMU_06, 0x10);
 
                 // [2:0] SEL_DIV = 3'b010 --> 750MHz ~ 1500MHz
-                ScalerSetBit_EXINT(P7B_21_CMU_07, ~(_BIT2 | _BIT1 | _BIT0), _BIT1);
+                RxSetBit(P7B_21_CMU_07, ~(_BIT2 | _BIT1 | _BIT0), _BIT1);
 
                 // [6:4] rate_sel = 3'b010 --> 750MHz ~ 1500MHz
-                ScalerSetBit_EXINT(P7B_3E_EN_01, ~(_BIT6 | _BIT5 | _BIT4), _BIT5);
+                RxSetBit(P7B_3E_EN_01, ~(_BIT6 | _BIT5 | _BIT4), _BIT5);
             }
             else if(usPixClk <= 3000)
             {
@@ -1228,21 +1275,21 @@ void ScalerTMDSRx2SetPhy_EXINT0(void)
                 // ref_conuter = 250
                 // cdr_counter = 500
                 // 250/500 = 1/2 = 5*(1/10 clock rate)
-                ScalerSetBit_EXINT(P7B_2D_ANA_CDR_03, ~(_BIT1 | _BIT0), _BIT0);
-                ScalerSetByte_EXINT(P7B_2E_ANA_CDR_04, 0xF9);
-                ScalerSetByte_EXINT(P7B_2F_ANA_CDR_05, 0xF3);
+                RxSetBit(P7B_2D_ANA_CDR_03, ~(_BIT1 | _BIT0), _BIT0);
+                RxSetByte(P7B_2E_ANA_CDR_04, 0xF9);
+                RxSetByte(P7B_2F_ANA_CDR_05, 0xF3);
 
                 // [5:4] CMU_SELPREDIV = 2'b00 --> /2
-                ScalerSetBit_EXINT(P7B_1F_CMU_05, ~(_BIT5 | _BIT4), _BIT4);
+                RxSetBit(P7B_1F_CMU_05, ~(_BIT5 | _BIT4), _BIT4);
 
                 // [7:0] N_CODE = 8'b0001 0000 --> 16 + 4 = 20
-                ScalerSetByte_EXINT(P7B_20_CMU_06, 0x10);
+                RxSetByte(P7B_20_CMU_06, 0x10);
 
                 // [2:0] SEL_DIV = 3'b001 --> 1500MHz ~ 3000MHz
-                ScalerSetBit_EXINT(P7B_21_CMU_07, ~(_BIT2 | _BIT1 | _BIT0), _BIT0);
+                RxSetBit(P7B_21_CMU_07, ~(_BIT2 | _BIT1 | _BIT0), _BIT0);
 
                 // [6:4] rate_sel = 3'b001 --> 1500MHz ~ 3000MHz
-                ScalerSetBit_EXINT(P7B_3E_EN_01, ~(_BIT6 | _BIT5 | _BIT4), _BIT4);
+                RxSetBit(P7B_3E_EN_01, ~(_BIT6 | _BIT5 | _BIT4), _BIT4);
             }
             else     // ACDR 1:10
             {
@@ -1250,15 +1297,15 @@ void ScalerTMDSRx2SetPhy_EXINT0(void)
                 // ref_conuter = 500
                 // cdr_counter = 500
                 // 500/500 = 1/1 = 5*(1/5 clock rate)
-                ScalerSetBit_EXINT(P7B_2D_ANA_CDR_03, ~(_BIT1 | _BIT0), (_BIT1 | _BIT0));
-                ScalerSetByte_EXINT(P7B_2E_ANA_CDR_04, 0xF3);
-                ScalerSetByte_EXINT(P7B_2F_ANA_CDR_05, 0xF3);
+                RxSetBit(P7B_2D_ANA_CDR_03, ~(_BIT1 | _BIT0), (_BIT1 | _BIT0));
+                RxSetByte(P7B_2E_ANA_CDR_04, 0xF3);
+                RxSetByte(P7B_2F_ANA_CDR_05, 0xF3);
 
                 // [2:0] rate_sel = 3'b000 --> 3000MHz ~ 6000MHz
-                ScalerSetBit_EXINT(P7B_21_CMU_07, ~(_BIT2 | _BIT1 | _BIT0), 0x00);
+                RxSetBit(P7B_21_CMU_07, ~(_BIT2 | _BIT1 | _BIT0), 0x00);
 
                 // [6:4] SEL_DIV = 3'b000 --> 3000MHz ~ 6000MHz
-                ScalerSetBit_EXINT(P7B_3E_EN_01, ~(_BIT6 | _BIT5 | _BIT4), 0x00);
+                RxSetBit(P7B_3E_EN_01, ~(_BIT6 | _BIT5 | _BIT4), 0x00);
             }
         }
 #if(_D2_HDMI_2_0_SUPPORT == _ON)
@@ -1268,15 +1315,15 @@ void ScalerTMDSRx2SetPhy_EXINT0(void)
             // ref_conuter = 125
             // cdr_counter = 500
             // 100/400 = 1/4 = 5*(1/20 clock rate)
-            ScalerSetBit_EXINT(P7B_2D_ANA_CDR_03, ~(_BIT1 | _BIT0), _BIT0);
-            ScalerSetByte_EXINT(P7B_2E_ANA_CDR_04, 0x7C);
-            ScalerSetByte_EXINT(P7B_2F_ANA_CDR_05, 0xF3);
+            RxSetBit(P7B_2D_ANA_CDR_03, ~(_BIT1 | _BIT0), _BIT0);
+            RxSetByte(P7B_2E_ANA_CDR_04, 0x7C);
+            RxSetByte(P7B_2F_ANA_CDR_05, 0xF3);
 
             // [2:0] rate_sel = 3'b000 --> 3000MHz ~ 6000MHz
-            ScalerSetBit_EXINT(P7B_21_CMU_07, ~(_BIT2 | _BIT1 | _BIT0), 0x00);
+            RxSetBit(P7B_21_CMU_07, ~(_BIT2 | _BIT1 | _BIT0), 0x00);
 
             // [6:4] SEL_DIV = 3'b000 --> 3000MHz ~ 6000MHz
-            ScalerSetBit_EXINT(P7B_3E_EN_01, ~(_BIT6 | _BIT5 | _BIT4), 0x00);
+            RxSetBit(P7B_3E_EN_01, ~(_BIT6 | _BIT5 | _BIT4), 0x00);
         }
 #endif
     }
@@ -1287,25 +1334,25 @@ void ScalerTMDSRx2SetPhy_EXINT0(void)
     /////////////////////
 
     // [0] en_clkout_manual = 0 --> Disable Clkout
-    ScalerSetBit_EXINT(P7B_0E_SDM_03, ~_BIT0, 0x00);
+    RxSetBit(P7B_0E_SDM_03, ~_BIT0, 0x00);
 
     // [0] en_eqen_manual = 0 --> Disable Clkout
-    ScalerSetBit_EXINT(P7B_10_EQEN_TIMER, ~_BIT0, 0x00);
+    RxSetBit(P7B_10_EQEN_TIMER, ~_BIT0, 0x00);
 
     // [0] en_data_manual = 0 --> Disable Dataout
-    ScalerSetBit_EXINT(P7B_11_DATA_TIMER, ~_BIT0, 0x00);
+    RxSetBit(P7B_11_DATA_TIMER, ~_BIT0, 0x00);
 
     // [4] reg_acdr_l0_en = 1'b0 --> Disable Lane0 ACDR_DFE
     // [3] reg_en_data_manual_l0 = 1'b0
     // [2] reg_bypass_data_rdy_l0 = 1'b1
     // [1] reg_en_eqen_manual_l0 = 1'b0
     // [0] reg_bypass_eqen_rdy_l0 = 1'b1
-    ScalerSetBit_EXINT(P7B_12_ANA_CDR, ~(_BIT4 | _BIT3 | _BIT2 | _BIT1 | _BIT0), (_BIT2 | _BIT0));
+    RxSetBit(P7B_12_ANA_CDR, ~(_BIT4 | _BIT3 | _BIT2 | _BIT1 | _BIT0), (_BIT2 | _BIT0));
 
     // [6:4] RST_N = 3'b000 = 3'b111 -> Digital Circuit Reset Toggle
     // [2:0] Disable DCDR
-    ScalerSetBit_EXINT(P7B_38_TMDS_RESET, ~(_BIT6 | _BIT5 | _BIT4 | _BIT2 | _BIT1 | _BIT0), 0x00);
-    ScalerSetBit_EXINT(P7B_38_TMDS_RESET, ~(_BIT6 | _BIT5 | _BIT4 | _BIT2 | _BIT1 | _BIT0), (_BIT6 | _BIT5 | _BIT4));
+    RxSetBit(P7B_38_TMDS_RESET, ~(_BIT6 | _BIT5 | _BIT4 | _BIT2 | _BIT1 | _BIT0), 0x00);
+    RxSetBit(P7B_38_TMDS_RESET, ~(_BIT6 | _BIT5 | _BIT4 | _BIT2 | _BIT1 | _BIT0), (_BIT6 | _BIT5 | _BIT4));
 
 
     /////////////////
@@ -1313,50 +1360,50 @@ void ScalerTMDSRx2SetPhy_EXINT0(void)
     /////////////////
 
     // Load DFE Initial Code
-    ScalerTMDSRx2SetDFEInitial_EXINT0();
+    ScalerTMDSRxSetDFEInitial_EXINT0();
 
     // Enable Tap0~4
-    ScalerSetBit_EXINT(P7B_21_CMU_07, ~(_BIT7 | _BIT6 | _BIT5 | _BIT4 | _BIT3), (_BIT7 | _BIT6 | _BIT5 | _BIT4 | _BIT3));
+    RxSetBit(P7B_21_CMU_07, ~(_BIT7 | _BIT6 | _BIT5 | _BIT4 | _BIT3), (_BIT7 | _BIT6 | _BIT5 | _BIT4 | _BIT3));
 
     if(usPixClk <= 2500)
     {
         // [3:1] LE_lowgain_highboost = 111 --> LE HighBoost Mode
-        ScalerSetBit_EXINT(P7B_22_CMU_08, ~(_BIT3 | _BIT2 | _BIT1), (_BIT3 | _BIT2 | _BIT1));
+        RxSetBit(P7B_22_CMU_08, ~(_BIT3 | _BIT2 | _BIT1), (_BIT3 | _BIT2 | _BIT1));
     }
     else
     {
         // [3:1] LE_lowgain_highboost = 100 --> LE HighBoost Mode
-        ScalerSetBit_EXINT(P7B_22_CMU_08, ~(_BIT3 | _BIT2 | _BIT1), _BIT3);
+        RxSetBit(P7B_22_CMU_08, ~(_BIT3 | _BIT2 | _BIT1), _BIT3);
     }
 
     if(usPixClk <= 2000)
     {
         // [7] SEL_DFE_DELAY = 1'b1 --> Increase DFE Delay
-        ScalerSetBit_EXINT(P7B_22_CMU_08, ~_BIT7, _BIT7);
+        RxSetBit(P7B_22_CMU_08, ~_BIT7, _BIT7);
     }
     else
     {
         // [7] SEL_DFE_DELAY = 1'b0 --> Normal DFE Delay
-        ScalerSetBit_EXINT(P7B_22_CMU_08, ~_BIT7, 0x00);
+        RxSetBit(P7B_22_CMU_08, ~_BIT7, 0x00);
     }
 
     if(usPixClk <= 2500)
     {
         // [7:5] LE_RLSEL = 3'b011
         // [4:2] LE_ISEL = 3'b000
-        ScalerSetBit_EXINT(P7B_23_CMU_09, ~(_BIT7 | _BIT6 | _BIT5 | _BIT4 | _BIT3 | _BIT2), (_BIT6 | _BIT5));
+        RxSetBit(P7B_23_CMU_09, ~(_BIT7 | _BIT6 | _BIT5 | _BIT4 | _BIT3 | _BIT2), (_BIT6 | _BIT5));
     }
     else if(usPixClk <= 3400)
     {
         // [7:5] LE_RLSEL = 3'b001
         // [4:2] LE_ISEL = 3'b010
-        ScalerSetBit_EXINT(P7B_23_CMU_09, ~(_BIT7 | _BIT6 | _BIT5 | _BIT4 | _BIT3 | _BIT2), (_BIT5 | _BIT3));
+        RxSetBit(P7B_23_CMU_09, ~(_BIT7 | _BIT6 | _BIT5 | _BIT4 | _BIT3 | _BIT2), (_BIT5 | _BIT3));
     }
     else
     {
         // [7:5] LE_RLSEL = 3'b000
         // [4:2] LE_ISEL = 3'b011
-        ScalerSetBit_EXINT(P7B_23_CMU_09, ~(_BIT7 | _BIT6 | _BIT5 | _BIT4 | _BIT3 | _BIT2), (_BIT3 | _BIT2));
+        RxSetBit(P7B_23_CMU_09, ~(_BIT7 | _BIT6 | _BIT5 | _BIT4 | _BIT3 | _BIT2), (_BIT3 | _BIT2));
     }
 
 
@@ -1365,15 +1412,15 @@ void ScalerTMDSRx2SetPhy_EXINT0(void)
     ////////////////////
 
     // Disable Sumamp High Gain Mode
-    ScalerSetBit_EXINT(P7B_1D_CMU_03, ~_BIT4, 0x00);
+    RxSetBit(P7B_1D_CMU_03, ~_BIT4, 0x00);
 
     // [5] Enable Foreground Calibration Auto Mode
-    ScalerSetBit_EXINT(P7B_24_KOFFSET_00, ~_BIT5, _BIT5);
+    RxSetBit(P7B_24_KOFFSET_00, ~_BIT5, _BIT5);
 
     // [6] Toggle Foreground Calibration
-    ScalerSetBit_EXINT(P7B_24_KOFFSET_00, ~_BIT6, _BIT6);
-    ScalerSetBit_EXINT(P7B_24_KOFFSET_00, ~_BIT6, 0x00);
-    ScalerSetBit_EXINT(P7B_24_KOFFSET_00, ~_BIT6, _BIT6);
+    RxSetBit(P7B_24_KOFFSET_00, ~_BIT6, _BIT6);
+    RxSetBit(P7B_24_KOFFSET_00, ~_BIT6, 0x00);
+    RxSetBit(P7B_24_KOFFSET_00, ~_BIT6, _BIT6);
 
     // Waiting for K Offset
     DELAY_XUS_EXINT(50);
@@ -1389,58 +1436,58 @@ void ScalerTMDSRx2SetPhy_EXINT0(void)
     // [4] reg_adp_eq_off = 1'b0 --> Enable Analog CDR DFE Adaptation
     // [3] xtal_en = 0 --> FLD Reference Input Clock
     // [0] reg_cp_adj_en = 1'b1 --> Enable Adjust Icp When Tracking
-    ScalerSetBit_EXINT(P7B_2B_ANA_CDR_01, ~(_BIT7 | _BIT6 | _BIT5 | _BIT4 | _BIT3 | _BIT0), (_BIT7 | _BIT0));
+    RxSetBit(P7B_2B_ANA_CDR_01, ~(_BIT7 | _BIT6 | _BIT5 | _BIT4 | _BIT3 | _BIT0), (_BIT7 | _BIT0));
 
     // [5] en_wide_temp = 1'b1 --> Enable Wide Temp VCO Band
-    ScalerSetBit_EXINT(P7B_2D_ANA_CDR_03, ~_BIT5, _BIT5);
+    RxSetBit(P7B_2D_ANA_CDR_03, ~_BIT5, _BIT5);
 
     // [3:2] en_vcm_tune = 2'b11 --> Vc = Vdd/2
-    ScalerSetBit_EXINT(P7B_2C_ANA_CDR_02, ~(_BIT3 | _BIT2), (_BIT3 | _BIT2));
+    RxSetBit(P7B_2C_ANA_CDR_02, ~(_BIT3 | _BIT2), (_BIT3 | _BIT2));
 
-    if(ScalerGetBit_EXINT(P7B_1B_CMU_01, _BIT0) == _BIT0) // DCDR
+    if(RxGetBit(P7B_1B_CMU_01, _BIT0) == _BIT0) // DCDR
     {
         // [7] reg_rstb_fsm --> Toggle for FLD reset
-        ScalerSetBit_EXINT(P7B_2A_ANA_CDR_00, ~_BIT7, 0x00);
-        ScalerSetBit_EXINT(P7B_2A_ANA_CDR_00, ~_BIT7, _BIT7);
+        RxSetBit(P7B_2A_ANA_CDR_00, ~_BIT7, 0x00);
+        RxSetBit(P7B_2A_ANA_CDR_00, ~_BIT7, _BIT7);
 
         // Waiting for FLD Lock Band
         AWTO_PHY_FLD_WAIT(360);
 
         // [7] cmu_en = 1'b1 --> Enable CMU PLL
-        ScalerSetBit_EXINT(P7B_1B_CMU_01, ~_BIT7, _BIT7);
+        RxSetBit(P7B_1B_CMU_01, ~_BIT7, _BIT7);
 
         // Enable Digital CDR
-        ScalerSetByte_EXINT(P7B_38_TMDS_RESET, 0xFF);
+        RxSetByte(P7B_38_TMDS_RESET, 0xFF);
 
         // Waiting for CMU Stable
         AWTO_PHY_CMU_WAIT(150);
 
         // [0] en_clkout_manual = 1 --> Enable Clkout
-        ScalerSetBit_EXINT(P7B_0E_SDM_03, ~_BIT0, _BIT0);
+        RxSetBit(P7B_0E_SDM_03, ~_BIT0, _BIT0);
 
         // [0] en_eqen_manual = 1 --> Enable Adaptation
-        ScalerSetBit_EXINT(P7B_10_EQEN_TIMER, ~_BIT0, _BIT0);
+        RxSetBit(P7B_10_EQEN_TIMER, ~_BIT0, _BIT0);
 
         if(usPixClk <= 375) // TMDS Clock < 375
         {
             // Disable Adaptation Loop  0x000
-            ScalerSetByte_EXINT(P7B_A1_L0_DFE_EN_2, 0x00);
-            ScalerSetByte_EXINT(P7B_B1_L1_DFE_EN_2, 0x00);
-            ScalerSetByte_EXINT(P7B_C1_L2_DFE_EN_2, 0x00);
+            RxSetByte(P7B_A1_L0_DFE_EN_2, 0x00);
+            RxSetByte(P7B_B1_L1_DFE_EN_2, 0x00);
+            RxSetByte(P7B_C1_L2_DFE_EN_2, 0x00);
         }
         else if(usPixClk <= 1000)// 375~1000
         {
             // Enable the Vth, Tap0~1 Adaptation Loop 0x043
-            ScalerSetByte_EXINT(P7B_A1_L0_DFE_EN_2, 0x43);
-            ScalerSetByte_EXINT(P7B_B1_L1_DFE_EN_2, 0x43);
-            ScalerSetByte_EXINT(P7B_C1_L2_DFE_EN_2, 0x43);
+            RxSetByte(P7B_A1_L0_DFE_EN_2, 0x43);
+            RxSetByte(P7B_B1_L1_DFE_EN_2, 0x43);
+            RxSetByte(P7B_C1_L2_DFE_EN_2, 0x43);
         }
         else
         {
             // Enable the LE, Vth, Tap0~1 Adaptation Loop 0x0C3
-            ScalerSetByte_EXINT(P7B_A1_L0_DFE_EN_2, 0xC3);
-            ScalerSetByte_EXINT(P7B_B1_L1_DFE_EN_2, 0xC3);
-            ScalerSetByte_EXINT(P7B_C1_L2_DFE_EN_2, 0xC3);
+            RxSetByte(P7B_A1_L0_DFE_EN_2, 0xC3);
+            RxSetByte(P7B_B1_L1_DFE_EN_2, 0xC3);
+            RxSetByte(P7B_C1_L2_DFE_EN_2, 0xC3);
         }
 
         // Waiting for the Adaptation
@@ -1449,54 +1496,54 @@ void ScalerTMDSRx2SetPhy_EXINT0(void)
     else if(usPixClk <= 3400) // 2000~3400 Analog CDR
     {
         // [7] cmu_en = 1'b1 --> Enable CMU PLL
-        ScalerSetBit_EXINT(P7B_1B_CMU_01, ~_BIT7, _BIT7);
+        RxSetBit(P7B_1B_CMU_01, ~_BIT7, _BIT7);
 
         // [4] reg_acdr_l0_en = 1'b1 --> Enable Lane0 ACDR
         // [1] reg_en_eqen_manual_l0 = 1'b1
-        ScalerSetBit_EXINT(P7B_12_ANA_CDR, ~(_BIT4 | _BIT1), (_BIT4 | _BIT1));
+        RxSetBit(P7B_12_ANA_CDR, ~(_BIT4 | _BIT1), (_BIT4 | _BIT1));
 
         // [7] reg_rstb_fsm --> Toggle for FLD reset
-        ScalerSetBit_EXINT(P7B_2A_ANA_CDR_00, ~_BIT7, 0x00);
-        ScalerSetBit_EXINT(P7B_2A_ANA_CDR_00, ~_BIT7, _BIT7);
+        RxSetBit(P7B_2A_ANA_CDR_00, ~_BIT7, 0x00);
+        RxSetBit(P7B_2A_ANA_CDR_00, ~_BIT7, _BIT7);
 
         // Enable LE, Vth, Tap0~4 Adaptation
-        ScalerSetByte_EXINT(P7B_A1_L0_DFE_EN_2, 0xDF);
-        ScalerSetByte_EXINT(P7B_B1_L1_DFE_EN_2, 0xDF);
-        ScalerSetByte_EXINT(P7B_C1_L2_DFE_EN_2, 0xDF);
+        RxSetByte(P7B_A1_L0_DFE_EN_2, 0xDF);
+        RxSetByte(P7B_B1_L1_DFE_EN_2, 0xDF);
+        RxSetByte(P7B_C1_L2_DFE_EN_2, 0xDF);
 
         // Waiting for VCO Stable & DFE Adaptation
         DELAY_XUS_EXINT(360);
 
 #if(_D2_INPUT_PORT_TYPE == _D2_MHL_PORT)
-        if(ScalerGetBit_EXINT(P7B_17_BANDGAP_03, _BIT1) == _BIT1)  // MHL Mode
+        if(RxGetBit(P7B_17_BANDGAP_03, _BIT1) == _BIT1)  // MHL Mode
         {
             if(usPixClk > 2500) // for 2500~3000 MHL PP Mode
             {
                 // Start to Record LE Max/Min
-                ScalerSetBit_EXINT(P7B_F2_COEF_3, ~_BIT0, _BIT0);
+                RxSetBit(P7B_F2_COEF_3, ~_BIT0, _BIT0);
 
                 // Waiting for DFE Adaptation
                 DELAY_XUS_EXINT(150);
 
                 // Stop to Record LE Max/Min
-                ScalerSetBit_EXINT(P7B_F2_COEF_3, ~_BIT0, 0x00);
+                RxSetBit(P7B_F2_COEF_3, ~_BIT0, 0x00);
 
                 // Disable All Adaptation Loop
-                ScalerSetByte_EXINT(P7B_A1_L0_DFE_EN_2, 0x00);
+                RxSetByte(P7B_A1_L0_DFE_EN_2, 0x00);
 
                 // Read Back LE Max
-                ScalerSetBit_EXINT(P7B_F2_COEF_3, ~(_BIT5 | _BIT4 | _BIT3 | _BIT2 | _BIT1), _BIT3);
+                RxSetBit(P7B_F2_COEF_3, ~(_BIT5 | _BIT4 | _BIT3 | _BIT2 | _BIT1), _BIT3);
 
                 // Read Back Lane0
-                ScalerSetBit_EXINT(P7B_F2_COEF_3, ~(_BIT7 | _BIT6), 0x00);
-                g_pucTMDSRx2LEMax[0] = ScalerGetByte_EXINT(P7B_F3_COEF_4);
+                RxSetBit(P7B_F2_COEF_3, ~(_BIT7 | _BIT6), 0x00);
+                g_pucTMDSRxLEMax[RX_CUR][0] = RxGetByte(P7B_F3_COEF_4);
 
                 // Set Max Value of LE
-                ScalerSetBit_EXINT(P7B_A5_L0_INIT_3, ~(_BIT5 | _BIT4 | _BIT3 | _BIT2 | _BIT1 | _BIT0), g_pucTMDSRx2LEMax[0]);
+                RxSetBit(P7B_A5_L0_INIT_3, ~(_BIT5 | _BIT4 | _BIT3 | _BIT2 | _BIT1 | _BIT0), g_pucTMDSRxLEMax[RX_CUR][0]);
 
                 // Reload LE Max
-                ScalerSetBit_EXINT(P7B_AA_L0_INIT_8, ~_BIT1, _BIT1);
-                ScalerSetBit_EXINT(P7B_AA_L0_INIT_8, ~_BIT1, 0x00);
+                RxSetBit(P7B_AA_L0_INIT_8, ~_BIT1, _BIT1);
+                RxSetBit(P7B_AA_L0_INIT_8, ~_BIT1, 0x00);
             }
         }
         else // HDMI Mode
@@ -1505,115 +1552,115 @@ void ScalerTMDSRx2SetPhy_EXINT0(void)
             if(usPixClk > 2900) // for 2900~3400 10M Cable Case
             {
                 // Start to Record LE Max/Min
-                ScalerSetBit_EXINT(P7B_F2_COEF_3, ~_BIT0, _BIT0);
+                RxSetBit(P7B_F2_COEF_3, ~_BIT0, _BIT0);
 
                 // Waiting for DFE Adaptation
                 DELAY_XUS_EXINT(150);
 
                 // Stop to Record LE Max/Min
-                ScalerSetBit_EXINT(P7B_F2_COEF_3, ~_BIT0, 0x00);
+                RxSetBit(P7B_F2_COEF_3, ~_BIT0, 0x00);
 
                 // Disable All Adaptation Loop
-                ScalerSetByte_EXINT(P7B_A1_L0_DFE_EN_2, 0x00);
-                ScalerSetByte_EXINT(P7B_B1_L1_DFE_EN_2, 0x00);
-                ScalerSetByte_EXINT(P7B_C1_L2_DFE_EN_2, 0x00);
+                RxSetByte(P7B_A1_L0_DFE_EN_2, 0x00);
+                RxSetByte(P7B_B1_L1_DFE_EN_2, 0x00);
+                RxSetByte(P7B_C1_L2_DFE_EN_2, 0x00);
 
                 // Read Back LE Max
-                ScalerSetBit_EXINT(P7B_F2_COEF_3, ~(_BIT5 | _BIT4 | _BIT3 | _BIT2 | _BIT1), _BIT3);
+                RxSetBit(P7B_F2_COEF_3, ~(_BIT5 | _BIT4 | _BIT3 | _BIT2 | _BIT1), _BIT3);
 
                 // Read Back Lane0
-                ScalerSetBit_EXINT(P7B_F2_COEF_3, ~(_BIT7 | _BIT6), 0x00);
-                g_pucTMDSRx2LEMax[0] = ScalerGetByte_EXINT(P7B_F3_COEF_4);
+                RxSetBit(P7B_F2_COEF_3, ~(_BIT7 | _BIT6), 0x00);
+                g_pucTMDSRxLEMax[RX_CUR][0] = RxGetByte(P7B_F3_COEF_4);
 
                 // Read Back Lane1
-                ScalerSetBit_EXINT(P7B_F2_COEF_3, ~(_BIT7 | _BIT6), _BIT6);
-                g_pucTMDSRx2LEMax[1] = ScalerGetByte_EXINT(P7B_F3_COEF_4);
+                RxSetBit(P7B_F2_COEF_3, ~(_BIT7 | _BIT6), _BIT6);
+                g_pucTMDSRxLEMax[RX_CUR][1] = RxGetByte(P7B_F3_COEF_4);
 
                 // Read Back Lane2
-                ScalerSetBit_EXINT(P7B_F2_COEF_3, ~(_BIT7 | _BIT6), _BIT7);
-                g_pucTMDSRx2LEMax[2] = ScalerGetByte_EXINT(P7B_F3_COEF_4);
+                RxSetBit(P7B_F2_COEF_3, ~(_BIT7 | _BIT6), _BIT7);
+                g_pucTMDSRxLEMax[RX_CUR][2] = RxGetByte(P7B_F3_COEF_4);
 
                 // Read Back Tap1 Max
-                ScalerSetBit_EXINT(P7B_F2_COEF_3, ~(_BIT5 | _BIT4 | _BIT3 | _BIT2 | _BIT1), _BIT2);
+                RxSetBit(P7B_F2_COEF_3, ~(_BIT5 | _BIT4 | _BIT3 | _BIT2 | _BIT1), _BIT2);
 
                 // Read Back Lane0
-                ScalerSetBit_EXINT(P7B_F2_COEF_3, ~(_BIT7 | _BIT6), 0x00);
-                g_pucTMDSRx2Tap1Max[0] = ScalerGetByte_EXINT(P7B_F3_COEF_4);
+                RxSetBit(P7B_F2_COEF_3, ~(_BIT7 | _BIT6), 0x00);
+                g_pucTMDSRxTap1Max[RX_CUR][0] = RxGetByte(P7B_F3_COEF_4);
 
                 // Read Back Lane1
-                ScalerSetBit_EXINT(P7B_F2_COEF_3, ~(_BIT7 | _BIT6), _BIT6);
-                g_pucTMDSRx2Tap1Max[1] = ScalerGetByte_EXINT(P7B_F3_COEF_4);
+                RxSetBit(P7B_F2_COEF_3, ~(_BIT7 | _BIT6), _BIT6);
+                g_pucTMDSRxTap1Max[RX_CUR][1] = RxGetByte(P7B_F3_COEF_4);
 
                 // Read Back Lane2
-                ScalerSetBit_EXINT(P7B_F2_COEF_3, ~(_BIT7 | _BIT6), _BIT7);
-                g_pucTMDSRx2Tap1Max[2] = ScalerGetByte_EXINT(P7B_F3_COEF_4);
+                RxSetBit(P7B_F2_COEF_3, ~(_BIT7 | _BIT6), _BIT7);
+                g_pucTMDSRxTap1Max[RX_CUR][2] = RxGetByte(P7B_F3_COEF_4);
 
                 // Lane0 LEQ >= 20
-                if(g_pucTMDSRx2LEMax[0] >= 16)
+                if(g_pucTMDSRxLEMax[RX_CUR][0] >= 16)
                 {
                     // Set Tap2 = 6
-                    ScalerSetByte_EXINT(P7B_A6_L0_INIT_4, 0x06);
+                    RxSetByte(P7B_A6_L0_INIT_4, 0x06);
 
                     // Set Max Value of LE + Tap1
-                    ScalerSetBit_EXINT(P7B_A5_L0_INIT_3, ~(_BIT5 | _BIT4 | _BIT3 | _BIT2 | _BIT1 | _BIT0), (g_pucTMDSRx2LEMax[0] + g_pucTMDSRx2Tap1Max[0]));
+                    RxSetBit(P7B_A5_L0_INIT_3, ~(_BIT5 | _BIT4 | _BIT3 | _BIT2 | _BIT1 | _BIT0), (g_pucTMDSRxLEMax[RX_CUR][0] + g_pucTMDSRxTap1Max[RX_CUR][0]));
 
                     // Reload LE/Tap1~2
-                    ScalerSetBit_EXINT(P7B_AA_L0_INIT_8, ~(_BIT2 | _BIT1), (_BIT2 | _BIT1));
-                    ScalerSetBit_EXINT(P7B_AA_L0_INIT_8, ~(_BIT2 | _BIT1), 0x00);
+                    RxSetBit(P7B_AA_L0_INIT_8, ~(_BIT2 | _BIT1), (_BIT2 | _BIT1));
+                    RxSetBit(P7B_AA_L0_INIT_8, ~(_BIT2 | _BIT1), 0x00);
                 }
 
                 // Lane1 LEQ >= 20
-                if(g_pucTMDSRx2LEMax[1] >= 16)
+                if(g_pucTMDSRxLEMax[RX_CUR][1] >= 16)
                 {
                     // Set Tap2 = 6
-                    ScalerSetByte_EXINT(P7B_B6_L1_INIT_4, 0x06);
+                    RxSetByte(P7B_B6_L1_INIT_4, 0x06);
 
                     // Set Max Value of LE + Tap1
-                    ScalerSetBit_EXINT(P7B_B5_L1_INIT_3, ~(_BIT5 | _BIT4 | _BIT3 | _BIT2 | _BIT1 | _BIT0), (g_pucTMDSRx2LEMax[1] + g_pucTMDSRx2Tap1Max[1]));
+                    RxSetBit(P7B_B5_L1_INIT_3, ~(_BIT5 | _BIT4 | _BIT3 | _BIT2 | _BIT1 | _BIT0), (g_pucTMDSRxLEMax[RX_CUR][1] + g_pucTMDSRxTap1Max[RX_CUR][1]));
 
                     // Reload LE/Tap1~2
-                    ScalerSetBit_EXINT(P7B_BA_L1_INIT_8, ~(_BIT2 | _BIT1), (_BIT2 | _BIT1));
-                    ScalerSetBit_EXINT(P7B_BA_L1_INIT_8, ~(_BIT2 | _BIT1), 0x00);
+                    RxSetBit(P7B_BA_L1_INIT_8, ~(_BIT2 | _BIT1), (_BIT2 | _BIT1));
+                    RxSetBit(P7B_BA_L1_INIT_8, ~(_BIT2 | _BIT1), 0x00);
                 }
 
                 // Lane2 LEQ >= 20
-                if(g_pucTMDSRx2LEMax[2] >= 16)
+                if(g_pucTMDSRxLEMax[RX_CUR][2] >= 16)
                 {
                     // Set Tap2 = 6
-                    ScalerSetByte_EXINT(P7B_C6_L2_INIT_4, 0x06);
+                    RxSetByte(P7B_C6_L2_INIT_4, 0x06);
 
                     // Set Max Value of LE + Tap1
-                    ScalerSetBit_EXINT(P7B_C5_L2_INIT_3, ~(_BIT5 | _BIT4 | _BIT3 | _BIT2 | _BIT1 | _BIT0), (g_pucTMDSRx2LEMax[2] + g_pucTMDSRx2Tap1Max[2]));
+                    RxSetBit(P7B_C5_L2_INIT_3, ~(_BIT5 | _BIT4 | _BIT3 | _BIT2 | _BIT1 | _BIT0), (g_pucTMDSRxLEMax[RX_CUR][2] + g_pucTMDSRxTap1Max[RX_CUR][2]));
 
                     // Reload LE/Tap1~2
-                    ScalerSetBit_EXINT(P7B_CA_L2_INIT_8, ~(_BIT2 | _BIT1), (_BIT2 | _BIT1));
-                    ScalerSetBit_EXINT(P7B_CA_L2_INIT_8, ~(_BIT2 | _BIT1), 0x00);
+                    RxSetBit(P7B_CA_L2_INIT_8, ~(_BIT2 | _BIT1), (_BIT2 | _BIT1));
+                    RxSetBit(P7B_CA_L2_INIT_8, ~(_BIT2 | _BIT1), 0x00);
                 }
             }
         }
 
         // Disable Adaptation
-        ScalerSetByte_EXINT(P7B_A1_L0_DFE_EN_2, 0x00);
-        ScalerSetByte_EXINT(P7B_B1_L1_DFE_EN_2, 0x00);
-        ScalerSetByte_EXINT(P7B_C1_L2_DFE_EN_2, 0x00);
+        RxSetByte(P7B_A1_L0_DFE_EN_2, 0x00);
+        RxSetByte(P7B_B1_L1_DFE_EN_2, 0x00);
+        RxSetByte(P7B_C1_L2_DFE_EN_2, 0x00);
     }
     else  // 3400~6000 Analog CDR
     {
         // [7] cmu_en = 1'b1 --> Enable CMU PLL
-        ScalerSetBit_EXINT(P7B_1B_CMU_01, ~_BIT7, _BIT7);
+        RxSetBit(P7B_1B_CMU_01, ~_BIT7, _BIT7);
 
         // [4] reg_acdr_l0_en = 1'b1 --> Enable Lane0 ACDR
         // [1] reg_en_eqen_manual_l0 = 1'b1
-        ScalerSetBit_EXINT(P7B_12_ANA_CDR, ~(_BIT4 | _BIT1), (_BIT4 | _BIT1));
+        RxSetBit(P7B_12_ANA_CDR, ~(_BIT4 | _BIT1), (_BIT4 | _BIT1));
 
         // [7] reg_rstb_fsm --> Toggle for FLD reset
-        ScalerSetBit_EXINT(P7B_2A_ANA_CDR_00, ~_BIT7, 0x00);
-        ScalerSetBit_EXINT(P7B_2A_ANA_CDR_00, ~_BIT7, _BIT7);
+        RxSetBit(P7B_2A_ANA_CDR_00, ~_BIT7, 0x00);
+        RxSetBit(P7B_2A_ANA_CDR_00, ~_BIT7, _BIT7);
 
         // Enable LE, Vth, Tap0~4 Adaptation
-        ScalerSetByte_EXINT(P7B_A1_L0_DFE_EN_2, 0xDF);
-        ScalerSetByte_EXINT(P7B_B1_L1_DFE_EN_2, 0xDF);
-        ScalerSetByte_EXINT(P7B_C1_L2_DFE_EN_2, 0xDF);
+        RxSetByte(P7B_A1_L0_DFE_EN_2, 0xDF);
+        RxSetByte(P7B_B1_L1_DFE_EN_2, 0xDF);
+        RxSetByte(P7B_C1_L2_DFE_EN_2, 0xDF);
 
         // Waiting for VCO Stable & DFE Adaptation
         AWTO_PHY_FLD_WAIT(360);
@@ -1631,189 +1678,189 @@ void ScalerTMDSRx2SetPhy_EXINT0(void)
         AWTO_PHY_STAMP(1);
 
         // Start to Record Tap0/Tap1 Max/Min
-        ScalerSetBit_EXINT(P7B_F2_COEF_3, ~_BIT0, _BIT0);
+        RxSetBit(P7B_F2_COEF_3, ~_BIT0, _BIT0);
 
         // Waiting for DFE Adaptation
         DELAY_XUS_EXINT(150);
 
         // Stop to Record Tap0 Max/Min
-        ScalerSetBit_EXINT(P7B_F2_COEF_3, ~_BIT0, 0x00);
+        RxSetBit(P7B_F2_COEF_3, ~_BIT0, 0x00);
 
         // Disable Adaptation
-        ScalerSetByte_EXINT(P7B_A1_L0_DFE_EN_2, 0x00);
-        ScalerSetByte_EXINT(P7B_B1_L1_DFE_EN_2, 0x00);
-        ScalerSetByte_EXINT(P7B_C1_L2_DFE_EN_2, 0x00);
+        RxSetByte(P7B_A1_L0_DFE_EN_2, 0x00);
+        RxSetByte(P7B_B1_L1_DFE_EN_2, 0x00);
+        RxSetByte(P7B_C1_L2_DFE_EN_2, 0x00);
 
         // Read Back Tap0 Max
-        ScalerSetBit_EXINT(P7B_F2_COEF_3, ~(_BIT5 | _BIT4 | _BIT3 | _BIT2 | _BIT1), 0x00);
+        RxSetBit(P7B_F2_COEF_3, ~(_BIT5 | _BIT4 | _BIT3 | _BIT2 | _BIT1), 0x00);
 
         // Read Back Lane0
-        ScalerSetBit_EXINT(P7B_F2_COEF_3, ~(_BIT7 | _BIT6), 0x00);
-        g_pucTMDSRx2Tap0Max[0] = ScalerGetByte_EXINT(P7B_F3_COEF_4);
+        RxSetBit(P7B_F2_COEF_3, ~(_BIT7 | _BIT6), 0x00);
+        g_pucTMDSRxTap0Max[RX_CUR][0] = RxGetByte(P7B_F3_COEF_4);
 
         // Read Back Lane1
-        ScalerSetBit_EXINT(P7B_F2_COEF_3, ~(_BIT7 | _BIT6), _BIT6);
-        g_pucTMDSRx2Tap0Max[1] = ScalerGetByte_EXINT(P7B_F3_COEF_4);
+        RxSetBit(P7B_F2_COEF_3, ~(_BIT7 | _BIT6), _BIT6);
+        g_pucTMDSRxTap0Max[RX_CUR][1] = RxGetByte(P7B_F3_COEF_4);
 
         // Read Back Lane2
-        ScalerSetBit_EXINT(P7B_F2_COEF_3, ~(_BIT7 | _BIT6), _BIT7);
-        g_pucTMDSRx2Tap0Max[2] = ScalerGetByte_EXINT(P7B_F3_COEF_4);
+        RxSetBit(P7B_F2_COEF_3, ~(_BIT7 | _BIT6), _BIT7);
+        g_pucTMDSRxTap0Max[RX_CUR][2] = RxGetByte(P7B_F3_COEF_4);
 
         // Read Back Tap0 Min
-        ScalerSetBit_EXINT(P7B_F2_COEF_3, ~(_BIT5 | _BIT4 | _BIT3 | _BIT2 | _BIT1), _BIT1);
+        RxSetBit(P7B_F2_COEF_3, ~(_BIT5 | _BIT4 | _BIT3 | _BIT2 | _BIT1), _BIT1);
 
         // Read Back Lane0
-        ScalerSetBit_EXINT(P7B_F2_COEF_3, ~(_BIT7 | _BIT6), 0x00);
-        g_pucTMDSRx2Tap0Min[0] = ScalerGetByte_EXINT(P7B_F3_COEF_4);
+        RxSetBit(P7B_F2_COEF_3, ~(_BIT7 | _BIT6), 0x00);
+        g_pucTMDSRxTap0Min[RX_CUR][0] = RxGetByte(P7B_F3_COEF_4);
 
         // Read Back Lane1
-        ScalerSetBit_EXINT(P7B_F2_COEF_3, ~(_BIT7 | _BIT6), _BIT6);
-        g_pucTMDSRx2Tap0Min[1] = ScalerGetByte_EXINT(P7B_F3_COEF_4);
+        RxSetBit(P7B_F2_COEF_3, ~(_BIT7 | _BIT6), _BIT6);
+        g_pucTMDSRxTap0Min[RX_CUR][1] = RxGetByte(P7B_F3_COEF_4);
 
         // Read Back Lane2
-        ScalerSetBit_EXINT(P7B_F2_COEF_3, ~(_BIT7 | _BIT6), _BIT7);
-        g_pucTMDSRx2Tap0Min[2] = ScalerGetByte_EXINT(P7B_F3_COEF_4);
+        RxSetBit(P7B_F2_COEF_3, ~(_BIT7 | _BIT6), _BIT7);
+        g_pucTMDSRxTap0Min[RX_CUR][2] = RxGetByte(P7B_F3_COEF_4);
 
         // Reload Max Value of Tap0
-        ScalerSetByte_EXINT(P7B_A4_L0_INIT_2, g_pucTMDSRx2Tap0Min[0]);
-        ScalerSetByte_EXINT(P7B_B4_L1_INIT_2, g_pucTMDSRx2Tap0Min[1]);
-        ScalerSetByte_EXINT(P7B_C4_L2_INIT_2, g_pucTMDSRx2Tap0Min[2]);
+        RxSetByte(P7B_A4_L0_INIT_2, g_pucTMDSRxTap0Min[RX_CUR][0]);
+        RxSetByte(P7B_B4_L1_INIT_2, g_pucTMDSRxTap0Min[RX_CUR][1]);
+        RxSetByte(P7B_C4_L2_INIT_2, g_pucTMDSRxTap0Min[RX_CUR][2]);
 
         // Reload Tap0
-        ScalerSetByte_EXINT(P7B_AA_L0_INIT_8, 0x01);
-        ScalerSetByte_EXINT(P7B_BA_L1_INIT_8, 0x01);
-        ScalerSetByte_EXINT(P7B_CA_L2_INIT_8, 0x01);
-        ScalerSetByte_EXINT(P7B_AA_L0_INIT_8, 0x00);
-        ScalerSetByte_EXINT(P7B_BA_L1_INIT_8, 0x00);
-        ScalerSetByte_EXINT(P7B_CA_L2_INIT_8, 0x00);
+        RxSetByte(P7B_AA_L0_INIT_8, 0x01);
+        RxSetByte(P7B_BA_L1_INIT_8, 0x01);
+        RxSetByte(P7B_CA_L2_INIT_8, 0x01);
+        RxSetByte(P7B_AA_L0_INIT_8, 0x00);
+        RxSetByte(P7B_BA_L1_INIT_8, 0x00);
+        RxSetByte(P7B_CA_L2_INIT_8, 0x00);
 
         // Enable LE/Tap1 Adapt
-        ScalerSetByte_EXINT(P7B_A1_L0_DFE_EN_2, 0x82);
-        ScalerSetByte_EXINT(P7B_B1_L1_DFE_EN_2, 0x82);
-        ScalerSetByte_EXINT(P7B_C1_L2_DFE_EN_2, 0x82);
+        RxSetByte(P7B_A1_L0_DFE_EN_2, 0x82);
+        RxSetByte(P7B_B1_L1_DFE_EN_2, 0x82);
+        RxSetByte(P7B_C1_L2_DFE_EN_2, 0x82);
 
         // Waiting for DFE Adaptation
         DELAY_XUS_EXINT(290);
 
         // Start to Record LE Max/Min
-        ScalerSetBit_EXINT(P7B_F2_COEF_3, ~_BIT0, _BIT0);
+        RxSetBit(P7B_F2_COEF_3, ~_BIT0, _BIT0);
 
         // Waiting for DFE Adaptation
         DELAY_XUS_EXINT(150);
 
         // Stop to Record LE Max/Min
-        ScalerSetBit_EXINT(P7B_F2_COEF_3, ~_BIT0, 0x00);
+        RxSetBit(P7B_F2_COEF_3, ~_BIT0, 0x00);
 
         // Disable Adaptation
-        ScalerSetByte_EXINT(P7B_A1_L0_DFE_EN_2, 0x00);
-        ScalerSetByte_EXINT(P7B_B1_L1_DFE_EN_2, 0x00);
-        ScalerSetByte_EXINT(P7B_C1_L2_DFE_EN_2, 0x00);
+        RxSetByte(P7B_A1_L0_DFE_EN_2, 0x00);
+        RxSetByte(P7B_B1_L1_DFE_EN_2, 0x00);
+        RxSetByte(P7B_C1_L2_DFE_EN_2, 0x00);
 
         // Read Back LE Min
-        ScalerSetBit_EXINT(P7B_F2_COEF_3, ~(_BIT5 | _BIT4 | _BIT3 | _BIT2 | _BIT1), (_BIT3 | _BIT1));
+        RxSetBit(P7B_F2_COEF_3, ~(_BIT5 | _BIT4 | _BIT3 | _BIT2 | _BIT1), (_BIT3 | _BIT1));
 
         // Read Back Lane0
-        ScalerSetBit_EXINT(P7B_F2_COEF_3, ~(_BIT7 | _BIT6), 0x00);
-        g_pucTMDSRx2LEMin[0] = ScalerGetByte_EXINT(P7B_F3_COEF_4);
+        RxSetBit(P7B_F2_COEF_3, ~(_BIT7 | _BIT6), 0x00);
+        g_pucTMDSRxLEMin[RX_CUR][0] = RxGetByte(P7B_F3_COEF_4);
 
         // Read Back Lane1
-        ScalerSetBit_EXINT(P7B_F2_COEF_3, ~(_BIT7 | _BIT6), _BIT6);
-        g_pucTMDSRx2LEMin[1] = ScalerGetByte_EXINT(P7B_F3_COEF_4);
+        RxSetBit(P7B_F2_COEF_3, ~(_BIT7 | _BIT6), _BIT6);
+        g_pucTMDSRxLEMin[RX_CUR][1] = RxGetByte(P7B_F3_COEF_4);
 
         // Read Back Lane2
-        ScalerSetBit_EXINT(P7B_F2_COEF_3, ~(_BIT7 | _BIT6), _BIT7);
-        g_pucTMDSRx2LEMin[2] = ScalerGetByte_EXINT(P7B_F3_COEF_4);
+        RxSetBit(P7B_F2_COEF_3, ~(_BIT7 | _BIT6), _BIT7);
+        g_pucTMDSRxLEMin[RX_CUR][2] = RxGetByte(P7B_F3_COEF_4);
 
         // Read Back LE Max
-        ScalerSetBit_EXINT(P7B_F2_COEF_3, ~(_BIT5 | _BIT4 | _BIT3 | _BIT2 | _BIT1), _BIT3);
+        RxSetBit(P7B_F2_COEF_3, ~(_BIT5 | _BIT4 | _BIT3 | _BIT2 | _BIT1), _BIT3);
 
         // Read Back Lane0
-        ScalerSetBit_EXINT(P7B_F2_COEF_3, ~(_BIT7 | _BIT6), 0x00);
-        g_pucTMDSRx2LEMax[0] = ScalerGetByte_EXINT(P7B_F3_COEF_4);
+        RxSetBit(P7B_F2_COEF_3, ~(_BIT7 | _BIT6), 0x00);
+        g_pucTMDSRxLEMax[RX_CUR][0] = RxGetByte(P7B_F3_COEF_4);
 
         // Read Back Lane1
-        ScalerSetBit_EXINT(P7B_F2_COEF_3, ~(_BIT7 | _BIT6), _BIT6);
-        g_pucTMDSRx2LEMax[1] = ScalerGetByte_EXINT(P7B_F3_COEF_4);
+        RxSetBit(P7B_F2_COEF_3, ~(_BIT7 | _BIT6), _BIT6);
+        g_pucTMDSRxLEMax[RX_CUR][1] = RxGetByte(P7B_F3_COEF_4);
 
         // Read Back Lane2
-        ScalerSetBit_EXINT(P7B_F2_COEF_3, ~(_BIT7 | _BIT6), _BIT7);
-        g_pucTMDSRx2LEMax[2] = ScalerGetByte_EXINT(P7B_F3_COEF_4);
+        RxSetBit(P7B_F2_COEF_3, ~(_BIT7 | _BIT6), _BIT7);
+        g_pucTMDSRxLEMax[RX_CUR][2] = RxGetByte(P7B_F3_COEF_4);
 
         // Read Back Tap1 Max
-        ScalerSetBit_EXINT(P7B_F2_COEF_3, ~(_BIT5 | _BIT4 | _BIT3 | _BIT2 | _BIT1), _BIT2);
+        RxSetBit(P7B_F2_COEF_3, ~(_BIT5 | _BIT4 | _BIT3 | _BIT2 | _BIT1), _BIT2);
 
         // Read Back Lane0
-        ScalerSetBit_EXINT(P7B_F2_COEF_3, ~(_BIT7 | _BIT6), 0x00);
-        g_pucTMDSRx2Tap1Max[0] = ScalerGetByte_EXINT(P7B_F3_COEF_4);
+        RxSetBit(P7B_F2_COEF_3, ~(_BIT7 | _BIT6), 0x00);
+        g_pucTMDSRxTap1Max[RX_CUR][0] = RxGetByte(P7B_F3_COEF_4);
 
         // Read Back Lane1
-        ScalerSetBit_EXINT(P7B_F2_COEF_3, ~(_BIT7 | _BIT6), _BIT6);
-        g_pucTMDSRx2Tap1Max[1] = ScalerGetByte_EXINT(P7B_F3_COEF_4);
+        RxSetBit(P7B_F2_COEF_3, ~(_BIT7 | _BIT6), _BIT6);
+        g_pucTMDSRxTap1Max[RX_CUR][1] = RxGetByte(P7B_F3_COEF_4);
 
         // Read Back Lane2
-        ScalerSetBit_EXINT(P7B_F2_COEF_3, ~(_BIT7 | _BIT6), _BIT7);
-        g_pucTMDSRx2Tap1Max[2] = ScalerGetByte_EXINT(P7B_F3_COEF_4);
+        RxSetBit(P7B_F2_COEF_3, ~(_BIT7 | _BIT6), _BIT7);
+        g_pucTMDSRxTap1Max[RX_CUR][2] = RxGetByte(P7B_F3_COEF_4);
 
         // Reload LE/Tap1 to Max
-        ScalerSetByte_EXINT(P7B_A5_L0_INIT_3, g_pucTMDSRx2LEMax[0] + g_pucTMDSRx2Tap1Max[0]);
-        ScalerSetByte_EXINT(P7B_B5_L1_INIT_3, g_pucTMDSRx2LEMax[1] + g_pucTMDSRx2Tap1Max[1]);
-        ScalerSetByte_EXINT(P7B_C5_L2_INIT_3, g_pucTMDSRx2LEMax[2] + g_pucTMDSRx2Tap1Max[2]);
+        RxSetByte(P7B_A5_L0_INIT_3, g_pucTMDSRxLEMax[RX_CUR][0] + g_pucTMDSRxTap1Max[RX_CUR][0]);
+        RxSetByte(P7B_B5_L1_INIT_3, g_pucTMDSRxLEMax[RX_CUR][1] + g_pucTMDSRxTap1Max[RX_CUR][1]);
+        RxSetByte(P7B_C5_L2_INIT_3, g_pucTMDSRxLEMax[RX_CUR][2] + g_pucTMDSRxTap1Max[RX_CUR][2]);
 
         // Reload LE + Tap1
-        ScalerSetByte_EXINT(P7B_AA_L0_INIT_8, 0x02);
-        ScalerSetByte_EXINT(P7B_BA_L1_INIT_8, 0x02);
-        ScalerSetByte_EXINT(P7B_CA_L2_INIT_8, 0x02);
-        ScalerSetByte_EXINT(P7B_AA_L0_INIT_8, 0x00);
-        ScalerSetByte_EXINT(P7B_BA_L1_INIT_8, 0x00);
-        ScalerSetByte_EXINT(P7B_CA_L2_INIT_8, 0x00);
+        RxSetByte(P7B_AA_L0_INIT_8, 0x02);
+        RxSetByte(P7B_BA_L1_INIT_8, 0x02);
+        RxSetByte(P7B_CA_L2_INIT_8, 0x02);
+        RxSetByte(P7B_AA_L0_INIT_8, 0x00);
+        RxSetByte(P7B_BA_L1_INIT_8, 0x00);
+        RxSetByte(P7B_CA_L2_INIT_8, 0x00);
     }
 
 #if(_D2_INPUT_PORT_TYPE == _D2_MHL_PORT)
-    if(ScalerGetBit_EXINT(P7B_17_BANDGAP_03, _BIT1) == _BIT1)  // MHL Mode
+    if(RxGetBit(P7B_17_BANDGAP_03, _BIT1) == _BIT1)  // MHL Mode
     {
         // Disable Adaptation
-        ScalerSetByte_EXINT(P7B_A1_L0_DFE_EN_2, 0x00);
+        RxSetByte(P7B_A1_L0_DFE_EN_2, 0x00);
 
         // [4] reg_adp_eq_off = 1'b1 --> Disable Adaptation for Analog CDR
-        ScalerSetBit_EXINT(P7B_2B_ANA_CDR_01, ~_BIT4, _BIT4);
+        RxSetBit(P7B_2B_ANA_CDR_01, ~_BIT4, _BIT4);
 
         // [1] reg_en_eqen_manual_l0 = 1'b0
-        ScalerSetBit_EXINT(P7B_12_ANA_CDR, ~_BIT1, 0x00);
+        RxSetBit(P7B_12_ANA_CDR, ~_BIT1, 0x00);
 
         // Reload Tap0 = 21
-        ScalerSetByte_EXINT(P7B_A4_L0_INIT_2, 0x15);
-        ScalerSetByte_EXINT(P7B_AA_L0_INIT_8, 0x01);
-        ScalerSetByte_EXINT(P7B_AA_L0_INIT_8, 0x00);
+        RxSetByte(P7B_A4_L0_INIT_2, 0x15);
+        RxSetByte(P7B_AA_L0_INIT_8, 0x01);
+        RxSetByte(P7B_AA_L0_INIT_8, 0x00);
 
         // Enable Sumamp High Gain Mode
-        ScalerSetBit_EXINT(P7B_1D_CMU_03, ~_BIT4, _BIT4);
+        RxSetBit(P7B_1D_CMU_03, ~_BIT4, _BIT4);
 
         /////////////////////
         // Second K Offset //
         /////////////////////
 
         // [5] Enable Foreground Calibration Auto Mode
-        ScalerSetBit_EXINT(P7B_24_KOFFSET_00, ~_BIT5, _BIT5);
+        RxSetBit(P7B_24_KOFFSET_00, ~_BIT5, _BIT5);
 
         // [6] Toggle Foreground Calibration
-        ScalerSetBit_EXINT(P7B_24_KOFFSET_00, ~_BIT6, _BIT6);
-        ScalerSetBit_EXINT(P7B_24_KOFFSET_00, ~_BIT6, 0x00);
-        ScalerSetBit_EXINT(P7B_24_KOFFSET_00, ~_BIT6, _BIT6);
+        RxSetBit(P7B_24_KOFFSET_00, ~_BIT6, _BIT6);
+        RxSetBit(P7B_24_KOFFSET_00, ~_BIT6, 0x00);
+        RxSetBit(P7B_24_KOFFSET_00, ~_BIT6, _BIT6);
 
         // Waiting for K Offset
         DELAY_XUS_EXINT(150);
 
         // Set Manual FLD Fine Tune OK
-        ScalerTMDSRx2FLDBandFineTune_EXINT0();
+        ScalerTMDSRxFLDBandFineTune_EXINT0();
 
         // [3:0] reg_cdr_cp_in --> Double Icp to Enlarge Locking Range
         if(ucIcp > 7)
         {
-            ScalerSetBit_EXINT(P7B_31_ANA_CDR_07, ~(_BIT3 | _BIT2 | _BIT1 | _BIT0), (_BIT3 | _BIT2 | _BIT1 | _BIT0));
+            RxSetBit(P7B_31_ANA_CDR_07, ~(_BIT3 | _BIT2 | _BIT1 | _BIT0), (_BIT3 | _BIT2 | _BIT1 | _BIT0));
         }
         else
         {
-            ScalerSetBit_EXINT(P7B_31_ANA_CDR_07, ~(_BIT3 | _BIT2 | _BIT1 | _BIT0), (ucIcp << 1));
+            RxSetBit(P7B_31_ANA_CDR_07, ~(_BIT3 | _BIT2 | _BIT1 | _BIT0), (ucIcp << 1));
         }
 
         // Waiting for VCO Stable
@@ -1821,13 +1868,13 @@ void ScalerTMDSRx2SetPhy_EXINT0(void)
 
         // [6] reg_adj_en_manual = 1'b1 -->  Enable adj_en_manual
         // [5] reg_cp_en_manual = 1'b1 -->  Enable cp_en_manual
-        ScalerSetBit_EXINT(P7B_2B_ANA_CDR_01, ~(_BIT6 | _BIT5), (_BIT6 | _BIT5));
+        RxSetBit(P7B_2B_ANA_CDR_01, ~(_BIT6 | _BIT5), (_BIT6 | _BIT5));
 
         // Waiting for VCO Stable
         DELAY_XUS_EXINT(80);
 
         // [3:0] reg_cdr_cp_in --> Restore Icp to Original Setting
-        ScalerSetBit_EXINT(P7B_31_ANA_CDR_07, ~(_BIT3 | _BIT2 | _BIT1 | _BIT0), ucIcp);
+        RxSetBit(P7B_31_ANA_CDR_07, ~(_BIT3 | _BIT2 | _BIT1 | _BIT0), ucIcp);
 
         // Waiting for VCO Stable
         DELAY_XUS_EXINT(80);
@@ -1835,79 +1882,79 @@ void ScalerTMDSRx2SetPhy_EXINT0(void)
     else
 #endif
     {
-        if(ScalerGetBit_EXINT(P7B_1B_CMU_01, _BIT0) == _BIT0) // DCDR
+        if(RxGetBit(P7B_1B_CMU_01, _BIT0) == _BIT0) // DCDR
         {
             // Disable the Vth Adaptation Loop
-            ScalerSetBit_EXINT(P7B_A1_L0_DFE_EN_2, ~_BIT6, 0x00);
-            ScalerSetBit_EXINT(P7B_B1_L1_DFE_EN_2, ~_BIT6, 0x00);
-            ScalerSetBit_EXINT(P7B_C1_L2_DFE_EN_2, ~_BIT6, 0x00);
+            RxSetBit(P7B_A1_L0_DFE_EN_2, ~_BIT6, 0x00);
+            RxSetBit(P7B_B1_L1_DFE_EN_2, ~_BIT6, 0x00);
+            RxSetBit(P7B_C1_L2_DFE_EN_2, ~_BIT6, 0x00);
         }
         else // 2000~6000 ACDR
         {
             // [4] reg_adp_eq_off = 1'b1 --> Disable Adaptation for Analog CDR
-            ScalerSetBit_EXINT(P7B_2B_ANA_CDR_01, ~_BIT4, _BIT4);
+            RxSetBit(P7B_2B_ANA_CDR_01, ~_BIT4, _BIT4);
 
             // [1] reg_en_eqen_manual_l0 = 1'b0
-            ScalerSetBit_EXINT(P7B_12_ANA_CDR, ~_BIT1, 0x00);
+            RxSetBit(P7B_12_ANA_CDR, ~_BIT1, 0x00);
 
             // Enable Sumamp High Gain Mode
-            ScalerSetBit_EXINT(P7B_1D_CMU_03, ~_BIT4, _BIT4);
+            RxSetBit(P7B_1D_CMU_03, ~_BIT4, _BIT4);
 
             /////////////////////
             // Second K Offset //
             /////////////////////
 
             // Read Back K offset Lane0
-            if((ScalerGetByte_EXINT(P7B_27_KOFFSET_03) & 0x1F) > 24)
+            if((RxGetByte(P7B_27_KOFFSET_03) & 0x1F) > 24)
             {
                 // Set Servo = 24
-                ScalerSetBit_EXINT(P7B_A3_L0_INIT_1, ~(_BIT4 | _BIT3 | _BIT2 | _BIT1 | _BIT0), (_BIT4 | _BIT3));
+                RxSetBit(P7B_A3_L0_INIT_1, ~(_BIT4 | _BIT3 | _BIT2 | _BIT1 | _BIT0), (_BIT4 | _BIT3));
             }
-            else if((ScalerGetByte_EXINT(P7B_27_KOFFSET_03) & 0x1F) < 8)
+            else if((RxGetByte(P7B_27_KOFFSET_03) & 0x1F) < 8)
             {
                 // Set Servo = 8
-                ScalerSetBit_EXINT(P7B_A3_L0_INIT_1, ~(_BIT4 | _BIT3 | _BIT2 | _BIT1 | _BIT0), _BIT3);
+                RxSetBit(P7B_A3_L0_INIT_1, ~(_BIT4 | _BIT3 | _BIT2 | _BIT1 | _BIT0), _BIT3);
             }
 
             // Read Back K offset Lane1
-            if((ScalerGetByte_EXINT(P7B_28_KOFFSET_04) & 0x1F) > 24)
+            if((RxGetByte(P7B_28_KOFFSET_04) & 0x1F) > 24)
             {
                 // Set Servo = 24
-                ScalerSetBit_EXINT(P7B_B3_L1_INIT_1, ~(_BIT4 | _BIT3 | _BIT2 | _BIT1 | _BIT0), (_BIT4 | _BIT3));
+                RxSetBit(P7B_B3_L1_INIT_1, ~(_BIT4 | _BIT3 | _BIT2 | _BIT1 | _BIT0), (_BIT4 | _BIT3));
             }
-            else if((ScalerGetByte_EXINT(P7B_28_KOFFSET_04) & 0x1F) < 8)
+            else if((RxGetByte(P7B_28_KOFFSET_04) & 0x1F) < 8)
             {
                 // Set Servo = 8
-                ScalerSetBit_EXINT(P7B_B3_L1_INIT_1, ~(_BIT4 | _BIT3 | _BIT2 | _BIT1 | _BIT0), _BIT3);
+                RxSetBit(P7B_B3_L1_INIT_1, ~(_BIT4 | _BIT3 | _BIT2 | _BIT1 | _BIT0), _BIT3);
             }
 
             // Read Back K offset Lane2
-            if((ScalerGetByte_EXINT(P7B_29_KOFFSET_05) & 0x1F) > 24)
+            if((RxGetByte(P7B_29_KOFFSET_05) & 0x1F) > 24)
             {
                 // Set Servo = 24
-                ScalerSetBit_EXINT(P7B_C3_L2_INIT_1, ~(_BIT4 | _BIT3 | _BIT2 | _BIT1 | _BIT0), (_BIT4 | _BIT3));
+                RxSetBit(P7B_C3_L2_INIT_1, ~(_BIT4 | _BIT3 | _BIT2 | _BIT1 | _BIT0), (_BIT4 | _BIT3));
             }
-            else if((ScalerGetByte_EXINT(P7B_29_KOFFSET_05) & 0x1F) < 8)
+            else if((RxGetByte(P7B_29_KOFFSET_05) & 0x1F) < 8)
             {
                 // Set Servo = 8
-                ScalerSetBit_EXINT(P7B_C3_L2_INIT_1, ~(_BIT4 | _BIT3 | _BIT2 | _BIT1 | _BIT0), _BIT3);
+                RxSetBit(P7B_C3_L2_INIT_1, ~(_BIT4 | _BIT3 | _BIT2 | _BIT1 | _BIT0), _BIT3);
             }
 
             // Reload Servo
-            ScalerSetByte_EXINT(P7B_AA_L0_INIT_8, 0x20);
-            ScalerSetByte_EXINT(P7B_BA_L1_INIT_8, 0x20);
-            ScalerSetByte_EXINT(P7B_CA_L2_INIT_8, 0x20);
-            ScalerSetByte_EXINT(P7B_AA_L0_INIT_8, 0x00);
-            ScalerSetByte_EXINT(P7B_BA_L1_INIT_8, 0x00);
-            ScalerSetByte_EXINT(P7B_CA_L2_INIT_8, 0x00);
+            RxSetByte(P7B_AA_L0_INIT_8, 0x20);
+            RxSetByte(P7B_BA_L1_INIT_8, 0x20);
+            RxSetByte(P7B_CA_L2_INIT_8, 0x20);
+            RxSetByte(P7B_AA_L0_INIT_8, 0x00);
+            RxSetByte(P7B_BA_L1_INIT_8, 0x00);
+            RxSetByte(P7B_CA_L2_INIT_8, 0x00);
 
             // [5] Enable Foreground Calibration Auto Mode
-            ScalerSetBit_EXINT(P7B_24_KOFFSET_00, ~_BIT5, _BIT5);
+            RxSetBit(P7B_24_KOFFSET_00, ~_BIT5, _BIT5);
 
             // [6] Toggle Foreground Calibration
-            ScalerSetBit_EXINT(P7B_24_KOFFSET_00, ~_BIT6, _BIT6);
-            ScalerSetBit_EXINT(P7B_24_KOFFSET_00, ~_BIT6, 0x00);
-            ScalerSetBit_EXINT(P7B_24_KOFFSET_00, ~_BIT6, _BIT6);
+            RxSetBit(P7B_24_KOFFSET_00, ~_BIT6, _BIT6);
+            RxSetBit(P7B_24_KOFFSET_00, ~_BIT6, 0x00);
+            RxSetBit(P7B_24_KOFFSET_00, ~_BIT6, _BIT6);
 
             AWTO_PHY_STAMP(2);
             // Waiting for K Offset
@@ -1915,17 +1962,17 @@ void ScalerTMDSRx2SetPhy_EXINT0(void)
             AWTO_PHY_STAMP(3);
 
             // Set Manual FLD Fine Tune OK
-            ScalerTMDSRx2FLDBandFineTune_EXINT0();
+            ScalerTMDSRxFLDBandFineTune_EXINT0();
             AWTO_PHY_STAMP(4);
 
             // [3:0] reg_cdr_cp_in --> Double Icp to Enlarge Locking Range
             if(ucIcp > 7)
             {
-                ScalerSetBit_EXINT(P7B_31_ANA_CDR_07, ~(_BIT3 | _BIT2 | _BIT1 | _BIT0), (_BIT3 | _BIT2 | _BIT1 | _BIT0));
+                RxSetBit(P7B_31_ANA_CDR_07, ~(_BIT3 | _BIT2 | _BIT1 | _BIT0), (_BIT3 | _BIT2 | _BIT1 | _BIT0));
             }
             else
             {
-                ScalerSetBit_EXINT(P7B_31_ANA_CDR_07, ~(_BIT3 | _BIT2 | _BIT1 | _BIT0), (ucIcp << 1));
+                RxSetBit(P7B_31_ANA_CDR_07, ~(_BIT3 | _BIT2 | _BIT1 | _BIT0), (ucIcp << 1));
             }
 
             // Waiting for VCO Stable
@@ -1933,13 +1980,13 @@ void ScalerTMDSRx2SetPhy_EXINT0(void)
 
             // [6] reg_adj_en_manual = 1'b1 -->  Enable adj_en_manual
             // [5] reg_cp_en_manual = 1'b1 -->  Enable cp_en_manual
-            ScalerSetBit_EXINT(P7B_2B_ANA_CDR_01, ~(_BIT6 | _BIT5), (_BIT6 | _BIT5));
+            RxSetBit(P7B_2B_ANA_CDR_01, ~(_BIT6 | _BIT5), (_BIT6 | _BIT5));
 
             // Waiting for VCO Stable
             DELAY_XUS_EXINT(80);
 
             // [3:0] reg_cdr_cp_in --> Restore Icp to Original Setting
-            ScalerSetBit_EXINT(P7B_31_ANA_CDR_07, ~(_BIT3 | _BIT2 | _BIT1 | _BIT0), ucIcp);
+            RxSetBit(P7B_31_ANA_CDR_07, ~(_BIT3 | _BIT2 | _BIT1 | _BIT0), ucIcp);
 
             // Waiting for VCO Stable
             DELAY_XUS_EXINT(80);
@@ -1947,40 +1994,40 @@ void ScalerTMDSRx2SetPhy_EXINT0(void)
     }
 
     // solve philip DVD issue
-    if((ScalerGetBit_EXINT(P7B_E4_GAIN_3, _BIT1) == _BIT1) && (((g_pucTMDSRx2Tap0Max[0] == g_ucTMDSRx2Tap0Init) && (g_pucTMDSRx2Tap0Min[0] == g_ucTMDSRx2Tap0Init)) ||
-                                                               ((g_pucTMDSRx2Tap0Max[1] == g_ucTMDSRx2Tap0Init) && (g_pucTMDSRx2Tap0Min[1] == g_ucTMDSRx2Tap0Init)) ||
-                                                               ((g_pucTMDSRx2Tap0Max[2] == g_ucTMDSRx2Tap0Init) && (g_pucTMDSRx2Tap0Min[2] == g_ucTMDSRx2Tap0Init))))
+    if((RxGetBit(P7B_E4_GAIN_3, _BIT1) == _BIT1) && (((g_pucTMDSRxTap0Max[RX_CUR][0] == g_ucTMDSRxTap0Init[RX_CUR]) && (g_pucTMDSRxTap0Min[RX_CUR][0] == g_ucTMDSRxTap0Init[RX_CUR])) ||
+                                                               ((g_pucTMDSRxTap0Max[RX_CUR][1] == g_ucTMDSRxTap0Init[RX_CUR]) && (g_pucTMDSRxTap0Min[RX_CUR][1] == g_ucTMDSRxTap0Init[RX_CUR])) ||
+                                                               ((g_pucTMDSRxTap0Max[RX_CUR][2] == g_ucTMDSRxTap0Init[RX_CUR]) && (g_pucTMDSRxTap0Min[RX_CUR][2] == g_ucTMDSRxTap0Init[RX_CUR]))))
     {
         // Disable Sumamp High Gain Mode
-        ScalerSetBit_EXINT(P7B_1D_CMU_03, ~_BIT4, 0x00);
+        RxSetBit(P7B_1D_CMU_03, ~_BIT4, 0x00);
 
         // [1] reg_en_eqen_manual_l0 = 1'b1
-        ScalerSetBit_EXINT(P7B_12_ANA_CDR, ~_BIT1, _BIT1);
+        RxSetBit(P7B_12_ANA_CDR, ~_BIT1, _BIT1);
 
         // Enable LE, Vth, Tap0~4 Adaptation
-        ScalerSetByte_EXINT(P7B_A1_L0_DFE_EN_2, 0xDF);
-        ScalerSetByte_EXINT(P7B_B1_L1_DFE_EN_2, 0xDF);
-        ScalerSetByte_EXINT(P7B_C1_L2_DFE_EN_2, 0xDF);
+        RxSetByte(P7B_A1_L0_DFE_EN_2, 0xDF);
+        RxSetByte(P7B_B1_L1_DFE_EN_2, 0xDF);
+        RxSetByte(P7B_C1_L2_DFE_EN_2, 0xDF);
     }
 
     // [3] reg_en_data_manual_l0 = 1'b1
-    ScalerSetBit_EXINT(P7B_12_ANA_CDR, ~_BIT3, _BIT3);
+    RxSetBit(P7B_12_ANA_CDR, ~_BIT3, _BIT3);
 
     // [0] en_data_manual = 1'b1 --> Enable Dataout
-    ScalerSetBit_EXINT(P7B_11_DATA_TIMER, ~_BIT0, _BIT0);
+    RxSetBit(P7B_11_DATA_TIMER, ~_BIT0, _BIT0);
 
     // Reset PHY -> MAC Interface
-    ScalerSetBit_EXINT(P71_A7_TMDS_PWDCTL, ~(_BIT4 | _BIT3 | _BIT2 | _BIT1 | _BIT0), 0x00);
-    ScalerSetBit_EXINT(P71_A7_TMDS_PWDCTL, ~(_BIT3 | _BIT2 | _BIT1 | _BIT0), (_BIT3 | _BIT2 | _BIT1 | _BIT0));
+    RxSetBit(P71_A7_TMDS_PWDCTL, ~(_BIT4 | _BIT3 | _BIT2 | _BIT1 | _BIT0), 0x00);
+    RxSetBit(P71_A7_TMDS_PWDCTL, ~(_BIT3 | _BIT2 | _BIT1 | _BIT0), (_BIT3 | _BIT2 | _BIT1 | _BIT0));
 
     // Reset HDMI 3 Channel FIFO
-    ScalerSetBit_EXINT(P71_B0_TMDS_CHANNEL_FIFO, ~_BIT6, _BIT6);
+    RxSetBit(P71_B0_TMDS_CHANNEL_FIFO, ~_BIT6, _BIT6);
 
     // HDMI 3 Channel FIFO Global Enable
-    ScalerSetBit_EXINT(P71_B0_TMDS_CHANNEL_FIFO, ~(_BIT7 | _BIT6), _BIT7);
+    RxSetBit(P71_B0_TMDS_CHANNEL_FIFO, ~(_BIT7 | _BIT6), _BIT7);
 
     // Clear RGB Data Detection Flags
-    ScalerSetBit_EXINT(P71_A4_TMDS_CTRL, ~(_BIT7 | _BIT6 | _BIT5 | _BIT4 | _BIT3), (_BIT7 | _BIT6 | _BIT5));
+    RxSetBit(P71_A4_TMDS_CTRL, ~(_BIT7 | _BIT6 | _BIT5 | _BIT4 | _BIT3), (_BIT7 | _BIT6 | _BIT5));
 }
 
 //--------------------------------------------------
@@ -1988,7 +2035,7 @@ void ScalerTMDSRx2SetPhy_EXINT0(void)
 // Input Value  : None
 // Output Value : None
 //--------------------------------------------------
-void ScalerTMDSRx2PhySetDeferred(void)
+void ScalerTMDSRxPhySetDeferred(void)
 {
     BYTE ucEx0 = EX0;
     BYTE ucAp;
@@ -1999,85 +2046,85 @@ void ScalerTMDSRx2PhySetDeferred(void)
 
     EX0 = 0;
 
-    if(isr_g_ucTMDSRx2PhyPend == _FALSE)
+    if(isr_g_ucTMDSRxPhyPend[RX_CUR] == _FALSE)
     {
         EX0 = ucEx0;
         return;
     }
 
-    isr_g_ucTMDSRx2PhyPend = _FALSE;
-    ucAp = ScalerGetByte_EXINT(P71_C9_HDMI_AP);
-    ucApc = ScalerGetByte_EXINT(P71_C8_HDMI_APC);
-    ScalerSetBit_EXINT(P71_C8_HDMI_APC, ~_BIT0, 0x00);
+    isr_g_ucTMDSRxPhyPend[RX_CUR] = _FALSE;
+    ucAp = RxGetByte(P71_C9_HDMI_AP);
+    ucApc = RxGetByte(P71_C8_HDMI_APC);
+    RxSetBit(P71_C8_HDMI_APC, ~_BIT0, 0x00);
 
     // The other port's handler may have overwritten the shared pixel clock since
-    SET_INPUT_PIXEL_CLK(isr_g_usTMDSRx2PhyClk);
+    SET_INPUT_PIXEL_CLK(isr_g_usTMDSRxPhyClk[RX_CUR]);
 
     // Enable Freq unstable IRQ
-    ScalerSetBit_EXINT(P71_E6_HDMI_FREQDET_CTRL, ~(_BIT2 | _BIT1), (_BIT2 | _BIT1));
+    RxSetBit(P71_E6_HDMI_FREQDET_CTRL, ~(_BIT2 | _BIT1), (_BIT2 | _BIT1));
 
-    if((GET_TMDS_RX2_PHY_SET() == _FALSE) || ((bit)ScalerTMDSRx2CheckCDRStable_EXINT0(isr_g_usTMDSRx2ClkCount) == _FALSE))
+    if((RXSEL((GET_TMDS_RX2_PHY_SET()), (GET_TMDS_RX3_PHY_SET())) == _FALSE) || ((bit)ScalerTMDSRxCheckCDRStable_EXINT0(isr_g_usTMDSRxClkCount[RX_CUR]) == _FALSE))
     {
-        isr_g_usTMDSRx2ClkCount = ScalerTMDSRx2MeasureClk_EXINT0(_CLK_SOURCE_TMDS);
+        isr_g_usTMDSRxClkCount[RX_CUR] = ScalerTMDSRxMeasureClk_EXINT0(_CLK_SOURCE_TMDS);
 
         // If Measure Divider = /2 then CLK x 2
-        ScalerSetByte_EXINT(P71_C9_HDMI_AP, _P71_CA_PT_28_PORT_PAGE71_HDMI_NTX1024TR0);
-        if(ScalerGetBit_EXINT(P71_CA_HDMI_DP, _BIT6) == _BIT6)
+        RxSetByte(P71_C9_HDMI_AP, _P71_CA_PT_28_PORT_PAGE71_HDMI_NTX1024TR0);
+        if(RxGetBit(P71_CA_HDMI_DP, _BIT6) == _BIT6)
         {
             // TMDS_OFFLine Measure FREQ(MHz) = GDI_CLK(MHz) * 1024 * 2 / isr_g_usTMDSRx2ClkCount
-            SET_TMDS_OFFLINE_MEASURE_CLK(((DWORD)(_GDI_CLK_KHZ * 1024) * 2 / 100) / isr_g_usTMDSRx2ClkCount);
+            SET_TMDS_OFFLINE_MEASURE_CLK(((DWORD)(_GDI_CLK_KHZ * 1024) * 2 / 100) / isr_g_usTMDSRxClkCount[RX_CUR]);
         }
         else
         {
             // TMDS_OFFLine Measure FREQ(MHz) = GDI_CLK(MHz) * 1024 / isr_g_usTMDSRx2ClkCount
-            SET_TMDS_OFFLINE_MEASURE_CLK(((DWORD)(_GDI_CLK_KHZ * 1024) / 100) / isr_g_usTMDSRx2ClkCount);
+            SET_TMDS_OFFLINE_MEASURE_CLK(((DWORD)(_GDI_CLK_KHZ * 1024) / 100) / isr_g_usTMDSRxClkCount[RX_CUR]);
         }
 
 #if(_D2_HDMI_2_0_SUPPORT == _ON)
-        if(GET_TMDS_RX2_HIGH_SPEED_MODE() == _TRUE)
+        if(RXSEL((GET_TMDS_RX2_HIGH_SPEED_MODE()), (GET_TMDS_RX3_HIGH_SPEED_MODE())) == _TRUE)
         {
             SET_TMDS_OFFLINE_MEASURE_CLK((GET_TMDS_OFFLINE_MEASURE_CLK() * 4));
         }
 #endif
 
 #if(_D2_INPUT_PORT_TYPE == _D2_MHL_PORT)
-        if(GET_D2_TMDS_MODE() == _TMDS_MHL_MODE)
+        if(RXSEL((GET_D2_TMDS_MODE()), (GET_D3_TMDS_MODE())) == _TMDS_MHL_MODE)
         {
-            ScalerSetByte_EXINT(P71_C9_HDMI_AP, _P71_CA_PT_00_PORT_PAGE71_HDMI_SCR);
+            RxSetByte(P71_C9_HDMI_AP, _P71_CA_PT_00_PORT_PAGE71_HDMI_SCR);
 
 #if(_MHL_DEBUG_WITHOUT_CBUS_MODE == _ON)
             // Set HDMI/DVI switch to Auto Mode
-            ScalerSetBit_EXINT(P71_CA_HDMI_DP, ~(_BIT7 | _BIT6 | _BIT3), 0x00);
+            RxSetBit(P71_CA_HDMI_DP, ~(_BIT7 | _BIT6 | _BIT3), 0x00);
 #else
             // Set HDMI/DVI switch to Manual Mode and Forced to HDMI
-            ScalerSetBit_EXINT(P71_CA_HDMI_DP, ~(_BIT7 | _BIT6 | _BIT3 | _BIT2), (_BIT3 | _BIT2));
+            RxSetBit(P71_CA_HDMI_DP, ~(_BIT7 | _BIT6 | _BIT3 | _BIT2), (_BIT3 | _BIT2));
 #endif
 
             if((GET_INPUT_PIXEL_CLK() >= 730) && (GET_INPUT_PIXEL_CLK() <= 770))
             {
-                SET_TMDS_RX2_CLK_MODE(_TMDS_MHL_PPMODE_PHY_SETTING);
+                RXSEL((SET_TMDS_RX2_CLK_MODE(_TMDS_MHL_PPMODE_PHY_SETTING)), (SET_TMDS_RX3_CLK_MODE(_TMDS_MHL_PPMODE_PHY_SETTING)));
 
                 SET_INPUT_PIXEL_CLK(GET_INPUT_PIXEL_CLK() * 4);
-                ScalerTMDSRx2SetPhy_EXINT0();
+                ScalerTMDSRxSetPhy_EXINT0();
                 SET_INPUT_PIXEL_CLK(GET_INPUT_PIXEL_CLK() / 4);
 
                 // Enable Packed Pixel Mode
-                ScalerSetBit_EXINT(P76_A0_MHL_CTRL_00, ~_BIT1, _BIT1);
+                RxSetBit(P76_A0_MHL_CTRL_00, ~_BIT1, _BIT1);
 
                 // Check CDR Stable
-                if((ScalerTMDSRx2CheckCDRStable_EXINT0(isr_g_usTMDSRx2ClkCount) == _FALSE) || (ScalerMHLRx2DetectClkMode_EXINT0() == _FALSE))// MHL mode need modify
+                if((ScalerTMDSRxCheckCDRStable_EXINT0(isr_g_usTMDSRxClkCount[RX_CUR]) == _FALSE) || (RXSEL((ScalerMHLRx2DetectClkMode_EXINT0()), (ScalerMHLRx3DetectClkMode_EXINT0())) == _FALSE))// MHL mode need modify
                 {
-                    SET_TMDS_RX2_CLK_MODE(_TMDS_24BIT_PHY_SETTING);
+                    RXSEL((SET_TMDS_RX2_CLK_MODE(_TMDS_24BIT_PHY_SETTING)), (SET_TMDS_RX3_CLK_MODE(_TMDS_24BIT_PHY_SETTING)));
 
                     // TMDS_FREQ(MHz) = GDI_CLK(MHz) * 1024 / CLK_COUNT = GDI_CLK(KHz) * 1024 / (CLK_COUNT * 1024)
                     SET_INPUT_PIXEL_CLK(GET_INPUT_PIXEL_CLK() * 3);
-                    ScalerTMDSRx2SetPhy_EXINT0();
+                    ScalerTMDSRxSetPhy_EXINT0();
                     SET_INPUT_PIXEL_CLK(GET_INPUT_PIXEL_CLK() / 3);
 
                     // Disable Packed Pixel Mode
-                    ScalerSetBit_EXINT(P76_A0_MHL_CTRL_00, ~_BIT1, 0x00);
+                    RxSetBit(P76_A0_MHL_CTRL_00, ~_BIT1, 0x00);
 
-                    if((ScalerTMDSRx2CheckCDRStable_EXINT0(isr_g_usTMDSRx2ClkCount) == _FALSE) || (ScalerMHLRx2DetectClkMode_EXINT0() == _FALSE))// MHL Need modify
+                    if((ScalerTMDSRxCheckCDRStable_EXINT0(isr_g_usTMDSRxClkCount[RX_CUR]) == _FALSE) || (RXSEL((ScalerMHLRx2DetectClkMode_EXINT0()), (ScalerMHLRx3DetectClkMode_EXINT0())) == _FALSE))// MHL Need modify
                     {
                         bMHLFail = _TRUE;
                     }
@@ -2085,17 +2132,17 @@ void ScalerTMDSRx2PhySetDeferred(void)
             }
             else
             {
-                SET_TMDS_RX2_CLK_MODE(_TMDS_24BIT_PHY_SETTING);
+                RXSEL((SET_TMDS_RX2_CLK_MODE(_TMDS_24BIT_PHY_SETTING)), (SET_TMDS_RX3_CLK_MODE(_TMDS_24BIT_PHY_SETTING)));
 
                 // TMDS_FREQ(MHz) = GDI_CLK(MHz) * 1024 / CLK_COUNT = GDI_CLK(KHz) * 1024 / (CLK_COUNT * 1024)
                 SET_INPUT_PIXEL_CLK(GET_INPUT_PIXEL_CLK() * 3);
-                ScalerTMDSRx2SetPhy_EXINT0();
+                ScalerTMDSRxSetPhy_EXINT0();
                 SET_INPUT_PIXEL_CLK(GET_INPUT_PIXEL_CLK() / 3);
 
                 // Disable Packed Pixel Mode
-                ScalerSetBit_EXINT(P76_A0_MHL_CTRL_00, ~_BIT1, 0x00);
+                RxSetBit(P76_A0_MHL_CTRL_00, ~_BIT1, 0x00);
 
-                if((ScalerTMDSRx2CheckCDRStable_EXINT0(isr_g_usTMDSRx2ClkCount) == _FALSE) || (ScalerMHLRx2DetectClkMode_EXINT0() == _FALSE))// MHL Need modify
+                if((ScalerTMDSRxCheckCDRStable_EXINT0(isr_g_usTMDSRxClkCount[RX_CUR]) == _FALSE) || (RXSEL((ScalerMHLRx2DetectClkMode_EXINT0()), (ScalerMHLRx3DetectClkMode_EXINT0())) == _FALSE))// MHL Need modify
                 {
                     bMHLFail = _TRUE;
                 }
@@ -2103,31 +2150,31 @@ void ScalerTMDSRx2PhySetDeferred(void)
         }
         else
         {
-            SET_TMDS_RX2_CLK_MODE(_TMDS_24BIT_PHY_SETTING);
+            RXSEL((SET_TMDS_RX2_CLK_MODE(_TMDS_24BIT_PHY_SETTING)), (SET_TMDS_RX3_CLK_MODE(_TMDS_24BIT_PHY_SETTING)));
 
-            ScalerTMDSRx2SetPhy_EXINT0();
+            ScalerTMDSRxSetPhy_EXINT0();
 
             // Disable Packed Pixel Mode
-            ScalerSetBit_EXINT(P76_A0_MHL_CTRL_00, ~_BIT1, 0x00);
+            RxSetBit(P76_A0_MHL_CTRL_00, ~_BIT1, 0x00);
 
             // Set HDMI/DVI switch to Auto Mode
-            ScalerSetByte_EXINT(P71_C9_HDMI_AP, _P71_CA_PT_00_PORT_PAGE71_HDMI_SCR);
-            ScalerSetBit_EXINT(P71_CA_HDMI_DP, ~(_BIT7 | _BIT6 | _BIT3), 0x00);
+            RxSetByte(P71_C9_HDMI_AP, _P71_CA_PT_00_PORT_PAGE71_HDMI_SCR);
+            RxSetBit(P71_CA_HDMI_DP, ~(_BIT7 | _BIT6 | _BIT3), 0x00);
         }
 #else
-        ScalerTMDSRx2SetPhy_EXINT0();
+        ScalerTMDSRxSetPhy_EXINT0();
         AWTO_PHY_MARK();
         {
-            BYTE ucCdr = ScalerTMDSRx2CheckCDRStable_EXINT0(isr_g_usTMDSRx2ClkCount);
+            BYTE ucCdr = ScalerTMDSRxCheckCDRStable_EXINT0(isr_g_usTMDSRxClkCount[RX_CUR]);
 
             // 4K60 (> 340 MHz): the 2.9 ms unscrambled-source block runs only when the first CDR check fails
             if((ucCdr == _FALSE) && (GET_INPUT_PIXEL_CLK() > 3400))
             {
                 g_ucTMDSPhyLong = _TRUE;
-                ScalerTMDSRx2SetPhy_EXINT0();
+                ScalerTMDSRxSetPhy_EXINT0();
                 g_ucTMDSPhyLong = _FALSE;
                 AWTO_PHY_RETRY();
-                ucCdr = ScalerTMDSRx2CheckCDRStable_EXINT0(isr_g_usTMDSRx2ClkCount);
+                ucCdr = ScalerTMDSRxCheckCDRStable_EXINT0(isr_g_usTMDSRxClkCount[RX_CUR]);
             }
             AWTO_PHY_END(ucCdr);
         }
@@ -2139,38 +2186,46 @@ void ScalerTMDSRx2PhySetDeferred(void)
 #endif
     {
         // Set Upper Bound (allow 1/64 freq shift)
-        ScalerSetByte_EXINT(P71_E8_HDMI_FREQDET_UPPER_M, (HIBYTE(isr_g_usTMDSRx2PhyCount + (isr_g_usTMDSRx2PhyCount >> 6)) & 0x7F));
-        ScalerSetByte_EXINT(P71_E9_HDMI_FREQDET_UPPER_L, LOBYTE(isr_g_usTMDSRx2PhyCount + (isr_g_usTMDSRx2PhyCount >> 6)));
+        RxSetByte(P71_E8_HDMI_FREQDET_UPPER_M, (HIBYTE(isr_g_usTMDSRxPhyCount[RX_CUR] + (isr_g_usTMDSRxPhyCount[RX_CUR] >> 6)) & 0x7F));
+        RxSetByte(P71_E9_HDMI_FREQDET_UPPER_L, LOBYTE(isr_g_usTMDSRxPhyCount[RX_CUR] + (isr_g_usTMDSRxPhyCount[RX_CUR] >> 6)));
 
         // Set Lower bound
-        ScalerSetByte_EXINT(P71_EA_HDMI_FREQDET_LOWER_M, (HIBYTE(isr_g_usTMDSRx2PhyCount - (isr_g_usTMDSRx2PhyCount >> 6)) & 0x7F));
-        ScalerSetByte_EXINT(P71_EB_HDMI_FREQDET_LOWER_L, LOBYTE(isr_g_usTMDSRx2PhyCount - (isr_g_usTMDSRx2PhyCount >> 6)));
+        RxSetByte(P71_EA_HDMI_FREQDET_LOWER_M, (HIBYTE(isr_g_usTMDSRxPhyCount[RX_CUR] - (isr_g_usTMDSRxPhyCount[RX_CUR] >> 6)) & 0x7F));
+        RxSetByte(P71_EB_HDMI_FREQDET_LOWER_L, LOBYTE(isr_g_usTMDSRxPhyCount[RX_CUR] - (isr_g_usTMDSRxPhyCount[RX_CUR] >> 6)));
 
         // Reset Color Depth to 8 Bits
         SET_COLOR_DEPTH(_COLOR_DEPTH_8_BITS);
 
-        SET_TMDS_RX2_PHY_SET();
+        RXSEL((SET_TMDS_RX2_PHY_SET()), (SET_TMDS_RX3_PHY_SET()));
     }
 
 #if(_D2_HDMI_2_0_SUPPORT == _ON)
     // Clear CED Lock Transition Flag
-    ScalerSetBit_EXINT(P71_17_HDMI_CTRL_17, ~(_BIT2 | _BIT1 | _BIT0), (_BIT2 | _BIT1 | _BIT0));
+    RxSetBit(P71_17_HDMI_CTRL_17, ~(_BIT2 | _BIT1 | _BIT0), (_BIT2 | _BIT1 | _BIT0));
 
     // Set HDMI 2.0 Character Error Detection Function Lock Transition Error Boundary
-    ScalerSetBit_EXINT(P71_14_HDMI_CTRL_14, ~(_BIT3 | _BIT2 | _BIT1 | _BIT0), (GET_INPUT_PIXEL_CLK() / 10) >> 8);
-    ScalerSetByte_EXINT(P71_15_HDMI_CTRL_15, (GET_INPUT_PIXEL_CLK() / 10));
+    RxSetBit(P71_14_HDMI_CTRL_14, ~(_BIT3 | _BIT2 | _BIT1 | _BIT0), (GET_INPUT_PIXEL_CLK() / 10) >> 8);
+    RxSetByte(P71_15_HDMI_CTRL_15, (GET_INPUT_PIXEL_CLK() / 10));
 
     // Enable Character Error Detection Function & Valid Flag
-    ScalerSetBit_EXINT(P71_0B_HDMI_CTRL_0B, ~(_BIT7 | _BIT6 | _BIT5 | _BIT4 | _BIT3 | _BIT2), (_BIT7 | _BIT6 | _BIT5 | _BIT4 | _BIT3 | _BIT2));
+    RxSetBit(P71_0B_HDMI_CTRL_0B, ~(_BIT7 | _BIT6 | _BIT5 | _BIT4 | _BIT3 | _BIT2), (_BIT7 | _BIT6 | _BIT5 | _BIT4 | _BIT3 | _BIT2));
 
     // Enable Character Error Detction Function Lock Transition IRQ
-    ScalerSetBit_EXINT(P71_18_HDMI_CTRL_18, ~(_BIT2 | _BIT1 | _BIT0), (_BIT2 | _BIT1 | _BIT0));
+    RxSetBit(P71_18_HDMI_CTRL_18, ~(_BIT2 | _BIT1 | _BIT0), (_BIT2 | _BIT1 | _BIT0));
 #endif
 
 
-    ScalerSetByte_EXINT(P71_C8_HDMI_APC, ucApc);
-    ScalerSetByte_EXINT(P71_C9_HDMI_AP, ucAp);
+    RxSetByte(P71_C8_HDMI_APC, ucApc);
+    RxSetByte(P71_C9_HDMI_AP, ucAp);
     EX0 = ucEx0;
+}
+void ScalerTMDSRx2PhySetDeferred(void)
+{
+    BYTE ucOld = RX_CUR;
+
+    RX_CUR = 0;
+    ScalerTMDSRxPhySetDeferred();
+    RX_CUR = ucOld;
 }
 
 //--------------------------------------------------
@@ -2178,7 +2233,7 @@ void ScalerTMDSRx2PhySetDeferred(void)
 // Input Value  : None
 // Output Value : None
 //--------------------------------------------------
-void ScalerTMDSRx2IntHandler_EXINT0(void)
+void ScalerTMDSRxIntHandler_EXINT0(void)
 {
 #if(_D2_HDMI_2_0_SUPPORT == _ON)
     BYTE pucBackUp[4];
@@ -2189,53 +2244,53 @@ void ScalerTMDSRx2IntHandler_EXINT0(void)
     WORD usPixClk;
     WORD usCount = 0;
 
-    pucBackUp[0] = ScalerGetByte_EXINT(P71_C9_HDMI_AP);
-    pucBackUp[1] = ScalerGetByte_EXINT(P71_C8_HDMI_APC);
+    pucBackUp[0] = RxGetByte(P71_C9_HDMI_AP);
+    pucBackUp[1] = RxGetByte(P71_C8_HDMI_APC);
 
     // Set CA Port non-auto increase
-    ScalerSetBit_EXINT(P71_C8_HDMI_APC, ~_BIT0, 0x00);
+    RxSetBit(P71_C8_HDMI_APC, ~_BIT0, 0x00);
 
 #if(_D2_HDMI_2_0_SUPPORT == _ON)
-    pucBackUp[2] = ScalerGetByte_EXINT(P71_39_HDMI_CTRL_39);
-    pucBackUp[3] = ScalerGetByte_EXINT(P71_38_HDMI_CTRL_38);
+    pucBackUp[2] = RxGetByte(P71_39_HDMI_CTRL_39);
+    pucBackUp[3] = RxGetByte(P71_38_HDMI_CTRL_38);
 #endif
 
     // Freq. Stable Into IRQ
-    if(((ScalerGetByte_EXINT(P71_EF_HDMI_ERROR_TH) & 0xC0) == 0xC0) && (isr_g_ucTMDSRx2ClkIRQ == _ENABLE))
+    if(((RxGetByte(P71_EF_HDMI_ERROR_TH) & 0xC0) == 0xC0) && (isr_g_ucTMDSRxClkIRQ[RX_CUR] == _ENABLE))
     {
         // Disable Freq Stable IRQ
-        ScalerSetBit_EXINT(P71_EF_HDMI_ERROR_TH, ~(_BIT7 | _BIT6), _BIT6);
+        RxSetBit(P71_EF_HDMI_ERROR_TH, ~(_BIT7 | _BIT6), _BIT6);
 
 #if(_D2_HDMI_2_0_SUPPORT == _ON)
         // Set SCDC Port Clock Detected
-        ScalerSetByte_EXINT(P71_39_HDMI_CTRL_39, _P71_3A_PT_40_PORT_PAGE71_HDMI_SCDC_40);
-        ScalerSetBit_EXINT(P71_3A_HDMI_CTRL_3A, ~_BIT0, _BIT0);
+        RxSetByte(P71_39_HDMI_CTRL_39, _P71_3A_PT_40_PORT_PAGE71_HDMI_SCDC_40);
+        RxSetBit(P71_3A_HDMI_CTRL_3A, ~_BIT0, _BIT0);
 
         // Disable Reset HDMI/DVI Format
-        ScalerSetBit_EXINT(P71_01_HDMI_CTRL_01, ~(_BIT7 | _BIT3), 0x00);
+        RxSetBit(P71_01_HDMI_CTRL_01, ~(_BIT7 | _BIT3), 0x00);
 
         // Set SCDC Port Status Update Flag
-        ScalerSetByte_EXINT(P71_39_HDMI_CTRL_39, _P71_3A_PT_10_PORT_PAGE71_HDMI_SCDC_10);
+        RxSetByte(P71_39_HDMI_CTRL_39, _P71_3A_PT_10_PORT_PAGE71_HDMI_SCDC_10);
 
-        if(ScalerGetBit_EXINT(P71_3A_HDMI_CTRL_3A, _BIT0) == 0x00)
+        if(RxGetBit(P71_3A_HDMI_CTRL_3A, _BIT0) == 0x00)
         {
-            ScalerSetBit_EXINT(P71_3A_HDMI_CTRL_3A, ~_BIT0, _BIT0);
+            RxSetBit(P71_3A_HDMI_CTRL_3A, ~_BIT0, _BIT0);
 
-            if(GET_HDMI_2_0_RX2_RR_ENABLE() == _TRUE)
+            if(RXSEL((GET_HDMI_2_0_RX2_RR_ENABLE()), (GET_HDMI_2_0_RX3_RR_ENABLE())) == _TRUE)
             {
                 // FW Manual Enable Read Request
-                ScalerSetBit_EXINT(P71_1B_HDMI_CTRL_1B, ~_BIT7, _BIT7);
+                RxSetBit(P71_1B_HDMI_CTRL_1B, ~_BIT7, _BIT7);
 
                 // Enable Read Request Done IRQ
-                ScalerSetBit_EXINT(P71_1F_HDMI_CTRL_1F, ~_BIT3, _BIT3);
+                RxSetBit(P71_1F_HDMI_CTRL_1F, ~_BIT3, _BIT3);
             }
         }
 #endif
 
         // Pop up Counter Value
-        ScalerSetBit_EXINT(P71_EC_HDMI_FREQDET_STABLE, ~_BIT7, _BIT7);
+        RxSetBit(P71_EC_HDMI_FREQDET_STABLE, ~_BIT7, _BIT7);
 
-        usCount = (WORD)(((ScalerGetByte_EXINT(P71_ED_HDMI_FREQDET_RESULT_M) & 0x7F) << 8) | ScalerGetByte_EXINT(P71_EE_HDMI_FREQDET_RESULT_L));
+        usCount = (WORD)(((RxGetByte(P71_ED_HDMI_FREQDET_RESULT_M) & 0x7F) << 8) | RxGetByte(P71_EE_HDMI_FREQDET_RESULT_L));
 
         // TMDS_FREQ(MHz) = GDI_CLK(MHz) * CLK_COUNT * _TMDS_MEASURE_CLOCK_DIVIDER / _TMDS_MEASURE_CLOCK_COUNTER
         usPixClk = (((DWORD)_GDI_CLK_KHZ * usCount + 50000) / 100000);   // snapshot: the handlers run one at a time
@@ -2246,15 +2301,15 @@ void ScalerTMDSRx2IntHandler_EXINT0(void)
         // If SCDC tell 1:40 then set High speed flag
         if((usPixClk >= 850) && (usPixClk <= 1500))
         {
-            ScalerSetByte_EXINT(P71_39_HDMI_CTRL_39, _P71_3A_PT_20_PORT_PAGE71_HDMI_SCDC_20);
+            RxSetByte(P71_39_HDMI_CTRL_39, _P71_3A_PT_20_PORT_PAGE71_HDMI_SCDC_20);
 
-            if((ScalerGetBit_EXINT(P71_3A_HDMI_CTRL_3A, _BIT1) == _BIT1) || AWTO_TMDS_MEM_USE(AWTO_TMDS_MEM_D2))
+            if((RxGetBit(P71_3A_HDMI_CTRL_3A, _BIT1) == _BIT1) || AWTO_TMDS_MEM_USE((AWTO_TMDS_MEM_D2 << RX_CUR)))
             {
-                SET_TMDS_RX2_HIGH_SPEED_MODE();
+                RXSEL((SET_TMDS_RX2_HIGH_SPEED_MODE()), (SET_TMDS_RX3_HIGH_SPEED_MODE()));
             }
         }
 
-        if(GET_TMDS_RX2_HIGH_SPEED_MODE() == _TRUE)
+        if(RXSEL((GET_TMDS_RX2_HIGH_SPEED_MODE()), (GET_TMDS_RX3_HIGH_SPEED_MODE())) == _TRUE)
         {
             usPixClk *= 4;
             SET_INPUT_PIXEL_CLK(usPixClk);
@@ -2264,119 +2319,119 @@ void ScalerTMDSRx2IntHandler_EXINT0(void)
         if(usPixClk > 3000)
         {
             // Set Input Clock Measure Divider = /2
-            ScalerSetByte_EXINT(P71_C9_HDMI_AP, _P71_CA_PT_28_PORT_PAGE71_HDMI_NTX1024TR0);
-            ScalerSetBit_EXINT(P71_CA_HDMI_DP, ~_BIT6, _BIT6);
+            RxSetByte(P71_C9_HDMI_AP, _P71_CA_PT_28_PORT_PAGE71_HDMI_NTX1024TR0);
+            RxSetBit(P71_CA_HDMI_DP, ~_BIT6, _BIT6);
         }
         else
         {
             // Set Input Clock Measure Divider = /1
-            ScalerSetByte_EXINT(P71_C9_HDMI_AP, _P71_CA_PT_28_PORT_PAGE71_HDMI_NTX1024TR0);
-            ScalerSetBit_EXINT(P71_CA_HDMI_DP, ~_BIT6, 0x00);
+            RxSetByte(P71_C9_HDMI_AP, _P71_CA_PT_28_PORT_PAGE71_HDMI_NTX1024TR0);
+            RxSetBit(P71_CA_HDMI_DP, ~_BIT6, 0x00);
         }
 
         // Deferred to ScalerTMDSRx2PhySetDeferred(): the 5.5 ms PHY set-up runs from the main loop
-        isr_g_usTMDSRx2PhyCount = usCount;
-        isr_g_usTMDSRx2PhyClk = usPixClk;
-        isr_g_ucTMDSRx2PhyPend = _TRUE;
+        isr_g_usTMDSRxPhyCount[RX_CUR] = usCount;
+        isr_g_usTMDSRxPhyClk[RX_CUR] = usPixClk;
+        isr_g_ucTMDSRxPhyPend[RX_CUR] = _TRUE;
     }
 
     // Freq. Unstable Into IRQ
-    if(((ScalerGetByte_EXINT(P71_E6_HDMI_FREQDET_CTRL) & 0x06) == 0x06) && (isr_g_ucTMDSRx2ClkIRQ == _ENABLE))
+    if(((RxGetByte(P71_E6_HDMI_FREQDET_CTRL) & 0x06) == 0x06) && (isr_g_ucTMDSRxClkIRQ[RX_CUR] == _ENABLE))
     {
         // Clear Unstable IRQ Flag
-        ScalerSetBit_EXINT(P71_E6_HDMI_FREQDET_CTRL, ~_BIT2, _BIT2);
+        RxSetBit(P71_E6_HDMI_FREQDET_CTRL, ~_BIT2, _BIT2);
 
         // Ensure Freq really unstable
         usPixClk = isr_g_usInputPixelClk;
-        if((abs(isr_g_usTMDSRx2ClkCount - ScalerTMDSRx2MeasureClk_EXINT0(_CLK_SOURCE_TMDS)) > (isr_g_usTMDSRx2ClkCount >> 6)) ||
+        if((abs(isr_g_usTMDSRxClkCount[RX_CUR] - ScalerTMDSRxMeasureClk_EXINT0(_CLK_SOURCE_TMDS)) > (isr_g_usTMDSRxClkCount[RX_CUR] >> 6)) ||
            (abs(usPixClk - ((GET_TMDS_OFFLINE_MEASURE_CLK() << 3) / GET_COLOR_DEPTH())) > (usPixClk >> 6)))
         {
             // Set Display M1 output force to background color and free run mode
             ScalerSetBit_EXINT(P0_28_VIDEO_DISPLAY_CONTROL_REG, ~_BIT5, _BIT5);
 
             // Disable RGB/clock Output to avoid garbage
-            ScalerSetBit_EXINT(P71_A6_TMDS_OUTCTL, ~(_BIT6 | _BIT5 | _BIT4 | _BIT3), 0x00);
+            RxSetBit(P71_A6_TMDS_OUTCTL, ~(_BIT6 | _BIT5 | _BIT4 | _BIT3), 0x00);
 
 #if(_D2_HDMI_2_0_SUPPORT == _ON)
 
             // Clear Scrambling Detection Flag
-            ScalerSetBit_EXINT(P71_01_HDMI_CTRL_01, ~_BIT3, _BIT3);
+            RxSetBit(P71_01_HDMI_CTRL_01, ~_BIT3, _BIT3);
 
             // Disable Scrambling Status
-            ScalerSetByte_EXINT(P71_39_HDMI_CTRL_39, _P71_3A_PT_21_PORT_PAGE71_HDMI_SCDC_21);
-            ScalerSetBit_EXINT(P71_3A_HDMI_CTRL_3A, ~_BIT0, 0x00);
+            RxSetByte(P71_39_HDMI_CTRL_39, _P71_3A_PT_21_PORT_PAGE71_HDMI_SCDC_21);
+            RxSetBit(P71_3A_HDMI_CTRL_3A, ~_BIT0, 0x00);
 
             // Disable CED Function
-            ScalerSetBit_EXINT(P71_0B_HDMI_CTRL_0B, ~(_BIT7 | _BIT6 | _BIT5 | _BIT4 | _BIT3 | _BIT2), 0x00);
+            RxSetBit(P71_0B_HDMI_CTRL_0B, ~(_BIT7 | _BIT6 | _BIT5 | _BIT4 | _BIT3 | _BIT2), 0x00);
 
             // Pop Up CED Error For Clear Error Counter
-            ScalerSetBit_EXINT(P71_0C_HDMI_CTRL_0C, ~_BIT7, _BIT7);
+            RxSetBit(P71_0C_HDMI_CTRL_0C, ~_BIT7, _BIT7);
 
             // Disable CED Lock Transition IRQ & Flag
-            ScalerSetBit_EXINT(P71_17_HDMI_CTRL_17, ~(_BIT2 | _BIT1 | _BIT0), (_BIT2 | _BIT1 | _BIT0));
-            ScalerSetBit_EXINT(P71_18_HDMI_CTRL_18, ~(_BIT2 | _BIT1 | _BIT0), 0x00);
+            RxSetBit(P71_17_HDMI_CTRL_17, ~(_BIT2 | _BIT1 | _BIT0), (_BIT2 | _BIT1 | _BIT0));
+            RxSetBit(P71_18_HDMI_CTRL_18, ~(_BIT2 | _BIT1 | _BIT0), 0x00);
 
             // Clear SCDC Port Status Update Flag & CED Update Flag
-            ScalerSetByte_EXINT(P71_39_HDMI_CTRL_39, _P71_3A_PT_10_PORT_PAGE71_HDMI_SCDC_10);
-            ScalerSetBit_EXINT(P71_3A_HDMI_CTRL_3A, ~(_BIT1 | _BIT0), 0x00);
+            RxSetByte(P71_39_HDMI_CTRL_39, _P71_3A_PT_10_PORT_PAGE71_HDMI_SCDC_10);
+            RxSetBit(P71_3A_HDMI_CTRL_3A, ~(_BIT1 | _BIT0), 0x00);
 
             // Clear SCDC Port Status Lock Flag
-            ScalerSetByte_EXINT(P71_39_HDMI_CTRL_39, _P71_3A_PT_40_PORT_PAGE71_HDMI_SCDC_40);
-            ScalerSetBit_EXINT(P71_3A_HDMI_CTRL_3A, ~(_BIT3 | _BIT2 | _BIT1 | _BIT0), 0x00);
+            RxSetByte(P71_39_HDMI_CTRL_39, _P71_3A_PT_40_PORT_PAGE71_HDMI_SCDC_40);
+            RxSetBit(P71_3A_HDMI_CTRL_3A, ~(_BIT3 | _BIT2 | _BIT1 | _BIT0), 0x00);
 
             // Reset HDMI/DVI Format
-            ScalerSetBit_EXINT(P71_01_HDMI_CTRL_01, ~(_BIT7 | _BIT3), _BIT7);
+            RxSetBit(P71_01_HDMI_CTRL_01, ~(_BIT7 | _BIT3), _BIT7);
 #endif
 
             // Disable Freq. Unstable IRQ
-            ScalerSetBit_EXINT(P71_E6_HDMI_FREQDET_CTRL, ~_BIT1, 0x00);
+            RxSetBit(P71_E6_HDMI_FREQDET_CTRL, ~_BIT1, 0x00);
 
             // Set HDMI/DVI switch to Auto Mode
-            ScalerSetByte_EXINT(P71_C9_HDMI_AP, _P71_CA_PT_00_PORT_PAGE71_HDMI_SCR);
-            ScalerSetBit_EXINT(P71_CA_HDMI_DP, ~(_BIT7 | _BIT6 | _BIT3), 0x00);
+            RxSetByte(P71_C9_HDMI_AP, _P71_CA_PT_00_PORT_PAGE71_HDMI_SCR);
+            RxSetBit(P71_CA_HDMI_DP, ~(_BIT7 | _BIT6 | _BIT3), 0x00);
 
 #if(_D2_INPUT_PORT_TYPE == _D2_MHL_PORT)
-            if(GET_D2_TMDS_MODE() == _TMDS_MHL_MODE)
+            if(RXSEL((GET_D2_TMDS_MODE()), (GET_D3_TMDS_MODE())) == _TMDS_MHL_MODE)
             {
                 // Set Upper Bound
-                ScalerSetByte_EXINT(P71_E8_HDMI_FREQDET_UPPER_M, HIBYTE(_TMDS_MHL_FREQ_NORMAL_UPPER_BOUND));
-                ScalerSetByte_EXINT(P71_E9_HDMI_FREQDET_UPPER_L, LOBYTE(_TMDS_MHL_FREQ_NORMAL_UPPER_BOUND));
+                RxSetByte(P71_E8_HDMI_FREQDET_UPPER_M, HIBYTE(_TMDS_MHL_FREQ_NORMAL_UPPER_BOUND));
+                RxSetByte(P71_E9_HDMI_FREQDET_UPPER_L, LOBYTE(_TMDS_MHL_FREQ_NORMAL_UPPER_BOUND));
 
                 // Suspend Key Calculation before load key
-                ScalerSetBit_EXINT(P71_AE_TMDS_RPS, ~_BIT1, 0x00);
+                RxSetBit(P71_AE_TMDS_RPS, ~_BIT1, 0x00);
             }
             else
 #endif
             {
                 // Set Upper Bound
-                ScalerSetByte_EXINT(P71_E8_HDMI_FREQDET_UPPER_M, HIBYTE(_TMDS_FREQ_NORMAL_HIGH_SPEED_UPPER_BOUND));
-                ScalerSetByte_EXINT(P71_E9_HDMI_FREQDET_UPPER_L, LOBYTE(_TMDS_FREQ_NORMAL_HIGH_SPEED_UPPER_BOUND));
+                RxSetByte(P71_E8_HDMI_FREQDET_UPPER_M, HIBYTE(_TMDS_FREQ_NORMAL_HIGH_SPEED_UPPER_BOUND));
+                RxSetByte(P71_E9_HDMI_FREQDET_UPPER_L, LOBYTE(_TMDS_FREQ_NORMAL_HIGH_SPEED_UPPER_BOUND));
             }
 
             // Set Lower bound
-            ScalerSetByte_EXINT(P71_EA_HDMI_FREQDET_LOWER_M, HIBYTE(_TMDS_FREQ_NORMAL_LOWER_BOUND));
-            ScalerSetByte_EXINT(P71_EB_HDMI_FREQDET_LOWER_L, LOBYTE(_TMDS_FREQ_NORMAL_LOWER_BOUND));
+            RxSetByte(P71_EA_HDMI_FREQDET_LOWER_M, HIBYTE(_TMDS_FREQ_NORMAL_LOWER_BOUND));
+            RxSetByte(P71_EB_HDMI_FREQDET_LOWER_L, LOBYTE(_TMDS_FREQ_NORMAL_LOWER_BOUND));
 
             // Reset Freq. Detect Counter(Toggle)
-            ScalerSetBit_EXINT(P71_E6_HDMI_FREQDET_CTRL, ~_BIT7, 0x00);
-            ScalerSetBit_EXINT(P71_E6_HDMI_FREQDET_CTRL, ~_BIT7, _BIT7);
+            RxSetBit(P71_E6_HDMI_FREQDET_CTRL, ~_BIT7, 0x00);
+            RxSetBit(P71_E6_HDMI_FREQDET_CTRL, ~_BIT7, _BIT7);
 
             // Enable Freq. Stable IRQ
-            ScalerSetBit_EXINT(P71_EF_HDMI_ERROR_TH, ~(_BIT7 | _BIT6), (_BIT7 | _BIT6));
+            RxSetBit(P71_EF_HDMI_ERROR_TH, ~(_BIT7 | _BIT6), (_BIT7 | _BIT6));
 
-            CLR_TMDS_RX2_PHY_SET();
+            RXSEL((CLR_TMDS_RX2_PHY_SET()), (CLR_TMDS_RX3_PHY_SET()));
 
 #if(_D2_HDMI_2_0_SUPPORT == _ON)
-            CLR_TMDS_RX2_HIGH_SPEED_MODE();
+            RXSEL((CLR_TMDS_RX2_HIGH_SPEED_MODE()), (CLR_TMDS_RX3_HIGH_SPEED_MODE()));
 #endif
 
 #if((_TMDS_HDCP_2_2_SUPPORT == _ON) && ((_D2_INPUT_PORT_TYPE == _D2_HDMI_PORT) || (_D2_INPUT_PORT_TYPE == _D2_MHL_PORT)))
             // Reset Authenticated FSM
-            ScalerSetByte_EXINT(P2D_28_HDCP_I2C_CTRL_2, 0x01);
-            ScalerSetBit_EXINT(P2D_29_HDCP_I2C_CTRL_3, ~_BIT6, _BIT6);
+            RxSetByte(P2D_28_HDCP_I2C_CTRL_2, 0x01);
+            RxSetBit(P2D_29_HDCP_I2C_CTRL_3, ~_BIT6, _BIT6);
 
             // Cancel HDCP 2.2 Re-Auth Timer Event
-            ScalerTimerCancelTimerEvent_EXINT0(_SCALER_TIMER_EVENT_RX2_HDCP2_REAUTH);
+            ScalerTimerCancelTimerEvent_EXINT0(RXSEL((_SCALER_TIMER_EVENT_RX2_HDCP2_REAUTH), (_SCALER_TIMER_EVENT_RX3_HDCP2_REAUTH)));
 #endif
         }
     }
@@ -2384,168 +2439,168 @@ void ScalerTMDSRx2IntHandler_EXINT0(void)
 #if(_D2_HDMI_2_0_SUPPORT == _ON)
 
     // Detect Source Write Read Request Enable Flag
-    if((ScalerGetBit_EXINT(P71_25_HDMI_CTRL_25, _BIT3) == _BIT3) && (ScalerGetBit_EXINT(P71_26_HDMI_CTRL_26, _BIT3) == _BIT3))
+    if((RxGetBit(P71_25_HDMI_CTRL_25, _BIT3) == _BIT3) && (RxGetBit(P71_26_HDMI_CTRL_26, _BIT3) == _BIT3))
     {
         // Clear Read Request Flag
-        ScalerSetBit_EXINT(P71_25_HDMI_CTRL_25, ~_BIT3, _BIT3);
+        RxSetBit(P71_25_HDMI_CTRL_25, ~_BIT3, _BIT3);
 
         // Set Read Request Enable
-        SET_HDMI_2_0_RX2_RR_ENABLE();
+        RXSEL((SET_HDMI_2_0_RX2_RR_ENABLE()), (SET_HDMI_2_0_RX3_RR_ENABLE()));
 
         // Enable Test Read Request HW Auto Mode
-        ScalerSetBit_EXINT(P71_1C_HDMI_CTRL_1C, ~_BIT1, _BIT1);
+        RxSetBit(P71_1C_HDMI_CTRL_1C, ~_BIT1, _BIT1);
 
         // Enable CED Update Read Request Auto Mode
-        ScalerSetBit_EXINT(P71_24_HDMI_CTRL_24, ~_BIT0, _BIT0);
+        RxSetBit(P71_24_HDMI_CTRL_24, ~_BIT0, _BIT0);
 
         // Enable Read Request Done IRQ
-        ScalerSetBit_EXINT(P71_1F_HDMI_CTRL_1F, ~_BIT3, _BIT3);
+        RxSetBit(P71_1F_HDMI_CTRL_1F, ~_BIT3, _BIT3);
     }
 
     // Detect CED Channel 2 Lock Transition Flag into IRQ
-    if((ScalerGetBit_EXINT(P71_17_HDMI_CTRL_17, _BIT2) == _BIT2) && (ScalerGetBit_EXINT(P71_18_HDMI_CTRL_18, _BIT2) == _BIT2))
+    if((RxGetBit(P71_17_HDMI_CTRL_17, _BIT2) == _BIT2) && (RxGetBit(P71_18_HDMI_CTRL_18, _BIT2) == _BIT2))
     {
         // Clear Lock Transition Flag
-        ScalerSetBit_EXINT(P71_17_HDMI_CTRL_17, ~(_BIT2 | _BIT1 | _BIT0), _BIT2);
+        RxSetBit(P71_17_HDMI_CTRL_17, ~(_BIT2 | _BIT1 | _BIT0), _BIT2);
 
         // Detect CED Realtime Flag
-        if(ScalerGetBit_EXINT(P71_17_HDMI_CTRL_17, _BIT5) == _BIT5)
+        if(RxGetBit(P71_17_HDMI_CTRL_17, _BIT5) == _BIT5)
         {
             // Set CED Lock Flag in SCDC Port
-            ScalerSetByte_EXINT(P71_39_HDMI_CTRL_39, _P71_3A_PT_40_PORT_PAGE71_HDMI_SCDC_40);
-            ScalerSetBit_EXINT(P71_3A_HDMI_CTRL_3A, ~_BIT3, _BIT3);
+            RxSetByte(P71_39_HDMI_CTRL_39, _P71_3A_PT_40_PORT_PAGE71_HDMI_SCDC_40);
+            RxSetBit(P71_3A_HDMI_CTRL_3A, ~_BIT3, _BIT3);
         }
         else
         {
             // Clear CED Lock Flag in SCDC Port
-            ScalerSetByte_EXINT(P71_39_HDMI_CTRL_39, _P71_3A_PT_40_PORT_PAGE71_HDMI_SCDC_40);
-            ScalerSetBit_EXINT(P71_3A_HDMI_CTRL_3A, ~_BIT3, 0x00);
+            RxSetByte(P71_39_HDMI_CTRL_39, _P71_3A_PT_40_PORT_PAGE71_HDMI_SCDC_40);
+            RxSetBit(P71_3A_HDMI_CTRL_3A, ~_BIT3, 0x00);
         }
 
         // Set SCDC Port Status Update Flag
-        ScalerSetByte_EXINT(P71_39_HDMI_CTRL_39, _P71_3A_PT_10_PORT_PAGE71_HDMI_SCDC_10);
+        RxSetByte(P71_39_HDMI_CTRL_39, _P71_3A_PT_10_PORT_PAGE71_HDMI_SCDC_10);
 
-        if(ScalerGetBit_EXINT(P71_3A_HDMI_CTRL_3A, _BIT0) == 0x00)
+        if(RxGetBit(P71_3A_HDMI_CTRL_3A, _BIT0) == 0x00)
         {
-            ScalerSetBit_EXINT(P71_3A_HDMI_CTRL_3A, ~_BIT0, _BIT0);
+            RxSetBit(P71_3A_HDMI_CTRL_3A, ~_BIT0, _BIT0);
 
-            if(GET_HDMI_2_0_RX2_RR_ENABLE() == _TRUE)
+            if(RXSEL((GET_HDMI_2_0_RX2_RR_ENABLE()), (GET_HDMI_2_0_RX3_RR_ENABLE())) == _TRUE)
             {
                 // FW Manual Enable Read Request
-                ScalerSetBit_EXINT(P71_1B_HDMI_CTRL_1B, ~_BIT7, _BIT7);
+                RxSetBit(P71_1B_HDMI_CTRL_1B, ~_BIT7, _BIT7);
 
                 // Enable Read Request Done IRQ
-                ScalerSetBit_EXINT(P71_1F_HDMI_CTRL_1F, ~_BIT3, _BIT3);
+                RxSetBit(P71_1F_HDMI_CTRL_1F, ~_BIT3, _BIT3);
             }
         }
     }
 
     // Detect CED Channel 1 Lock Transition Flag into IRQ
-    if((ScalerGetBit_EXINT(P71_17_HDMI_CTRL_17, _BIT1) == _BIT1) && (ScalerGetBit_EXINT(P71_18_HDMI_CTRL_18, _BIT1) == _BIT1))
+    if((RxGetBit(P71_17_HDMI_CTRL_17, _BIT1) == _BIT1) && (RxGetBit(P71_18_HDMI_CTRL_18, _BIT1) == _BIT1))
     {
         // Clear Lock Transition Flag
-        ScalerSetBit_EXINT(P71_17_HDMI_CTRL_17, ~(_BIT2 | _BIT1 | _BIT0), _BIT1);
+        RxSetBit(P71_17_HDMI_CTRL_17, ~(_BIT2 | _BIT1 | _BIT0), _BIT1);
 
         // Detect CED Realtime Flag
-        if(ScalerGetBit_EXINT(P71_17_HDMI_CTRL_17, _BIT4) == _BIT4)
+        if(RxGetBit(P71_17_HDMI_CTRL_17, _BIT4) == _BIT4)
         {
             // Set CED Lock Flag in SCDC Port
-            ScalerSetByte_EXINT(P71_39_HDMI_CTRL_39, _P71_3A_PT_40_PORT_PAGE71_HDMI_SCDC_40);
-            ScalerSetBit_EXINT(P71_3A_HDMI_CTRL_3A, ~_BIT2, _BIT2);
+            RxSetByte(P71_39_HDMI_CTRL_39, _P71_3A_PT_40_PORT_PAGE71_HDMI_SCDC_40);
+            RxSetBit(P71_3A_HDMI_CTRL_3A, ~_BIT2, _BIT2);
         }
         else
         {
             // Clear CED Lock Flag in SCDC Port
-            ScalerSetByte_EXINT(P71_39_HDMI_CTRL_39, _P71_3A_PT_40_PORT_PAGE71_HDMI_SCDC_40);
-            ScalerSetBit_EXINT(P71_3A_HDMI_CTRL_3A, ~_BIT2, 0x00);
+            RxSetByte(P71_39_HDMI_CTRL_39, _P71_3A_PT_40_PORT_PAGE71_HDMI_SCDC_40);
+            RxSetBit(P71_3A_HDMI_CTRL_3A, ~_BIT2, 0x00);
         }
 
         // Set SCDC Port Status Update Flag
-        ScalerSetByte_EXINT(P71_39_HDMI_CTRL_39, _P71_3A_PT_10_PORT_PAGE71_HDMI_SCDC_10);
+        RxSetByte(P71_39_HDMI_CTRL_39, _P71_3A_PT_10_PORT_PAGE71_HDMI_SCDC_10);
 
-        if(ScalerGetBit_EXINT(P71_3A_HDMI_CTRL_3A, _BIT0) == 0x00)
+        if(RxGetBit(P71_3A_HDMI_CTRL_3A, _BIT0) == 0x00)
         {
-            ScalerSetBit_EXINT(P71_3A_HDMI_CTRL_3A, ~_BIT0, _BIT0);
+            RxSetBit(P71_3A_HDMI_CTRL_3A, ~_BIT0, _BIT0);
 
-            if(GET_HDMI_2_0_RX2_RR_ENABLE() == _TRUE)
+            if(RXSEL((GET_HDMI_2_0_RX2_RR_ENABLE()), (GET_HDMI_2_0_RX3_RR_ENABLE())) == _TRUE)
             {
                 // FW Manual Enable Read Request
-                ScalerSetBit_EXINT(P71_1B_HDMI_CTRL_1B, ~_BIT7, _BIT7);
+                RxSetBit(P71_1B_HDMI_CTRL_1B, ~_BIT7, _BIT7);
 
                 // Enable Read Request Done IRQ
-                ScalerSetBit_EXINT(P71_1F_HDMI_CTRL_1F, ~_BIT3, _BIT3);
+                RxSetBit(P71_1F_HDMI_CTRL_1F, ~_BIT3, _BIT3);
             }
         }
     }
 
     // Detect CED Channel 0 Lock Transition Flag into IRQ
-    if((ScalerGetBit_EXINT(P71_17_HDMI_CTRL_17, _BIT0) == _BIT0) && (ScalerGetBit_EXINT(P71_18_HDMI_CTRL_18, _BIT0) == _BIT0))
+    if((RxGetBit(P71_17_HDMI_CTRL_17, _BIT0) == _BIT0) && (RxGetBit(P71_18_HDMI_CTRL_18, _BIT0) == _BIT0))
     {
         // Clear Lock Transition Flag
-        ScalerSetBit_EXINT(P71_17_HDMI_CTRL_17, ~(_BIT2 | _BIT1 | _BIT0), _BIT0);
+        RxSetBit(P71_17_HDMI_CTRL_17, ~(_BIT2 | _BIT1 | _BIT0), _BIT0);
 
         // Detect CED Realtime Flag
-        if(ScalerGetBit_EXINT(P71_17_HDMI_CTRL_17, _BIT3) == _BIT3)
+        if(RxGetBit(P71_17_HDMI_CTRL_17, _BIT3) == _BIT3)
         {
             // Set CED Lock Flag in SCDC Port
-            ScalerSetByte_EXINT(P71_39_HDMI_CTRL_39, _P71_3A_PT_40_PORT_PAGE71_HDMI_SCDC_40);
-            ScalerSetBit_EXINT(P71_3A_HDMI_CTRL_3A, ~_BIT1, _BIT1);
+            RxSetByte(P71_39_HDMI_CTRL_39, _P71_3A_PT_40_PORT_PAGE71_HDMI_SCDC_40);
+            RxSetBit(P71_3A_HDMI_CTRL_3A, ~_BIT1, _BIT1);
         }
         else
         {
             // Clear CED Lock Flag in SCDC Port
-            ScalerSetByte_EXINT(P71_39_HDMI_CTRL_39, _P71_3A_PT_40_PORT_PAGE71_HDMI_SCDC_40);
-            ScalerSetBit_EXINT(P71_3A_HDMI_CTRL_3A, ~_BIT1, 0x00);
+            RxSetByte(P71_39_HDMI_CTRL_39, _P71_3A_PT_40_PORT_PAGE71_HDMI_SCDC_40);
+            RxSetBit(P71_3A_HDMI_CTRL_3A, ~_BIT1, 0x00);
         }
 
         // Set SCDC Port Status Update Flag
-        ScalerSetByte_EXINT(P71_39_HDMI_CTRL_39, _P71_3A_PT_10_PORT_PAGE71_HDMI_SCDC_10);
+        RxSetByte(P71_39_HDMI_CTRL_39, _P71_3A_PT_10_PORT_PAGE71_HDMI_SCDC_10);
 
-        if(ScalerGetBit_EXINT(P71_3A_HDMI_CTRL_3A, _BIT0) == 0x00)
+        if(RxGetBit(P71_3A_HDMI_CTRL_3A, _BIT0) == 0x00)
         {
-            ScalerSetBit_EXINT(P71_3A_HDMI_CTRL_3A, ~_BIT0, _BIT0);
+            RxSetBit(P71_3A_HDMI_CTRL_3A, ~_BIT0, _BIT0);
 
-            if(GET_HDMI_2_0_RX2_RR_ENABLE() == _TRUE)
+            if(RXSEL((GET_HDMI_2_0_RX2_RR_ENABLE()), (GET_HDMI_2_0_RX3_RR_ENABLE())) == _TRUE)
             {
                 // FW Manual Enable Read Request
-                ScalerSetBit_EXINT(P71_1B_HDMI_CTRL_1B, ~_BIT7, _BIT7);
+                RxSetBit(P71_1B_HDMI_CTRL_1B, ~_BIT7, _BIT7);
 
                 // Enable Read Request Done IRQ
-                ScalerSetBit_EXINT(P71_1F_HDMI_CTRL_1F, ~_BIT3, _BIT3);
+                RxSetBit(P71_1F_HDMI_CTRL_1F, ~_BIT3, _BIT3);
             }
         }
     }
 
     // Read Request Done into IRQ
-    if((ScalerGetBit_EXINT(P71_1F_HDMI_CTRL_1F, _BIT3) == _BIT3) && (ScalerGetBit_EXINT(P71_1C_HDMI_CTRL_1C, _BIT7) == _BIT7))
+    if((RxGetBit(P71_1F_HDMI_CTRL_1F, _BIT3) == _BIT3) && (RxGetBit(P71_1C_HDMI_CTRL_1C, _BIT7) == _BIT7))
     {
         // Clear Read Request Done Flag
-        ScalerSetBit_EXINT(P71_1C_HDMI_CTRL_1C, ~_BIT7, _BIT7);
+        RxSetBit(P71_1C_HDMI_CTRL_1C, ~_BIT7, _BIT7);
 
         // Read Request Outcome Processing
-        ScalerTMDSRx2ReadRequestProc_EXINT0(ScalerGetByte_EXINT(P71_1C_HDMI_CTRL_1C) & 0x70);
+        ScalerTMDSRxReadRequestProc_EXINT0(RxGetByte(P71_1C_HDMI_CTRL_1C) & 0x70);
     }
 
     // Detect HDMI HPD Rising to Falling into IRQ
 #if(_TMDS_HDMI_2_0_SCDC_RR_CTS_SUPPORT == _ON)
-    if(ScalerGetBit_EXINT(P71_23_HDMI_CTRL_23, (_BIT6 | _BIT1)) == (_BIT6 | _BIT1))
+    if(RxGetBit(P71_23_HDMI_CTRL_23, (_BIT6 | _BIT1)) == (_BIT6 | _BIT1))
     {
         // Clear HPD IRQ Flag
-        ScalerSetBit_EXINT(P71_23_HDMI_CTRL_23, ~_BIT1, _BIT1);
+        RxSetBit(P71_23_HDMI_CTRL_23, ~_BIT1, _BIT1);
 
-        if(ScalerGetBit_EXINT(P71_23_HDMI_CTRL_23, (_BIT2 | _BIT0)) == 0x00)
+        if(RxGetBit(P71_23_HDMI_CTRL_23, (_BIT2 | _BIT0)) == 0x00)
         {
             // Clear All Source Write SCDC Port Register
-            ScalerSetBit_EXINT(P71_38_HDMI_CTRL_38, ~(_BIT2 | _BIT1), (_BIT2 | _BIT1));
+            RxSetBit(P71_38_HDMI_CTRL_38, ~(_BIT2 | _BIT1), (_BIT2 | _BIT1));
 
             // Clear HDMI 2.0 Read Request Enable
-            CLR_HDMI_2_0_RX2_RR_ENABLE();
+            RXSEL((CLR_HDMI_2_0_RX2_RR_ENABLE()), (CLR_HDMI_2_0_RX3_RR_ENABLE()));
 
             // Disable Rising to Falling IRQ, Set IRQ Status Falling to Rising edge IRQ
-            ScalerSetBit_EXINT(P71_23_HDMI_CTRL_23, ~(_BIT6 | _BIT2 | _BIT1), (_BIT2 | _BIT1));
+            RxSetBit(P71_23_HDMI_CTRL_23, ~(_BIT6 | _BIT2 | _BIT1), (_BIT2 | _BIT1));
 
             // Enable Falling to Rising edge IRQ
-            ScalerSetBit_EXINT(P71_23_HDMI_CTRL_23, ~_BIT6, _BIT6);
+            RxSetBit(P71_23_HDMI_CTRL_23, ~_BIT6, _BIT6);
 
             /*
             // Disable Test Read Request HW Auto Mode
@@ -2589,10 +2644,10 @@ void ScalerTMDSRx2IntHandler_EXINT0(void)
             */
 
             // Disable Falling to Rising IRQ, Set IRQ Status Rising to Falling edge IRQ
-            ScalerSetBit_EXINT(P71_23_HDMI_CTRL_23, ~(_BIT6 | _BIT2 | _BIT1), _BIT1);
+            RxSetBit(P71_23_HDMI_CTRL_23, ~(_BIT6 | _BIT2 | _BIT1), _BIT1);
 
             // Enable Rising to edge IRQ
-            ScalerSetBit_EXINT(P71_23_HDMI_CTRL_23, ~_BIT6, _BIT6);
+            RxSetBit(P71_23_HDMI_CTRL_23, ~_BIT6, _BIT6);
         }
     }
 #endif // End of #if(_TMDS_HDMI_2_0_SCDC_RR_CTS_SUPPORT == _ON)
@@ -2600,59 +2655,67 @@ void ScalerTMDSRx2IntHandler_EXINT0(void)
 #endif // End of #if(_D2_HDMI_2_0_SUPPORT == _ON)
 
     // HDCP 1.4 Write Aksv IRQ have been Received
-    if((ScalerGetBit_EXINT(P71_A9_TMDS_ABC0, _BIT7) == _BIT7) && (ScalerGetBit_EXINT(P71_AA_TMDS_ABC1, _BIT4) == _BIT4))
+    if((RxGetBit(P71_A9_TMDS_ABC0, _BIT7) == _BIT7) && (RxGetBit(P71_AA_TMDS_ABC1, _BIT4) == _BIT4))
     {
         // clear AKSV flag
-        ScalerSetBit_EXINT(P71_A9_TMDS_ABC0, ~(_BIT7 | _BIT6 | _BIT5 | _BIT2), _BIT7);
+        RxSetBit(P71_A9_TMDS_ABC0, ~(_BIT7 | _BIT6 | _BIT5 | _BIT2), _BIT7);
 
         // SET KEY ready bit 1
-        ScalerSetBit_EXINT(P71_AE_TMDS_RPS, ~_BIT1, _BIT1);
+        RxSetBit(P71_AE_TMDS_RPS, ~_BIT1, _BIT1);
 
 #if(_TMDS_HDCP_2_2_SUPPORT == _ON)
         // Enable HDCP 1.4 Module
-        ScalerSetBit_EXINT(P71_C0_HDCP_CR, ~(_BIT7 | _BIT0), (_BIT7 | _BIT0));
+        RxSetBit(P71_C0_HDCP_CR, ~(_BIT7 | _BIT0), (_BIT7 | _BIT0));
 
         // Disable HDCP 2 Function
-        ScalerSetBit_EXINT(P2D_26_HDCP_I2C_CTRL_0, ~_BIT7, 0x00);
+        RxSetBit(P2D_26_HDCP_I2C_CTRL_0, ~_BIT7, 0x00);
 #endif
     }
 
 #if(_AUDIO_SUPPORT == _ON)
     // Detect if Auido Sampling is Changed
-    ScalerSetByte_EXINT(P71_C9_HDMI_AP, _P71_CA_PT_8A_PORT_PAGE71_AUDIO_FREQDET);
-    if(ScalerGetBit_EXINT(P71_CA_HDMI_DP, (_BIT3 | _BIT1)) == (_BIT3 | _BIT1))
+    RxSetByte(P71_C9_HDMI_AP, _P71_CA_PT_8A_PORT_PAGE71_AUDIO_FREQDET);
+    if(RxGetBit(P71_CA_HDMI_DP, (_BIT3 | _BIT1)) == (_BIT3 | _BIT1))
     {
         // Clear Auido Sampling Change Flag
-        ScalerSetByte_EXINT(P71_C9_HDMI_AP, _P71_CA_PT_8A_PORT_PAGE71_AUDIO_FREQDET);
-        ScalerSetBit_EXINT(P71_CA_HDMI_DP, ~_BIT1, _BIT1);
+        RxSetByte(P71_C9_HDMI_AP, _P71_CA_PT_8A_PORT_PAGE71_AUDIO_FREQDET);
+        RxSetBit(P71_CA_HDMI_DP, ~_BIT1, _BIT1);
 
         // Disable FIFO Boundary Tracking, Disable Trend Tracking
-        ScalerSetByte_EXINT(P71_C9_HDMI_AP, _P71_CA_PT_15_PORT_PAGE71_HDMI_PSCR);
-        ScalerSetBit_EXINT(P71_CA_HDMI_DP, ~(_BIT3 | _BIT2), 0x00);
+        RxSetByte(P71_C9_HDMI_AP, _P71_CA_PT_15_PORT_PAGE71_HDMI_PSCR);
+        RxSetBit(P71_CA_HDMI_DP, ~(_BIT3 | _BIT2), 0x00);
 
         // Set Double Buffer bit
-        ScalerSetByte_EXINT(P71_C9_HDMI_AP, _P71_CA_PT_10_PORT_PAGE71_HDMI_CMCR);
-        ScalerSetBit_EXINT(P71_CA_HDMI_DP, ~_BIT4, _BIT4);
+        RxSetByte(P71_C9_HDMI_AP, _P71_CA_PT_10_PORT_PAGE71_HDMI_CMCR);
+        RxSetBit(P71_CA_HDMI_DP, ~_BIT4, _BIT4);
 
         // Reload D __code
-        ScalerSetByte_EXINT(P71_C9_HDMI_AP, _P71_CA_PT_31_PORT_PAGE71_HDMI_WDCR0);
-        ScalerSetBit_EXINT(P71_CA_HDMI_DP, ~_BIT6, _BIT6);
-        ScalerSetByte_EXINT(P71_C9_HDMI_AP, _P71_CA_PT_31_PORT_PAGE71_HDMI_WDCR0);
-        ScalerSetBit_EXINT(P71_CA_HDMI_DP, ~_BIT6, 0x00);
+        RxSetByte(P71_C9_HDMI_AP, _P71_CA_PT_31_PORT_PAGE71_HDMI_WDCR0);
+        RxSetBit(P71_CA_HDMI_DP, ~_BIT6, _BIT6);
+        RxSetByte(P71_C9_HDMI_AP, _P71_CA_PT_31_PORT_PAGE71_HDMI_WDCR0);
+        RxSetBit(P71_CA_HDMI_DP, ~_BIT6, 0x00);
     }
 #endif
 
     // Clear IRQ Pending Flag
-    ScalerSetByte_EXINT(P71_C9_HDMI_AP, _P71_CA_PT_60_PORT_PAGE71_HDMI_INTCR);
-    ScalerSetBit_EXINT(P71_CA_HDMI_DP, ~_BIT7, _BIT7);
+    RxSetByte(P71_C9_HDMI_AP, _P71_CA_PT_60_PORT_PAGE71_HDMI_INTCR);
+    RxSetBit(P71_CA_HDMI_DP, ~_BIT7, _BIT7);
 
-    ScalerSetByte_EXINT(P71_C8_HDMI_APC, pucBackUp[1]);
-    ScalerSetByte_EXINT(P71_C9_HDMI_AP, pucBackUp[0]);
+    RxSetByte(P71_C8_HDMI_APC, pucBackUp[1]);
+    RxSetByte(P71_C9_HDMI_AP, pucBackUp[0]);
 
 #if(_D2_HDMI_2_0_SUPPORT == _ON)
-    ScalerSetByte_EXINT(P71_38_HDMI_CTRL_38, pucBackUp[3]);
-    ScalerSetByte_EXINT(P71_39_HDMI_CTRL_39, pucBackUp[2]);
+    RxSetByte(P71_38_HDMI_CTRL_38, pucBackUp[3]);
+    RxSetByte(P71_39_HDMI_CTRL_39, pucBackUp[2]);
 #endif
+}
+void ScalerTMDSRx2IntHandler_EXINT0(void)
+{
+    BYTE ucOld = RX_CUR;
+
+    RX_CUR = 0;
+    ScalerTMDSRxIntHandler_EXINT0();
+    RX_CUR = ucOld;
 }
 
 //--------------------------------------------------
@@ -2660,27 +2723,27 @@ void ScalerTMDSRx2IntHandler_EXINT0(void)
 // Input Value  : Measured Clk Count to be compared
 // Output Value : _TRUE => Stable
 //--------------------------------------------------
-bit ScalerTMDSRx2CheckCDRStable(WORD usClkCount)
+bit ScalerTMDSRxCheckCDRStable(WORD usClkCount)
 {
     // Disable INT Clock Check
-    isr_g_ucTMDSRx2ClkIRQ = _DISABLE;
+    isr_g_ucTMDSRxClkIRQ[RX_CUR] = _DISABLE;
 
 #if(_D2_INPUT_PORT_TYPE == _D2_MHL_PORT)
 
-    if(GET_D2_TMDS_MODE() == _TMDS_MHL_MODE)
+    if(RXSEL((GET_D2_TMDS_MODE()), (GET_D3_TMDS_MODE())) == _TMDS_MHL_MODE)
     {
-        switch(GET_TMDS_RX2_CLK_MODE())
+        switch(RXSEL((GET_TMDS_RX2_CLK_MODE()), (GET_TMDS_RX3_CLK_MODE())))
         {
             // Check if Packed Pixel Mode
             case _TMDS_MHL_PPMODE_PHY_SETTING:
 
                 // Check Current Measured Freq. is the same as previously locked
-                if(abs(usClkCount - (ScalerTMDSRx2MeasureClk(_CLK_SOURCE_RED) * 4)) > (usClkCount >> 6))
+                if(abs(usClkCount - (ScalerTMDSRxMeasureClk(_CLK_SOURCE_RED) * 4)) > (usClkCount >> 6))
                 {
-                    DebugMessageRx2("R Channel CDR Unstable", ScalerTMDSRx2MeasureClk(_CLK_SOURCE_RED));
+                    DebugMessageRx2("R Channel CDR Unstable", ScalerTMDSRxMeasureClk(_CLK_SOURCE_RED));
 
                     // Enable INT Clock Check
-                    isr_g_ucTMDSRx2ClkIRQ = _ENABLE;
+                    isr_g_ucTMDSRxClkIRQ[RX_CUR] = _ENABLE;
 
                     return _FALSE;
                 }
@@ -2691,12 +2754,12 @@ bit ScalerTMDSRx2CheckCDRStable(WORD usClkCount)
             case _TMDS_24BIT_PHY_SETTING:
 
                 // Check Current Measured Freq. is the same as previously locked
-                if(abs(usClkCount - (ScalerTMDSRx2MeasureClk(_CLK_SOURCE_RED) * 3)) > (usClkCount >> 6))
+                if(abs(usClkCount - (ScalerTMDSRxMeasureClk(_CLK_SOURCE_RED) * 3)) > (usClkCount >> 6))
                 {
-                    DebugMessageRx2("R Channel CDR Unstable", ScalerTMDSRx2MeasureClk(_CLK_SOURCE_RED));
+                    DebugMessageRx2("R Channel CDR Unstable", ScalerTMDSRxMeasureClk(_CLK_SOURCE_RED));
 
                     // Enable INT Clock Check
-                    isr_g_ucTMDSRx2ClkIRQ = _ENABLE;
+                    isr_g_ucTMDSRxClkIRQ[RX_CUR] = _ENABLE;
 
                     return _FALSE;
                 }
@@ -2706,7 +2769,7 @@ bit ScalerTMDSRx2CheckCDRStable(WORD usClkCount)
             default:
 
                 // Enable INT Clock Check
-                isr_g_ucTMDSRx2ClkIRQ = _ENABLE;
+                isr_g_ucTMDSRxClkIRQ[RX_CUR] = _ENABLE;
 
                 return _FALSE;
                 break;
@@ -2716,29 +2779,29 @@ bit ScalerTMDSRx2CheckCDRStable(WORD usClkCount)
 #endif // End of #if(_D2_INPUT_PORT_TYPE == _D2_MHL_PORT)
     {
 #if(_D2_HDMI_2_0_SUPPORT == _ON)
-        if(GET_TMDS_RX2_HIGH_SPEED_MODE() == _TRUE)
+        if(RXSEL((GET_TMDS_RX2_HIGH_SPEED_MODE()), (GET_TMDS_RX3_HIGH_SPEED_MODE())) == _TRUE)
         {
             // Check Current Measured Freq. is the same as previously locked
-            if(abs(usClkCount - (ScalerTMDSRx2MeasureClk(_CLK_SOURCE_RED) * 4)) > (usClkCount >> 6))
+            if(abs(usClkCount - (ScalerTMDSRxMeasureClk(_CLK_SOURCE_RED) * 4)) > (usClkCount >> 6))
             {
                 // Enable INT Clock Check
-                isr_g_ucTMDSRx2ClkIRQ = _ENABLE;
+                isr_g_ucTMDSRxClkIRQ[RX_CUR] = _ENABLE;
 
                 return _FALSE;
             }
 
-            if(abs(usClkCount - (ScalerTMDSRx2MeasureClk(_CLK_SOURCE_BLUE) * 4)) > (usClkCount >> 6))
+            if(abs(usClkCount - (ScalerTMDSRxMeasureClk(_CLK_SOURCE_BLUE) * 4)) > (usClkCount >> 6))
             {
                 // Enable INT Clock Check
-                isr_g_ucTMDSRx2ClkIRQ = _ENABLE;
+                isr_g_ucTMDSRxClkIRQ[RX_CUR] = _ENABLE;
 
                 return _FALSE;
             }
 
-            if(abs(usClkCount - (ScalerTMDSRx2MeasureClk(_CLK_SOURCE_GREEN) * 4)) > (usClkCount >> 6))
+            if(abs(usClkCount - (ScalerTMDSRxMeasureClk(_CLK_SOURCE_GREEN) * 4)) > (usClkCount >> 6))
             {
                 // Enable INT Clock Check
-                isr_g_ucTMDSRx2ClkIRQ = _ENABLE;
+                isr_g_ucTMDSRxClkIRQ[RX_CUR] = _ENABLE;
 
                 return _FALSE;
             }
@@ -2747,32 +2810,32 @@ bit ScalerTMDSRx2CheckCDRStable(WORD usClkCount)
 #endif
         {
             // Check Current Measured Freq. is the same as previously locked
-            if(abs(usClkCount - ScalerTMDSRx2MeasureClk(_CLK_SOURCE_RED)) > (usClkCount >> 6))
+            if(abs(usClkCount - ScalerTMDSRxMeasureClk(_CLK_SOURCE_RED)) > (usClkCount >> 6))
             {
-                DebugMessageRx2("R Channel CDR Unstable", ScalerTMDSRx2MeasureClk(_CLK_SOURCE_RED));
+                DebugMessageRx2("R Channel CDR Unstable", ScalerTMDSRxMeasureClk(_CLK_SOURCE_RED));
 
                 // Enable INT Clock Check
-                isr_g_ucTMDSRx2ClkIRQ = _ENABLE;
+                isr_g_ucTMDSRxClkIRQ[RX_CUR] = _ENABLE;
 
                 return _FALSE;
             }
 
-            if(abs(usClkCount - ScalerTMDSRx2MeasureClk(_CLK_SOURCE_BLUE)) > (usClkCount >> 6))
+            if(abs(usClkCount - ScalerTMDSRxMeasureClk(_CLK_SOURCE_BLUE)) > (usClkCount >> 6))
             {
-                DebugMessageRx2("B Channel CDR Unstable", ScalerTMDSRx2MeasureClk(_CLK_SOURCE_BLUE));
+                DebugMessageRx2("B Channel CDR Unstable", ScalerTMDSRxMeasureClk(_CLK_SOURCE_BLUE));
 
                 // Enable INT Clock Check
-                isr_g_ucTMDSRx2ClkIRQ = _ENABLE;
+                isr_g_ucTMDSRxClkIRQ[RX_CUR] = _ENABLE;
 
                 return _FALSE;
             }
 
-            if(abs(usClkCount - ScalerTMDSRx2MeasureClk(_CLK_SOURCE_GREEN)) > (usClkCount >> 6))
+            if(abs(usClkCount - ScalerTMDSRxMeasureClk(_CLK_SOURCE_GREEN)) > (usClkCount >> 6))
             {
-                DebugMessageRx2("G Channel CDR Unstable", ScalerTMDSRx2MeasureClk(_CLK_SOURCE_GREEN));
+                DebugMessageRx2("G Channel CDR Unstable", ScalerTMDSRxMeasureClk(_CLK_SOURCE_GREEN));
 
                 // Enable INT Clock Check
-                isr_g_ucTMDSRx2ClkIRQ = _ENABLE;
+                isr_g_ucTMDSRxClkIRQ[RX_CUR] = _ENABLE;
 
                 return _FALSE;
             }
@@ -2780,9 +2843,20 @@ bit ScalerTMDSRx2CheckCDRStable(WORD usClkCount)
     }
 
     // Enable INT Clock Check
-    isr_g_ucTMDSRx2ClkIRQ = _ENABLE;
+    isr_g_ucTMDSRxClkIRQ[RX_CUR] = _ENABLE;
 
     return _TRUE;
+}
+bit ScalerTMDSRx2CheckCDRStable(WORD usClkCount)
+{
+    bit xRet;
+    BYTE ucOld = RX_CUR;
+
+    RX_CUR = 0;
+    xRet = ScalerTMDSRxCheckCDRStable(usClkCount);
+    RX_CUR = ucOld;
+
+    return xRet;
 }
 
 //--------------------------------------------------
@@ -2790,25 +2864,25 @@ bit ScalerTMDSRx2CheckCDRStable(WORD usClkCount)
 // Input Value  : Measured Clk Count to be compared
 // Output Value : _TRUE => Stable
 //--------------------------------------------------
-BYTE ScalerTMDSRx2CheckCDRStable_EXINT0(WORD usClkCount)
+BYTE ScalerTMDSRxCheckCDRStable_EXINT0(WORD usClkCount)
 {
 #if(_D2_INPUT_PORT_TYPE == _D2_MHL_PORT)
 
-    if(GET_D2_TMDS_MODE() == _TMDS_MHL_MODE)
+    if(RXSEL((GET_D2_TMDS_MODE()), (GET_D3_TMDS_MODE())) == _TMDS_MHL_MODE)
     {
-        switch(GET_TMDS_RX2_CLK_MODE())
+        switch(RXSEL((GET_TMDS_RX2_CLK_MODE()), (GET_TMDS_RX3_CLK_MODE())))
         {
             // Check if Packed Pixel Mode
             case _TMDS_MHL_PPMODE_PHY_SETTING:
 
                 // Check Current Measured Freq. is the same as previously locked
-                if(abs(usClkCount - ScalerTMDSRx2MeasureClk_EXINT0(_CLK_SOURCE_TMDS)) > (usClkCount >> 6))
+                if(abs(usClkCount - ScalerTMDSRxMeasureClk_EXINT0(_CLK_SOURCE_TMDS)) > (usClkCount >> 6))
                 {
                     return _FALSE;
                 }
 
                 // Check Current Measured Freq. is the same as previously locked
-                if(abs(usClkCount - (ScalerTMDSRx2MeasureClk_EXINT0(_CLK_SOURCE_RED) * 4)) > (usClkCount >> 6))
+                if(abs(usClkCount - (ScalerTMDSRxMeasureClk_EXINT0(_CLK_SOURCE_RED) * 4)) > (usClkCount >> 6))
                 {
                     return _FALSE;
                 }
@@ -2819,13 +2893,13 @@ BYTE ScalerTMDSRx2CheckCDRStable_EXINT0(WORD usClkCount)
             case _TMDS_24BIT_PHY_SETTING:
 
                 // Check Current Measured Freq. is the same as previously locked
-                if(abs(usClkCount - ScalerTMDSRx2MeasureClk_EXINT0(_CLK_SOURCE_TMDS)) > (usClkCount >> 6))
+                if(abs(usClkCount - ScalerTMDSRxMeasureClk_EXINT0(_CLK_SOURCE_TMDS)) > (usClkCount >> 6))
                 {
                     return _FALSE;
                 }
 
                 // Check Current Measured Freq. is the same as previously locked
-                if(abs(usClkCount - (ScalerTMDSRx2MeasureClk_EXINT0(_CLK_SOURCE_RED) * 3)) > (usClkCount >> 6))
+                if(abs(usClkCount - (ScalerTMDSRxMeasureClk_EXINT0(_CLK_SOURCE_RED) * 3)) > (usClkCount >> 6))
                 {
                     return _FALSE;
                 }
@@ -2842,25 +2916,25 @@ BYTE ScalerTMDSRx2CheckCDRStable_EXINT0(WORD usClkCount)
 #endif // End of #if(_D2_INPUT_PORT_TYPE == _D2_MHL_PORT)
     {
 #if(_D2_HDMI_2_0_SUPPORT == _ON)
-        if(GET_TMDS_RX2_HIGH_SPEED_MODE() == _TRUE)
+        if(RXSEL((GET_TMDS_RX2_HIGH_SPEED_MODE()), (GET_TMDS_RX3_HIGH_SPEED_MODE())) == _TRUE)
         {
             // Check Current Measured Freq. is the same as previously locked
-            if(abs(usClkCount - ScalerTMDSRx2MeasureClk_EXINT0(_CLK_SOURCE_TMDS)) > (usClkCount >> 6))
+            if(abs(usClkCount - ScalerTMDSRxMeasureClk_EXINT0(_CLK_SOURCE_TMDS)) > (usClkCount >> 6))
             {
                 return _FALSE;
             }
 
-            if(abs(usClkCount - (ScalerTMDSRx2MeasureClk_EXINT0(_CLK_SOURCE_RED) * 4)) > (usClkCount >> 6))
+            if(abs(usClkCount - (ScalerTMDSRxMeasureClk_EXINT0(_CLK_SOURCE_RED) * 4)) > (usClkCount >> 6))
             {
                 return _FALSE;
             }
 
-            if(abs(usClkCount - (ScalerTMDSRx2MeasureClk_EXINT0(_CLK_SOURCE_BLUE) * 4)) > (usClkCount >> 6))
+            if(abs(usClkCount - (ScalerTMDSRxMeasureClk_EXINT0(_CLK_SOURCE_BLUE) * 4)) > (usClkCount >> 6))
             {
                 return _FALSE;
             }
 
-            if(abs(usClkCount - (ScalerTMDSRx2MeasureClk_EXINT0(_CLK_SOURCE_GREEN) * 4)) > (usClkCount >> 6))
+            if(abs(usClkCount - (ScalerTMDSRxMeasureClk_EXINT0(_CLK_SOURCE_GREEN) * 4)) > (usClkCount >> 6))
             {
                 return _FALSE;
             }
@@ -2869,22 +2943,22 @@ BYTE ScalerTMDSRx2CheckCDRStable_EXINT0(WORD usClkCount)
 #endif
         {
             // Check Current Measured Freq. is the same as previously locked
-            if(abs(usClkCount - ScalerTMDSRx2MeasureClk_EXINT0(_CLK_SOURCE_TMDS)) > (usClkCount >> 6))
+            if(abs(usClkCount - ScalerTMDSRxMeasureClk_EXINT0(_CLK_SOURCE_TMDS)) > (usClkCount >> 6))
             {
                 return _FALSE;
             }
 
-            if(abs(usClkCount - ScalerTMDSRx2MeasureClk_EXINT0(_CLK_SOURCE_RED)) > (usClkCount >> 6))
+            if(abs(usClkCount - ScalerTMDSRxMeasureClk_EXINT0(_CLK_SOURCE_RED)) > (usClkCount >> 6))
             {
                 return _FALSE;
             }
 
-            if(abs(usClkCount - ScalerTMDSRx2MeasureClk_EXINT0(_CLK_SOURCE_BLUE)) > (usClkCount >> 6))
+            if(abs(usClkCount - ScalerTMDSRxMeasureClk_EXINT0(_CLK_SOURCE_BLUE)) > (usClkCount >> 6))
             {
                 return _FALSE;
             }
 
-            if(abs(usClkCount - ScalerTMDSRx2MeasureClk_EXINT0(_CLK_SOURCE_GREEN)) > (usClkCount >> 6))
+            if(abs(usClkCount - ScalerTMDSRxMeasureClk_EXINT0(_CLK_SOURCE_GREEN)) > (usClkCount >> 6))
             {
                 return _FALSE;
             }
@@ -2899,44 +2973,44 @@ BYTE ScalerTMDSRx2CheckCDRStable_EXINT0(WORD usClkCount)
 // Input Value  : Clk Source to be measured
 // Output Value : Measured Clk Count
 //--------------------------------------------------
-WORD ScalerTMDSRx2MeasureClk(BYTE ucMeasureClk)
+WORD ScalerTMDSRxMeasureClk(BYTE ucMeasureClk)
 {
     BYTE ucDelayCount = 0;
 
 #if(_D2_INPUT_PORT_TYPE == _D2_MHL_PORT)
-    if(GET_D2_TMDS_MODE() == _TMDS_MHL_MODE)
+    if(RXSEL((GET_D2_TMDS_MODE()), (GET_D3_TMDS_MODE())) == _TMDS_MHL_MODE)
     {
         // Enable Rx_EN (Lane0,3)
-        ScalerSetBit(P7B_1A_CMU_00, ~(_BIT7 | _BIT4), (_BIT7 | _BIT4));
+        RxSetBit(P7B_1A_CMU_00, ~(_BIT7 | _BIT4), (_BIT7 | _BIT4));
     }
     else
 #endif
     {
         // Enable Rx_EN (Lane3)
-        ScalerSetBit(P7B_1A_CMU_00, ~_BIT7, _BIT7);
+        RxSetBit(P7B_1A_CMU_00, ~_BIT7, _BIT7);
     }
 
     // Disable Measure for Reset Measure Window
-    ScalerSetDataPortBit(P71_C9_HDMI_AP, _P71_CA_PT_28_PORT_PAGE71_HDMI_NTX1024TR0, ~(_BIT5 | _BIT4 | _BIT3), 0x00);
+    ScalerSetDataPortBit(RXA(P71_C9_HDMI_AP), _P71_CA_PT_28_PORT_PAGE71_HDMI_NTX1024TR0, ~(_BIT5 | _BIT4 | _BIT3), 0x00);
 
     // Select reference clk to Xtal Clk and measure clk
-    ScalerSetBit(P71_AD_TMDS_CPS, ~(_BIT6 | _BIT5 | _BIT4), ((ucMeasureClk << 5) | _BIT4));
+    RxSetBit(P71_AD_TMDS_CPS, ~(_BIT6 | _BIT5 | _BIT4), ((ucMeasureClk << 5) | _BIT4));
 
     // Start Measure
-    ScalerSetDataPortBit(P71_C9_HDMI_AP, _P71_CA_PT_28_PORT_PAGE71_HDMI_NTX1024TR0, ~(_BIT5 | _BIT4 | _BIT3), _BIT3);
+    ScalerSetDataPortBit(RXA(P71_C9_HDMI_AP), _P71_CA_PT_28_PORT_PAGE71_HDMI_NTX1024TR0, ~(_BIT5 | _BIT4 | _BIT3), _BIT3);
 
     // Delay at least 40us at Xtal = 27MHz
     for(ucDelayCount = 0; ucDelayCount <= 8; ucDelayCount++)
     {
         DELAY_5US();
 
-        if((ScalerGetDataPortBit(P71_C9_HDMI_AP, _P71_CA_PT_28_PORT_PAGE71_HDMI_NTX1024TR0, _BIT3)) == 0x00)
+        if((ScalerGetDataPortBit(RXA(P71_C9_HDMI_AP), _P71_CA_PT_28_PORT_PAGE71_HDMI_NTX1024TR0, _BIT3)) == 0x00)
         {
             break;
         }
     }
 
-    ScalerGetDataPortByte(P71_C9_HDMI_AP, _P71_CA_PT_28_PORT_PAGE71_HDMI_NTX1024TR0, 2, &pData[0], _AUTOINC);
+    ScalerGetDataPortByte(RXA(P71_C9_HDMI_AP), _P71_CA_PT_28_PORT_PAGE71_HDMI_NTX1024TR0, 2, &pData[0], _AUTOINC);
 
     return ((WORD)(pData[0] & 0x07) << 8) | pData[1];
 }
@@ -2946,59 +3020,59 @@ WORD ScalerTMDSRx2MeasureClk(BYTE ucMeasureClk)
 // Input Value  : Clk Source to be measured
 // Output Value : Measured Clk Count
 //--------------------------------------------------
-WORD ScalerTMDSRx2MeasureClk_EXINT0(BYTE ucMeasureClk)
+WORD ScalerTMDSRxMeasureClk_EXINT0(BYTE ucMeasureClk)
 {
     BYTE ucDelayCount = 0;
     WORD usClkCount = 0;
     BYTE ucBackUp = 0;
 
 #if(_D2_INPUT_PORT_TYPE == _D2_MHL_PORT)
-    if(GET_D2_TMDS_MODE() == _TMDS_MHL_MODE)
+    if(RXSEL((GET_D2_TMDS_MODE()), (GET_D3_TMDS_MODE())) == _TMDS_MHL_MODE)
     {
         // Enable Rx_EN (Lane0,3)
-        ScalerSetBit_EXINT(P7B_1A_CMU_00, ~(_BIT7 | _BIT4), (_BIT7 | _BIT4));
+        RxSetBit(P7B_1A_CMU_00, ~(_BIT7 | _BIT4), (_BIT7 | _BIT4));
     }
     else
 #endif
     {
         // Enable Rx_EN (Lane3)
-        ScalerSetBit_EXINT(P7B_1A_CMU_00, ~_BIT7, _BIT7);
+        RxSetBit(P7B_1A_CMU_00, ~_BIT7, _BIT7);
     }
 
     // Disable Measure for Reset Measure Window
-    ScalerSetByte_EXINT(P71_C9_HDMI_AP, _P71_CA_PT_28_PORT_PAGE71_HDMI_NTX1024TR0);
-    ScalerSetBit_EXINT(P71_CA_HDMI_DP, ~(_BIT5 | _BIT4 | _BIT3), 0x00);
+    RxSetByte(P71_C9_HDMI_AP, _P71_CA_PT_28_PORT_PAGE71_HDMI_NTX1024TR0);
+    RxSetBit(P71_CA_HDMI_DP, ~(_BIT5 | _BIT4 | _BIT3), 0x00);
 
     // Select reference clk to Xtal Clk and measure clk
-    ScalerSetBit_EXINT(P71_AD_TMDS_CPS, ~(_BIT6 | _BIT5 | _BIT4), ((ucMeasureClk << 5) | _BIT4));
+    RxSetBit(P71_AD_TMDS_CPS, ~(_BIT6 | _BIT5 | _BIT4), ((ucMeasureClk << 5) | _BIT4));
 
-    ucBackUp = ScalerGetByte_EXINT(P71_C8_HDMI_APC);
+    ucBackUp = RxGetByte(P71_C8_HDMI_APC);
 
     // Set CA Port non-auto increase
-    ScalerSetBit_EXINT(P71_C8_HDMI_APC, ~_BIT0, 0x00);
+    RxSetBit(P71_C8_HDMI_APC, ~_BIT0, 0x00);
 
     // Start Measure
-    ScalerSetByte_EXINT(P71_C9_HDMI_AP, _P71_CA_PT_28_PORT_PAGE71_HDMI_NTX1024TR0);
-    ScalerSetBit_EXINT(P71_CA_HDMI_DP, ~(_BIT5 | _BIT4 | _BIT3), _BIT3);
+    RxSetByte(P71_C9_HDMI_AP, _P71_CA_PT_28_PORT_PAGE71_HDMI_NTX1024TR0);
+    RxSetBit(P71_CA_HDMI_DP, ~(_BIT5 | _BIT4 | _BIT3), _BIT3);
 
     // Delay at least 40us at Xtal = 27MHz
     for(ucDelayCount = 0; ucDelayCount <= 8; ucDelayCount++)
     {
         DELAY_5US_EXINT();
 
-        if((ScalerGetBit_EXINT(P71_CA_HDMI_DP, _BIT3)) == 0x00)
+        if((RxGetBit(P71_CA_HDMI_DP, _BIT3)) == 0x00)
         {
             break;
         }
     }
 
-    ScalerSetByte_EXINT(P71_C9_HDMI_AP, _P71_CA_PT_28_PORT_PAGE71_HDMI_NTX1024TR0);
-    usClkCount = ((WORD)(ScalerGetByte_EXINT(P71_CA_HDMI_DP) & 0x07) << 8);
+    RxSetByte(P71_C9_HDMI_AP, _P71_CA_PT_28_PORT_PAGE71_HDMI_NTX1024TR0);
+    usClkCount = ((WORD)(RxGetByte(P71_CA_HDMI_DP) & 0x07) << 8);
 
-    ScalerSetByte_EXINT(P71_C9_HDMI_AP, _P71_CA_PT_29_PORT_PAGE71_HDMI_NTX1024TR1);
-    usClkCount = usClkCount | ScalerGetByte_EXINT(P71_CA_HDMI_DP);
+    RxSetByte(P71_C9_HDMI_AP, _P71_CA_PT_29_PORT_PAGE71_HDMI_NTX1024TR1);
+    usClkCount = usClkCount | RxGetByte(P71_CA_HDMI_DP);
 
-    ScalerSetByte_EXINT(P71_C8_HDMI_APC, ucBackUp);
+    RxSetByte(P71_C8_HDMI_APC, ucBackUp);
 
     return usClkCount;
 }
@@ -3008,40 +3082,48 @@ WORD ScalerTMDSRx2MeasureClk_EXINT0(BYTE ucMeasureClk)
 // Input Value  : Current Color Space
 // Output Value : None
 //--------------------------------------------------
-void ScalerTMDSRx2SetPorchColor(EnumColorSpace enumColorFormat)
+void ScalerTMDSRxSetPorchColor(EnumColorSpace enumColorFormat)
 {
     // Manual Set Background Color Enable
-    ScalerSetBit(P71_B9_TMDS_OUT_CTRL, ~_BIT7, 0x00);
+    RxSetBit(P71_B9_TMDS_OUT_CTRL, ~_BIT7, 0x00);
 
     if((enumColorFormat == _COLOR_SPACE_YCBCR444) || (enumColorFormat == _COLOR_SPACE_YCBCR422))
     {
-        ScalerSetByte(P71_BA_TMDS_ROUT_HIGH_BYTE, 0x80);
-        ScalerSetByte(P71_BB_TMDS_ROUT_LOW_BYTE, 0x00);
-        ScalerSetByte(P71_BC_TMDS_GOUT_HIGH_BYTE, 0x10);
-        ScalerSetByte(P71_BD_TMDS_GOUT_LOW_BYTE, 0x00);
-        ScalerSetByte(P71_BE_TMDS_BOUT_HIGH_BYTE, 0x80);
-        ScalerSetByte(P71_BF_TMDS_BOUT_LOW_BYTE, 0x00);
+        RxSetByte(P71_BA_TMDS_ROUT_HIGH_BYTE, 0x80);
+        RxSetByte(P71_BB_TMDS_ROUT_LOW_BYTE, 0x00);
+        RxSetByte(P71_BC_TMDS_GOUT_HIGH_BYTE, 0x10);
+        RxSetByte(P71_BD_TMDS_GOUT_LOW_BYTE, 0x00);
+        RxSetByte(P71_BE_TMDS_BOUT_HIGH_BYTE, 0x80);
+        RxSetByte(P71_BF_TMDS_BOUT_LOW_BYTE, 0x00);
     }
 #if(_HDMI_2_0_YCBCR420_SUPPORT == _ON)
     else if(enumColorFormat == _COLOR_SPACE_YCBCR420)
     {
-        ScalerSetByte(P71_BA_TMDS_ROUT_HIGH_BYTE, 0x10);
-        ScalerSetByte(P71_BB_TMDS_ROUT_LOW_BYTE, 0x00);
-        ScalerSetByte(P71_BC_TMDS_GOUT_HIGH_BYTE, 0x10);
-        ScalerSetByte(P71_BD_TMDS_GOUT_LOW_BYTE, 0x00);
-        ScalerSetByte(P71_BE_TMDS_BOUT_HIGH_BYTE, 0x80);
-        ScalerSetByte(P71_BF_TMDS_BOUT_LOW_BYTE, 0x00);
+        RxSetByte(P71_BA_TMDS_ROUT_HIGH_BYTE, 0x10);
+        RxSetByte(P71_BB_TMDS_ROUT_LOW_BYTE, 0x00);
+        RxSetByte(P71_BC_TMDS_GOUT_HIGH_BYTE, 0x10);
+        RxSetByte(P71_BD_TMDS_GOUT_LOW_BYTE, 0x00);
+        RxSetByte(P71_BE_TMDS_BOUT_HIGH_BYTE, 0x80);
+        RxSetByte(P71_BF_TMDS_BOUT_LOW_BYTE, 0x00);
     }
 #endif
     else
     {
-        ScalerSetByte(P71_BA_TMDS_ROUT_HIGH_BYTE, 0x00);
-        ScalerSetByte(P71_BB_TMDS_ROUT_LOW_BYTE, 0x00);
-        ScalerSetByte(P71_BC_TMDS_GOUT_HIGH_BYTE, 0x00);
-        ScalerSetByte(P71_BD_TMDS_GOUT_LOW_BYTE, 0x00);
-        ScalerSetByte(P71_BE_TMDS_BOUT_HIGH_BYTE, 0x00);
-        ScalerSetByte(P71_BF_TMDS_BOUT_LOW_BYTE, 0x00);
+        RxSetByte(P71_BA_TMDS_ROUT_HIGH_BYTE, 0x00);
+        RxSetByte(P71_BB_TMDS_ROUT_LOW_BYTE, 0x00);
+        RxSetByte(P71_BC_TMDS_GOUT_HIGH_BYTE, 0x00);
+        RxSetByte(P71_BD_TMDS_GOUT_LOW_BYTE, 0x00);
+        RxSetByte(P71_BE_TMDS_BOUT_HIGH_BYTE, 0x00);
+        RxSetByte(P71_BF_TMDS_BOUT_LOW_BYTE, 0x00);
     }
+}
+void ScalerTMDSRx2SetPorchColor(EnumColorSpace enumColorFormat)
+{
+    BYTE ucOld = RX_CUR;
+
+    RX_CUR = 0;
+    ScalerTMDSRxSetPorchColor(enumColorFormat);
+    RX_CUR = ucOld;
 }
 
 #if(_D2_HDMI_SUPPORT == _ON)
@@ -3051,7 +3133,7 @@ void ScalerTMDSRx2SetPorchColor(EnumColorSpace enumColorFormat)
 // Input Value  : usTMDSClkCount, ucColorDepth
 // Output Value : None
 //--------------------------------------------------
-bit ScalerTMDSRx2HdmiSetDeepColorPll(WORD usTMDSClkCount, BYTE ucColorDepth)
+bit ScalerTMDSRxHdmiSetDeepColorPll(WORD usTMDSClkCount, BYTE ucColorDepth)
 {
     DWORD ulTMDSClkValue = 0;
     WORD usM = 0;
@@ -3084,7 +3166,7 @@ bit ScalerTMDSRx2HdmiSetDeepColorPll(WORD usTMDSClkCount, BYTE ucColorDepth)
     ////////////////////////////////////////////////////////////////////////////////////////////////
 
     // If Measure Divider = /2 then TMDS_CLK x 2, unit:kHz
-    if(ScalerGetDataPortBit(P71_C9_HDMI_AP, _P71_CA_PT_28_PORT_PAGE71_HDMI_NTX1024TR0, _BIT6) == _BIT6)
+    if(ScalerGetDataPortBit(RXA(P71_C9_HDMI_AP), _P71_CA_PT_28_PORT_PAGE71_HDMI_NTX1024TR0, _BIT6) == _BIT6)
     {
         ulTMDSClkValue = (DWORD)_GDI_CLK_KHZ * 1024 * 2 / usTMDSClkCount;
     }
@@ -3095,7 +3177,7 @@ bit ScalerTMDSRx2HdmiSetDeepColorPll(WORD usTMDSClkCount, BYTE ucColorDepth)
 
 #if(_D2_HDMI_2_0_SUPPORT == _ON)
 
-    if(GET_TMDS_RX2_HIGH_SPEED_MODE() == _TRUE)
+    if(RXSEL((GET_TMDS_RX2_HIGH_SPEED_MODE()), (GET_TMDS_RX3_HIGH_SPEED_MODE())) == _TRUE)
     {
         ulTMDSClkValue = (ulTMDSClkValue << 2);
     }
@@ -3198,10 +3280,10 @@ bit ScalerTMDSRx2HdmiSetDeepColorPll(WORD usTMDSClkCount, BYTE ucColorDepth)
     //////////////////////////////////////////////////////////////////////////////////////////////////
 
     // Set VCO resister = 3b'011(13K), Capacitor = 2b'11(66pF) (Analog DIC suggust)
-    ScalerSetBit(P2D_BE_MN_SCLKG_PLL_CHP, ~(_BIT7 | _BIT6 | _BIT5 | _BIT4 | _BIT3), (_BIT6 | _BIT5 | _BIT4 | _BIT3));
+    RxSetBit(P2D_BE_MN_SCLKG_PLL_CHP, ~(_BIT7 | _BIT6 | _BIT5 | _BIT4 | _BIT3), (_BIT6 | _BIT5 | _BIT4 | _BIT3));
 
     // BW = Kvco * Icp * R / (M * 2pi) = 700k --> Icp = M * BW * 2pi / Kvco / R
-    PDATA_WORD(1) = ((DWORD)usM * 700UL * 2 * 314UL * 20) / _PLL_VCO_BAND_10 / ((7 + (ScalerGetBit(P2D_BE_MN_SCLKG_PLL_CHP, (_BIT7 | _BIT6 | _BIT5)) >> 5) * 2) * 100);
+    PDATA_WORD(1) = ((DWORD)usM * 700UL * 2 * 314UL * 20) / _PLL_VCO_BAND_10 / ((7 + (RxGetBit(P2D_BE_MN_SCLKG_PLL_CHP, (_BIT7 | _BIT6 | _BIT5)) >> 5) * 2) * 100);
     pData[5] = (PDATA_WORD(1) + 25) / 50;
     pData[5] -= ((pData[5] == 0) ? 0 : 1);
 
@@ -3213,53 +3295,53 @@ bit ScalerTMDSRx2HdmiSetDeepColorPll(WORD usTMDSClkCount, BYTE ucColorDepth)
     DebugMessageRx2("Deep Color Charge Pump icp =", pData[5]);
 
     // DPPLL Power Down
-    ScalerSetByte(P2D_BD_MN_SCLKG_PLL_PWR, 0x80);
+    RxSetByte(P2D_BD_MN_SCLKG_PLL_PWR, 0x80);
 
     // Disable M/N Tracking
-    ScalerSetBit(P2D_A7_MN_SCLKG_TRK_CTRL, ~(_BIT7 | _BIT6 | _BIT1 | _BIT0), (_BIT1 | _BIT0));
+    RxSetBit(P2D_A7_MN_SCLKG_TRK_CTRL, ~(_BIT7 | _BIT6 | _BIT1 | _BIT0), (_BIT1 | _BIT0));
 
     // Set PLL Charge Pump Current
-    ScalerSetBit(P2D_BE_MN_SCLKG_PLL_CHP, ~(_BIT2 | _BIT1 | _BIT0), (pData[5] & 0x07));
+    RxSetBit(P2D_BE_MN_SCLKG_PLL_CHP, ~(_BIT2 | _BIT1 | _BIT0), (pData[5] & 0x07));
 
     // Set VCOMD, phase Swallow Circuit Clock Select, SCLKGSTOP
-    ScalerSetBit(P2D_BF_MN_SCLKG_PLL_WD, ~(0x7F), 0x16);
+    RxSetBit(P2D_BF_MN_SCLKG_PLL_WD, ~(0x7F), 0x16);
 
     // Set DPPLL Div_2 & Div_s
-    ScalerSetByte(P2D_A3_MN_SCLKG_DIVS, (ucDivS >> 1));
+    RxSetByte(P2D_A3_MN_SCLKG_DIVS, (ucDivS >> 1));
 
     // Set DPPLL Div_O.
-    ScalerSetBit(P2D_BD_MN_SCLKG_PLL_PWR, ~(_BIT1 | _BIT0), (0 & (_BIT1 | _BIT0)));
+    RxSetBit(P2D_BD_MN_SCLKG_PLL_PWR, ~(_BIT1 | _BIT0), (0 & (_BIT1 | _BIT0)));
 
     // Offset Value Setting
-    ScalerSetByte(P2D_A6_MN_SCLKG_OFFS_L, 0);
-    ScalerSetByte(P2D_A5_MN_SCLKG_OFFS_M, 0);
-    ScalerSetBit(P2D_A4_MN_SCLKG_OFFS_H, ~(_BIT2 | _BIT1 | _BIT0), 0x00);
-    ScalerSetBit(P2D_A7_MN_SCLKG_TRK_CTRL, ~(_BIT1 | _BIT0), 0x00);
+    RxSetByte(P2D_A6_MN_SCLKG_OFFS_L, 0);
+    RxSetByte(P2D_A5_MN_SCLKG_OFFS_M, 0);
+    RxSetBit(P2D_A4_MN_SCLKG_OFFS_H, ~(_BIT2 | _BIT1 | _BIT0), 0x00);
+    RxSetBit(P2D_A7_MN_SCLKG_TRK_CTRL, ~(_BIT1 | _BIT0), 0x00);
 
     // Enable phase swallow
-    ScalerSetBit(P2D_B8_MN_SCLKG_SDM_CTRL, ~(_BIT5 | _BIT4), _BIT4);
+    RxSetBit(P2D_B8_MN_SCLKG_SDM_CTRL, ~(_BIT5 | _BIT4), _BIT4);
 
     // Set DPPLL M Code
-    ScalerSetBit(P2D_A0_MN_SCLKG_CTRL, ~(_BIT1 | _BIT0), (HIBYTE(usM - 2) & 0x03));
-    ScalerSetByte(P2D_A1_MN_SCLKG_DIVM, LOBYTE(usM - 2));
+    RxSetBit(P2D_A0_MN_SCLKG_CTRL, ~(_BIT1 | _BIT0), (HIBYTE(usM - 2) & 0x03));
+    RxSetByte(P2D_A1_MN_SCLKG_DIVM, LOBYTE(usM - 2));
 
     // Set DPPLL N Code
-    ScalerSetByte(P2D_A2_MN_SCLKG_DIVN, (ucN - 2));
+    RxSetByte(P2D_A2_MN_SCLKG_DIVN, (ucN - 2));
 
     // PLL Input Clock select to Link Clock, Output Clock Select to PLL Clock, Double Buffer.
-    ScalerSetBit(P2D_A0_MN_SCLKG_CTRL, ~(_BIT6 | _BIT5 | _BIT4), (_BIT6 | _BIT4));
+    RxSetBit(P2D_A0_MN_SCLKG_CTRL, ~(_BIT6 | _BIT5 | _BIT4), (_BIT6 | _BIT4));
 
     // Load offset value
-    ScalerSetBit(P2D_A4_MN_SCLKG_OFFS_H, ~(_BIT7 | _BIT6 | _BIT5 | _BIT4 | _BIT3), _BIT7);
+    RxSetBit(P2D_A4_MN_SCLKG_OFFS_H, ~(_BIT7 | _BIT6 | _BIT5 | _BIT4 | _BIT3), _BIT7);
 
     // Double Buffer for M/N Tracking
-    ScalerSetBit(P2D_A0_MN_SCLKG_CTRL, ~_BIT4, _BIT4);
+    RxSetBit(P2D_A0_MN_SCLKG_CTRL, ~_BIT4, _BIT4);
 
     // DPLL VCORSTB Set to Normal
-    ScalerSetBit(P2D_C0_MN_SCLKG_PLL_INSEL, ~_BIT0, _DPLL_VCORSTB_NORMAL_VALUE);
+    RxSetBit(P2D_C0_MN_SCLKG_PLL_INSEL, ~_BIT0, _DPLL_VCORSTB_NORMAL_VALUE);
 
     // DPLL Power On
-    ScalerSetBit(P2D_BD_MN_SCLKG_PLL_PWR, ~_BIT7, 0x00);
+    RxSetBit(P2D_BD_MN_SCLKG_PLL_PWR, ~_BIT7, 0x00);
 
     ScalerTimerDelayXms(2);
 
@@ -3268,22 +3350,22 @@ bit ScalerTMDSRx2HdmiSetDeepColorPll(WORD usTMDSClkCount, BYTE ucColorDepth)
     ////////////////////////////////
 
     // Reg DPLL_CMPEN
-    ScalerSetBit(P2D_BD_MN_SCLKG_PLL_PWR, ~_BIT2, _BIT2);
+    RxSetBit(P2D_BD_MN_SCLKG_PLL_PWR, ~_BIT2, _BIT2);
 
     ScalerTimerDelayXms(2);
 
     // Reg DPLL_CALLCH
-    ScalerSetBit(P2D_BD_MN_SCLKG_PLL_PWR, ~_BIT3, _BIT3);
+    RxSetBit(P2D_BD_MN_SCLKG_PLL_PWR, ~_BIT3, _BIT3);
 
     ScalerTimerDelayXms(2);
 
     // Reg DPLL_CALSW
-    ScalerSetBit(P2D_BD_MN_SCLKG_PLL_PWR, ~_BIT4, _BIT4);
+    RxSetBit(P2D_BD_MN_SCLKG_PLL_PWR, ~_BIT4, _BIT4);
 
     // Check VCO Band is '10
-    if(ScalerGetBit(P2D_C0_MN_SCLKG_PLL_INSEL, (_BIT5 | _BIT4)) != _BIT5)
+    if(RxGetBit(P2D_C0_MN_SCLKG_PLL_INSEL, (_BIT5 | _BIT4)) != _BIT5)
     {
-        switch(ScalerGetBit(P2D_C0_MN_SCLKG_PLL_INSEL, (_BIT5 | _BIT4)) >> 4)
+        switch(RxGetBit(P2D_C0_MN_SCLKG_PLL_INSEL, (_BIT5 | _BIT4)) >> 4)
         {
             case 00:
 
@@ -3310,7 +3392,7 @@ bit ScalerTMDSRx2HdmiSetDeepColorPll(WORD usTMDSClkCount, BYTE ucColorDepth)
                 break;
         }
 
-        PDATA_WORD(1) = ((DWORD)usM * 700UL * 2 * 314UL * 20) / PDATA_WORD(0) / ((7 + (ScalerGetBit(P2D_BE_MN_SCLKG_PLL_CHP, (_BIT7 | _BIT6 | _BIT5)) >> 5) * 2) * 100);
+        PDATA_WORD(1) = ((DWORD)usM * 700UL * 2 * 314UL * 20) / PDATA_WORD(0) / ((7 + (RxGetBit(P2D_BE_MN_SCLKG_PLL_CHP, (_BIT7 | _BIT6 | _BIT5)) >> 5) * 2) * 100);
 
         DebugMessageRx2("4. reset Icp", PDATA_WORD(1));
 
@@ -3323,12 +3405,23 @@ bit ScalerTMDSRx2HdmiSetDeepColorPll(WORD usTMDSClkCount, BYTE ucColorDepth)
         }
 
         // Set PLL Charge Pump Current
-        ScalerSetBit(P2D_BE_MN_SCLKG_PLL_CHP, ~(_BIT2 | _BIT1 | _BIT0), (pData[5] & 0x07));
+        RxSetBit(P2D_BE_MN_SCLKG_PLL_CHP, ~(_BIT2 | _BIT1 | _BIT0), (pData[5] & 0x07));
 
         DebugMessageRx2("4. VCO is not band10, reset Icp", pData[5]);
     }
 
     return _TRUE;
+}
+bit ScalerTMDSRx2HdmiSetDeepColorPll(WORD usTMDSClkCount, BYTE ucColorDepth)
+{
+    bit xRet;
+    BYTE ucOld = RX_CUR;
+
+    RX_CUR = 0;
+    xRet = ScalerTMDSRxHdmiSetDeepColorPll(usTMDSClkCount, ucColorDepth);
+    RX_CUR = ucOld;
+
+    return xRet;
 }
 #endif // End of #if(_D2_INPUT_PORT_TYPE != _D2_DUAL_DVI_PORT)
 
@@ -3337,173 +3430,181 @@ bit ScalerTMDSRx2HdmiSetDeepColorPll(WORD usTMDSClkCount, BYTE ucColorDepth)
 // Input Value  : bWait => Whether to wait then read
 // Output Value : None
 //--------------------------------------------------
-void ScalerTMDSRx2HdmiPacketDetect(bit bWait)
+void ScalerTMDSRxHdmiPacketDetect(bit bWait)
 {
     if(bWait == _WAIT)
     {
         // Polling 3 frame for detect Packet signals
-        if(ScalerTimerPollingFlagProc(130, P71_CC_HDMI_GPVS, (_BIT6 | _BIT5), _TRUE) == _TRUE)
+        if(ScalerTimerPollingFlagProc(130, RXA(P71_CC_HDMI_GPVS), (_BIT6 | _BIT5), _TRUE) == _TRUE)
         {
             // Both GCP & AVI infoframe packet have been received
-            if(ScalerGetBit(P71_CC_HDMI_GPVS, (_BIT6 | _BIT5)) == (_BIT6 | _BIT5))
+            if(RxGetBit(P71_CC_HDMI_GPVS, (_BIT6 | _BIT5)) == (_BIT6 | _BIT5))
             {
-                SET_HDMI_RX2_GCP_RECEIVED();
+                RXSEL((SET_HDMI_RX2_GCP_RECEIVED()), (SET_HDMI_RX3_GCP_RECEIVED()));
 
-                SET_HDMI_RX2_AVI_INFO_FRAME_RECEIVED();
+                RXSEL((SET_HDMI_RX2_AVI_INFO_FRAME_RECEIVED()), (SET_HDMI_RX3_AVI_INFO_FRAME_RECEIVED()));
             }
             // Only AVI infoframe packet have been received
-            else if(ScalerGetBit(P71_CC_HDMI_GPVS, (_BIT6 | _BIT5)) == _BIT5)
+            else if(RxGetBit(P71_CC_HDMI_GPVS, (_BIT6 | _BIT5)) == _BIT5)
             {
-                SET_HDMI_RX2_AVI_INFO_FRAME_RECEIVED();
+                RXSEL((SET_HDMI_RX2_AVI_INFO_FRAME_RECEIVED()), (SET_HDMI_RX3_AVI_INFO_FRAME_RECEIVED()));
 
                 // Polling more time to wait GCP when AVI IF has been received.
-                if(ScalerTimerPollingFlagProc(180, P71_CC_HDMI_GPVS, _BIT6, _TRUE) == _TRUE)
+                if(ScalerTimerPollingFlagProc(180, RXA(P71_CC_HDMI_GPVS), _BIT6, _TRUE) == _TRUE)
                 {
-                    SET_HDMI_RX2_GCP_RECEIVED();
+                    RXSEL((SET_HDMI_RX2_GCP_RECEIVED()), (SET_HDMI_RX3_GCP_RECEIVED()));
                 }
                 else
                 {
-                    CLR_HDMI_RX2_GCP_RECEIVED();
+                    RXSEL((CLR_HDMI_RX2_GCP_RECEIVED()), (CLR_HDMI_RX3_GCP_RECEIVED()));
                 }
             }
             // Only GCP Packet have been received
-            else if(ScalerGetBit(P71_CC_HDMI_GPVS, (_BIT6 | _BIT5)) == _BIT6)
+            else if(RxGetBit(P71_CC_HDMI_GPVS, (_BIT6 | _BIT5)) == _BIT6)
             {
-                SET_HDMI_RX2_GCP_RECEIVED();
+                RXSEL((SET_HDMI_RX2_GCP_RECEIVED()), (SET_HDMI_RX3_GCP_RECEIVED()));
 
                 // Polling more time to wait AVI IF when GCP has been received.
-                if(ScalerTimerPollingFlagProc(180, P71_CC_HDMI_GPVS, _BIT5, _TRUE) == _TRUE)
+                if(ScalerTimerPollingFlagProc(180, RXA(P71_CC_HDMI_GPVS), _BIT5, _TRUE) == _TRUE)
                 {
-                    SET_HDMI_RX2_AVI_INFO_FRAME_RECEIVED();
+                    RXSEL((SET_HDMI_RX2_AVI_INFO_FRAME_RECEIVED()), (SET_HDMI_RX3_AVI_INFO_FRAME_RECEIVED()));
                 }
                 else
                 {
-                    CLR_HDMI_RX2_AVI_INFO_FRAME_RECEIVED();
+                    RXSEL((CLR_HDMI_RX2_AVI_INFO_FRAME_RECEIVED()), (CLR_HDMI_RX3_AVI_INFO_FRAME_RECEIVED()));
                 }
             }
         }
         // Neither AVI infoframe nor GCP packet received
         else
         {
-            CLR_HDMI_RX2_GCP_RECEIVED();
+            RXSEL((CLR_HDMI_RX2_GCP_RECEIVED()), (CLR_HDMI_RX3_GCP_RECEIVED()));
 
-            CLR_HDMI_RX2_AVI_INFO_FRAME_RECEIVED();
+            RXSEL((CLR_HDMI_RX2_AVI_INFO_FRAME_RECEIVED()), (CLR_HDMI_RX3_AVI_INFO_FRAME_RECEIVED()));
         }
 
 #if((_HDMI_FREESYNC_SUPPORT == _ON) || (_HDMI_FREESYNC_II_SUPPORT == _ON))
 #if((_HDMI_FREESYNC_SUPPORT == _ON) && (_HDMI_FREESYNC_II_SUPPORT == _OFF) && (_HDMI_FREESYNC_CAPABILITY_SWITCH_METHOD == _MCCS_SWITCH_MODE))
         // Polling 3 frame for detect Packet signals
-        if((GET_HDMI_FREESYNC_VCP() == 0x01) && (ScalerTimerPollingDataBitFlagProc(130, P71_C9_HDMI_AP, _P71_CA_PT_00_PORT_PAGE71_HDMI_SCR, _BIT7, _TRUE) == _TRUE))
+        if((GET_HDMI_FREESYNC_VCP() == 0x01) && (ScalerTimerPollingDataBitFlagProc(130, RXA(P71_C9_HDMI_AP), _P71_CA_PT_00_PORT_PAGE71_HDMI_SCR, _BIT7, _TRUE) == _TRUE))
 #else
         // Polling 3 frame for detect Packet signals
-        if(ScalerTimerPollingDataBitFlagProc(130, P71_C9_HDMI_AP, _P71_CA_PT_00_PORT_PAGE71_HDMI_SCR, _BIT7, _TRUE) == _TRUE)
+        if(ScalerTimerPollingDataBitFlagProc(130, RXA(P71_C9_HDMI_AP), _P71_CA_PT_00_PORT_PAGE71_HDMI_SCR, _BIT7, _TRUE) == _TRUE)
 #endif
         {
-            SET_TMDS_RX2_SPD_INFO_FRAME_RECEIVED();
+            RXSEL((SET_TMDS_RX2_SPD_INFO_FRAME_RECEIVED()), (SET_TMDS_RX3_SPD_INFO_FRAME_RECEIVED()));
         }
         else
         {
-            CLR_TMDS_RX2_SPD_INFO_FRAME_RECEIVED();
+            RXSEL((CLR_TMDS_RX2_SPD_INFO_FRAME_RECEIVED()), (CLR_TMDS_RX3_SPD_INFO_FRAME_RECEIVED()));
         }
 #endif
 
 #if(_HDMI_HDR10_SUPPORT == _ON)
         // Polling 3 frame for detect Packet signals
-        if(ScalerTimerPollingDataBitFlagProc(130, P71_C9_HDMI_AP, _P71_CA_PT_00_PORT_PAGE71_HDMI_SCR, _BIT6, _TRUE) == _TRUE)
+        if(ScalerTimerPollingDataBitFlagProc(130, RXA(P71_C9_HDMI_AP), _P71_CA_PT_00_PORT_PAGE71_HDMI_SCR, _BIT6, _TRUE) == _TRUE)
         {
-            SET_HDMI_RX2_HDR10_INFO_FRAME_RECEIVED();
+            RXSEL((SET_HDMI_RX2_HDR10_INFO_FRAME_RECEIVED()), (SET_HDMI_RX3_HDR10_INFO_FRAME_RECEIVED()));
         }
         else
         {
-            CLR_HDMI_RX2_HDR10_INFO_FRAME_RECEIVED();
+            RXSEL((CLR_HDMI_RX2_HDR10_INFO_FRAME_RECEIVED()), (CLR_HDMI_RX3_HDR10_INFO_FRAME_RECEIVED()));
         }
 #endif
 
         // No extra frame wait (was 130 ms): the GCP poll above has seen the packet, the depth is read once and re-checked in TMDSStableDetect; #216
 
-        CLR_HDMI_RX2_PACKET_DETECTING();
+        RXSEL((CLR_HDMI_RX2_PACKET_DETECTING()), (CLR_HDMI_RX3_PACKET_DETECTING()));
     }
     else
     {
-        if(ScalerGetBit(P71_CC_HDMI_GPVS, _BIT6) == _BIT6)
+        if(RxGetBit(P71_CC_HDMI_GPVS, _BIT6) == _BIT6)
         {
-            ScalerTMDSRx2HdmiWatchDog(_HDMI_AV_MUTE_WD, _ENABLE);
+            ScalerTMDSRxHdmiWatchDog(_HDMI_AV_MUTE_WD, _ENABLE);
 
-            SET_HDMI_RX2_GCP_RECEIVED();
+            RXSEL((SET_HDMI_RX2_GCP_RECEIVED()), (SET_HDMI_RX3_GCP_RECEIVED()));
 
             // Clear Detection Flag
-            ScalerSetBit(P71_CC_HDMI_GPVS, ~(_BIT6 | _BIT5), _BIT6);
+            RxSetBit(P71_CC_HDMI_GPVS, ~(_BIT6 | _BIT5), _BIT6);
         }
         else
         {
-            ScalerTMDSRx2HdmiWatchDog(_HDMI_AV_MUTE_WD, _DISABLE);
+            ScalerTMDSRxHdmiWatchDog(_HDMI_AV_MUTE_WD, _DISABLE);
 
-            CLR_HDMI_RX2_GCP_RECEIVED();
+            RXSEL((CLR_HDMI_RX2_GCP_RECEIVED()), (CLR_HDMI_RX3_GCP_RECEIVED()));
         }
 
-        if(ScalerGetBit(P71_CC_HDMI_GPVS, _BIT5) == _BIT5)
+        if(RxGetBit(P71_CC_HDMI_GPVS, _BIT5) == _BIT5)
         {
             // Color Space Auto/ Pixel Repetition auto mode
-            ScalerSetDataPortBit(P71_C9_HDMI_AP, _P71_CA_PT_51_PORT_PAGE71_HDMI_ACRCR, ~(_BIT6 | _BIT2), (_BIT6 | _BIT2));
+            ScalerSetDataPortBit(RXA(P71_C9_HDMI_AP), _P71_CA_PT_51_PORT_PAGE71_HDMI_ACRCR, ~(_BIT6 | _BIT2), (_BIT6 | _BIT2));
 
-            ScalerTMDSRx2HdmiWatchDog(_HDMI_AVI_INFO_VARIATION_WD, _ENABLE);
+            ScalerTMDSRxHdmiWatchDog(_HDMI_AVI_INFO_VARIATION_WD, _ENABLE);
 
-            SET_HDMI_RX2_AVI_INFO_FRAME_RECEIVED();
+            RXSEL((SET_HDMI_RX2_AVI_INFO_FRAME_RECEIVED()), (SET_HDMI_RX3_AVI_INFO_FRAME_RECEIVED()));
 
             // Clear Detection Flag
-            ScalerSetBit(P71_CC_HDMI_GPVS, ~(_BIT6 | _BIT5), _BIT5);
+            RxSetBit(P71_CC_HDMI_GPVS, ~(_BIT6 | _BIT5), _BIT5);
         }
         else
         {
             // Mannal Set Color Space and disable pixel  repetition
-            ScalerSetDataPortBit(P71_C9_HDMI_AP, _P71_CA_PT_51_PORT_PAGE71_HDMI_ACRCR, ~(_BIT6 | _BIT5 | _BIT4 | _BIT3 | _BIT2), 0x00);
+            ScalerSetDataPortBit(RXA(P71_C9_HDMI_AP), _P71_CA_PT_51_PORT_PAGE71_HDMI_ACRCR, ~(_BIT6 | _BIT5 | _BIT4 | _BIT3 | _BIT2), 0x00);
 
             // Disable down sampling
-            ScalerSetDataPortBit(P71_C9_HDMI_AP, _P71_CA_PT_50_PORT_PAGE71_HDMI_VCR, ~(_BIT3 | _BIT2 | _BIT1 | _BIT0), 0x00);
+            ScalerSetDataPortBit(RXA(P71_C9_HDMI_AP), _P71_CA_PT_50_PORT_PAGE71_HDMI_VCR, ~(_BIT3 | _BIT2 | _BIT1 | _BIT0), 0x00);
 
             // Waiting for Down Sampling Effect
             ScalerTimerDelayXms(20);
 
-            ScalerTMDSRx2HdmiWatchDog(_HDMI_AVI_INFO_VARIATION_WD, _DISABLE);
+            ScalerTMDSRxHdmiWatchDog(_HDMI_AVI_INFO_VARIATION_WD, _DISABLE);
 
-            CLR_HDMI_RX2_AVI_INFO_FRAME_RECEIVED();
+            RXSEL((CLR_HDMI_RX2_AVI_INFO_FRAME_RECEIVED()), (CLR_HDMI_RX3_AVI_INFO_FRAME_RECEIVED()));
         }
 
 #if((_HDMI_FREESYNC_SUPPORT == _ON) || (_HDMI_FREESYNC_II_SUPPORT == _ON))
 #if((_HDMI_FREESYNC_SUPPORT == _ON) && (_HDMI_FREESYNC_II_SUPPORT == _OFF) && (_HDMI_FREESYNC_CAPABILITY_SWITCH_METHOD == _MCCS_SWITCH_MODE))
-        if((GET_HDMI_FREESYNC_VCP() == 0x01) && (ScalerGetDataPortBit(P71_C9_HDMI_AP, _P71_CA_PT_00_PORT_PAGE71_HDMI_SCR, _BIT7) == _BIT7))
+        if((GET_HDMI_FREESYNC_VCP() == 0x01) && (ScalerGetDataPortBit(RXA(P71_C9_HDMI_AP), _P71_CA_PT_00_PORT_PAGE71_HDMI_SCR, _BIT7) == _BIT7))
 #else
-        if(ScalerGetDataPortBit(P71_C9_HDMI_AP, _P71_CA_PT_00_PORT_PAGE71_HDMI_SCR, _BIT7) == _BIT7)
+        if(ScalerGetDataPortBit(RXA(P71_C9_HDMI_AP), _P71_CA_PT_00_PORT_PAGE71_HDMI_SCR, _BIT7) == _BIT7)
 #endif
         {
-            SET_TMDS_RX2_SPD_INFO_FRAME_RECEIVED();
+            RXSEL((SET_TMDS_RX2_SPD_INFO_FRAME_RECEIVED()), (SET_TMDS_RX3_SPD_INFO_FRAME_RECEIVED()));
 
-            ScalerSetDataPortBit(P71_C9_HDMI_AP, _P71_CA_PT_00_PORT_PAGE71_HDMI_SCR, ~(_BIT7 | _BIT6), _BIT7);
+            ScalerSetDataPortBit(RXA(P71_C9_HDMI_AP), _P71_CA_PT_00_PORT_PAGE71_HDMI_SCR, ~(_BIT7 | _BIT6), _BIT7);
         }
         else
         {
-            CLR_TMDS_RX2_SPD_INFO_FRAME_RECEIVED();
+            RXSEL((CLR_TMDS_RX2_SPD_INFO_FRAME_RECEIVED()), (CLR_TMDS_RX3_SPD_INFO_FRAME_RECEIVED()));
         }
 #endif
 
 #if(_HDMI_HDR10_SUPPORT == _ON)
-        if(ScalerGetDataPortBit(P71_C9_HDMI_AP, _P71_CA_PT_00_PORT_PAGE71_HDMI_SCR, _BIT6) == _BIT6)
+        if(ScalerGetDataPortBit(RXA(P71_C9_HDMI_AP), _P71_CA_PT_00_PORT_PAGE71_HDMI_SCR, _BIT6) == _BIT6)
         {
-            SET_HDMI_RX2_HDR10_INFO_FRAME_RECEIVED();
+            RXSEL((SET_HDMI_RX2_HDR10_INFO_FRAME_RECEIVED()), (SET_HDMI_RX3_HDR10_INFO_FRAME_RECEIVED()));
 
-            ScalerSetDataPortBit(P71_C9_HDMI_AP, _P71_CA_PT_00_PORT_PAGE71_HDMI_SCR, ~(_BIT7 | _BIT6), _BIT6);
+            ScalerSetDataPortBit(RXA(P71_C9_HDMI_AP), _P71_CA_PT_00_PORT_PAGE71_HDMI_SCR, ~(_BIT7 | _BIT6), _BIT6);
         }
         else
         {
-            CLR_HDMI_RX2_HDR10_INFO_FRAME_RECEIVED();
+            RXSEL((CLR_HDMI_RX2_HDR10_INFO_FRAME_RECEIVED()), (CLR_HDMI_RX3_HDR10_INFO_FRAME_RECEIVED()));
         }
 #endif
 
-        SET_HDMI_RX2_PACKET_DETECTING();
+        RXSEL((SET_HDMI_RX2_PACKET_DETECTING()), (SET_HDMI_RX3_PACKET_DETECTING()));
 
         // Activate Packet Detection Event
-        ScalerTimerActiveTimerEvent(130, _SCALER_TIMER_EVENT_RX2_TMDS_HDMI_PACKET_DETECT);
+        ScalerTimerActiveTimerEvent(130, RXSEL((_SCALER_TIMER_EVENT_RX2_TMDS_HDMI_PACKET_DETECT), (_SCALER_TIMER_EVENT_RX3_TMDS_HDMI_PACKET_DETECT)));
     }
+}
+void ScalerTMDSRx2HdmiPacketDetect(bit bWait)
+{
+    BYTE ucOld = RX_CUR;
+
+    RX_CUR = 0;
+    ScalerTMDSRxHdmiPacketDetect(bWait);
+    RX_CUR = ucOld;
 }
 
 //--------------------------------------------------
@@ -3511,26 +3612,34 @@ void ScalerTMDSRx2HdmiPacketDetect(bit bWait)
 // Input Value  : None
 // Output Value : None
 //--------------------------------------------------
-void ScalerTMDSRx2HdmiAVMuteProc(void)
+void ScalerTMDSRxHdmiAVMuteProc(void)
 {
     // if AVMute Has been triggered
-    if((ScalerGetBit(P71_CB_HDMI_SR, _BIT6) == 0x00) && (ScalerGetBit(P71_A6_TMDS_OUTCTL, (_BIT6 | _BIT5 | _BIT4)) == 0x00))
+    if((RxGetBit(P71_CB_HDMI_SR, _BIT6) == 0x00) && (RxGetBit(P71_A6_TMDS_OUTCTL, (_BIT6 | _BIT5 | _BIT4)) == 0x00))
     {
         // Clear AVMute Flag
-        ScalerSetBit(P71_CB_HDMI_SR, ~_BIT7, _BIT7);
+        RxSetBit(P71_CB_HDMI_SR, ~_BIT7, _BIT7);
 
         // Disable AVMute Watch Dog
-        ScalerSetDataPortBit(P71_C9_HDMI_AP, _P71_CA_PT_31_PORT_PAGE71_HDMI_WDCR0, ~_BIT7, 0x00);
+        ScalerSetDataPortBit(RXA(P71_C9_HDMI_AP), _P71_CA_PT_31_PORT_PAGE71_HDMI_WDCR0, ~_BIT7, 0x00);
 
         // Enable Video/Audio Output
-        ScalerSetDataPortBit(P71_C9_HDMI_AP, _P71_CA_PT_30_PORT_PAGE71_HDMI_AVMCR, ~(_BIT5 | _BIT3), (_BIT5 | _BIT3));
+        ScalerSetDataPortBit(RXA(P71_C9_HDMI_AP), _P71_CA_PT_30_PORT_PAGE71_HDMI_AVMCR, ~(_BIT5 | _BIT3), (_BIT5 | _BIT3));
 
         // Enable RGB Output
-        ScalerSetBit(P71_A6_TMDS_OUTCTL, ~(_BIT6 | _BIT5 | _BIT4), (_BIT6 | _BIT5 | _BIT4));
+        RxSetBit(P71_A6_TMDS_OUTCTL, ~(_BIT6 | _BIT5 | _BIT4), (_BIT6 | _BIT5 | _BIT4));
 
         // Enable AVMute Watch Dog
-        ScalerSetDataPortBit(P71_C9_HDMI_AP, _P71_CA_PT_31_PORT_PAGE71_HDMI_WDCR0, ~_BIT7, _BIT7);
+        ScalerSetDataPortBit(RXA(P71_C9_HDMI_AP), _P71_CA_PT_31_PORT_PAGE71_HDMI_WDCR0, ~_BIT7, _BIT7);
     }
+}
+void ScalerTMDSRx2HdmiAVMuteProc(void)
+{
+    BYTE ucOld = RX_CUR;
+
+    RX_CUR = 0;
+    ScalerTMDSRxHdmiAVMuteProc();
+    RX_CUR = ucOld;
 }
 
 //--------------------------------------------------
@@ -3538,34 +3647,34 @@ void ScalerTMDSRx2HdmiAVMuteProc(void)
 // Input Value  : ucWDType => Watch Dog type, bEnable => Enable watch dog flag
 // Output Value : None
 //--------------------------------------------------
-void ScalerTMDSRx2HdmiWatchDog(BYTE ucWDType, bit bEnable)
+void ScalerTMDSRxHdmiWatchDog(BYTE ucWDType, bit bEnable)
 {
     if(bEnable == _ENABLE)
     {
         if(((ucWDType & _HDMI_AVI_INFO_VARIATION_WD) == _HDMI_AVI_INFO_VARIATION_WD) && (GET_DIGITAL_COLOR_INFO_CHANGE_RESET() == _TRUE))
         {
-            if(ScalerGetDataPortBit(P71_C9_HDMI_AP, _P71_CA_PT_41_PORT_PAGE71_HDMI_VWDSR, _BIT0) == 0x00)
+            if(ScalerGetDataPortBit(RXA(P71_C9_HDMI_AP), _P71_CA_PT_41_PORT_PAGE71_HDMI_VWDSR, _BIT0) == 0x00)
             {
                 // Clear AVI Info Frame Variation flag
-                ScalerSetBit(P71_CC_HDMI_GPVS, ~(_BIT6 | _BIT5 | _BIT0), _BIT0);
+                RxSetBit(P71_CC_HDMI_GPVS, ~(_BIT6 | _BIT5 | _BIT0), _BIT0);
 
                 // Enable Color Space/ Colorimetry Change Detection
-                ScalerSetDataPortBit(P71_C9_HDMI_AP, _P71_CA_PT_45_PORT_PAGE71_HDMI_PVGCR0, ~(_BIT3 | _BIT0), (_BIT3 | _BIT0));
+                ScalerSetDataPortBit(RXA(P71_C9_HDMI_AP), _P71_CA_PT_45_PORT_PAGE71_HDMI_PVGCR0, ~(_BIT3 | _BIT0), (_BIT3 | _BIT0));
 
                 // Enable AVI Info Frame Variation Watch Dog
-                ScalerSetDataPortBit(P71_C9_HDMI_AP, _P71_CA_PT_41_PORT_PAGE71_HDMI_VWDSR, ~_BIT0, _BIT0);
+                ScalerSetDataPortBit(RXA(P71_C9_HDMI_AP), _P71_CA_PT_41_PORT_PAGE71_HDMI_VWDSR, ~_BIT0, _BIT0);
             }
         }
 
         if((ucWDType & _HDMI_AV_MUTE_WD) == _HDMI_AV_MUTE_WD)
         {
-            if(ScalerGetDataPortBit(P71_C9_HDMI_AP, _P71_CA_PT_31_PORT_PAGE71_HDMI_WDCR0, _BIT7) == 0x00)
+            if(ScalerGetDataPortBit(RXA(P71_C9_HDMI_AP), _P71_CA_PT_31_PORT_PAGE71_HDMI_WDCR0, _BIT7) == 0x00)
             {
                 // CLR AVMute Flag
-                ScalerSetBit(P71_CB_HDMI_SR, ~_BIT7, _BIT7);
+                RxSetBit(P71_CB_HDMI_SR, ~_BIT7, _BIT7);
 
                 // Enable AVMute WD
-                ScalerSetDataPortBit(P71_C9_HDMI_AP, _P71_CA_PT_31_PORT_PAGE71_HDMI_WDCR0, ~_BIT7, _BIT7);
+                ScalerSetDataPortBit(RXA(P71_C9_HDMI_AP), _P71_CA_PT_31_PORT_PAGE71_HDMI_WDCR0, ~_BIT7, _BIT7);
             }
         }
     }
@@ -3574,19 +3683,27 @@ void ScalerTMDSRx2HdmiWatchDog(BYTE ucWDType, bit bEnable)
         if((ucWDType & _HDMI_AVI_INFO_VARIATION_WD) == _HDMI_AVI_INFO_VARIATION_WD)
         {
             // Disable packet variation Watch Dog
-            ScalerSetDataPortBit(P71_C9_HDMI_AP, _P71_CA_PT_41_PORT_PAGE71_HDMI_VWDSR, ~_BIT0, 0x00);
+            ScalerSetDataPortBit(RXA(P71_C9_HDMI_AP), _P71_CA_PT_41_PORT_PAGE71_HDMI_VWDSR, ~_BIT0, 0x00);
 
-            ScalerSetDataPortByte(P71_C9_HDMI_AP, _P71_CA_PT_45_PORT_PAGE71_HDMI_PVGCR0, 0x00);
+            ScalerSetDataPortByte(RXA(P71_C9_HDMI_AP), _P71_CA_PT_45_PORT_PAGE71_HDMI_PVGCR0, 0x00);
 
-            ScalerSetDataPortBit(P71_C9_HDMI_AP, _P71_CA_PT_46_PORT_PAGE71_HDMI_PVGCR1, ~_BIT0, 0x00);
+            ScalerSetDataPortBit(RXA(P71_C9_HDMI_AP), _P71_CA_PT_46_PORT_PAGE71_HDMI_PVGCR1, ~_BIT0, 0x00);
         }
 
         if((ucWDType & _HDMI_AV_MUTE_WD) == _HDMI_AV_MUTE_WD)
         {
             // Disable AV Mute Watch Dog
-            ScalerSetDataPortBit(P71_C9_HDMI_AP, _P71_CA_PT_31_PORT_PAGE71_HDMI_WDCR0, ~_BIT7, 0x00);
+            ScalerSetDataPortBit(RXA(P71_C9_HDMI_AP), _P71_CA_PT_31_PORT_PAGE71_HDMI_WDCR0, ~_BIT7, 0x00);
         }
     }
+}
+void ScalerTMDSRx2HdmiWatchDog(BYTE ucWDType, bit bEnable)
+{
+    BYTE ucOld = RX_CUR;
+
+    RX_CUR = 0;
+    ScalerTMDSRxHdmiWatchDog(ucWDType, bEnable);
+    RX_CUR = ucOld;
 }
 
 #endif // End of #if(_D2_HDMI_SUPPORT == _ON)
@@ -3596,40 +3713,48 @@ void ScalerTMDSRx2HdmiWatchDog(BYTE ucWDType, bit bEnable)
 // Input Value  : None
 // Output Value : None
 //--------------------------------------------------
-void ScalerTMDSRx2PowerSavingProc(void)
+void ScalerTMDSRxPowerSavingProc(void)
 {
     // Set Power Saving DDC Debounce Counter
     isr_g_usDDCDebounceCnt = _TMDS_DDC_DEBOUNCE_PS;
-    ScalerTMDSRx2FreqDetectDisable();
+    ScalerTMDSRxFreqDetectDisable();
 
     // Switch TMDS Input/Output to Auto
-    ScalerSetBit(P71_A6_TMDS_OUTCTL, ~_BIT7, _BIT7);
-    ScalerSetBit(P71_A7_TMDS_PWDCTL, ~_BIT4, _BIT4);
+    RxSetBit(P71_A6_TMDS_OUTCTL, ~_BIT7, _BIT7);
+    RxSetBit(P71_A7_TMDS_PWDCTL, ~_BIT4, _BIT4);
 
     // Set Freq. Stable Time: 5 times
-    ScalerSetByte(P71_EC_HDMI_FREQDET_STABLE, 0x05);
+    RxSetByte(P71_EC_HDMI_FREQDET_STABLE, 0x05);
 
     // Set Freq. Shift Offset to Max
-    ScalerSetBit(P71_E7_HDMI_FREQDET_OFFSET, ~(_BIT2 | _BIT1 | _BIT0), 0x00);
+    RxSetBit(P71_E7_HDMI_FREQDET_OFFSET, ~(_BIT2 | _BIT1 | _BIT0), 0x00);
 
 #if(_D2_INPUT_PORT_TYPE == _D2_MHL_PORT)
-    if(GET_D2_TMDS_MODE() == _TMDS_MHL_MODE)
+    if(RXSEL((GET_D2_TMDS_MODE()), (GET_D3_TMDS_MODE())) == _TMDS_MHL_MODE)
     {
         // Set Upper Bound
-        ScalerSetByte(P71_E8_HDMI_FREQDET_UPPER_M, HIBYTE(_TMDS_MHL_FREQ_PS_UPPER_BOUND));
-        ScalerSetByte(P71_E9_HDMI_FREQDET_UPPER_L, LOBYTE(_TMDS_MHL_FREQ_PS_UPPER_BOUND));
+        RxSetByte(P71_E8_HDMI_FREQDET_UPPER_M, HIBYTE(_TMDS_MHL_FREQ_PS_UPPER_BOUND));
+        RxSetByte(P71_E9_HDMI_FREQDET_UPPER_L, LOBYTE(_TMDS_MHL_FREQ_PS_UPPER_BOUND));
     }
     else
 #endif
     {
         // Set Upper Bound
-        ScalerSetByte(P71_E8_HDMI_FREQDET_UPPER_M, HIBYTE(_TMDS_FREQ_PS_HIGH_SPEED_UPPER_BOUND));
-        ScalerSetByte(P71_E9_HDMI_FREQDET_UPPER_L, LOBYTE(_TMDS_FREQ_PS_HIGH_SPEED_UPPER_BOUND));
+        RxSetByte(P71_E8_HDMI_FREQDET_UPPER_M, HIBYTE(_TMDS_FREQ_PS_HIGH_SPEED_UPPER_BOUND));
+        RxSetByte(P71_E9_HDMI_FREQDET_UPPER_L, LOBYTE(_TMDS_FREQ_PS_HIGH_SPEED_UPPER_BOUND));
     }
 
     // Set Lower Bound
-    ScalerSetByte(P71_EA_HDMI_FREQDET_LOWER_M, HIBYTE(_TMDS_FREQ_PS_LOWER_BOUND));
-    ScalerSetByte(P71_EB_HDMI_FREQDET_LOWER_L, LOBYTE(_TMDS_FREQ_PS_LOWER_BOUND));
+    RxSetByte(P71_EA_HDMI_FREQDET_LOWER_M, HIBYTE(_TMDS_FREQ_PS_LOWER_BOUND));
+    RxSetByte(P71_EB_HDMI_FREQDET_LOWER_L, LOBYTE(_TMDS_FREQ_PS_LOWER_BOUND));
+}
+void ScalerTMDSRx2PowerSavingProc(void)
+{
+    BYTE ucOld = RX_CUR;
+
+    RX_CUR = 0;
+    ScalerTMDSRxPowerSavingProc();
+    RX_CUR = ucOld;
 }
 
 //--------------------------------------------------
@@ -3637,37 +3762,45 @@ void ScalerTMDSRx2PowerSavingProc(void)
 // Input Value  : None
 // Output Value : None
 //--------------------------------------------------
-void ScalerTMDSRx2FreqDetectDisable(void)
+void ScalerTMDSRxFreqDetectDisable(void)
 {
     // Disable TMDS Freq. Detect IRQ
-    ScalerSetBit(P71_E6_HDMI_FREQDET_CTRL, ~_BIT1, 0x00);
-    ScalerSetBit(P71_EF_HDMI_ERROR_TH, ~_BIT7, 0x00);
+    RxSetBit(P71_E6_HDMI_FREQDET_CTRL, ~_BIT1, 0x00);
+    RxSetBit(P71_EF_HDMI_ERROR_TH, ~_BIT7, 0x00);
 
     // Clear TMDS Clk Count
-    isr_g_usTMDSRx2ClkCount = 0;
+    isr_g_usTMDSRxClkCount[RX_CUR] = 0;
 
     // Clear PHY SET flag and a pending deferred set-up (IRQ already disabled above)
-    isr_g_ucTMDSRx2PhyPend = _FALSE;
-    CLR_TMDS_RX2_PHY_SET();
+    isr_g_ucTMDSRxPhyPend[RX_CUR] = _FALSE;
+    RXSEL((CLR_TMDS_RX2_PHY_SET()), (CLR_TMDS_RX3_PHY_SET()));
 
     // Disable HDMI MAC Power
-    ScalerSetBit(P71_A7_TMDS_PWDCTL, ~(_BIT4 | _BIT3 | _BIT2 | _BIT1 | _BIT0), 0x00);
+    RxSetBit(P71_A7_TMDS_PWDCTL, ~(_BIT4 | _BIT3 | _BIT2 | _BIT1 | _BIT0), 0x00);
 
     // Disable CED Function
-    ScalerSetBit(P71_0B_HDMI_CTRL_0B, ~(_BIT7 | _BIT6 | _BIT5 | _BIT4 | _BIT3 | _BIT2), 0x00);
+    RxSetBit(P71_0B_HDMI_CTRL_0B, ~(_BIT7 | _BIT6 | _BIT5 | _BIT4 | _BIT3 | _BIT2), 0x00);
 
     // Pop Up CED Error For Clear Error Counter
-    ScalerSetBit(P71_0C_HDMI_CTRL_0C, ~_BIT7, _BIT7);
+    RxSetBit(P71_0C_HDMI_CTRL_0C, ~_BIT7, _BIT7);
 
     // Disable CED Lock Transition IRQ & Flag
-    ScalerSetBit(P71_17_HDMI_CTRL_17, ~(_BIT2 | _BIT1 | _BIT0), (_BIT2 | _BIT1 | _BIT0));
-    ScalerSetBit(P71_18_HDMI_CTRL_18, ~(_BIT2 | _BIT1 | _BIT0), 0x00);
+    RxSetBit(P71_17_HDMI_CTRL_17, ~(_BIT2 | _BIT1 | _BIT0), (_BIT2 | _BIT1 | _BIT0));
+    RxSetBit(P71_18_HDMI_CTRL_18, ~(_BIT2 | _BIT1 | _BIT0), 0x00);
 
     // Set Read Request 1ms reference clock to internal OSC
-    ScalerSetBit(P71_1A_HDMI_CTRL_1A, ~_BIT3, _BIT3);
+    RxSetBit(P71_1A_HDMI_CTRL_1A, ~_BIT3, _BIT3);
 
     // Set time interval form bus free to Read Request(4.7us~500us)
-    ScalerSetBit(P71_1B_HDMI_CTRL_1B, ~(_BIT5 | _BIT4 | _BIT3 | _BIT2 | _BIT1 | _BIT0), (_BIT4 | _BIT0));
+    RxSetBit(P71_1B_HDMI_CTRL_1B, ~(_BIT5 | _BIT4 | _BIT3 | _BIT2 | _BIT1 | _BIT0), (_BIT4 | _BIT0));
+}
+void ScalerTMDSRx2FreqDetectDisable(void)
+{
+    BYTE ucOld = RX_CUR;
+
+    RX_CUR = 0;
+    ScalerTMDSRxFreqDetectDisable();
+    RX_CUR = ucOld;
 }
 
 #if(_D2_INPUT_PORT_TYPE != _D2_DUAL_DVI_PORT)
@@ -3679,7 +3812,7 @@ void ScalerTMDSRx2FreqDetectDisable(void)
 //                Source HDMI --> HDMI Format
 //                Source None --> No Stable Sync
 //--------------------------------------------------
-BYTE ScalerTMDSRx2TMDSScanInputPort(BYTE ucInputType)
+BYTE ScalerTMDSRxTMDSScanInputPort(BYTE ucInputType)
 {
     BYTE ucTMDSType = _SOURCE_NONE;
 
@@ -3691,25 +3824,25 @@ BYTE ScalerTMDSRx2TMDSScanInputPort(BYTE ucInputType)
 
     ucInputType = ucInputType;
 
-    if(GET_TMDS_RX2_HPD_TRIGGER_EVENT() != _TMDS_HPD_NONE)
+    if(RXSEL((GET_TMDS_RX2_HPD_TRIGGER_EVENT()), (GET_TMDS_RX3_HPD_TRIGGER_EVENT())) != _TMDS_HPD_NONE)
     {
         AWTO_SCAN_STAGE(AWTO_SCAN_TMDS_HPD);
         return _SOURCE_NONE;
     }
 
     // Set-up still pending: SysTMDSRxHandler runs it next pass; scanning now would check CDR with no settle time
-    if(isr_g_ucTMDSRx2PhyPend == _TRUE)
+    if(isr_g_ucTMDSRxPhyPend[RX_CUR] == _TRUE)
     {
         return _SOURCE_NONE;
     }
 
-    if(GET_TMDS_RX2_PHY_SET() == _TRUE)
+    if(RXSEL((GET_TMDS_RX2_PHY_SET()), (GET_TMDS_RX3_PHY_SET())) == _TRUE)
     {
 #if(_D2_INPUT_PORT_TYPE == _D2_MHL_PORT)
-        if(GET_D2_TMDS_MODE() == _TMDS_MHL_MODE)
+        if(RXSEL((GET_D2_TMDS_MODE()), (GET_D3_TMDS_MODE())) == _TMDS_MHL_MODE)
         {
             // Set DIGITAL_PORT_SWITCH Flag for MHL
-            SET_DIGITAL_PORT_SWITCH_TO_D2();
+            RXSEL((SET_DIGITAL_PORT_SWITCH_TO_D2()), (SET_DIGITAL_PORT_SWITCH_TO_D3()));
         }
 #endif
 
@@ -3720,15 +3853,15 @@ BYTE ScalerTMDSRx2TMDSScanInputPort(BYTE ucInputType)
 
 #if(_D2_HDMI_2_0_SUPPORT == _ON)
 
-        if(((AWTO_SCAN_STAGE(1), ScalerTMDSRx2CheckCDRStable(isr_g_usTMDSRx2ClkCount)) == _FALSE) || ((AWTO_SCAN_STAGE(2), ScalerTMDSRx2CheckDataDFE()) == _FALSE) ||
-           ((GET_D2_TMDS_MODE() == _TMDS_MHL_MODE) && (ScalerMHLRx2DetectClkMode() == _FALSE)) ||
-           ((AWTO_SCAN_STAGE(3), ScalerTMDSRx2TMDSVideoDetect(_WAIT)) == _TMDS_VIDEO_DATA_NONE))
+        if(((AWTO_SCAN_STAGE(1), ScalerTMDSRxCheckCDRStable(isr_g_usTMDSRxClkCount[RX_CUR])) == _FALSE) || ((AWTO_SCAN_STAGE(2), ScalerTMDSRxCheckDataDFE()) == _FALSE) ||
+           ((RXSEL((GET_D2_TMDS_MODE()), (GET_D3_TMDS_MODE())) == _TMDS_MHL_MODE) && (RXSEL((ScalerMHLRx2DetectClkMode()), (ScalerMHLRx3DetectClkMode())) == _FALSE)) ||
+           ((AWTO_SCAN_STAGE(3), ScalerTMDSRxTMDSVideoDetect(_WAIT)) == _TMDS_VIDEO_DATA_NONE))
 
 #else
 
         // Detect MHL Mode
-        if(((AWTO_SCAN_STAGE(1), ScalerTMDSRx2CheckCDRStable(isr_g_usTMDSRx2ClkCount)) == _FALSE) || ((AWTO_SCAN_STAGE(2), ScalerTMDSRx2CheckDataDFE()) == _FALSE) ||
-           ((GET_D2_TMDS_MODE() == _TMDS_MHL_MODE) && (ScalerMHLRx2DetectClkMode() == _FALSE)))
+        if(((AWTO_SCAN_STAGE(1), ScalerTMDSRxCheckCDRStable(isr_g_usTMDSRxClkCount[RX_CUR])) == _FALSE) || ((AWTO_SCAN_STAGE(2), ScalerTMDSRxCheckDataDFE()) == _FALSE) ||
+           ((RXSEL((GET_D2_TMDS_MODE()), (GET_D3_TMDS_MODE())) == _TMDS_MHL_MODE) && (RXSEL((ScalerMHLRx2DetectClkMode()), (ScalerMHLRx3DetectClkMode())) == _FALSE)))
 
 #endif
 
@@ -3736,75 +3869,75 @@ BYTE ScalerTMDSRx2TMDSScanInputPort(BYTE ucInputType)
 
 #if(_D2_HDMI_2_0_SUPPORT == _ON)
 
-        if(((AWTO_SCAN_STAGE(1), ScalerTMDSRx2CheckCDRStable(isr_g_usTMDSRx2ClkCount)) == _FALSE) || ((AWTO_SCAN_STAGE(2), ScalerTMDSRx2CheckDataDFE()) == _FALSE) || ((AWTO_SCAN_STAGE(3), ScalerTMDSRx2TMDSVideoDetect(_WAIT)) == _TMDS_VIDEO_DATA_NONE))
+        if(((AWTO_SCAN_STAGE(1), ScalerTMDSRxCheckCDRStable(isr_g_usTMDSRxClkCount[RX_CUR])) == _FALSE) || ((AWTO_SCAN_STAGE(2), ScalerTMDSRxCheckDataDFE()) == _FALSE) || ((AWTO_SCAN_STAGE(3), ScalerTMDSRxTMDSVideoDetect(_WAIT)) == _TMDS_VIDEO_DATA_NONE))
 #else
-        if(((AWTO_SCAN_STAGE(1), ScalerTMDSRx2CheckCDRStable(isr_g_usTMDSRx2ClkCount)) == _FALSE) || ((AWTO_SCAN_STAGE(2), ScalerTMDSRx2CheckDataDFE()) == _FALSE))
+        if(((AWTO_SCAN_STAGE(1), ScalerTMDSRxCheckCDRStable(isr_g_usTMDSRxClkCount[RX_CUR])) == _FALSE) || ((AWTO_SCAN_STAGE(2), ScalerTMDSRxCheckDataDFE()) == _FALSE))
 #endif
 
 #endif // End of #if(_D2_INPUT_PORT_TYPE == _D2_MHL_PORT)
         {
 #if(_D2_INPUT_PORT_TYPE == _D2_MHL_PORT)
 
-            if(GET_D2_TMDS_MODE() == _TMDS_MHL_MODE)
+            if(RXSEL((GET_D2_TMDS_MODE()), (GET_D3_TMDS_MODE())) == _TMDS_MHL_MODE)
             {
                 // Set Upper Bound
-                ScalerSetByte(P71_E8_HDMI_FREQDET_UPPER_M, HIBYTE(_TMDS_MHL_FREQ_NORMAL_UPPER_BOUND));
-                ScalerSetByte(P71_E9_HDMI_FREQDET_UPPER_L, LOBYTE(_TMDS_MHL_FREQ_NORMAL_UPPER_BOUND));
+                RxSetByte(P71_E8_HDMI_FREQDET_UPPER_M, HIBYTE(_TMDS_MHL_FREQ_NORMAL_UPPER_BOUND));
+                RxSetByte(P71_E9_HDMI_FREQDET_UPPER_L, LOBYTE(_TMDS_MHL_FREQ_NORMAL_UPPER_BOUND));
             }
             else
 #endif
             {
                 // Set Upper Bound
-                ScalerSetByte(P71_E8_HDMI_FREQDET_UPPER_M, HIBYTE(_TMDS_FREQ_NORMAL_HIGH_SPEED_UPPER_BOUND));
-                ScalerSetByte(P71_E9_HDMI_FREQDET_UPPER_L, LOBYTE(_TMDS_FREQ_NORMAL_HIGH_SPEED_UPPER_BOUND));
+                RxSetByte(P71_E8_HDMI_FREQDET_UPPER_M, HIBYTE(_TMDS_FREQ_NORMAL_HIGH_SPEED_UPPER_BOUND));
+                RxSetByte(P71_E9_HDMI_FREQDET_UPPER_L, LOBYTE(_TMDS_FREQ_NORMAL_HIGH_SPEED_UPPER_BOUND));
             }
 
             // Set Lower Bound
-            ScalerSetByte(P71_EA_HDMI_FREQDET_LOWER_M, HIBYTE(_TMDS_FREQ_NORMAL_LOWER_BOUND));
-            ScalerSetByte(P71_EB_HDMI_FREQDET_LOWER_L, LOBYTE(_TMDS_FREQ_NORMAL_LOWER_BOUND));
+            RxSetByte(P71_EA_HDMI_FREQDET_LOWER_M, HIBYTE(_TMDS_FREQ_NORMAL_LOWER_BOUND));
+            RxSetByte(P71_EB_HDMI_FREQDET_LOWER_L, LOBYTE(_TMDS_FREQ_NORMAL_LOWER_BOUND));
 
             // Set Stable Time (0x3F = about 5ms)
-            ScalerSetByte(P71_EC_HDMI_FREQDET_STABLE, 0x3F);
+            RxSetByte(P71_EC_HDMI_FREQDET_STABLE, 0x3F);
 
 #if(_D2_HDMI_2_0_SUPPORT == _ON)
 
-            AWTO_SCAN_STAGE(AWTO_SCAN_TMDS_LOCK + g_ucAwtoScanStage + ((GET_TMDS_RX2_HIGH_SPEED_MODE() != 0) ? 3 : 0));    // lock step failed, 1:10 / 1:40 tried
-            if((GET_TMDS_RX2_HIGH_SPEED_MODE() == _FALSE) && (GET_D2_TMDS_MODE() != _TMDS_MHL_MODE)) // HDMI mode
+            AWTO_SCAN_STAGE(AWTO_SCAN_TMDS_LOCK + g_ucAwtoScanStage + ((RXSEL((GET_TMDS_RX2_HIGH_SPEED_MODE()), (GET_TMDS_RX3_HIGH_SPEED_MODE())) != 0) ? 3 : 0));    // lock step failed, 1:10 / 1:40 tried
+            if((RXSEL((GET_TMDS_RX2_HIGH_SPEED_MODE()), (GET_TMDS_RX3_HIGH_SPEED_MODE())) == _FALSE) && (RXSEL((GET_D2_TMDS_MODE()), (GET_D3_TMDS_MODE())) != _TMDS_MHL_MODE)) // HDMI mode
             {
                 DebugMessageRx2("TMDS Rx2 First 1:10 set phy not success", 1);
 
-                SET_TMDS_RX2_HIGH_SPEED_MODE();
+                RXSEL((SET_TMDS_RX2_HIGH_SPEED_MODE()), (SET_TMDS_RX3_HIGH_SPEED_MODE()));
             }
             else
             {
-                CLR_TMDS_RX2_HIGH_SPEED_MODE();
+                RXSEL((CLR_TMDS_RX2_HIGH_SPEED_MODE()), (CLR_TMDS_RX3_HIGH_SPEED_MODE()));
             }
 #endif
-            CLR_TMDS_RX2_PHY_SET(); AWTO_TMDS_MEM_CLR(AWTO_TMDS_MEM_D2);     // a failed try drops the remembered mode
+            RXSEL((CLR_TMDS_RX2_PHY_SET()), (CLR_TMDS_RX3_PHY_SET())); AWTO_TMDS_MEM_CLR((AWTO_TMDS_MEM_D2 << RX_CUR));     // a failed try drops the remembered mode
 
             // Disable Freq. Unstable IRQ
-            ScalerSetBit(P71_E6_HDMI_FREQDET_CTRL, ~_BIT1, 0x00);
+            RxSetBit(P71_E6_HDMI_FREQDET_CTRL, ~_BIT1, 0x00);
 
             // Reset Freq. Detect Counter(Toggle)
-            ScalerSetBit(P71_E6_HDMI_FREQDET_CTRL, ~_BIT7, 0x00);
-            ScalerSetBit(P71_E6_HDMI_FREQDET_CTRL, ~_BIT7, _BIT7);
+            RxSetBit(P71_E6_HDMI_FREQDET_CTRL, ~_BIT7, 0x00);
+            RxSetBit(P71_E6_HDMI_FREQDET_CTRL, ~_BIT7, _BIT7);
 
             // Enable Freq. Stable IRQ
-            ScalerSetBit(P71_EF_HDMI_ERROR_TH, ~(_BIT7 | _BIT6), (_BIT7 | _BIT6));
+            RxSetBit(P71_EF_HDMI_ERROR_TH, ~(_BIT7 | _BIT6), (_BIT7 | _BIT6));
 
             return _SOURCE_NONE;
         }
 
         // Clear RGBHV Flag
-        ScalerSetBit(P71_A4_TMDS_CTRL, ~(_BIT7 | _BIT6 | _BIT5 | _BIT4 | _BIT3), (_BIT7 | _BIT6 | _BIT5 | _BIT4 | _BIT3));
+        RxSetBit(P71_A4_TMDS_CTRL, ~(_BIT7 | _BIT6 | _BIT5 | _BIT4 | _BIT3), (_BIT7 | _BIT6 | _BIT5 | _BIT4 | _BIT3));
 
         // Clear Info Packet SRAM
-        ScalerSetBit(P71_AD_TMDS_CPS, ~_BIT3, _BIT3);
-        ScalerSetBit(P71_AD_TMDS_CPS, ~_BIT3, 0x00);
+        RxSetBit(P71_AD_TMDS_CPS, ~_BIT3, _BIT3);
+        RxSetBit(P71_AD_TMDS_CPS, ~_BIT3, 0x00);
 
         // Clear AVI infoframe & GCP packet Detection Flag
-        ScalerSetBit(P71_CC_HDMI_GPVS, ~_BIT6, _BIT6);
-        ScalerSetBit(P71_CC_HDMI_GPVS, ~_BIT5, _BIT5);
+        RxSetBit(P71_CC_HDMI_GPVS, ~_BIT6, _BIT6);
+        RxSetBit(P71_CC_HDMI_GPVS, ~_BIT5, _BIT5);
 
 #if(_HDMI_FREESYNC_SUPPORT == _ON)
         // Clear DRR flag
@@ -3813,37 +3946,37 @@ BYTE ScalerTMDSRx2TMDSScanInputPort(BYTE ucInputType)
 
 #if((_HDMI_FREESYNC_SUPPORT == _ON) || (_HDMI_FREESYNC_II_SUPPORT == _ON))
         // Clear SPD infoframe
-        ScalerSetDataPortBit(P71_C9_HDMI_AP, _P71_CA_PT_00_PORT_PAGE71_HDMI_SCR, ~(_BIT7 | _BIT6), _BIT7);
+        ScalerSetDataPortBit(RXA(P71_C9_HDMI_AP), _P71_CA_PT_00_PORT_PAGE71_HDMI_SCR, ~(_BIT7 | _BIT6), _BIT7);
 #endif
 
 #if(_HDMI_HDR10_SUPPORT == _ON)
         // Clear SPD infoframe
-        ScalerSetDataPortBit(P71_C9_HDMI_AP, _P71_CA_PT_00_PORT_PAGE71_HDMI_SCR, ~(_BIT7 | _BIT6), _BIT6);
+        ScalerSetDataPortBit(RXA(P71_C9_HDMI_AP), _P71_CA_PT_00_PORT_PAGE71_HDMI_SCR, ~(_BIT7 | _BIT6), _BIT6);
 #endif
 
         DebugMessageRx2("9. Freq Check Pass => Pixel Clock", GET_INPUT_PIXEL_CLK());
-        DebugMessageRx2("7. TMDS Lane0 LE Min", g_pucTMDSRx2LEMin[0]);
-        DebugMessageRx2("7. TMDS Lane1 LE Min", g_pucTMDSRx2LEMin[1]);
-        DebugMessageRx2("7. TMDS Lane2 LE Min", g_pucTMDSRx2LEMin[2]);
-        DebugMessageRx2("7. TMDS Lane0 LE Max", g_pucTMDSRx2LEMax[0]);
-        DebugMessageRx2("7. TMDS Lane1 LE Max", g_pucTMDSRx2LEMax[1]);
-        DebugMessageRx2("7. TMDS Lane2 LE Max", g_pucTMDSRx2LEMax[2]);
+        DebugMessageRx2("7. TMDS Lane0 LE Min", g_pucTMDSRxLEMin[RX_CUR][0]);
+        DebugMessageRx2("7. TMDS Lane1 LE Min", g_pucTMDSRxLEMin[RX_CUR][1]);
+        DebugMessageRx2("7. TMDS Lane2 LE Min", g_pucTMDSRxLEMin[RX_CUR][2]);
+        DebugMessageRx2("7. TMDS Lane0 LE Max", g_pucTMDSRxLEMax[RX_CUR][0]);
+        DebugMessageRx2("7. TMDS Lane1 LE Max", g_pucTMDSRxLEMax[RX_CUR][1]);
+        DebugMessageRx2("7. TMDS Lane2 LE Max", g_pucTMDSRxLEMax[RX_CUR][2]);
 
 #if(_D2_HDMI_2_0_SUPPORT == _ON)
 
         // Disable Reset HDMI/DVI Format
-        ScalerSetBit(P71_01_HDMI_CTRL_01, ~(_BIT7 | _BIT3), 0x00);
+        RxSetBit(P71_01_HDMI_CTRL_01, ~(_BIT7 | _BIT3), 0x00);
 
-        DebugMessageRx2("HDMI 2.0 Error Boundary set High Byte", ScalerGetByte(P71_14_HDMI_CTRL_14));
-        DebugMessageRx2("HDMI 2.0 Error Boundary set Low Byte", ScalerGetByte(P71_15_HDMI_CTRL_15));
+        DebugMessageRx2("HDMI 2.0 Error Boundary set High Byte", RxGetByte(P71_14_HDMI_CTRL_14));
+        DebugMessageRx2("HDMI 2.0 Error Boundary set Low Byte", RxGetByte(P71_15_HDMI_CTRL_15));
 #endif
 
-        if(ScalerTMDSRx2FormatDetect() == _SOURCE_HDMI)
+        if(ScalerTMDSRxFormatDetect() == _SOURCE_HDMI)
         {
             DebugMessageRx2("Format Detect HDMI", 0x00);
 
 #if(_TMDS_HDCP_FEATURE == _HDCP_FEATURE_BY_INPUT)
-            ScalerSetDataPortBit(P71_C3_HDCP_AP, _P71_C4_PT_40_PORT_PAGE71_BCAPS, ~_BIT1, _BIT1);
+            ScalerSetDataPortBit(RXA(P71_C3_HDCP_AP), _P71_C4_PT_40_PORT_PAGE71_BCAPS, ~_BIT1, _BIT1);
 #endif
 
 #if(_HDMI_FROM_DVI_CONNECT == _OFF)
@@ -3857,11 +3990,11 @@ BYTE ScalerTMDSRx2TMDSScanInputPort(BYTE ucInputType)
         else
         {
 #if(_TMDS_HDCP_FEATURE == _HDCP_FEATURE_BY_INPUT)
-            ScalerSetDataPortBit(P71_C3_HDCP_AP, _P71_C4_PT_40_PORT_PAGE71_BCAPS, ~_BIT1, 0x00);
+            ScalerSetDataPortBit(RXA(P71_C3_HDCP_AP), _P71_C4_PT_40_PORT_PAGE71_BCAPS, ~_BIT1, 0x00);
 #endif
 
 #if(_D2_INPUT_PORT_TYPE == _D2_MHL_PORT)
-            if(GET_TMDS_RX2_CLK_MODE() == _TMDS_MHL_PPMODE_PHY_SETTING)
+            if(RXSEL((GET_TMDS_RX2_CLK_MODE()), (GET_TMDS_RX3_CLK_MODE())) == _TMDS_MHL_PPMODE_PHY_SETTING)
             {
                 ucTMDSType = _SOURCE_HDMI;
             }
@@ -3874,14 +4007,14 @@ BYTE ScalerTMDSRx2TMDSScanInputPort(BYTE ucInputType)
 
 #if(_D2_INPUT_PORT_TYPE == _D2_MHL_PORT)
         // Mute ASUS Padfone until Source Read Ri Done (Incase of Color Format Error)
-        if(((GET_MHL_RX2_ADOPTER_ID_HBYTE() == _ASUS_PADFONE2_ADOPTER_ID_HBYTE) && (GET_MHL_RX2_ADOPTER_ID_LBYTE() == _ASUS_PADFONE2_ADOPTER_ID_LBYTE)) &&
-           !(((ScalerGetBit(P71_A9_TMDS_ABC0, _BIT7) == _BIT7) || (ScalerGetBit(P71_AE_TMDS_RPS, (_BIT1)) == _BIT1)) && (ScalerGetBit(P71_A9_TMDS_ABC0, _BIT6) == _BIT6)))
+        if(((RXSEL((GET_MHL_RX2_ADOPTER_ID_HBYTE()), (GET_MHL_RX3_ADOPTER_ID_HBYTE())) == _ASUS_PADFONE2_ADOPTER_ID_HBYTE) && (RXSEL((GET_MHL_RX2_ADOPTER_ID_LBYTE()), (GET_MHL_RX3_ADOPTER_ID_LBYTE())) == _ASUS_PADFONE2_ADOPTER_ID_LBYTE)) &&
+           !(((RxGetBit(P71_A9_TMDS_ABC0, _BIT7) == _BIT7) || (RxGetBit(P71_AE_TMDS_RPS, (_BIT1)) == _BIT1)) && (RxGetBit(P71_A9_TMDS_ABC0, _BIT6) == _BIT6)))
         {
             return _SOURCE_NONE;
         }
 #endif
 
-        ucTMDSVideoDataType = ScalerTMDSRx2TMDSVideoDetect(_WAIT);
+        ucTMDSVideoDataType = ScalerTMDSRxTMDSVideoDetect(_WAIT);
 
         if(ucTMDSVideoDataType == _TMDS_VIDEO_DATA_DE_ONLY)
         {
@@ -3892,7 +4025,7 @@ BYTE ScalerTMDSRx2TMDSScanInputPort(BYTE ucInputType)
             if(ucTMDSType == _SOURCE_DVI)
             {
                 // Enable DE Only Mode
-                ScalerSetBit(P71_A7_TMDS_PWDCTL, ~_BIT7, _BIT7);
+                RxSetBit(P71_A7_TMDS_PWDCTL, ~_BIT7, _BIT7);
             }
             else
             {
@@ -3905,7 +4038,7 @@ BYTE ScalerTMDSRx2TMDSScanInputPort(BYTE ucInputType)
         else if(ucTMDSVideoDataType == _TMDS_VIDEO_DATA_RGBHV)
         {
             // Enable DE Only Mode
-            ScalerSetBit(P71_A7_TMDS_PWDCTL, ~_BIT7, _BIT7);
+            RxSetBit(P71_A7_TMDS_PWDCTL, ~_BIT7, _BIT7);
         }
         else
         {
@@ -3917,28 +4050,28 @@ BYTE ScalerTMDSRx2TMDSScanInputPort(BYTE ucInputType)
         {
             // [1] De_inverse = 1'b0 --> Adapation Only for Data island Area (Transition Minimum)
             // [0] De_brank_en = 1'b1 --> Enable Blank Function of gdi_de
-            ScalerSetBit(P7B_AF_L0_GDI_DE, ~(_BIT1 | _BIT0), _BIT0);
-            ScalerSetBit(P7B_BF_L1_GDI_DE, ~(_BIT1 | _BIT0), _BIT0);
-            ScalerSetBit(P7B_CF_L2_GDI_DE, ~(_BIT1 | _BIT0), _BIT0);
+            RxSetBit(P7B_AF_L0_GDI_DE, ~(_BIT1 | _BIT0), _BIT0);
+            RxSetBit(P7B_BF_L1_GDI_DE, ~(_BIT1 | _BIT0), _BIT0);
+            RxSetBit(P7B_CF_L2_GDI_DE, ~(_BIT1 | _BIT0), _BIT0);
         }
         else
         {
             // [1] De_inverse = 1'b1 --> Adapation Only for Data Area (Transition Minimum)
             // [0] De_brank_en = 1'b1 --> Enable Blank Function of gdi_de
-            ScalerSetBit(P7B_AF_L0_GDI_DE, ~(_BIT1 | _BIT0), (_BIT1 | _BIT0));
-            ScalerSetBit(P7B_BF_L1_GDI_DE, ~(_BIT1 | _BIT0), (_BIT1 | _BIT0));
-            ScalerSetBit(P7B_CF_L2_GDI_DE, ~(_BIT1 | _BIT0), (_BIT1 | _BIT0));
+            RxSetBit(P7B_AF_L0_GDI_DE, ~(_BIT1 | _BIT0), (_BIT1 | _BIT0));
+            RxSetBit(P7B_BF_L1_GDI_DE, ~(_BIT1 | _BIT0), (_BIT1 | _BIT0));
+            RxSetBit(P7B_CF_L2_GDI_DE, ~(_BIT1 | _BIT0), (_BIT1 | _BIT0));
         }
 
 #if(_D2_HDMI_SUPPORT == _ON)
         if(ucTMDSType == _SOURCE_HDMI)
         {
             // HDMI packet detect --> AVI infoframe & GCP packet
-            ScalerTMDSRx2HdmiPacketDetect(_WAIT);
+            ScalerTMDSRxHdmiPacketDetect(_WAIT);
 
-            ScalerSyncTMDSRx2HdmiVideoSetting();
+            RXSEL((ScalerSyncTMDSRx2HdmiVideoSetting()), (ScalerSyncTMDSRx3HdmiVideoSetting()));
 
-            SET_COLOR_DEPTH(ScalerTMDSRx2HdmiGetColorDepth());
+            SET_COLOR_DEPTH(ScalerTMDSRxHdmiGetColorDepth());
 
             if((GET_COLOR_DEPTH() != _COLOR_DEPTH_8_BITS) && (GET_COLOR_SPACE() != _COLOR_SPACE_YCBCR422))
             {
@@ -3949,7 +4082,7 @@ BYTE ScalerTMDSRx2TMDSScanInputPort(BYTE ucInputType)
 
                 SET_INPUT_PIXEL_CLK((GET_INPUT_PIXEL_CLK() << 3) / GET_COLOR_DEPTH());
 
-                if(ScalerTMDSRx2HdmiDeepColorProc(isr_g_usTMDSRx2ClkCount) == _FALSE)
+                if(ScalerTMDSRxHdmiDeepColorProc(isr_g_usTMDSRxClkCount[RX_CUR]) == _FALSE)
                 {
                     // Restore Input Pixel clk
                     SET_INPUT_PIXEL_CLK(usInputPixelClk);
@@ -3959,39 +4092,39 @@ BYTE ScalerTMDSRx2TMDSScanInputPort(BYTE ucInputType)
                 }
 
                 // Turn On Deep Color Block
-                ScalerSetBit(P71_B5_TMDS_UDC0, ~_BIT7, _BIT7);
+                RxSetBit(P71_B5_TMDS_UDC0, ~_BIT7, _BIT7);
 
                 if(GET_COLOR_SPACE() == _COLOR_SPACE_YCBCR420)
                 {
                     // HDMI Output Div2 Enable
-                    ScalerSetBit(P71_AD_TMDS_CPS, ~_BIT7, _BIT7);
+                    RxSetBit(P71_AD_TMDS_CPS, ~_BIT7, _BIT7);
                 }
                 else
                 {
                     // HDMI Output Div2 Disable
-                    ScalerSetBit(P71_AD_TMDS_CPS, ~_BIT7, 0x00);
+                    RxSetBit(P71_AD_TMDS_CPS, ~_BIT7, 0x00);
                 }
             }
             else
             {
                 // Turn off Deep Color Block
-                ScalerSetBit(P71_B5_TMDS_UDC0, ~_BIT7, 0x00);
+                RxSetBit(P71_B5_TMDS_UDC0, ~_BIT7, 0x00);
 
                 // HDMI Output Div2 Disable
-                ScalerSetBit(P71_AD_TMDS_CPS, ~_BIT7, 0x00);
+                RxSetBit(P71_AD_TMDS_CPS, ~_BIT7, 0x00);
             }
 
 #if(_HDMI_FREESYNC_SUPPORT == _ON)
-            if(GET_HDMIRX2_AMD_SPD_INFO(_SPD_INFO_FREESYNC_SUPPORT) == _ENABLE)
+            if(RXSEL((GET_HDMIRX2_AMD_SPD_INFO(_SPD_INFO_FREESYNC_SUPPORT)), (GET_HDMIRX3_AMD_SPD_INFO(_SPD_INFO_FREESYNC_SUPPORT))) == _ENABLE)
             {
                 SET_HDMI_FREESYNC_ENABLED();
 
                 // Get SPD Free Sync Vfreq Max
-                g_usFREESYNCVFreq_max = (WORD)GET_HDMIRX2_AMD_SPD_INFO(_SPD_INFO_FREESYNC_MAX_VFREQ) * 10;
-                g_usFREESYNCVFreq_min = (WORD)GET_HDMIRX2_AMD_SPD_INFO(_SPD_INFO_FREESYNC_MIN_VFREQ) * 10;
+                g_usFREESYNCVFreq_max = (WORD)RXSEL((GET_HDMIRX2_AMD_SPD_INFO(_SPD_INFO_FREESYNC_MAX_VFREQ)), (GET_HDMIRX3_AMD_SPD_INFO(_SPD_INFO_FREESYNC_MAX_VFREQ))) * 10;
+                g_usFREESYNCVFreq_min = (WORD)RXSEL((GET_HDMIRX2_AMD_SPD_INFO(_SPD_INFO_FREESYNC_MIN_VFREQ)), (GET_HDMIRX3_AMD_SPD_INFO(_SPD_INFO_FREESYNC_MIN_VFREQ))) * 10;
 
                 // Disable DE Only Mode
-                ScalerSetBit(P71_A7_TMDS_PWDCTL, ~_BIT7, 0x00);
+                RxSetBit(P71_A7_TMDS_PWDCTL, ~_BIT7, 0x00);
             }
 #endif
         }
@@ -3999,59 +4132,70 @@ BYTE ScalerTMDSRx2TMDSScanInputPort(BYTE ucInputType)
         {
 #if(_D2_INPUT_PORT_TYPE == _D2_MHL_PORT)
             // Guard Band reference disable for __data remapping
-            ScalerSetBit(P76_B2_MHL_CTRL_12, ~_BIT7, 0x00);
+            RxSetBit(P76_B2_MHL_CTRL_12, ~_BIT7, 0x00);
 #endif
 
-            CLR_HDMI_RX2_AVI_INFO_FRAME_RECEIVED();
+            RXSEL((CLR_HDMI_RX2_AVI_INFO_FRAME_RECEIVED()), (CLR_HDMI_RX3_AVI_INFO_FRAME_RECEIVED()));
 
-            CLR_HDMI_RX2_GCP_RECEIVED();
+            RXSEL((CLR_HDMI_RX2_GCP_RECEIVED()), (CLR_HDMI_RX3_GCP_RECEIVED()));
 
             // Disable All WD when DVI
-            ScalerTMDSRx2HdmiWatchDog((_HDMI_AVI_INFO_VARIATION_WD | _HDMI_AV_MUTE_WD), _DISABLE);
+            ScalerTMDSRxHdmiWatchDog((_HDMI_AVI_INFO_VARIATION_WD | _HDMI_AV_MUTE_WD), _DISABLE);
 
-            ScalerTMDSRx2DviVideoSetting();
+            ScalerTMDSRxDviVideoSetting();
 
             SET_COLOR_DEPTH(_COLOR_DEPTH_8_BITS);
 
             // Turn off Deep Color Block
-            ScalerSetBit(P71_B5_TMDS_UDC0, ~_BIT7, 0x00);
+            RxSetBit(P71_B5_TMDS_UDC0, ~_BIT7, 0x00);
         }
 #else
 
-        ScalerTMDSRx2DviVideoSetting();
+        ScalerTMDSRxDviVideoSetting();
 
         SET_COLOR_DEPTH(_COLOR_DEPTH_8_BITS);
 
         // Turn off Deep Color Block
-        ScalerSetBit(P71_B5_TMDS_UDC0, ~_BIT7, 0x00);
+        RxSetBit(P71_B5_TMDS_UDC0, ~_BIT7, 0x00);
 #endif
 
         // Enable Video Output
-        ScalerSetDataPortBit(P71_C9_HDMI_AP, _P71_CA_PT_30_PORT_PAGE71_HDMI_AVMCR, ~_BIT3, _BIT3);
-        ScalerSetDataPortBit(P71_C9_HDMI_AP, _P71_CA_PT_80_PORT_PAGE71_HDMI_DPC_SET0, ~_BIT7, _BIT7);
+        ScalerSetDataPortBit(RXA(P71_C9_HDMI_AP), _P71_CA_PT_30_PORT_PAGE71_HDMI_AVMCR, ~_BIT3, _BIT3);
+        ScalerSetDataPortBit(RXA(P71_C9_HDMI_AP), _P71_CA_PT_80_PORT_PAGE71_HDMI_DPC_SET0, ~_BIT7, _BIT7);
 
         // Enable RGB Clk Output
-        ScalerSetBit(P71_A6_TMDS_OUTCTL, ~(_BIT6 | _BIT5 | _BIT4 | _BIT3), (_BIT6 | _BIT5 | _BIT4 | _BIT3));
+        RxSetBit(P71_A6_TMDS_OUTCTL, ~(_BIT6 | _BIT5 | _BIT4 | _BIT3), (_BIT6 | _BIT5 | _BIT4 | _BIT3));
 
         // solve philip DVD issue
-        if(ScalerGetBit(P7B_E4_GAIN_3, _BIT1) == _BIT1)
+        if(RxGetBit(P7B_E4_GAIN_3, _BIT1) == _BIT1)
         {
             // Disable LE, Vth, Tap0~4 Adaptation
-            ScalerSetByte(P7B_A1_L0_DFE_EN_2, 0x00);
-            ScalerSetByte(P7B_B1_L1_DFE_EN_2, 0x00);
-            ScalerSetByte(P7B_C1_L2_DFE_EN_2, 0x00);
+            RxSetByte(P7B_A1_L0_DFE_EN_2, 0x00);
+            RxSetByte(P7B_B1_L1_DFE_EN_2, 0x00);
+            RxSetByte(P7B_C1_L2_DFE_EN_2, 0x00);
 
             // [1] reg_en_eqen_manual_l0 = 1'b0
-            ScalerSetBit(P7B_12_ANA_CDR, ~_BIT1, 0x00);
+            RxSetBit(P7B_12_ANA_CDR, ~_BIT1, 0x00);
 
             // Enable Sumamp High Gain Mode
-            ScalerSetBit(P7B_1D_CMU_03, ~_BIT4, _BIT4);
+            RxSetBit(P7B_1D_CMU_03, ~_BIT4, _BIT4);
         }
 
         return ucTMDSType;
     }
 
     return _SOURCE_NONE;
+}
+BYTE ScalerTMDSRx2TMDSScanInputPort(BYTE ucInputType)
+{
+    BYTE xRet;
+    BYTE ucOld = RX_CUR;
+
+    RX_CUR = 0;
+    xRet = ScalerTMDSRxTMDSScanInputPort(ucInputType);
+    RX_CUR = ucOld;
+
+    return xRet;
 }
 #endif // End of #if(_D2_INPUT_PORT_TYPE != _D2_NO_PORT)
 
@@ -4060,70 +4204,70 @@ BYTE ScalerTMDSRx2TMDSScanInputPort(BYTE ucInputType)
 // Input Value  : None
 // Output Value : Return DVI or HDMI format
 //--------------------------------------------------
-BYTE ScalerTMDSRx2FormatDetect(void)
+BYTE ScalerTMDSRxFormatDetect(void)
 {
     // Polling at least 3 frame for HW auto detect TMDS format
-    if(ScalerTimerPollingFlagProc(130, P71_CB_HDMI_SR, _BIT0, _TRUE) == _TRUE)
+    if(ScalerTimerPollingFlagProc(130, RXA(P71_CB_HDMI_SR), _BIT0, _TRUE) == _TRUE)
     {
-        ScalerSetBit(P71_AF_TMDS_WDC, ~_BIT0, 0x00);
+        RxSetBit(P71_AF_TMDS_WDC, ~_BIT0, 0x00);
 
 #if(_D2_HDMI_2_0_SUPPORT == _ON)
-        if(GET_D2_TMDS_MODE() == _TMDS_HDMI_MODE)
+        if(RXSEL((GET_D2_TMDS_MODE()), (GET_D3_TMDS_MODE())) == _TMDS_HDMI_MODE)
         {
             // Check if HDMI 2.0 ON
-            if(ScalerGetBit(P71_00_HDMI_CTRL_00, _BIT0) == _BIT0)
+            if(RxGetBit(P71_00_HDMI_CTRL_00, _BIT0) == _BIT0)
             {
                 // Set Manual Format to HDMI
-                ScalerSetDataPortBit(P71_C9_HDMI_AP, _P71_CA_PT_00_PORT_PAGE71_HDMI_SCR, ~(_BIT7 | _BIT6 | _BIT3 | _BIT2), (_BIT3 | _BIT2));
+                ScalerSetDataPortBit(RXA(P71_C9_HDMI_AP), _P71_CA_PT_00_PORT_PAGE71_HDMI_SCR, ~(_BIT7 | _BIT6 | _BIT3 | _BIT2), (_BIT3 | _BIT2));
 
                 // Toggle HW Format Detect Flag Reset
-                ScalerSetBit(P71_01_HDMI_CTRL_01, ~(_BIT7 | _BIT3), _BIT7);
-                ScalerSetBit(P71_01_HDMI_CTRL_01, ~(_BIT7 | _BIT3), 0x00);
+                RxSetBit(P71_01_HDMI_CTRL_01, ~(_BIT7 | _BIT3), _BIT7);
+                RxSetBit(P71_01_HDMI_CTRL_01, ~(_BIT7 | _BIT3), 0x00);
 
-                SET_TMDS_RX2_HDMI_2_0_FORMAT_RESET_WAITING();
+                RXSEL((SET_TMDS_RX2_HDMI_2_0_FORMAT_RESET_WAITING()), (SET_TMDS_RX3_HDMI_2_0_FORMAT_RESET_WAITING()));
 
-                ScalerTimerReactiveTimerEvent(130, _SCALER_TIMER_EVENT_RX2_HDMI2_FORMAT_RESET_WAIT);
+                ScalerTimerReactiveTimerEvent(130, RXSEL((_SCALER_TIMER_EVENT_RX2_HDMI2_FORMAT_RESET_WAIT), (_SCALER_TIMER_EVENT_RX3_HDMI2_FORMAT_RESET_WAIT)));
             }
 
             // Detect Scrambling Control Symbol
-            if(ScalerGetBit(P71_01_HDMI_CTRL_01, _BIT3) == _BIT3)
+            if(RxGetBit(P71_01_HDMI_CTRL_01, _BIT3) == _BIT3)
             {
                 // Enable Scrambling Status in SCDC
-                ScalerSetDataPortBit(P71_39_HDMI_CTRL_39, _P71_3A_PT_21_PORT_PAGE71_HDMI_SCDC_21, ~_BIT0, _BIT0);
+                ScalerSetDataPortBit(RXA(P71_39_HDMI_CTRL_39), _P71_3A_PT_21_PORT_PAGE71_HDMI_SCDC_21, ~_BIT0, _BIT0);
             }
         }
 #endif
 
 #if(_D2_INPUT_PORT_TYPE == _D2_MHL_PORT)
 
-        if(GET_D2_TMDS_MODE() == _TMDS_MHL_MODE)
+        if(RXSEL((GET_D2_TMDS_MODE()), (GET_D3_TMDS_MODE())) == _TMDS_MHL_MODE)
         {
             // Set Manual Format to HDMI
-            ScalerSetDataPortBit(P71_C9_HDMI_AP, _P71_CA_PT_00_PORT_PAGE71_HDMI_SCR, ~(_BIT7 | _BIT6 | _BIT3 | _BIT2), (_BIT3 | _BIT2));
+            ScalerSetDataPortBit(RXA(P71_C9_HDMI_AP), _P71_CA_PT_00_PORT_PAGE71_HDMI_SCR, ~(_BIT7 | _BIT6 | _BIT3 | _BIT2), (_BIT3 | _BIT2));
         }
 #endif
         return _SOURCE_HDMI;
     }
     else
     {
-        ScalerSetBit(P71_AF_TMDS_WDC, ~_BIT0, _BIT0);
+        RxSetBit(P71_AF_TMDS_WDC, ~_BIT0, _BIT0);
 
-        if(GET_D2_TMDS_MODE() == _TMDS_HDMI_MODE)
+        if(RXSEL((GET_D2_TMDS_MODE()), (GET_D3_TMDS_MODE())) == _TMDS_HDMI_MODE)
         {
 #if(_D2_HDMI_2_0_SUPPORT == _ON)
-            if(ScalerGetBit(P71_00_HDMI_CTRL_00, _BIT0) == _BIT0)
+            if(RxGetBit(P71_00_HDMI_CTRL_00, _BIT0) == _BIT0)
             {
-                ScalerTimerCancelTimerEvent(_SCALER_TIMER_EVENT_RX2_HDMI2_FORMAT_RESET_WAIT);
+                ScalerTimerCancelTimerEvent(RXSEL((_SCALER_TIMER_EVENT_RX2_HDMI2_FORMAT_RESET_WAIT), (_SCALER_TIMER_EVENT_RX3_HDMI2_FORMAT_RESET_WAIT)));
             }
 #endif
             // Set Format Detect HW Auto Mode
-            ScalerSetDataPortBit(P71_C9_HDMI_AP, _P71_CA_PT_00_PORT_PAGE71_HDMI_SCR, ~(_BIT7 | _BIT6 | _BIT3 | _BIT2), 0x00);
+            ScalerSetDataPortBit(RXA(P71_C9_HDMI_AP), _P71_CA_PT_00_PORT_PAGE71_HDMI_SCR, ~(_BIT7 | _BIT6 | _BIT3 | _BIT2), 0x00);
         }
 #if(_D2_INPUT_PORT_TYPE == _D2_MHL_PORT)
         else
         {
             // Manual Set to DVI Mode
-            ScalerSetDataPortBit(P71_C9_HDMI_AP, _P71_CA_PT_00_PORT_PAGE71_HDMI_SCR, ~(_BIT7 | _BIT6 | _BIT3 | _BIT2), _BIT3);
+            ScalerSetDataPortBit(RXA(P71_C9_HDMI_AP), _P71_CA_PT_00_PORT_PAGE71_HDMI_SCR, ~(_BIT7 | _BIT6 | _BIT3 | _BIT2), _BIT3);
         }
 #endif
         return _SOURCE_DVI;
@@ -4135,24 +4279,24 @@ BYTE ScalerTMDSRx2FormatDetect(void)
 // Input Value  : None
 // Output Value : TRUE => HDCP Enabled
 //--------------------------------------------------
-bit ScalerTMDSRx2HdcpEnabled(void)
+bit ScalerTMDSRxHdcpEnabled(void)
 {
     BYTE pucHDCPFrameCount[2];
     memset(pucHDCPFrameCount, 0, sizeof(pucHDCPFrameCount));
 
 #if(_TMDS_HDCP_2_2_SUPPORT == _ON)
-    if((ScalerGetBit(P71_C0_HDCP_CR, _BIT0) == _BIT0) && (ScalerGetBit(P2D_26_HDCP_I2C_CTRL_0, _BIT7) == 0x00))
+    if((RxGetBit(P71_C0_HDCP_CR, _BIT0) == _BIT0) && (RxGetBit(P2D_26_HDCP_I2C_CTRL_0, _BIT7) == 0x00))
 #endif
     {
-        ScalerGetDataPortByte(P71_C3_HDCP_AP, _P71_C4_PT_C0_PORT_PAGE71_HDCP_FCR, 1, &pucHDCPFrameCount[0], _NON_AUTOINC);
+        ScalerGetDataPortByte(RXA(P71_C3_HDCP_AP), _P71_C4_PT_C0_PORT_PAGE71_HDCP_FCR, 1, &pucHDCPFrameCount[0], _NON_AUTOINC);
 
         // Wait 2Vsync to make sure frame counter changing, and timeout 45ms (margin + 1/24 frame+rate)
-        ScalerSetBit(P71_A4_TMDS_CTRL, ~(_BIT7 | _BIT6 | _BIT5 | _BIT4 | _BIT3), _BIT3);
-        ScalerTimerPollingFlagProc(45, P71_A4_TMDS_CTRL, _BIT3, _TRUE);
-        ScalerSetBit(P71_A4_TMDS_CTRL, ~(_BIT7 | _BIT6 | _BIT5 | _BIT4 | _BIT3), _BIT3);
-        ScalerTimerPollingFlagProc(45, P71_A4_TMDS_CTRL, _BIT3, _TRUE);
+        RxSetBit(P71_A4_TMDS_CTRL, ~(_BIT7 | _BIT6 | _BIT5 | _BIT4 | _BIT3), _BIT3);
+        ScalerTimerPollingFlagProc(45, RXA(P71_A4_TMDS_CTRL), _BIT3, _TRUE);
+        RxSetBit(P71_A4_TMDS_CTRL, ~(_BIT7 | _BIT6 | _BIT5 | _BIT4 | _BIT3), _BIT3);
+        ScalerTimerPollingFlagProc(45, RXA(P71_A4_TMDS_CTRL), _BIT3, _TRUE);
 
-        ScalerGetDataPortByte(P71_C3_HDCP_AP, _P71_C4_PT_C0_PORT_PAGE71_HDCP_FCR, 1, &pucHDCPFrameCount[1], _NON_AUTOINC);
+        ScalerGetDataPortByte(RXA(P71_C3_HDCP_AP), _P71_C4_PT_C0_PORT_PAGE71_HDCP_FCR, 1, &pucHDCPFrameCount[1], _NON_AUTOINC);
 
         if(pucHDCPFrameCount[0] != pucHDCPFrameCount[1])
         {
@@ -4162,9 +4306,9 @@ bit ScalerTMDSRx2HdcpEnabled(void)
         return _FALSE;
     }
 #if(_TMDS_HDCP_2_2_SUPPORT == _ON)
-    else if((ScalerGetBit(P71_C0_HDCP_CR, _BIT0) == 0x00) && (ScalerGetBit(P2D_26_HDCP_I2C_CTRL_0, _BIT7) == _BIT7))
+    else if((RxGetBit(P71_C0_HDCP_CR, _BIT0) == 0x00) && (RxGetBit(P2D_26_HDCP_I2C_CTRL_0, _BIT7) == _BIT7))
     {
-        if(ScalerGetByte(P2D_2C_HDCP_I2C_CTRL_6) == 0x10)
+        if(RxGetByte(P2D_2C_HDCP_I2C_CTRL_6) == 0x10)
         {
             return _TRUE;
         }
@@ -4179,6 +4323,17 @@ bit ScalerTMDSRx2HdcpEnabled(void)
     }
 #endif
 }
+bit ScalerTMDSRx2HdcpEnabled(void)
+{
+    bit xRet;
+    BYTE ucOld = RX_CUR;
+
+    RX_CUR = 0;
+    xRet = ScalerTMDSRxHdcpEnabled();
+    RX_CUR = ucOld;
+
+    return xRet;
+}
 #endif // End of #if(_D2_INPUT_PORT_TYPE != _D2_DUAL_DVI_PORT)
 
 //--------------------------------------------------
@@ -4187,31 +4342,31 @@ bit ScalerTMDSRx2HdcpEnabled(void)
 // Output Value : True --> DFE Normal
 //                False --> DFE Abnormal
 //--------------------------------------------------
-bit ScalerTMDSRx2CheckDataDFE(void)
+bit ScalerTMDSRxCheckDataDFE(void)
 {
     BYTE ucTemp = 0;
     BYTE ucCnt = 0;
 
     // DFE Check only under HDMI Mode.
     // MHL has only 1 __data Lane --> Skip DFE Check Process and Function return True!
-    if(ScalerGetBit(P7B_17_BANDGAP_03, _BIT1) != _BIT1)
+    if(RxGetBit(P7B_17_BANDGAP_03, _BIT1) != _BIT1)
     {
         for(pData[0] = 0; pData[0] <= 2; pData[0]++)
         {
             // Sel lane
-            ScalerSetBit(P7B_F2_COEF_3, ~(_BIT7 | _BIT6), pData[0] << 6);
+            RxSetBit(P7B_F2_COEF_3, ~(_BIT7 | _BIT6), pData[0] << 6);
 
             // Read VTH
-            ScalerSetBit(P7B_F0_COEF_1, ~(_BIT5 | _BIT4 | _BIT3 | _BIT2 | _BIT1 | _BIT0), 0x00);
+            RxSetBit(P7B_F0_COEF_1, ~(_BIT5 | _BIT4 | _BIT3 | _BIT2 | _BIT1 | _BIT0), 0x00);
 
-            if((ScalerGetByte(P7B_F1_COEF_2) & 0x1F) == 0)
+            if((RxGetByte(P7B_F1_COEF_2) & 0x1F) == 0)
             {
                 for(ucCnt = 0; ucCnt < 3; ucCnt++)
                 {
                     // Read TAP0
-                    ScalerSetBit(P7B_F0_COEF_1, ~(_BIT5 | _BIT4 | _BIT3 | _BIT2 | _BIT1 | _BIT0), _BIT0);
+                    RxSetBit(P7B_F0_COEF_1, ~(_BIT5 | _BIT4 | _BIT3 | _BIT2 | _BIT1 | _BIT0), _BIT0);
 
-                    ucTemp = (ScalerGetByte(P7B_F1_COEF_2) & 0x1F);
+                    ucTemp = (RxGetByte(P7B_F1_COEF_2) & 0x1F);
 
                     if(ucTemp < 21)
                     {
@@ -4229,6 +4384,17 @@ bit ScalerTMDSRx2CheckDataDFE(void)
 
     return _TRUE;
 }
+bit ScalerTMDSRx2CheckDataDFE(void)
+{
+    bit xRet;
+    BYTE ucOld = RX_CUR;
+
+    RX_CUR = 0;
+    xRet = ScalerTMDSRxCheckDataDFE();
+    RX_CUR = ucOld;
+
+    return xRet;
+}
 
 //--------------------------------------------------
 // Description  : On Line Check TMDS stability
@@ -4236,25 +4402,25 @@ bit ScalerTMDSRx2CheckDataDFE(void)
 // Output Value : True --> TMDS Stable
 //                False --> TMDS Unstable
 //--------------------------------------------------
-bit ScalerTMDSRx2TMDSStableDetect(BYTE ucSourceType)
+bit ScalerTMDSRxTMDSStableDetect(BYTE ucSourceType)
 {
     // CLR SCL/SDA Toggle Flag
-    CLR_TMDS_RX2_DDC_DETECTED();
+    RXSEL((CLR_TMDS_RX2_DDC_DETECTED()), (CLR_TMDS_RX3_DDC_DETECTED()));
 
-    if(GET_TMDS_RX2_HPD_TRIGGER_EVENT() != _TMDS_HPD_NONE)
+    if(RXSEL((GET_TMDS_RX2_HPD_TRIGGER_EVENT()), (GET_TMDS_RX3_HPD_TRIGGER_EVENT())) != _TMDS_HPD_NONE)
     {
         DebugMessageRx2("Rx2 HPD Toggle!!", 0);
         return _FALSE;
     }
 
-    if(ScalerTMDSRx2CheckCDRStable(isr_g_usTMDSRx2ClkCount) == _FALSE)
+    if(ScalerTMDSRxCheckCDRStable(isr_g_usTMDSRxClkCount[RX_CUR]) == _FALSE)
     {
         DebugMessageRx2("CDR Unstable!!", ucSourceType);
         return _FALSE;
     }
 
     // Check TMDS Clock Output Disable
-    if(ScalerGetBit(P71_A6_TMDS_OUTCTL, _BIT3) == 0x00)
+    if(RxGetBit(P71_A6_TMDS_OUTCTL, _BIT3) == 0x00)
     {
         DebugMessageRx2("TMDS Clock Output has been disable", ucSourceType);
         return _FALSE;
@@ -4262,19 +4428,19 @@ bit ScalerTMDSRx2TMDSStableDetect(BYTE ucSourceType)
 
 #if(_D2_HDMI_2_0_SUPPORT == _ON)
 
-    if((GET_D2_TMDS_MODE() == _TMDS_HDMI_MODE) && (ScalerGetBit(P71_00_HDMI_CTRL_00, _BIT0) == _BIT0))
+    if((RXSEL((GET_D2_TMDS_MODE()), (GET_D3_TMDS_MODE())) == _TMDS_HDMI_MODE) && (RxGetBit(P71_00_HDMI_CTRL_00, _BIT0) == _BIT0))
     {
         if(ucSourceType == _SOURCE_HDMI)
         {
-            if(GET_TMDS_RX2_HDMI_2_0_FORMAT_RESET_WAITING() == _FALSE)
+            if(RXSEL((GET_TMDS_RX2_HDMI_2_0_FORMAT_RESET_WAITING()), (GET_TMDS_RX3_HDMI_2_0_FORMAT_RESET_WAITING())) == _FALSE)
             {
-                if(ScalerGetDataPortBit(P71_C9_HDMI_AP, _P71_CA_PT_00_PORT_PAGE71_HDMI_SCR, _BIT3) != _BIT3)
+                if(ScalerGetDataPortBit(RXA(P71_C9_HDMI_AP), _P71_CA_PT_00_PORT_PAGE71_HDMI_SCR, _BIT3) != _BIT3)
                 {
                     return _FALSE;
                 }
                 else
                 {
-                    if(ScalerGetBit(P71_CB_HDMI_SR, _BIT0) == 0x00)
+                    if(RxGetBit(P71_CB_HDMI_SR, _BIT0) == 0x00)
                     {
                         DebugMessageRx2("TMDS Format Changed", ucSourceType);
 
@@ -4283,19 +4449,19 @@ bit ScalerTMDSRx2TMDSStableDetect(BYTE ucSourceType)
                     else
                     {
                         // Toggle HW Format Detect Flag Reset
-                        ScalerSetBit(P71_01_HDMI_CTRL_01, ~(_BIT7 | _BIT3), _BIT7);
-                        ScalerSetBit(P71_01_HDMI_CTRL_01, ~(_BIT7 | _BIT3), 0x00);
+                        RxSetBit(P71_01_HDMI_CTRL_01, ~(_BIT7 | _BIT3), _BIT7);
+                        RxSetBit(P71_01_HDMI_CTRL_01, ~(_BIT7 | _BIT3), 0x00);
 
-                        SET_TMDS_RX2_HDMI_2_0_FORMAT_RESET_WAITING();
+                        RXSEL((SET_TMDS_RX2_HDMI_2_0_FORMAT_RESET_WAITING()), (SET_TMDS_RX3_HDMI_2_0_FORMAT_RESET_WAITING()));
 
-                        ScalerTimerReactiveTimerEvent(130, _SCALER_TIMER_EVENT_RX2_HDMI2_FORMAT_RESET_WAIT);
+                        ScalerTimerReactiveTimerEvent(130, RXSEL((_SCALER_TIMER_EVENT_RX2_HDMI2_FORMAT_RESET_WAIT), (_SCALER_TIMER_EVENT_RX3_HDMI2_FORMAT_RESET_WAIT)));
                     }
                 }
             }
         }
         else
         {
-            if(ScalerGetBit(P71_CB_HDMI_SR, _BIT0) == _BIT0)
+            if(RxGetBit(P71_CB_HDMI_SR, _BIT0) == _BIT0)
             {
                 DebugMessageRx2("TMDS Format Changed", ucSourceType);
                 return _FALSE;
@@ -4306,13 +4472,13 @@ bit ScalerTMDSRx2TMDSStableDetect(BYTE ucSourceType)
 #endif
     {
 #if(_D2_INPUT_PORT_TYPE == _D2_MHL_PORT)
-        if((GET_TMDS_RX2_CLK_MODE() == _TMDS_24BIT_PHY_SETTING) ||
-           ((GET_TMDS_RX2_CLK_MODE() == _TMDS_MHL_PPMODE_PHY_SETTING) && (ucSourceType == _SOURCE_DVI)))
+        if((RXSEL((GET_TMDS_RX2_CLK_MODE()), (GET_TMDS_RX3_CLK_MODE())) == _TMDS_24BIT_PHY_SETTING) ||
+           ((RXSEL((GET_TMDS_RX2_CLK_MODE()), (GET_TMDS_RX3_CLK_MODE())) == _TMDS_MHL_PPMODE_PHY_SETTING) && (ucSourceType == _SOURCE_DVI)))
 #endif
         {
             if(ucSourceType == _SOURCE_HDMI)
             {
-                if(ScalerGetBit(P71_CB_HDMI_SR, _BIT0) == 0x00)
+                if(RxGetBit(P71_CB_HDMI_SR, _BIT0) == 0x00)
                 {
                     DebugMessageRx2("TMDS Format Changed", ucSourceType);
                     return _FALSE;
@@ -4320,7 +4486,7 @@ bit ScalerTMDSRx2TMDSStableDetect(BYTE ucSourceType)
             }
             else
             {
-                if(ScalerGetBit(P71_CB_HDMI_SR, _BIT0) == _BIT0)
+                if(RxGetBit(P71_CB_HDMI_SR, _BIT0) == _BIT0)
                 {
                     DebugMessageRx2("TMDS Format Changed", ucSourceType);
                     return _FALSE;
@@ -4329,19 +4495,19 @@ bit ScalerTMDSRx2TMDSStableDetect(BYTE ucSourceType)
         }
     }
 
-    if(GET_TMDS_RX2_Z0_ASSERTED() == _TRUE)
+    if(RXSEL((GET_TMDS_RX2_Z0_ASSERTED()), (GET_TMDS_RX3_Z0_ASSERTED())) == _TRUE)
     {
-        if((ScalerGetBit(P71_A9_TMDS_ABC0, _BIT6) == _BIT6) && (!((((ScalerGetBit(P71_A9_TMDS_ABC0, _BIT7)) == _BIT7) || ((ScalerGetBit(P71_AE_TMDS_RPS, _BIT1)) == _BIT1)) && ((ScalerGetBit(P71_A9_TMDS_ABC0, _BIT5)) == _BIT5))))
+        if((RxGetBit(P71_A9_TMDS_ABC0, _BIT6) == _BIT6) && (!((((RxGetBit(P71_A9_TMDS_ABC0, _BIT7)) == _BIT7) || ((RxGetBit(P71_AE_TMDS_RPS, _BIT1)) == _BIT1)) && ((RxGetBit(P71_A9_TMDS_ABC0, _BIT5)) == _BIT5))))
         {
-            SET_TMDS_RX2_HPD_TRIGGER_EVENT(_TMDS_HPD_NORMAL);
+            RXSEL((SET_TMDS_RX2_HPD_TRIGGER_EVENT(_TMDS_HPD_NORMAL)), (SET_TMDS_RX3_HPD_TRIGGER_EVENT(_TMDS_HPD_NORMAL)));
 
-            CLR_TMDS_RX2_Z0_ASSERTED();
+            RXSEL((CLR_TMDS_RX2_Z0_ASSERTED()), (CLR_TMDS_RX3_Z0_ASSERTED()));
 
             DebugMessageRx2("7. HDCP Abnormal !!!!!", 0);
 
             // MHL mode of MHL PORT will not return FALSE
 #if(_D2_INPUT_PORT_TYPE == _D2_MHL_PORT)
-            if(GET_D2_TMDS_MODE() == _TMDS_HDMI_MODE)
+            if(RXSEL((GET_D2_TMDS_MODE()), (GET_D3_TMDS_MODE())) == _TMDS_HDMI_MODE)
             {
                 return _FALSE;
             }
@@ -4349,9 +4515,9 @@ bit ScalerTMDSRx2TMDSStableDetect(BYTE ucSourceType)
             return _FALSE;
 #endif
         }
-        else if(((ScalerGetBit(P71_A9_TMDS_ABC0, _BIT7) == (_BIT7)) || (ScalerGetBit(P71_AE_TMDS_RPS, _BIT1) == (_BIT1))) && (ScalerGetBit(P71_A9_TMDS_ABC0, _BIT5) == (_BIT5)))
+        else if(((RxGetBit(P71_A9_TMDS_ABC0, _BIT7) == (_BIT7)) || (RxGetBit(P71_AE_TMDS_RPS, _BIT1) == (_BIT1))) && (RxGetBit(P71_A9_TMDS_ABC0, _BIT5) == (_BIT5)))
         {
-            CLR_TMDS_RX2_Z0_ASSERTED();
+            RXSEL((CLR_TMDS_RX2_Z0_ASSERTED()), (CLR_TMDS_RX3_Z0_ASSERTED()));
 
             DebugMessageRx2("7. HDCP Normal", 0);
         }
@@ -4359,13 +4525,13 @@ bit ScalerTMDSRx2TMDSStableDetect(BYTE ucSourceType)
 
     if(ucSourceType == _SOURCE_DVI)
     {
-        if(GET_TMDS_RX2_RGBHV_DETECTING() == _FALSE)
+        if(RXSEL((GET_TMDS_RX2_RGBHV_DETECTING()), (GET_TMDS_RX3_RGBHV_DETECTING())) == _FALSE)
         {
             // TMDS Video Detected
 #if(_DVI_DE_ONLY_SUPPORT == _OFF)
-            if(ScalerTMDSRx2TMDSVideoDetect(_NOT_WAIT) != _TMDS_VIDEO_DATA_RGBHV)
+            if(ScalerTMDSRxTMDSVideoDetect(_NOT_WAIT) != _TMDS_VIDEO_DATA_RGBHV)
 #else
-            if(ScalerTMDSRx2TMDSVideoDetect(_NOT_WAIT) == _TMDS_VIDEO_DATA_NONE)
+            if(ScalerTMDSRxTMDSVideoDetect(_NOT_WAIT) == _TMDS_VIDEO_DATA_NONE)
 #endif
             {
                 DebugMessageRx2("TMDS Video format changed", ucSourceType);
@@ -4379,20 +4545,20 @@ bit ScalerTMDSRx2TMDSStableDetect(BYTE ucSourceType)
 
     if(ucSourceType == _SOURCE_HDMI)
     {
-        if(GET_HDMI_RX2_PACKET_DETECTING() == _FALSE)
+        if(RXSEL((GET_HDMI_RX2_PACKET_DETECTING()), (GET_HDMI_RX3_PACKET_DETECTING())) == _FALSE)
         {
             // HDMI Packet Detected
-            ScalerTMDSRx2HdmiPacketDetect(_NOT_WAIT);
+            ScalerTMDSRxHdmiPacketDetect(_NOT_WAIT);
 
-            if(GET_HDMI_RX2_AVI_INFO_FRAME_RECEIVED() == _TRUE)
+            if(RXSEL((GET_HDMI_RX2_AVI_INFO_FRAME_RECEIVED()), (GET_HDMI_RX3_AVI_INFO_FRAME_RECEIVED())) == _TRUE)
             {
-                if(ScalerSyncTMDSRx2HdmiColorInfoChanged() == _TRUE)
+                if(RXSEL((ScalerSyncTMDSRx2HdmiColorInfoChanged()), (ScalerSyncTMDSRx3HdmiColorInfoChanged())) == _TRUE)
                 {
                     DebugMessageRx2("Color Info Changed", ucSourceType);
                     return _FALSE;
                 }
 
-                if(ScalerTMDSRx2HdmiAviPixelRepInfoChanged() == _TRUE)
+                if(ScalerTMDSRxHdmiAviPixelRepInfoChanged() == _TRUE)
                 {
                     DebugMessageRx2("Pixel Repetition Info Changed", ucSourceType);
                     return _FALSE;
@@ -4401,7 +4567,7 @@ bit ScalerTMDSRx2TMDSStableDetect(BYTE ucSourceType)
             else
             {
 #if(_D2_INPUT_PORT_TYPE == _D2_MHL_PORT)
-                if(GET_TMDS_RX2_CLK_MODE() == _TMDS_24BIT_PHY_SETTING)
+                if(RXSEL((GET_TMDS_RX2_CLK_MODE()), (GET_TMDS_RX3_CLK_MODE())) == _TMDS_24BIT_PHY_SETTING)
 #endif
                 {
                     if(GET_COLOR_SPACE() != _COLOR_SPACE_RGB)
@@ -4419,7 +4585,7 @@ bit ScalerTMDSRx2TMDSStableDetect(BYTE ucSourceType)
                 }
 #endif
 
-                if(GET_TMDS_RX2_AVI_PIXEL_REPETITION() != _AVI_PIXEL_REPETITION_0)
+                if(RXSEL((GET_TMDS_RX2_AVI_PIXEL_REPETITION()), (GET_TMDS_RX3_AVI_PIXEL_REPETITION())) != _AVI_PIXEL_REPETITION_0)
                 {
                     DebugMessageRx2("Pixel Repetition Not Received and not Pixel repetition 0", ucSourceType);
                     return _FALSE;
@@ -4428,16 +4594,16 @@ bit ScalerTMDSRx2TMDSStableDetect(BYTE ucSourceType)
 
             if(GET_DIGITAL_COLOR_INFO_CHANGE_RESET() == _TRUE)
             {
-                if((ScalerGetDataPortBit(P71_C9_HDMI_AP, _P71_CA_PT_41_PORT_PAGE71_HDMI_VWDSR, _BIT0) == _BIT0) && (ScalerGetBit(P71_CC_HDMI_GPVS, _BIT0) == _BIT0))
+                if((ScalerGetDataPortBit(RXA(P71_C9_HDMI_AP), _P71_CA_PT_41_PORT_PAGE71_HDMI_VWDSR, _BIT0) == _BIT0) && (RxGetBit(P71_CC_HDMI_GPVS, _BIT0) == _BIT0))
                 {
                     DebugMessageRx2("HDMI AVI info frame has changed", ucSourceType);
                     return _FALSE;
                 }
             }
 
-            if(GET_HDMI_RX2_GCP_RECEIVED() == _TRUE)
+            if(RXSEL((GET_HDMI_RX2_GCP_RECEIVED()), (GET_HDMI_RX3_GCP_RECEIVED())) == _TRUE)
             {
-                if((GET_COLOR_SPACE() != _COLOR_SPACE_YCBCR422) && (ScalerTMDSRx2HdmiGetColorDepth() != GET_COLOR_DEPTH()))
+                if((GET_COLOR_SPACE() != _COLOR_SPACE_YCBCR422) && (ScalerTMDSRxHdmiGetColorDepth() != GET_COLOR_DEPTH()))
                 {
                     DebugMessageRx2("Color Depth Has Changed", GET_COLOR_DEPTH());
                     return _FALSE;
@@ -4453,9 +4619,9 @@ bit ScalerTMDSRx2TMDSStableDetect(BYTE ucSourceType)
             }
 
 #if(_HDMI_FREESYNC_SUPPORT == _ON)
-            if(GET_TMDS_RX2_SPD_INFO_FRAME_RECEIVED() == _TRUE)
+            if(RXSEL((GET_TMDS_RX2_SPD_INFO_FRAME_RECEIVED()), (GET_TMDS_RX3_SPD_INFO_FRAME_RECEIVED())) == _TRUE)
             {
-                if((bit)GET_HDMIRX2_AMD_SPD_INFO(_SPD_INFO_FREESYNC_SUPPORT) != GET_HDMI_FREESYNC_ENABLED())
+                if((bit)RXSEL((GET_HDMIRX2_AMD_SPD_INFO(_SPD_INFO_FREESYNC_SUPPORT)), (GET_HDMIRX3_AMD_SPD_INFO(_SPD_INFO_FREESYNC_SUPPORT))) != GET_HDMI_FREESYNC_ENABLED())
                 {
                     DebugMessageRx2("HDMI Freesync Status Change", GET_HDMI_FREESYNC_ENABLED());
                     return _FALSE;
@@ -4477,9 +4643,9 @@ bit ScalerTMDSRx2TMDSStableDetect(BYTE ucSourceType)
 
 #if(_TMDS_TOGGLE_HPD_Z0_FOR_ACER == _ON)
 
-    if(GET_TMDS_RX2_TOGGLE_Z0() == _TRUE)
+    if(RXSEL((GET_TMDS_RX2_TOGGLE_Z0()), (GET_TMDS_RX3_TOGGLE_Z0())) == _TRUE)
     {
-        SET_TMDS_RX2_TOGGLE_Z0_EVENT();
+        RXSEL((SET_TMDS_RX2_TOGGLE_Z0_EVENT()), (SET_TMDS_RX3_TOGGLE_Z0_EVENT()));
 
         return _FALSE;
     }
@@ -4488,25 +4654,36 @@ bit ScalerTMDSRx2TMDSStableDetect(BYTE ucSourceType)
 
     return _TRUE;
 }
+bit ScalerTMDSRx2TMDSStableDetect(BYTE ucSourceType)
+{
+    bit xRet;
+    BYTE ucOld = RX_CUR;
+
+    RX_CUR = 0;
+    xRet = ScalerTMDSRxTMDSStableDetect(ucSourceType);
+    RX_CUR = ucOld;
+
+    return xRet;
+}
 
 //--------------------------------------------------
 // Description  : TMDS Hot Plug Event
 // Input Value  : None
 // Output Value :
 //--------------------------------------------------
-void ScalerTMDSRx2HotPlugEvent(void)
+void ScalerTMDSRxHotPlugEvent(void)
 {
-    ScalerTMDSRx2BeforeHotPlugEventProc();
+    ScalerTMDSRxBeforeHotPlugEventProc();
 
     // ACER mode and DVI port will only toggle Z0 130ms
 #if((_D2_INPUT_PORT_TYPE == _D2_DVI_PORT) && (_TMDS_TOGGLE_HPD_Z0_FOR_ACER == _ON))
-    if(GET_TMDS_RX2_HPD_TRIGGER_EVENT() == _TMDS_HPD_ACER)
+    if(RXSEL((GET_TMDS_RX2_HPD_TRIGGER_EVENT()), (GET_TMDS_RX3_HPD_TRIGGER_EVENT())) == _TMDS_HPD_ACER)
     {
         // MHL mode of MHL PORT can not pull HPD
 #if(_D2_INPUT_PORT_TYPE == _D2_MHL_PORT)
-        if((GET_HDMI_HOTPLUG_TOGGLE() == _TRUE) && (GET_D2_CABLE_STATUS() == _TRUE) && (GET_D2_TMDS_MODE() == _TMDS_HDMI_MODE))
+        if((GET_HDMI_HOTPLUG_TOGGLE() == _TRUE) && (RXSEL((GET_D2_CABLE_STATUS()), (GET_D3_CABLE_STATUS())) == _TRUE) && (RXSEL((GET_D2_TMDS_MODE()), (GET_D3_TMDS_MODE())) == _TMDS_HDMI_MODE))
 #else
-        if((GET_HDMI_HOTPLUG_TOGGLE() == _TRUE) && (GET_D2_CABLE_STATUS() == _TRUE))
+        if((GET_HDMI_HOTPLUG_TOGGLE() == _TRUE) && (RXSEL((GET_D2_CABLE_STATUS()), (GET_D3_CABLE_STATUS())) == _TRUE))
 #endif
         {
             ScalerTimerDelayXms(_TMDS_ACER_HPD_TIME);
@@ -4516,45 +4693,53 @@ void ScalerTMDSRx2HotPlugEvent(void)
 #endif
     {
         // HPD Low
-        ScalerTMDSRx2HotPlugLowProc();
+        ScalerTMDSRxHotPlugLowProc();
 
         // wait
-        if(GET_TMDS_RX2_HPD_TRIGGER_EVENT() == _TMDS_HPD_NORMAL)
+        if(RXSEL((GET_TMDS_RX2_HPD_TRIGGER_EVENT()), (GET_TMDS_RX3_HPD_TRIGGER_EVENT())) == _TMDS_HPD_NORMAL)
         {
-            ScalerTMDSRx2HotPlugHighProc(GET_HDMI_HOTPLUG_TIME());
+            ScalerTMDSRxHotPlugHighProc(GET_HDMI_HOTPLUG_TIME());
         }
-        else if(GET_TMDS_RX2_HPD_TRIGGER_EVENT() == _TMDS_HPD_HDCP_2_2)
+        else if(RXSEL((GET_TMDS_RX2_HPD_TRIGGER_EVENT()), (GET_TMDS_RX3_HPD_TRIGGER_EVENT())) == _TMDS_HPD_HDCP_2_2)
         {
-            ScalerTMDSRx2HotPlugHighProc(_TMDS_HDCP_2_2_HPD_TIME);
+            ScalerTMDSRxHotPlugHighProc(_TMDS_HDCP_2_2_HPD_TIME);
         }
-        else if(GET_TMDS_RX2_HPD_TRIGGER_EVENT() == _TMDS_HPD_ACER)
+        else if(RXSEL((GET_TMDS_RX2_HPD_TRIGGER_EVENT()), (GET_TMDS_RX3_HPD_TRIGGER_EVENT())) == _TMDS_HPD_ACER)
         {
-            ScalerTMDSRx2HotPlugHighProc(_TMDS_ACER_HPD_TIME);
+            ScalerTMDSRxHotPlugHighProc(_TMDS_ACER_HPD_TIME);
         }
-        else if(GET_TMDS_RX2_HPD_TRIGGER_EVENT() == _TMDS_HPD_EDID_SWITCH)
+        else if(RXSEL((GET_TMDS_RX2_HPD_TRIGGER_EVENT()), (GET_TMDS_RX3_HPD_TRIGGER_EVENT())) == _TMDS_HPD_EDID_SWITCH)
         {
-            ScalerTMDSRx2HotPlugHighProc(_TMDS_EDID_SWITCH_HPD_TIME);
+            ScalerTMDSRxHotPlugHighProc(_TMDS_EDID_SWITCH_HPD_TIME);
         }
         else
         {
-            ScalerTMDSRx2HotPlugHighProc(GET_HDMI_HOTPLUG_TIME());
+            ScalerTMDSRxHotPlugHighProc(GET_HDMI_HOTPLUG_TIME());
         }
     }
 
     // Restore Slave Address and Z0 Status
-    ScalerTMDSRx2AfterHotPlugEventProc();
+    ScalerTMDSRxAfterHotPlugEventProc();
 
     DebugMessageRx2("Rx2 HPD Toggle!!", 0);
 
 #if(_TMDS_TOGGLE_HPD_Z0_FOR_ACER == _ON)
-    if(GET_TMDS_RX2_TOGGLE_Z0_EVENT() == _TRUE)
+    if(RXSEL((GET_TMDS_RX2_TOGGLE_Z0_EVENT()), (GET_TMDS_RX3_TOGGLE_Z0_EVENT())) == _TRUE)
     {
-        CLR_TMDS_RX2_TOGGLE_Z0();
-        CLR_TMDS_RX2_TOGGLE_Z0_EVENT();
+        RXSEL((CLR_TMDS_RX2_TOGGLE_Z0()), (CLR_TMDS_RX3_TOGGLE_Z0()));
+        RXSEL((CLR_TMDS_RX2_TOGGLE_Z0_EVENT()), (CLR_TMDS_RX3_TOGGLE_Z0_EVENT()));
     }
 #endif
 
-    CLR_TMDS_RX2_HPD_TRIGGER_EVENT();
+    RXSEL((CLR_TMDS_RX2_HPD_TRIGGER_EVENT()), (CLR_TMDS_RX3_HPD_TRIGGER_EVENT()));
+}
+void ScalerTMDSRx2HotPlugEvent(void)
+{
+    BYTE ucOld = RX_CUR;
+
+    RX_CUR = 0;
+    ScalerTMDSRxHotPlugEvent();
+    RX_CUR = ucOld;
 }
 
 //--------------------------------------------------
@@ -4562,9 +4747,17 @@ void ScalerTMDSRx2HotPlugEvent(void)
 // Input Value  : None
 // Output Value : None
 //--------------------------------------------------
+void ScalerTMDSRxSwitchSlaveAddr(void)
+{
+    ScalerSetDataPortByte(RXA(P71_C3_HDCP_AP), _P71_C4_PT_C2_PORT_PAGE71_HDCP_SLAVE_ADD, 0x7F);
+}
 void ScalerTMDSRx2SwitchSlaveAddr(void)
 {
-    ScalerSetDataPortByte(P71_C3_HDCP_AP, _P71_C4_PT_C2_PORT_PAGE71_HDCP_SLAVE_ADD, 0x7F);
+    BYTE ucOld = RX_CUR;
+
+    RX_CUR = 0;
+    ScalerTMDSRxSwitchSlaveAddr();
+    RX_CUR = ucOld;
 }
 
 //--------------------------------------------------
@@ -4572,39 +4765,47 @@ void ScalerTMDSRx2SwitchSlaveAddr(void)
 // Input Value  : None
 // Output Value : Hot Plug time
 //--------------------------------------------------
-void ScalerTMDSRx2BeforeHotPlugEventProc(void)
+void ScalerTMDSRxBeforeHotPlugEventProc(void)
 {
     // MHL mode of MHL PORT can not pull HPD
 #if(_D2_INPUT_PORT_TYPE == _D2_MHL_PORT)
-    if((GET_HDMI_HOTPLUG_TOGGLE() == _TRUE) && (GET_D2_CABLE_STATUS() == _TRUE) && (GET_D2_TMDS_MODE() == _TMDS_HDMI_MODE))
+    if((GET_HDMI_HOTPLUG_TOGGLE() == _TRUE) && (RXSEL((GET_D2_CABLE_STATUS()), (GET_D3_CABLE_STATUS())) == _TRUE) && (RXSEL((GET_D2_TMDS_MODE()), (GET_D3_TMDS_MODE())) == _TMDS_HDMI_MODE))
 #else
-    if((GET_HDMI_HOTPLUG_TOGGLE() == _TRUE) && (GET_D2_CABLE_STATUS() == _TRUE))
+    if((GET_HDMI_HOTPLUG_TOGGLE() == _TRUE) && (RXSEL((GET_D2_CABLE_STATUS()), (GET_D3_CABLE_STATUS())) == _TRUE))
 #endif
     {
         // Save Z0 Status
-        g_ucTMDSRx2Z0Status = ScalerGetBit(P7B_18_IMPEDANCE_00, (_BIT7 | _BIT6 | _BIT5 | _BIT4));
+        g_ucTMDSRxZ0Status[RX_CUR] = RxGetBit(P7B_18_IMPEDANCE_00, (_BIT7 | _BIT6 | _BIT5 | _BIT4));
 
         // Backup Slave Address
-        ScalerGetDataPortByte(P71_C3_HDCP_AP, _P71_C4_PT_C2_PORT_PAGE71_HDCP_SLAVE_ADD, 1, &g_ucTMDSRx2SlaveAddr, _NON_AUTOINC);
+        ScalerGetDataPortByte(RXA(P71_C3_HDCP_AP), _P71_C4_PT_C2_PORT_PAGE71_HDCP_SLAVE_ADD, 1, &g_ucTMDSRxSlaveAddr[RX_CUR], _NON_AUTOINC);
 
 #if((_TMDS_HDCP_2_2_SUPPORT == _ON) && ((_D2_INPUT_PORT_TYPE == _D2_HDMI_PORT) || (_D2_INPUT_PORT_TYPE == _D2_MHL_PORT)))
         // Reset HDCP 2.2
-        ScalerTMDSRx2Hdcp2ResetProc();
+        RXSEL((ScalerTMDSRx2Hdcp2ResetProc()), (ScalerTMDSRx3Hdcp2ResetProc()));
 #endif
 
 #if(_D2_HDMI_2_0_SUPPORT == _ON)
         // Disable HDMI 2.0 SCDC Function
-        ScalerSetBit(P71_19_HDMI_CTRL_19, ~_BIT7, 0x00);
+        RxSetBit(P71_19_HDMI_CTRL_19, ~_BIT7, 0x00);
 #endif
 
         // Disable Z0
-        ScalerSetBit(P7B_18_IMPEDANCE_00, ~(_BIT7 | _BIT6 | _BIT5 | _BIT4), 0x00);
+        RxSetBit(P7B_18_IMPEDANCE_00, ~(_BIT7 | _BIT6 | _BIT5 | _BIT4), 0x00);
     }
-    else if(GET_D2_CABLE_STATUS() == _FALSE)
+    else if(RXSEL((GET_D2_CABLE_STATUS()), (GET_D3_CABLE_STATUS())) == _FALSE)
     {
         // Reset DDC2
-        MCU_FE65_DDC2_DDC_CONTROL_1 |= _BIT1;
+        RXREG(MCU_FE65_DDC2_DDC_CONTROL_1, MCU_FE6E_DDC3_DDC_CONTROL_1) |= _BIT1;
     }
+}
+void ScalerTMDSRx2BeforeHotPlugEventProc(void)
+{
+    BYTE ucOld = RX_CUR;
+
+    RX_CUR = 0;
+    ScalerTMDSRxBeforeHotPlugEventProc();
+    RX_CUR = ucOld;
 }
 
 //--------------------------------------------------
@@ -4612,26 +4813,34 @@ void ScalerTMDSRx2BeforeHotPlugEventProc(void)
 // Input Value  : None
 // Output Value :
 //--------------------------------------------------
-void ScalerTMDSRx2AfterHotPlugEventProc(void)
+void ScalerTMDSRxAfterHotPlugEventProc(void)
 {
     // MHL mode of MHL PORT can not pull HPD
 #if(_D2_INPUT_PORT_TYPE == _D2_MHL_PORT)
-    if((GET_HDMI_HOTPLUG_TOGGLE() == _TRUE) && (GET_D2_CABLE_STATUS() == _TRUE) && (GET_D2_TMDS_MODE() == _TMDS_HDMI_MODE))
+    if((GET_HDMI_HOTPLUG_TOGGLE() == _TRUE) && (RXSEL((GET_D2_CABLE_STATUS()), (GET_D3_CABLE_STATUS())) == _TRUE) && (RXSEL((GET_D2_TMDS_MODE()), (GET_D3_TMDS_MODE())) == _TMDS_HDMI_MODE))
 #else
-    if((GET_HDMI_HOTPLUG_TOGGLE() == _TRUE) && (GET_D2_CABLE_STATUS() == _TRUE))
+    if((GET_HDMI_HOTPLUG_TOGGLE() == _TRUE) && (RXSEL((GET_D2_CABLE_STATUS()), (GET_D3_CABLE_STATUS())) == _TRUE))
 #endif
     {
         // Restore Slave Address
-        ScalerSetDataPortByte(P71_C3_HDCP_AP, _P71_C4_PT_C2_PORT_PAGE71_HDCP_SLAVE_ADD, g_ucTMDSRx2SlaveAddr);
+        ScalerSetDataPortByte(RXA(P71_C3_HDCP_AP), _P71_C4_PT_C2_PORT_PAGE71_HDCP_SLAVE_ADD, g_ucTMDSRxSlaveAddr[RX_CUR]);
 
 #if(_D2_HDMI_2_0_SUPPORT == _ON)
         // Enable HDMI 2.0 SCDC Function
-        ScalerSetBit(P71_19_HDMI_CTRL_19, ~_BIT7, _BIT7);
+        RxSetBit(P71_19_HDMI_CTRL_19, ~_BIT7, _BIT7);
 #endif
 
         // Restore Z0 Status
-        ScalerSetBit(P7B_18_IMPEDANCE_00, ~(_BIT7 | _BIT6 | _BIT5 | _BIT4), g_ucTMDSRx2Z0Status);
+        RxSetBit(P7B_18_IMPEDANCE_00, ~(_BIT7 | _BIT6 | _BIT5 | _BIT4), g_ucTMDSRxZ0Status[RX_CUR]);
     }
+}
+void ScalerTMDSRx2AfterHotPlugEventProc(void)
+{
+    BYTE ucOld = RX_CUR;
+
+    RX_CUR = 0;
+    ScalerTMDSRxAfterHotPlugEventProc();
+    RX_CUR = ucOld;
 }
 
 //--------------------------------------------------
@@ -4639,10 +4848,18 @@ void ScalerTMDSRx2AfterHotPlugEventProc(void)
 // Input Value  : None
 // Output Value : None
 //--------------------------------------------------
-void ScalerTMDSRx2Hdcp1p4AksvClear(void)
+void ScalerTMDSRxHdcp1p4AksvClear(void)
 {
     // Disable R0 ready bit
-    ScalerSetBit(P71_AE_TMDS_RPS, ~_BIT1, 0x00);
+    RxSetBit(P71_AE_TMDS_RPS, ~_BIT1, 0x00);
+}
+void ScalerTMDSRx2Hdcp1p4AksvClear(void)
+{
+    BYTE ucOld = RX_CUR;
+
+    RX_CUR = 0;
+    ScalerTMDSRxHdcp1p4AksvClear();
+    RX_CUR = ucOld;
 }
 
 #endif // End of #if(_D2_TMDS_SUPPORT == _ON)

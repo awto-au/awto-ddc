@@ -320,7 +320,7 @@ def parse_args(argv=None):
     ap.add_argument("--cluster", choices=["module", "fn"], default="",
                     help="call-graph bank placement; only valid while a layout is being created (missing/empty --layout file)")
     ap.add_argument("--cluster-weights", default="", help="passed to sdcc_bank (measured call counts, fw/cluster_weights.json)")
-    ap.add_argument("--pin-common", default="_AwtoPutStr,_AwtoStackPaint,_AwtoStackCheck,_AwtoStackDeepTest,_AwtoDbgIsrCmd_EXINT1,_ScalerTimerWaitForEvent,_AwtoWaitLog,_AwtoWaitPump,_AwtoPsPollSite,_AwtoDelayLoops,_AwtoDelayXus,_AwtoDelayCnt,_AwtoDelayEnd,_AwtoDelayLong,_AwtoWdtPoke,_ScalerSyncDpHpdIrqAssertTimer2EventProc_EXINT",
+    ap.add_argument("--pin-common", default="_AwtoPutStr,_AwtoStackPaint,_AwtoStackCheck,_AwtoStackDeepTest,_AwtoDbgIsrCmd_EXINT1,_ScalerTimerWaitForEvent,_AwtoWaitLog,_AwtoWaitPump,_AwtoPsPollSite,_AwtoDelayLoops,_AwtoDelayXus,_AwtoDelayCnt,_AwtoDelayEnd,_AwtoDelayLong,_AwtoWdtPoke,_ScalerSyncDpHpdIrqAssertTimer2EventProc_EXINT,_RxRegGetBit,_RxRegGetByte,_RxRegSetBit,_RxRegSetByte",
                     help="passed to sdcc_bank (comma list of fns forced into common; OSD string helper: callers pass bank-local literals; stack canary fns read SP: no trampoline bytes in between; the EXINT1 debug reply: no banked call in the ISR; ScalerTimerWaitForEvent reads its caller's return address (#216): no stub; AwtoWaitLog / AwtoWaitPump read SP)")
     ap.add_argument("--src-patch", default="")
     # 0xc38: the --keil-compat /0 wrappers (_divulong_keil etc.) end the library at 0xc12 (awto-sdcc#36)

@@ -49,8 +49,7 @@
 ^conditional flow changed by optimizer	Kernel/Scaler/RL6449_Series_Scaler/Code/RL6449_Series_PLL.c	303	ok	OK-CONFIG: usFCode=ulCMUFreq%(_EXT_XTAL*2) is compile-time constant from constant link rate and xtal
 ^conditional flow changed by optimizer	Kernel/Scaler/RL6449_Series_Scaler/Code/RL6449_Series_TimerFunction.c	166	ok	OK-CONFIG: _OD_SUPPORT/_FRC_SUPPORT off: _EVENT_DEN_START arm equals the default arm (ByReg), compare removed
 ^conditional flow changed by optimizer	Kernel/Scaler/RL6449_Series_Scaler/Code/RL6449_Series_TimerFunction.c	65	ok	OK-CONFIG: _OD_SUPPORT/_FRC_SUPPORT off: _EVENT_DEN_START arm equals the default arm (ByReg), compare removed
-^conditional flow changed by optimizer	Kernel/Scaler/RL6449_Series_Scaler/Code/RL6449_Series_TMDSRx2.c	3182	ok	OK-HARMLESS: local ucDivS is only assigned just before break, so ucDivS==0 is always true when tested; pData[15]==254 guard stays
-^conditional flow changed by optimizer	Kernel/Scaler/RL6449_Series_Scaler/Code/RL6449_Series_TMDSRx3.c	3184	ok	OK-HARMLESS: same as TMDSRx2: ucDivS is only set immediately before break
+^conditional flow changed by optimizer	Kernel/Scaler/RL6449_Series_Scaler/Code/RL6449_Series_TMDSRx2.c	3264	ok	OK-HARMLESS (shared Rx2/Rx3 body): local ucDivS is only assigned just before break, so ucDivS==0 is always true when tested; pData[15]==254 guard stays
 ^conditional flow changed by optimizer	Kernel/Scaler/ScalerCommonFunction/Code/ScalerCommonDPRx1.c	511	ok	OK-HARMLESS: switch(enumDpMeasurePeriod): 2000_CYCLE shares body with default; same dispatch
 ^conditional flow changed by optimizer	Kernel/Scaler/ScalerCommonFunction/Code/ScalerCommonDPRx1.c	588	ok	OK-HARMLESS: switch(ucDpcdLane): default and _DP_FOUR_LANE share body; same dispatch
 ^conditional flow changed by optimizer	Kernel/Scaler/ScalerCommonFunction/Code/ScalerCommonDPRx1.c	656	ok	OK-HARMLESS: switch(ucDpcdLane): default and _DP_FOUR_LANE share body; same dispatch
