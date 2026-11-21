@@ -214,7 +214,7 @@ def _debug_part(bus: int, serial: str, be: bool) -> tuple[dict | None, str]:
 
 def status(d, u: dict) -> dict:
     """One read-only pass for the GUI status line (awto-ddc#277): Get VCP of the quick rows + the info rows (paged read) over the unit's DDC session, then the
-    debug-slave reads when 0x35 answers. A failed source is named in `ddc_err` / `dbg_err`; the rest still returns."""
+    debug-slave reads only for fields the rows left empty. A failed source is named in `ddc_err` / `dbg_err`; the rest still returns."""
     import flash_registry
     st = {"serial": u["serial"], "t": isostamp.now(), "ddc": {}, "ddc_err": "", "dbg": None, "dbg_err": "",
           "tag": str(flash_registry.current(u["serial"]).get("tag") or "")}
@@ -233,10 +233,15 @@ def status(d, u: dict) -> dict:
             continue
         if v is not None:
             into[name] = v
+    if not S.missing_fields(st):                       # the info rows filled every field: 0x35 is only the fallback for firmware without them
+        return st
     try:
-        st["dbg"], st["dbg_err"] = _debug_part(s.bus_no, u["serial"], bool(u.get("be")))
+        st["dbg"], why = _debug_part(s.bus_no, u["serial"], bool(u.get("be")))
     except (OSError, SystemExit, ValueError) as e:
-        st["dbg_err"] = f"{type(e).__name__}: {e}"
+        why = f"{type(e).__name__}: {e}"
+    gaps = S.missing_fields(st)
+    if gaps:
+        st["dbg_err"] = f"{', '.join(gaps)} n/a: {why or (st['dbg'] or {}).get('timing_why') or 'no source'}"
     return st
 
 

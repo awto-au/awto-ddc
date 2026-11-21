@@ -61,6 +61,14 @@ def tag_from_rows(i: dict) -> str | None:
     return f"{i['info_tag_hi']:0{TAG_HEX_HALF}x}{i['info_tag_lo']:0{TAG_HEX_HALF}x}"
 
 
+def missing_fields(st: dict) -> list[str]:
+    """status-line fields no source filled (info rows, then the 0x35 fallback); the tag is not read over 0x35"""
+    i, g = st.get("info", {}), st.get("dbg") or {}
+    gaps = {"clocks": not (clocks_from_rows(i) or g.get("clk")), "timing": "info_hres" not in i and not g.get("timing"),
+            "PWM": i.get("info_pwm", g.get("pwm")) is None, "loop": g.get("loop", i.get("info_loop")) is None}
+    return [k for k, v in gaps.items() if v]
+
+
 def backlight_pct(duty: int) -> int:
     """lit percent of a PWM4 duty byte"""
     return round(((PWM_FULL - duty) if PWM_INVERSE else duty) * 100 / PWM_FULL)

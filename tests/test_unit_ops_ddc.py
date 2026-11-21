@@ -234,8 +234,19 @@ def test_status_is_read_only_and_decodes(monkeypatch):
     assert st["ddc"] == {"volume": 50, "mute": 1, "brightness": 51, "contrast": 75, "power_mode": 0, "input": 1}, st
     assert st["info"] == {"info_hres": 1920, "info_vres": 1080, "info_vfreq": 600, "info_loop": 4100, "info_cpu": 3508,
                           "info_pll": 3508, "info_spi": 1169, "info_pwm": 130, "info_tag_hi": 0x632, "info_tag_lo": 0x635}, st
+    assert st["dbg"] is None and st["dbg_err"] == "" and st["ddc_err"] == "" and not io.log, "rows answered: no 0x35 traffic, no tag"
+    assert len(bus.writes) == len(S.DDC_ROWS) + 2 * len(S.INFO_ROWS), "one Get per quick row, select + Get per info row, nothing else"
+    rows_only = S.format_line(st)
+    assert "CPU 350.8 PLL 350.8 SPI 116.9" in rows_only and "loop 4100/s" in rows_only and "n/a" not in rows_only, rows_only
+    monkeypatch.setattr(S, "INFO_ROWS", ("info_hres", "info_vres", "info_vfreq", "info_loop"))      # firmware without the clock / PWM / tag rows
+    st = U.status(None, {"serial": "AWT1", "be": True})
     assert st["dbg"]["loop"] == 4100 and st["dbg"]["stage"] == 8 and st["dbg"]["pwm"] == 125 and st["tag"] == "wb-x", st
     assert st["dbg"]["clk"]["pll"] > st["dbg"]["clk"]["cpu"] > 0 and st["dbg"]["timing"] is None and "no map" in st["dbg"]["timing_why"]
+    assert st["dbg_err"] == "", "fallback filled every field: no tag"
+    st["info"] = {"info_hres": 1920, "info_vres": 1080, "info_vfreq": 600}
+    assert S.missing_fields({**st, "dbg": None}) == ["clocks", "PWM", "loop"]
+    st = {**st, "info": {**st["info"], "info_loop": 4100, "info_cpu": 3508, "info_pll": 3508, "info_spi": 1169, "info_pwm": 130,
+                         "info_tag_hi": 0x632, "info_tag_lo": 0x635}}
     sets = [w[1] for w in bus.writes if w[1][2] == U.OP_SET]                                         # [51 len op code ...]
     assert sets and all(f[3] == U.VCP_SEL for f in sets), "the only Set frames are the RAM-only row selector 0xE0"
     assert io.allow_write is False and all(sub in (0x01, 0x3A, 0x3C) for sub, _ in io.log), io.log   # staging + read commands only
@@ -261,3 +272,4 @@ def test_status_without_debug_link_names_it(monkeypatch):
     monkeypatch.setattr("flash_registry.current", lambda serial: {})
     st = U.status(None, {"serial": "AWT1"})
     assert st["ddc"] == {} and st["ddc_err"].startswith("volume:") and st["dbg"] is None and "0x35 not answering" in st["dbg_err"], st
+    assert st["dbg_err"].startswith("clocks, timing, PWM, loop n/a:"), "the tag names only the fields that are missing"

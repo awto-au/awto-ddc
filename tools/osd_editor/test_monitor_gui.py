@@ -536,6 +536,7 @@ def status_line():
     for want in ("CPU 350.8 PLL 350.8 SPI 116.9", "1920x1080 60.000Hz", "sound muted vol 50", "bright 51", "contrast 75", "PWM 125 (51 %)",
                  "loop 4100/s", "fw wb-test", "power On", "input D2 HDMI"):
         assert want in txt, (want, txt)
+    assert "[" not in txt, ("a complete pass shows no error tag", txt)
     serials = {s for _, s in fb.status_calls}
     assert serials == {pg.states["3"].info["serial"]}, serials              # selected unit only
     assert not any(c[0] == "set" for c in fb.live_calls) and not writes(fb), "the status line never writes"
@@ -559,12 +560,12 @@ def status_line():
     assert len(fb.status_calls) == n0
     pg.states["3"].sline_busy = False
     pg.status_tick()                                                         # a failed source is named, the rest stays
-    fb.status_reply = {**fb.status_reply, "dbg": None, "dbg_err": "0x35 not answering (debug link is on the DDC side)"}
+    fb.status_reply = {**fb.status_reply, "dbg": None, "dbg_err": "clocks n/a: 0x35 not answering (debug link is on the DDC side)"}
     pg.states["3"].sline = {}
     pg.status_tick()
     until(lambda: pg.states["3"].sline.get("dbg_err"), "pass without debug link")
     txt = pg.status_label.text()
-    assert "CPU n/a PLL n/a SPI n/a" in txt and "1920x1080 60.0Hz" in txt and "loop 4100/s" in txt and "sound muted vol 50" in txt and "0x35 not answering" in txt, txt
+    assert "CPU n/a PLL n/a SPI n/a" in txt and "1920x1080 60.0Hz" in txt and "loop 4100/s" in txt and "sound muted vol 50" in txt and "[dbg_err: clocks n/a: 0x35 not answering" in txt, txt
     pg.select_unit("1", read=False)                                          # another unit: its own (empty) line, no read of unit 3
     pg.states["1"].sline = {}
     assert "reading" in pg.status_text("1") or "read-only" in pg.status_text("1")
