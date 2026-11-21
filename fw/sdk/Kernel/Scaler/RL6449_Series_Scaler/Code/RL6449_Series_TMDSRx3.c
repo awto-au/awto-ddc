@@ -31,20 +31,6 @@ volatile bit d_g_bTMDSRx3HDMI2RREnable = _FALSE;
 volatile bit d_isr_g_bTMDSRx3HDMI2HighSpeedMode = _FALSE;
 volatile bit d_isr_g_bTMDSRx3TMDSPhySet = _FALSE;
 volatile bit d_isr_g_bTMDSRx3TMDSDdcDetected = _FALSE;
-volatile WORD isr_g_usTMDSRx3ClkCount;
-volatile WORD isr_g_usTMDSRx3PhyCount;
-volatile WORD isr_g_usTMDSRx3PhyClk;
-volatile BYTE isr_g_ucTMDSRx3PhyPend;
-
-volatile BYTE g_pucTMDSRx3LEMax[3];
-volatile BYTE g_pucTMDSRx3LEMin[3];
-BYTE g_pucTMDSRx3Tap0Min[3];
-BYTE g_pucTMDSRx3Tap0Max[3];
-BYTE g_ucTMDSRx3Tap0Init;
-BYTE g_pucTMDSRx3Tap1Max[3];
-volatile BYTE isr_g_ucTMDSRx3ClkIRQ;
-BYTE g_ucTMDSRx3Z0Status;
-BYTE g_ucTMDSRx3SlaveAddr;
 
 #if(_D3_INPUT_PORT_TYPE == _D3_MHL_PORT)
 BYTE g_ucTMDSRx3ClkMode = _TMDS_24BIT_PHY_SETTING;

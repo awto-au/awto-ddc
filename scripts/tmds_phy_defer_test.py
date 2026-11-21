@@ -66,7 +66,7 @@ def run_port(bin_: Path, mapp: Path, port: int) -> int:
     m = bus.m
     pend, info, clk_irq = m.addr("isr_g_ucTMDSRxPhyPend") + port - 2, m.addr(f"g_stTMDSRx{port}CtrlInfo"), m.addr("isr_g_ucTMDSRxClkIRQ") + port - 2
     ev = {"phy": [], "cdr": []}
-    port_addr = m.addr("isr_g_ucTMDSRxPort")
+    port_addr = m.addr("d_isr_g_ucTMDSRxPort")
 
     def ex0():
         return (m.rd(0xA8, 1, "sfr")[0] >> 0) & 1

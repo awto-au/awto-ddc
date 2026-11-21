@@ -14,15 +14,15 @@
 
 //----------------------------------------------------------------------------------------------------
 // ID Code      : RL6449_Series_TMDSRxShareInclude.h
-// Update Note  : D2 (Rx2) and D3 (Rx3) run one TMDS implementation; the port is isr_g_ucTMDSRxPort (0 = D2, 1 = D3)
+// Update Note  : D2 (Rx2) and D3 (Rx3) run one TMDS implementation; the port is d_isr_g_ucTMDSRxPort (0 = D2, 1 = D3)
 //----------------------------------------------------------------------------------------------------
 
 #if((_D2_TMDS_SUPPORT == _ON) && (_D3_TMDS_SUPPORT == _ON))
 //--------------------------------------------------
 // Port select. The ScalerTMDSRx2* / Rx3* entry points set it; ISR-level entries restore the caller's value
 //--------------------------------------------------
-extern volatile BYTE __data isr_g_ucTMDSRxPort;
-#define RX_CUR                                          (isr_g_ucTMDSRxPort)
+extern volatile BYTE __data d_isr_g_ucTMDSRxPort;
+#define RX_CUR                                          (d_isr_g_ucTMDSRxPort)
 #define RXSEL(x2, x3)                                   (RX_CUR ? (x3) : (x2))
 #define RXSTMT(s2, s3)                                  if(RX_CUR) { s3; } else { s2; }
 #define RXA(usAddr)                                     ((WORD)(usAddr) + ((WORD)RX_CUR << 8))

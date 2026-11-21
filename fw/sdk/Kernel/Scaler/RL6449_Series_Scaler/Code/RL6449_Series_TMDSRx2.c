@@ -13,7 +13,7 @@
 /********************************************************************************/
 
 //----------------------------------------------------------------------------------------------------
-// ID Code      : RL6449_Series_TMDSRx2.c No.0000 (shared Rx2/Rx3 body, port = isr_g_ucTMDSRxPort; Rx3 wrappers: RL6449_Series_TMDSRx3.c)
+// ID Code      : RL6449_Series_TMDSRx2.c No.0000 (shared Rx2/Rx3 body, port = d_isr_g_ucTMDSRxPort; Rx3 wrappers: RL6449_Series_TMDSRx3.c)
 // Update Note  :
 //----------------------------------------------------------------------------------------------------
 
@@ -49,7 +49,7 @@
 //****************************************************************************
 // VARIABLE DECLARATIONS
 //****************************************************************************
-volatile BYTE __data isr_g_ucTMDSRxPort;
+volatile BYTE __data d_isr_g_ucTMDSRxPort;
 StructTMDSCtrlInfo g_stTMDSRx2CtrlInfo;
 volatile bit d_g_bTMDSRx2HDMI2RREnable = _FALSE;
 volatile bit d_isr_g_bTMDSRx2HDMI2HighSpeedMode = _FALSE;
