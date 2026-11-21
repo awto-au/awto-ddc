@@ -23,7 +23,7 @@ RL6449_Series_FRC	0xd700	2001	62
 diag	0xd700	2063	54
 awto_arith_arith	0xd700	2117	50
 ScalerSync	0xd700	2167	48
-monitor	0xd700	2215	48
+monitor	0xd700	2215	35
 text_layer	0xd700	2263	46
 qc_osd	0xd700	2309	39
 awto_settings_vcp	0xd700	2348	38
@@ -35,7 +35,7 @@ RTD2014UserInterfaceCec	0xd700	2526	28
 SysSource	0xd700	2554	27
 UserCommonInterface	0xd700	2581	27
 delaycal	0xd700	2608	27
-wdt	0xd700	2635	26
+wdt	0xd700	2635	22
 flash_io	0xd700	2661	25
 saver	0xd700	2686	25
 ScalerMemory	0xd700	2711	24
@@ -129,7 +129,7 @@ SysCec	0xe580	132	1
 __ovl	0xe580	133	1
 flash_screen	0xe580	134	1
 RL6449_Series_DPRx1	0xe580	135	95
-sync	0xe780	37	716
+sync	0xe780	37	715
 asteroids	0xe780	753	515
 ScalerCommonDebug	0xe780	1268	363
 awto_settings_settings	0xe780	1631	326

@@ -1377,17 +1377,17 @@ void AwtoSyncEdidOn(void)                           // ScalerMcuDdcRamEnable: th
     AwtoSyncPushQuiet(AWTO_SYNC_EV_HPD, 2, AwtoHpdPins());
 }
 
-static __xdata WORD s_usEdidT0;
+static __xdata BYTE s_ucEdidT0;                    // AwtoMs low byte at the load start (the load is a few ms)
 
 void AwtoSyncEdidLoad(BYTE ucEnd)                   // SysPowerInitial around the EDID SRAM write (#289: load vs HPD)
 {
     if(ucEnd == 0)
     {
-        s_usEdidT0 = (WORD)AwtoMs();
+        s_ucEdidT0 = (BYTE)AwtoMs();
         AwtoSyncPushQuiet(AWTO_SYNC_EV_HPD, 3, AwtoHpdPins());
         return;
     }
-    AwtoSyncPushQuiet(AWTO_SYNC_EV_HPD, 4, (WORD)((WORD)AwtoMs() - s_usEdidT0));
+    AwtoSyncPushQuiet(AWTO_SYNC_EV_HPD, 4, (BYTE)((BYTE)AwtoMs() - s_ucEdidT0));
 }
 
 void AwtoEdidPoll(void)                             // awake: every EDID read by a source is a log line (power saving: the wake lines)

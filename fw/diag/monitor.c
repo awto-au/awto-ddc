@@ -10,7 +10,7 @@ static __xdata BYTE s_ucMonBeat;                // samples since the last heartb
 static __xdata BYTE s_pucMonAdc[4];             // last logged
 static __xdata WORD s_usMonTrim;
 static __xdata BYTE s_ucMonPoke;
-static __xdata WORD s_usMonGap;                // longest gap logged, 0.1 ms
+static __xdata BYTE s_ucMonGap;                // longest gap logged, 1 ms (saturates at 255)
 static __xdata BYTE s_ucMonStack;
 
 static BYTE AwtoMonMoved(BYTE ucA, BYTE ucB, BYTE ucStep)
@@ -97,10 +97,10 @@ void AwtoMonSample(void)
         AwtoSyncPush(AWTO_SYNC_EV_MON, AWTO_MON_EV_TRIM, usTrim);
         ucLog++;
     }
-    if((ucBeat != 0) || (g_stAwtoMon.ucMaxPoke != s_ucMonPoke) || (usGap >= s_usMonGap + AWTO_MON_GAP_STEP))
+    if((ucBeat != 0) || (g_stAwtoMon.ucMaxPoke != s_ucMonPoke) || ((usGap / AWTO_MON_GAP_STEP) >= (WORD)s_ucMonGap + 1))
     {
         s_ucMonPoke = g_stAwtoMon.ucMaxPoke;
-        s_usMonGap = usGap;
+        s_ucMonGap = ((usGap / AWTO_MON_GAP_STEP) > 255) ? 255 : (BYTE)(usGap / AWTO_MON_GAP_STEP);
         AwtoSyncPush(AWTO_SYNC_EV_MON, AWTO_MON_EV_LOOP, ((DWORD)usLoop << 16) | usGap);
         ucLog++;
     }
