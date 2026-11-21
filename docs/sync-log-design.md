@@ -62,3 +62,4 @@ Existing sync lines stay (C1 / C6 / C2 / F0..F4 / FC / system machine); the new 
 - Per episode a re-sync without a mode change through NO SIGNAL (receiver glitch inside ACTIVE) writes no second DONE.
 - `PHY` time and `scan ok` belong to the port the search visited last before ACTIVE.
 - DP trainings count TP1 starts: a source that retrains with a new TP1 write counts each; one counted by the EXINT even before the main loop saw it.
+- A wake search that ends in POWER SAVING writes no FAILED line: the system line `wake search found no source` states it (a FAILED line there splits the system transition from its LED line: panel_sim LED gate).
