@@ -56,6 +56,7 @@ volatile WORD isr_g_usTMDSRx2ClkCount;
 volatile WORD isr_g_usTMDSRx2PhyCount;
 volatile WORD isr_g_usTMDSRx2PhyClk;
 volatile BYTE isr_g_ucTMDSRx2PhyPend;
+BYTE g_ucTMDSPhyLong;
 
 volatile BYTE g_pucTMDSRx2LEMax[3];
 volatile BYTE g_pucTMDSRx2LEMin[3];
@@ -761,6 +762,8 @@ void ScalerTMDSRx2SetPhy_EXINT0(void)
 
     BYTE ucIcp = 0;
 
+    AWTO_PHY_START(2, (usPixClk <= 2000) ? 0 : ((usPixClk <= 3400) ? 1 : 2));
+
     //////////////
     // CDR Mode //
     //////////////
@@ -1399,7 +1402,7 @@ void ScalerTMDSRx2SetPhy_EXINT0(void)
         ScalerSetBit_EXINT(P7B_2A_ANA_CDR_00, ~_BIT7, _BIT7);
 
         // Waiting for FLD Lock Band
-        DELAY_XUS_EXINT(360);
+        AWTO_PHY_FLD_WAIT(360);
 
         // [7] cmu_en = 1'b1 --> Enable CMU PLL
         ScalerSetBit_EXINT(P7B_1B_CMU_01, ~_BIT7, _BIT7);
@@ -1408,7 +1411,7 @@ void ScalerTMDSRx2SetPhy_EXINT0(void)
         ScalerSetByte_EXINT(P7B_38_TMDS_RESET, 0xFF);
 
         // Waiting for CMU Stable
-        DELAY_XUS_EXINT(150);
+        AWTO_PHY_CMU_WAIT(150);
 
         // [0] en_clkout_manual = 1 --> Enable Clkout
         ScalerSetBit_EXINT(P7B_0E_SDM_03, ~_BIT0, _BIT0);
@@ -1611,13 +1614,16 @@ void ScalerTMDSRx2SetPhy_EXINT0(void)
         ScalerSetByte_EXINT(P7B_C1_L2_DFE_EN_2, 0xDF);
 
         // Waiting for VCO Stable & DFE Adaptation
-        DELAY_XUS_EXINT(360);
+        AWTO_PHY_FLD_WAIT(360);
 
 #if(_INPUTCLOCK_RANG_DVI >= 3400)
         // Delay 2.9ms due to RLE0638 is unscrambled source.
-        DELAY_XUS_EXINT(1000);
-        DELAY_XUS_EXINT(1000);
-        DELAY_XUS_EXINT(900);
+        if(AWTO_PHY_LONG_BLOCK())
+        {
+            DELAY_XUS_EXINT(1000);
+            DELAY_XUS_EXINT(1000);
+            DELAY_XUS_EXINT(900);
+        }
 #endif
 
         // Start to Record Tap0/Tap1 Max/Min
@@ -2103,6 +2109,21 @@ void ScalerTMDSRx2PhySetDeferred(void)
         }
 #else
         ScalerTMDSRx2SetPhy_EXINT0();
+        AWTO_PHY_MARK();
+        {
+            BYTE ucCdr = ScalerTMDSRx2CheckCDRStable_EXINT0(isr_g_usTMDSRx2ClkCount);
+
+            // 4K60 (> 340 MHz): the 2.9 ms unscrambled-source block runs only when the first CDR check fails
+            if((ucCdr == _FALSE) && (GET_INPUT_PIXEL_CLK() > 3400))
+            {
+                g_ucTMDSPhyLong = _TRUE;
+                ScalerTMDSRx2SetPhy_EXINT0();
+                g_ucTMDSPhyLong = _FALSE;
+                AWTO_PHY_RETRY();
+                ucCdr = ScalerTMDSRx2CheckCDRStable_EXINT0(isr_g_usTMDSRx2ClkCount);
+            }
+            AWTO_PHY_END(ucCdr);
+        }
 #endif
     }
 

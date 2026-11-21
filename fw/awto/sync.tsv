@@ -158,6 +158,12 @@ FA	02	n	EDID channels on:HPD pin mask % (bit0 = D1)	timing
 E8	01	n	OSD SRAM probe done:% addresses written and read back from M1 / M2 on the MCU, results in g_stAwtoOsdProbe
 E8	03	-	OSD SRAM probe refused:the OSD is on	warning
 EA	*	mon	monitor: %
+EC	02	x	TMDS PHY probe D2:set-up us << 16 | pixel clock 0.1 MHz = %
+EC	12	x	TMDS PHY probe D2:adp_en x3 us << 16 | ckrdy us (FLD wait, FFFF = never) = %
+EC	22	x	TMDS PHY probe D2:CMU-wait ckrdy us << 16 | path << 8 | adp end << 4 | ckrdy end << 2 | skip << 1 | CDR ok = %
+EC	03	x	TMDS PHY probe D3:set-up us << 16 | pixel clock 0.1 MHz = %
+EC	13	x	TMDS PHY probe D3:adp_en x3 us << 16 | ckrdy us (FLD wait, FFFF = never) = %
+EC	23	x	TMDS PHY probe D3:CMU-wait ckrdy us << 16 | path << 8 | adp end << 4 | ckrdy end << 2 | skip << 1 | CDR ok = %
 E9	01	n	OSD demo #215 window %:x0 = x1 (vertical, zero width) at x 100, y 40..140
 E9	11	n	OSD demo gradient window %:horizontal, no R / G / B enabled (flat)
 E9	15	n	OSD demo gradient window %:vertical, G up, step 4, level 5

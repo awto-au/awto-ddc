@@ -887,6 +887,35 @@ extern void AwtoWaitPump(void);       // #216: Get-VCP / capabilities answered i
 extern volatile unsigned char isr_g_ucTMDSRx2PhyPend, isr_g_ucTMDSRx3PhyPend;
 extern void ScalerTMDSPhySetDeferred(void);
 #define AWTO_TMDS_PHY_PUMP()                                    { if(((isr_g_ucTMDSRx2PhyPend | isr_g_ucTMDSRx3PhyPend) != 0) && (SP <= AWTO_PUMP_SP_MAX)) { ScalerTMDSPhySetDeferred(); } }
+extern BYTE g_ucTMDSPhyLong;          // 1 = SetPhy runs the 2.9 ms unscrambled-source block (retry after a failed CDR check)
+#ifndef AWTO_TMDS_PHY_PROBE
+#define AWTO_TMDS_PHY_PROBE                                     0       // 1 = test image: per-lock PHY set-up timing to the sync ring (fw/diag/phyprobe.c)
+#endif
+#if(AWTO_TMDS_PHY_PROBE != 0)
+#define AWTO_SYNC_EV_PHYT                                       0xEC    // test only: PHY set-up timing, arg = kind << 4 | port (sync.tsv)
+extern __xdata unsigned char g_ucPhyProbeSkip;
+extern void AwtoPhyProbeStart(unsigned char ucPort, unsigned char ucPath);
+extern void AwtoPhyProbeWait(unsigned char ucKind);
+extern bit AwtoPhyProbeSkip(void);
+extern void AwtoPhyProbeMark(void);
+extern void AwtoPhyProbeRetry(void);
+extern void AwtoPhyProbeEnd(unsigned char ucCdrOk);
+#define AWTO_PHY_START(port, path)                              AwtoPhyProbeStart((port), (path))
+#define AWTO_PHY_MARK()                                         AwtoPhyProbeMark()
+#define AWTO_PHY_END(cdr)                                       AwtoPhyProbeEnd(cdr)
+#define AWTO_PHY_FLD_WAIT(us)                                   AwtoPhyProbeWait(0)
+#define AWTO_PHY_CMU_WAIT(us)                                   AwtoPhyProbeWait(1)
+#define AWTO_PHY_LONG_BLOCK()                                   ((g_ucTMDSPhyLong != _FALSE) || (AwtoPhyProbeSkip() == _FALSE))
+#define AWTO_PHY_RETRY()                                        AwtoPhyProbeRetry()
+#else
+#define AWTO_PHY_START(port, path)
+#define AWTO_PHY_MARK()
+#define AWTO_PHY_END(cdr)
+#define AWTO_PHY_FLD_WAIT(us)                                   DELAY_XUS_EXINT(us)
+#define AWTO_PHY_CMU_WAIT(us)                                   DELAY_XUS_EXINT(us)
+#define AWTO_PHY_LONG_BLOCK()                                   (g_ucTMDSPhyLong != _FALSE)
+#define AWTO_PHY_RETRY()
+#endif
 #if(_AWTO_DDCCI_NOPOLL == 1)
 #define AWTO_DDCCI_POLL()                                       // bisect: engine __code linked, never called
 #define AWTO_WAIT_PUMP()
