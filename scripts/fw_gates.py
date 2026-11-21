@@ -117,7 +117,7 @@ SKIP_IF_MISSING = {      # gate -> map symbols the image must define, else SKIP 
 
 
 for _k in ("keys", "wdt", "wake", "crash", "monitor", "conwrap"):       # the extensive twin of a gate has its limit and its image requirements
-    SKIP_IF_MISSING[_k + "_full"] = SKIP_IF_MISSING[_k] if _k in SKIP_IF_MISSING else ()
+    SKIP_IF_MISSING[_k + "_full"] = SKIP_IF_MISSING.get(_k, ())
     LIMIT_OF[_k + "_full"] = LIMIT_OF.get(_k, LIMIT_S)
 LIMIT_OF["crash"] = LIMIT_OF["crash_full"] = 60
 SKIP_IF_MISSING["monitor_real"] = SKIP_IF_MISSING["monitor"]

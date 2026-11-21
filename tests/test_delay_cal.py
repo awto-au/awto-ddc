@@ -42,6 +42,6 @@ def test_not_run():
 
 
 def test_djnz_model():
-    # mov d,d (3) + 26 x djnz d,r (3) = 81: the Keil reference loop
-    assert D.pattern_cycles("single", 26, 26, 0) == 81
-    assert D.static_cycles(bytes([0x85, 0x08, 0x0A, 0xD5, 0x0A, 0xFD])) + 3 * 25 == 81
+    # mov R7,d (2) + 26 x djnz R7,r (3) = 80
+    assert D.pattern_cycles("single", 26, 26, 0) == 80
+    assert D.static_cycles(bytes([0xAF, 0x08, 0xDF, 0xFE])) + 3 * 25 == 79      # static: 2 B djnz counted 2, loop = 26 passes

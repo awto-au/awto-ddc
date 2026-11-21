@@ -292,7 +292,7 @@ def write_vectors(bank_dir: Path, required: dict | None = None):
         sys.exit(f"vectors: {e}")
     (bank_dir / "awto_vectors.asm").write_text("\n".join(lines) + "\n")
     run("bank", [T.tool("sdas8051"), "-plosgffw", bank_dir / "awto_vectors.rel", bank_dir / "awto_vectors.asm"])
-    log("vectors: " + ", ".join(f"0x{3 + 8 * n:x} {isr[n] if n in isr else 'reti'}{' [required]' if n in required else ''}" for n in range(VEC_COUNT)))
+    log("vectors: " + ", ".join(f"0x{3 + 8 * n:x} {isr.get(n, 'reti')}{' [required]' if n in required else ''}" for n in range(VEC_COUNT)))
 
 
 def parse_ihx(p: Path) -> dict:

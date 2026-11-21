@@ -28,9 +28,9 @@ def test_counts_at_every_clock_state():
 
 
 def test_counts_are_what_the_sim_measured():
-    assert DA.counts(350791 // 4) == (27, 21)       # docs/delay-audit.md, delay_sim.py at 87.7 MHz: hot 101 % / 104 %
-    assert DA.counts(350791 // 2) == (54, 43)       # at 175.4 MHz: hot 100 % / 102 %
-    assert DA.counts(350791) == (109, 87)           # at 350.8 MHz (default)
+    assert DA.counts(350791 // 4) == (36, 28)       # formula at 12 clk per count, 87.7 MHz
+    assert DA.counts(350791 // 2) == (73, 57)       # 175.4 MHz
+    assert DA.counts(350791) == (146, 116)          # 350.8 MHz (default)
 
 
 def test_no_runtime_calibration_left():
