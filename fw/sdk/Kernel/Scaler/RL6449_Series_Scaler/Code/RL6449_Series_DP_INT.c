@@ -88,7 +88,7 @@ BYTE ScalerDpAuxJudgeHandler_EXINT0(void)
 
             SET_DP_RX0_PS_AUX_TOGGLE();
 
-            IP = 0xA0;
+            IP = AWTO_IP_NORMAL;
 
             // DPCD 022xxh Into INT
             if(ScalerGetBit_EXINT(PB7_FB_DUMMY_1, (_BIT7 | _BIT6)) != (_BIT7 | _BIT6))
@@ -499,7 +499,7 @@ BYTE ScalerDpAuxJudgeHandler_EXINT0(void)
 
             SET_DP_RX1_PS_AUX_TOGGLE();
 
-            IP = 0xA0;
+            IP = AWTO_IP_NORMAL;
 
             // DPCD 022xxh Into INT
             if(ScalerGetBit_EXINT(PBA_FB_DUMMY_1, (_BIT7 | _BIT6)) != (_BIT7 | _BIT6))

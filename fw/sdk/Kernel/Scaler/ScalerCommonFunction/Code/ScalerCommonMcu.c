@@ -365,6 +365,8 @@ BYTE ScalerMcuDdcciGetInputPort_EXINT1(void)
 //--------------------------------------------------
 BYTE ScalerMcuDdcciIntGetData_EXINT1(BYTE *pucReadArray)
 {
+    BYTE ucIdx;
+
     // Get DDC-CI Source Address
     if((MCU_FF27_IIC_STATUS & _BIT1) == _BIT1)
     {
@@ -1130,7 +1132,7 @@ BYTE ScalerMcuDdcciIntGetData_EXINT1(BYTE *pucReadArray)
 
                 g_ucDdcciCountEXINT = 0;
 
-                for(pData_EXINT[0] = 32; pData_EXINT[0] > 0; pData_EXINT[0] --)
+                for(ucIdx = 32; ucIdx > 0; ucIdx --)
                 {
                     MCU_FF26_IIC_DATA_OUT = 0;
                 }

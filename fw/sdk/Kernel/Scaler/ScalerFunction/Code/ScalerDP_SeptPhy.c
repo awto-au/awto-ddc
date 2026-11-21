@@ -777,7 +777,7 @@ void ScalerDpLowPowerProc(void)
         // Disable GDI Bandgap
         ScalerGDIPhyBandgap(_OFF);
 #endif
-        IP = 0x81;
+        IP = AWTO_IP_PS_WINDOW;
 
         CLR_DP_RX0_PS_AUX_TOGGLE();
 
@@ -827,7 +827,7 @@ void ScalerDpLowPowerProc(void)
         ScalerGDIPhyBandgap(_OFF);
 #endif
 
-        IP = 0x81;
+        IP = AWTO_IP_PS_WINDOW;
 
         CLR_DP_RX0_PS_AUX_TOGGLE();
 
@@ -870,7 +870,7 @@ void ScalerDpLowPowerProc(void)
         ScalerGDIPhyBandgap(_OFF);
 #endif
 
-        IP = 0x81;
+        IP = AWTO_IP_PS_WINDOW;
 
         CLR_DP_RX1_PS_AUX_TOGGLE();
 

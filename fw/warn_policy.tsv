@@ -175,8 +175,8 @@
 ^unreachable code$	Kernel/Scaler/ScalerFunction/Code/ScalerCec.c	502	ok	OK-CONFIG: CEC gen type 0 has no destination register (ucDestLa = 0xFF): the main-loop polling receive body is dead, the interrupt path receives (docs/cec.md)
 ^conditional flow changed by optimizer	Kernel/Scaler/ScalerFunction/Code/ScalerCec.c	558	ok	OK-HARMLESS: CEC gen type 0: ucDestLa is the constant _CEC_LA_TV, the || is always true
 ^conditional flow changed by optimizer	Kernel/Scaler/ScalerFunction/Code/ScalerCec.c	559	ok	OK-HARMLESS: CEC gen type 0: ucDestLa is the constant _CEC_LA_TV, the || is always true
-^pointer target lost volatile qualifier	Kernel/Scaler/ScalerFunction/Code/ScalerCec.c	781	ok	OK-HARMLESS: memset / memcpy of CEC state the interrupt fills only while the analysing flag is clear (SDK handshake)
-^pointer target lost volatile qualifier	Kernel/Scaler/ScalerFunction/Code/ScalerCec.c	848	ok	OK-HARMLESS: memset / memcpy of CEC state the interrupt fills only while the analysing flag is clear (SDK handshake)
+^pointer target lost volatile qualifier	Kernel/Scaler/ScalerFunction/Code/ScalerCec.c	785	ok	OK-HARMLESS: memset / memcpy of CEC state the interrupt fills only while the analysing flag is clear (SDK handshake)
+^pointer target lost volatile qualifier	Kernel/Scaler/ScalerFunction/Code/ScalerCec.c	852	ok	OK-HARMLESS: memset / memcpy of CEC state the interrupt fills only while the analysing flag is clear (SDK handshake)
 ^pointer target lost volatile qualifier	Kernel/User Common Function/Code/UserCommonCec.c	73	ok	OK-HARMLESS: clear of the CEC RX struct after its frame was handled; the analysing flag is set first, so the interrupt writes the backup FIFO meanwhile (see the ScalerCec.c rows)
 ^pointer target lost volatile qualifier	Kernel/Scaler/ScalerFunction/Code/ScalerCec.c	279	ok	OK-HARMLESS: same handshake: the backup FIFO is read out into the RX struct while the analysing flag is clear and the interrupt is not writing it
 ^conditional flow changed by optimizer	Kernel/Scaler/ScalerFunction/Code/ScalerCec.c	481	ok	OK-CONFIG: CEC gen type 0: ucDestLa = 0xFF makes the polling-mode receive dead, the interrupt path receives (docs/cec.md)

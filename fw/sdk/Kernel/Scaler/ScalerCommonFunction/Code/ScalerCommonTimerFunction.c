@@ -2427,14 +2427,16 @@ bit ScalerTimerSearchActiveTimerEvent(EnumScalerTimerEventID enumEventID)
 //--------------------------------------------------
 void ScalerTimerCancelTimerEvent_EXINT0(EnumScalerTimerEventID enumEventID)
 {
+    BYTE ucIdx;
+
     // Search for Existing Event with the same Event ID
-    for(pData_EXINT[0] = 0; pData_EXINT[0] < _TIMER_EVENT_COUNT; pData_EXINT[0]++)
+    for(ucIdx = 0; ucIdx < _TIMER_EVENT_COUNT; ucIdx++)
     {
-        if(GET_EVENT_VALID(pData_EXINT[0]) == _TRUE)
+        if(GET_EVENT_VALID(ucIdx) == _TRUE)
         {
-            if(GET_EVENT_ID(pData_EXINT[0]) == enumEventID)
+            if(GET_EVENT_ID(ucIdx) == enumEventID)
             {
-                CLR_EVENT_VALID(pData_EXINT[0]);
+                CLR_EVENT_VALID(ucIdx);
                 return;
             }
         }
@@ -2450,14 +2452,16 @@ void ScalerTimerCancelTimerEvent_EXINT0(EnumScalerTimerEventID enumEventID)
 //--------------------------------------------------
 void ScalerTimerCancelTimerEvent_EXINT1(EnumScalerTimerEventID enumEventID)
 {
+    BYTE ucIdx;
+
     // Search for Existing Event with the same Event ID
-    for(pData_EXINT[0] = 0; pData_EXINT[0] < _TIMER_EVENT_COUNT; pData_EXINT[0]++)
+    for(ucIdx = 0; ucIdx < _TIMER_EVENT_COUNT; ucIdx++)
     {
-        if(GET_EVENT_VALID(pData_EXINT[0]) == _TRUE)
+        if(GET_EVENT_VALID(ucIdx) == _TRUE)
         {
-            if(GET_EVENT_ID(pData_EXINT[0]) == enumEventID)
+            if(GET_EVENT_ID(ucIdx) == enumEventID)
             {
-                CLR_EVENT_VALID(pData_EXINT[0]);
+                CLR_EVENT_VALID(ucIdx);
                 return;
             }
         }

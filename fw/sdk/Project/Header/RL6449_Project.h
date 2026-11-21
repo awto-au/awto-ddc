@@ -478,6 +478,9 @@ extern void AwtoCpuSuiteMain(void);
 #else
 #define AWTO_CPUS_ISR(ucVec)
 #endif
+// Interrupt priority (IP), named policy values, docs/watchdog.md "IP in the power-saving window": bit 7 = WD warning (high), bit 5 = Timer2, bit 0 = EXINT0.
+#define AWTO_IP_NORMAL                                          0xA0    // WD warning + Timer2 high, EXINT0 low
+#define AWTO_IP_PS_WINDOW                                       0x81    // WD warning + EXINT0 high, Timer2 low (DP AUX handling in power saving)
 // #138: WD-timer protocol events on Timer0 (fw/timer/t0ev.c)
 extern void AwtoT0EvIsr(void);
 extern void AwtoT0EvClock(void);

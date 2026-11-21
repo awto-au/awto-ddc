@@ -588,6 +588,8 @@ void ScalerCecRxMsgReceiving_EXINT0(void)
 //--------------------------------------------------
 void ScalerCecRxWriteIntoBackupFifo_EXINT0(void)
 {
+    BYTE ucIdx;
+
 #if(_HW_HDMI_CEC_GEN == _HW_CEC_GEN_TYPE_2)
     BYTE ucHbInfo = ScalerGetByte_EXINT(P18_E3_CEC_RX_FIFO_RSV_0);
 #else
@@ -607,9 +609,9 @@ void ScalerCecRxWriteIntoBackupFifo_EXINT0(void)
     isr_g_pucCecRxBackupFifo[isr_g_ucCecRxBackupFifoWaterLevel] = ScalerGetBit_EXINT(P18_B1_CEC1_RXCR0_2, (_BIT4 | _BIT3 | _BIT2 | _BIT1 | _BIT0));
     isr_g_pucCecRxBackupFifo[isr_g_ucCecRxBackupFifoWaterLevel + 1] = ucHbInfo;
 
-    for(pData_EXINT[0] = 0; pData_EXINT[0] < isr_g_pucCecRxBackupFifo[isr_g_ucCecRxBackupFifoWaterLevel]; pData_EXINT[0]++)
+    for(ucIdx = 0; ucIdx < isr_g_pucCecRxBackupFifo[isr_g_ucCecRxBackupFifoWaterLevel]; ucIdx++)
     {
-        isr_g_pucCecRxBackupFifo[isr_g_ucCecRxBackupFifoWaterLevel + 2 + pData_EXINT[0]] = ScalerGetByte_EXINT(P18_D3_CEC1_RXDR1_1 + pData_EXINT[0]);
+        isr_g_pucCecRxBackupFifo[isr_g_ucCecRxBackupFifoWaterLevel + 2 + ucIdx] = ScalerGetByte_EXINT(P18_D3_CEC1_RXDR1_1 + ucIdx);
     }
 
     isr_g_ucCecRxBackupFifoWaterLevel += (ScalerGetBit_EXINT(P18_B1_CEC1_RXCR0_2, (_BIT4 | _BIT3 | _BIT2 | _BIT1 | _BIT0)) + 2);
@@ -623,6 +625,8 @@ void ScalerCecRxWriteIntoBackupFifo_EXINT0(void)
 //--------------------------------------------------
 void ScalerCecRxWriteIntoRxInfoStruct_EXINT0(void)
 {
+    BYTE ucIdx;
+
     // Fill CEC RX Info into xdata
     isr_g_stCecRxReceivedInfo.ucDbLength = ScalerGetBit_EXINT(P18_B1_CEC1_RXCR0_2, (_BIT4 | _BIT3 | _BIT2 | _BIT1 | _BIT0));
 
@@ -637,9 +641,9 @@ void ScalerCecRxWriteIntoRxInfoStruct_EXINT0(void)
     {
         isr_g_stCecRxReceivedInfo.ucDbLength = 16;
     }
-    for(pData_EXINT[0] = 0; pData_EXINT[0] < isr_g_stCecRxReceivedInfo.ucDbLength; pData_EXINT[0]++)
+    for(ucIdx = 0; ucIdx < isr_g_stCecRxReceivedInfo.ucDbLength; ucIdx++)
     {
-        isr_g_stCecRxReceivedInfo.pucReceivedDb[pData_EXINT[0]] = ScalerGetByte_EXINT(P18_D3_CEC1_RXDR1_1 + pData_EXINT[0]);
+        isr_g_stCecRxReceivedInfo.pucReceivedDb[ucIdx] = ScalerGetByte_EXINT(P18_D3_CEC1_RXDR1_1 + ucIdx);
     }
 
     SET_CEC_RX_READ_DONE();

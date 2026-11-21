@@ -489,7 +489,7 @@ void ScalerDpPowerSwitch(EnumPowerAction enumPowerAction)
             ScalerSetByte(PBC_53_DP_INFO_FM_RSV0, _SPD_INFO_TYPE);
 
 #endif
-            IP = 0xA0;
+            IP = AWTO_IP_NORMAL;
 
             break;
 

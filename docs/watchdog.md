@@ -99,6 +99,10 @@
   ASSUMED: CNT1 counts CNT3 wraps in timer mode as in normal mode.
 - Power-saving IP = 0x81: EXINT0 high. A stuck EXINT0 is then not preempted by the WDT IRQ (same level): hardware reset at 1171.8 ms, no
   capture (sim: prio_wdt_preempts).
+- IP policy values (`RL6449_Project.h`): `AWTO_IP_NORMAL` 0xA0 (WD warning + Timer2 high), `AWTO_IP_PS_WINDOW` 0x81 (WD warning + EXINT0 high);
+  set by the DP AUX code (`ScalerDP_SeptPhy.c`, `RL6449_Series_DP.c`, `RL6449_Series_DP_INT.c`). Documented, not changed:
+  - in the 0x81 window the WD warning (high) cannot preempt EXINT0 (high): a stuck EXINT0 resets without crash capture
+  - Timer2 drops to low there: it waits for EXINT0 and Timer0 / EXINT1 order, a 1 ms tick can be late or lost while EXINT0 runs
 
 ## Bounded-loop audit (task 4)
 

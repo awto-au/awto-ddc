@@ -51,7 +51,7 @@
 10eb	Rx2	Kernel/Scaler/ScalerCommonFunction/Code/ScalerCommonSync.c:8035	Get Colorimetry EXT_YCC_ITUR_BT2020_NCL	0
 10f3	FS	Kernel/Scaler/ScalerFunction/Code/ScalerMemory.c:505	7.Calculated Max	1
 1108	Rx2	Kernel/Scaler/ScalerCommonFunction/Code/ScalerCommonSync.c:8107	Get YCC LIMIT RANGE	0
-1111	CEC	Kernel/Scaler/ScalerFunction/Code/ScalerCec.c:694	CEC TX HB Nack Happened!!	0
+1111	CEC	Kernel/Scaler/ScalerFunction/Code/ScalerCec.c:698	CEC TX HB Nack Happened!!	0
 116b	Rx4	Kernel/Scaler/ScalerCommonFunction/Code/ScalerCommonSync.c:9036	Get Pixel Repetition 8	0
 1192	Digital	Kernel/Scaler/ScalerFunction/Code/ScalerPLL.c:625	6. DPLL TBASE	1
 123b	Rx2	Kernel/Scaler/ScalerCommonFunction/Code/ScalerCommonSync.c:7749	Get Color Space YUV420	0
@@ -87,7 +87,7 @@
 193d	Rx3	Kernel/Scaler/ScalerCommonFunction/Code/ScalerCommonSync.c:8372	Get Pixel Repetition 0	0
 19a0	Audio	Kernel/Scaler/RL6449_Series_Scaler/Code/RL6449_Series_Audio.c:423	Audio D1: WatchDog	0
 1a13	Scaler	User/RTD Series/RTD2014Function/Code/RTD2014UserInterface.c:4227	ucIndex if Drr user define timing 	0
-1a1e	CEC	Kernel/Scaler/ScalerFunction/Code/ScalerCec.c:785	<= Cec Rx Read: DB	0
+1a1e	CEC	Kernel/Scaler/ScalerFunction/Code/ScalerCec.c:789	<= Cec Rx Read: DB	0
 1a4a	Rx2	Kernel/Scaler/RL6449_Series_Scaler/Code/RL6449_Series_TMDSRx2.c:4396	Pixel Repetition Not Received and not Pixel repetition 0	0
 1ad2	Rx0	Kernel/Scaler/ScalerCommonFunction/Code/ScalerCommonSync.c:6514	Get Color Space YUV422	0
 1ada	Rx1	Kernel/Scaler/ScalerCommonFunction/Code/ScalerCommonSync.c:7308	Get Colorimetry 709	0
@@ -230,7 +230,7 @@
 3e0d	Rx3	Kernel/Scaler/ScalerCommonFunction/Code/ScalerCommonSync.c:8534	Get Colorimetry Extended	0
 3e0d	Rx3	Kernel/Scaler/ScalerCommonFunction/Code/ScalerCommonSync.c:8567	Get Colorimetry Extended	0
 3e24	Rx0	Kernel/Scaler/ScalerCommonFunction/Code/ScalerCommonSync.c:6591	Get Pixel Repetition 8	0
-3e5d	Scaler	Kernel/Scaler/ScalerCommonFunction/Code/ScalerCommonMcu.c:2614	- IIC Write Time Out: Transmit	0
+3e5d	Scaler	Kernel/Scaler/ScalerCommonFunction/Code/ScalerCommonMcu.c:2616	- IIC Write Time Out: Transmit	0
 3f9c	Audio	Kernel/Scaler/RL6449_Series_Scaler/Code/RL6449_Series_Audio.c:1582	False : D1 DP Audio Tracking Disable	0
 3fb2	Rx5	Kernel/Scaler/ScalerCommonFunction/Code/ScalerCommonSync.c:9657	Get Pixel Repetition Error	0
 3fd3	FRC	Kernel/Scaler/ScalerFunction/Code/ScalerMDomain.c:1585	4. OD bit	1
@@ -321,12 +321,12 @@
 5816	Rx1	Kernel/Scaler/ScalerCommonFunction/Code/ScalerCommonDPRx1.c:2739	MST Fake Interlace	0
 5852	Rx1	Kernel/Scaler/ScalerCommonFunction/Code/ScalerCommonSync.c:7387	Get Colorimetry EXT_YCC_XVYCC601	0
 58b3	Rx5	Kernel/Scaler/ScalerCommonFunction/Code/ScalerCommonSync.c:9833	Get Colorimetry EXT_YCC_SYCC601	0
-592d	Scaler	Kernel/Scaler/ScalerCommonFunction/Code/ScalerCommonMcu.c:2411	- IIC Write Time Out: FIFO Clock	0
-592d	Scaler	Kernel/Scaler/ScalerCommonFunction/Code/ScalerCommonMcu.c:2512	- IIC Write Time Out: FIFO Clock	0
+592d	Scaler	Kernel/Scaler/ScalerCommonFunction/Code/ScalerCommonMcu.c:2413	- IIC Write Time Out: FIFO Clock	0
+592d	Scaler	Kernel/Scaler/ScalerCommonFunction/Code/ScalerCommonMcu.c:2514	- IIC Write Time Out: FIFO Clock	0
 5969	Rx5	Kernel/Scaler/ScalerCommonFunction/Code/ScalerCommonSync.c:9587	Get Pixel Repetition 0	0
 59b8	Audio	Kernel/System/Code/SysAudio.c:529	Sleep Audio Playback Index	0
 5a12	Rx0	Kernel/Scaler/ScalerCommonFunction/Code/ScalerCommonSync.c:6542	Get Pixel Repetition 1	0
-5a34	CEC	Kernel/Scaler/ScalerFunction/Code/ScalerCec.c:845	=> Cec Tx send: HB	0
+5a34	CEC	Kernel/Scaler/ScalerFunction/Code/ScalerCec.c:849	=> Cec Tx send: HB	0
 5b2f	Rx2	Kernel/Scaler/ScalerCommonFunction/Code/ScalerCommonSync.c:8168	Get RGB RANGE Error	0
 5b34	Scaler	Kernel/User Common Function/Code/UserCommonInterface.c:4506	MBR: Not Enough TCON for Toggle	0
 5b48	Scaler	Kernel/User Common Function/Code/UserCommonInterface.c:4328	MBR: Adim Adjust for constant	0
@@ -343,7 +343,7 @@
 5d6f	Audio	Kernel/Scaler/ScalerFunction/Code/ScalerAudio_SeptPhy.c:791	False : D2 AVMute	0
 5d7b	Rx5	Kernel/Scaler/ScalerCommonFunction/Code/ScalerCommonSync.c:9773	Get Colorimetry RGB_SRGB	0
 5d7b	Rx5	Kernel/Scaler/ScalerCommonFunction/Code/ScalerCommonSync.c:9781	Get Colorimetry RGB_SRGB	0
-5dcc	CEC	Kernel/Scaler/ScalerFunction/Code/ScalerCec.c:852	=> Cec Tx send: DB	0
+5dcc	CEC	Kernel/Scaler/ScalerFunction/Code/ScalerCec.c:856	=> Cec Tx send: DB	0
 5de8	Rx5	Kernel/Scaler/ScalerCommonFunction/Code/ScalerCommonSync.c:9594	Get Pixel Repetition 1	0
 5df1	Rx3	Kernel/Scaler/ScalerCommonFunction/Code/ScalerCommonSync.c:8736	Get RGB LIMIT RANGE	0
 5ea8	CheckMDomain	Kernel/Scaler/ScalerFunction/Code/ScalerMDomain.c:1860	Free Run Mode	1
@@ -378,7 +378,7 @@
 6590	System	Kernel/System/Code/SysSource.c:2317	7. Bingo Defautlt!!!!!!!	1
 6590	System	Kernel/System/Code/SysSource.c:2973	7. Bingo Defautlt!!!!!!!	1
 65b8	CEC	Kernel/Scaler/ScalerFunction/Code/ScalerCec.c:286	CEC0 RX Backup Fifo Finished	0
-65e7	CEC	Kernel/Scaler/ScalerFunction/Code/ScalerCec.c:687	CEC0 TX Line Error Happened!!	0
+65e7	CEC	Kernel/Scaler/ScalerFunction/Code/ScalerCec.c:691	CEC0 TX Line Error Happened!!	0
 6673	FRC	Kernel/Scaler/ScalerFunction/Code/ScalerFRC.c:683	-I_addr3 FRC	1
 672a	Rx0	Kernel/Scaler/ScalerCommonFunction/Code/ScalerCommonSync.c:7005	Ext Colorimetry Changed	0
 678f	Rx4	Kernel/Scaler/ScalerCommonFunction/Code/ScalerCommonSync.c:9112	Get Colorimetry YCC_SMPTE_170M	0
@@ -389,7 +389,7 @@
 6807	Rx4	Kernel/Scaler/ScalerCommonFunction/Code/ScalerCommonSync.c:9413	Colorimetry Changed	0
 6839	Audio	Kernel/Scaler/ScalerFunction/Code/ScalerAudio_SeptPhy.c:1964	D4 Aduio Test Off	0
 6877	Rx2	Kernel/Scaler/ScalerCommonFunction/Code/ScalerCommonSync.c:8099	Get YCC FULL RANGE	0
-68b5	CEC	Kernel/Scaler/ScalerFunction/Code/ScalerCec.c:715	CEC TX has been Nack	0
+68b5	CEC	Kernel/Scaler/ScalerFunction/Code/ScalerCec.c:719	CEC TX has been Nack	0
 68c3	Rx1	Kernel/Scaler/ScalerCommonFunction/Code/ScalerCommonDPRx1.c:2540	MST Current Link Clk	0
 6932	Rx1	Kernel/Scaler/ScalerFunction/Code/ScalerDPRx1_SeptPhy.c:5383	7. DP HDCP Check Fail	0
 6a68	Scaler	Kernel/Scaler/ScalerFunction/Code/ScalerMDomain.c:1939	Accuracy IHF	0
@@ -408,14 +408,14 @@
 6d4c	System	Kernel/System/Code/SysSource.c:1510	7. Source Judge HP Case	1
 6d7b	Rx1	Kernel/Scaler/ScalerCommonFunction/Code/ScalerCommonDPRx1.c:1527	_COLORIMETRY_EXT_YCC_ITUR_BT601	0
 6db7	FRC	Kernel/Scaler/ScalerFunction/Code/ScalerMDomain.c:1624	4.OD use BW	1
-6df3	Scaler	Kernel/Scaler/ScalerCommonFunction/Code/ScalerCommonMcu.c:2584	- IIC Write Time Out: Burst Mode	0
+6df3	Scaler	Kernel/Scaler/ScalerCommonFunction/Code/ScalerCommonMcu.c:2586	- IIC Write Time Out: Burst Mode	0
 6dfd	Check	Kernel/Scaler/ScalerFunction/Code/ScalerDisplayDPTx.c:2743	eDP Tx2 LT2 Lane or PN Fail	1
 6e46	Rx1	Kernel/Scaler/ScalerFunction/Code/ScalerDPRx1_SeptPhy.c:4208	7. IIIIIInterLace Vtotal	0
 6e77	Audio	Kernel/Scaler/ScalerFunction/Code/ScalerAudio_SeptPhy.c:798	False : D2 HDMI Audio Tracking Disable	0
 6eb6	Audio	Kernel/Scaler/ScalerFunction/Code/ScalerAudio_SeptPhy.c:758	D2 Audio Tracking Disable	0
 6f26	Rx3	Kernel/Scaler/RL6449_Series_Scaler/Code/RL6449_Series_TMDSRx3.c:3087	TMDS clk	0
 6f2a	Rx5	Kernel/Scaler/ScalerCommonFunction/Code/ScalerCommonSync.c:9817	Get Colorimetry EXT_YCC_XVYCC601	0
-6f80	CEC	Kernel/Scaler/ScalerFunction/Code/ScalerCec.c:701	CEC TX DB Nack Happened!!	0
+6f80	CEC	Kernel/Scaler/ScalerFunction/Code/ScalerCec.c:705	CEC TX DB Nack Happened!!	0
 6fbb	System	Kernel/System/Code/SysJudge.c:779	Input Timing VFreq	1
 7020	System	Kernel/System/Code/SysSource.c:5440	Background source judge!!	1
 7083	Rx0	Kernel/Scaler/ScalerCommonFunction/Code/ScalerCommonSync.c:6869	Get YCC FULL RANGE	0
@@ -548,7 +548,7 @@
 93f3	Rx4	Kernel/Scaler/ScalerCommonFunction/Code/ScalerCommonSync.c:9235	Get Colorimetry EXT_YCC_ADOBEYCC601	0
 9408	Rx1	Kernel/Scaler/ScalerCommonFunction/Code/ScalerCommonSync.c:7667	YCC Quantization Range Changed	0
 9441	Rx3	Kernel/Scaler/RL6449_Series_Scaler/Code/RL6449_Series_TMDSRx3.c:3088	Color Depth	0
-9442	CEC	Kernel/Scaler/ScalerFunction/Code/ScalerCec.c:678	CEC TX has been Ack	0
+9442	CEC	Kernel/Scaler/ScalerFunction/Code/ScalerCec.c:682	CEC TX has been Ack	0
 9549	Rx3	Kernel/Scaler/ScalerCommonFunction/Code/ScalerCommonSync.c:8407	Get Pixel Repetition 5	0
 956f	Rx1	Kernel/Scaler/ScalerCommonFunction/Code/ScalerCommonDPRx1.c:1000	7. Frame[N + 1] VBS2BS Counter	0
 9595	System	Kernel/System/Code/SysSource.c:3532	7. OSD Switch Port to --> 	1
@@ -670,7 +670,7 @@ b4dd	Rx1	Kernel/Scaler/ScalerCommonFunction/Code/ScalerCommonDPRx1.c:1376	_COLOR
 b4e3	Scaler	User/RTD Series/RTD2014Function/Code/RTD2014UserInterface.c:2203	MBR: ucBacklightDuty	0
 b524	Audio	Kernel/Scaler/ScalerFunction/Code/ScalerAudio_SeptPhy.c:2480	D5 Aduio Test Off	0
 b553	Rx1	Kernel/Scaler/ScalerCommonFunction/Code/ScalerCommonDPRx1.c:1465	_COLORIMETRY_RGB_SRGB_CEA	0
-b571	CEC	Kernel/Scaler/ScalerFunction/Code/ScalerCec.c:735	CEC TX MSG Sned!!	0
+b571	CEC	Kernel/Scaler/ScalerFunction/Code/ScalerCec.c:739	CEC TX MSG Sned!!	0
 b5b5	System	Kernel/User Common Function/Code/UserCommonNVRamSystem.c:1300	FlashSaveItem : Retry	1
 b62b	System	Kernel/System/Code/SysSource.c:2575	7. Switch no signal !!!!!!!!!!!!!!!!!!!	1
 b62b	System	Kernel/System/Code/SysSource.c:2694	7. Switch no signal !!!!!!!!!!!!!!!!!!!	1
@@ -687,7 +687,7 @@ b8be	Rx2	Kernel/Scaler/ScalerCommonFunction/Code/ScalerCommonSync.c:8158	Get RGB
 b959	Rx1	Kernel/Scaler/ScalerFunction/Code/ScalerDPRx1_SeptPhy.c:4204	###Origin usVTotal###	0
 b959	Rx1	Kernel/Scaler/ScalerFunction/Code/ScalerDPRx1_SeptPhy.c:6290	###Origin usVTotal###	0
 b98f	Rx0	Kernel/Scaler/ScalerFunction/Code/ScalerDP_SeptPhy.c:1266	DP Rx0 MST reset	0
-b9a4	CEC	Kernel/Scaler/ScalerFunction/Code/ScalerCec.c:709	CEC TX FAKE Line Error Happened Orz.........	0
+b9a4	CEC	Kernel/Scaler/ScalerFunction/Code/ScalerCec.c:713	CEC TX FAKE Line Error Happened Orz.........	0
 ba10	Rx1	Kernel/Scaler/ScalerCommonFunction/Code/ScalerCommonDPRx1.c:1413	_COLOR_DEPTH	0
 ba6b	Measure	Kernel/Scaler/ScalerFunction/Code/ScalerMeasure.c:208	VGA active count difference fail	1
 baad	Measure	Kernel/Scaler/RL6449_Series_Scaler/Code/RL6449_Series_Measure.c:538	Digital check H width fail	1
@@ -741,7 +741,7 @@ c7a8	Scaler	User/RTD Series/RTD2014Function/Code/RTD2014UserInterface.c:1601	FRC
 c899	Audio	Kernel/Scaler/RL6449_Series_Scaler/Code/RL6449_Series_Audio.c:1210	False : D0 DP Audio Fsm Disable	0
 c964	Scaler	Kernel/User Common Function/Code/UserCommonInterface.c:4275	MBR: Backlight Control Start	0
 ca4f	Rx1	Kernel/Scaler/ScalerFunction/Code/ScalerDPRx1_SeptPhy.c:6206	MST FREESYNC Mode Enabled!!	0
-ca5e	CEC	Kernel/Scaler/ScalerFunction/Code/ScalerCec.c:666	CEC TX is Busy	0
+ca5e	CEC	Kernel/Scaler/ScalerFunction/Code/ScalerCec.c:670	CEC TX is Busy	0
 ca78	Rx1	Kernel/Scaler/ScalerCommonFunction/Code/ScalerCommonDPRx1.c:1592	_COLORIMETRY_EXT_RGB_ADOBERGB	0
 caad	System	Kernel/System/Code/SysSource.c:3146	7. DP Port Initial	1
 cacb	Rx2	Kernel/Scaler/ScalerCommonFunction/Code/ScalerCommonSync.c:7995	Get Colorimetry EXT_YCC_XVYCC601	0
@@ -839,7 +839,7 @@ e0d8	System	Kernel/System/Code/SysSource.c:2342	7. Bingo Priority!!!!!!!	1
 e0d8	System	Kernel/System/Code/SysSource.c:2542	7. Bingo Priority!!!!!!!	1
 e0d8	System	Kernel/System/Code/SysSource.c:3001	7. Bingo Priority!!!!!!!	1
 e0f0	System	Kernel/System/Code/SysJudge.c:772	Input Timing V Polarity is Positive	1
-e0fc	CEC	Kernel/Scaler/ScalerFunction/Code/ScalerCec.c:779	<= Cec Rx Read: HB	0
+e0fc	CEC	Kernel/Scaler/ScalerFunction/Code/ScalerCec.c:783	<= Cec Rx Read: HB	0
 e11a	Rx3	Kernel/Scaler/RL6449_Series_Scaler/Code/RL6449_Series_TMDSRx3.c:4316	7. HDCP Abnormal !!!!!	0
 e151	FRC	Kernel/Scaler/ScalerFunction/Code/ScalerMemory.c:938	3Block-addr1	1
 e162	Rx0	Kernel/Scaler/ScalerCommonFunction/Code/ScalerCommonSync.c:6686	Get Colorimetry YCC_ITUR_BT709	0
