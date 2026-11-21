@@ -399,10 +399,6 @@ void ScalerDpRx1HDCPSetKsvFifo_EXINT0(void)
 #endif // End of #if((_DP_TX_SUPPORT == _ON) && (_D1_DP_MST_PORT_SUPPORT == _ON))
 
 #if(_WD_TIMER_INT_SUPPORT == _ON)
-#undef AWTO_DLY5_CNT
-#define AWTO_DLY5_CNT d_g_ucDelay5usI_INTLO
-#undef AWTO_DLYX_CNT
-#define AWTO_DLYX_CNT d_g_ucDelayXus_Counter_INTLO
 //--------------------------------------------------
 // Description  : Get DPCD Table Information in WDINT
 // Input Value  : ucDpcdAccessPortH --> High Byte of DPCD Address
@@ -418,15 +414,7 @@ BYTE ScalerDpRx1GetDpcdInfo_WDINT(BYTE ucDpcdAccessPortH, BYTE ucDpcdAccessPortM
 
     AWTO_DPCD_SETTLE_E() return ScalerGetByte_EXINT(PBA_C4_DPCD_DATA_PORT);
 }
-#undef AWTO_DLY5_CNT
-#define AWTO_DLY5_CNT d_isr_g_ucDelay5usI_EXINT
-#undef AWTO_DLYX_CNT
-#define AWTO_DLYX_CNT d_isr_g_ucDelayXus_Counter_EXINT
 #if(_DP_HDCP_2_2_SUPPORT == _ON)
-#undef AWTO_DLY5_CNT
-#define AWTO_DLY5_CNT d_g_ucDelay5usI_INTLO
-#undef AWTO_DLYX_CNT
-#define AWTO_DLYX_CNT d_g_ucDelayXus_Counter_INTLO
 //--------------------------------------------------
 // Description  : Get DPCD Table Information in WDINT
 // Input Value  : ucDpcdAccessPortH --> High Byte of DPCD Address
@@ -442,10 +430,6 @@ BYTE ScalerDpRx1GetDpcdBitInfo_WDINT(BYTE ucDpcdAccessPortH, BYTE ucDpcdAccessPo
 
     AWTO_DPCD_SETTLE_E() return ScalerGetBit_EXINT(PBA_C4_DPCD_DATA_PORT, ucDpcdBit);
 }
-#undef AWTO_DLY5_CNT
-#define AWTO_DLY5_CNT d_isr_g_ucDelay5usI_EXINT
-#undef AWTO_DLYX_CNT
-#define AWTO_DLYX_CNT d_isr_g_ucDelayXus_Counter_EXINT
 #endif
 #endif
 

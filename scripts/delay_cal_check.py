@@ -40,11 +40,8 @@ CYCLES_PER_US = 87.7 / 4            # DW8051: MCU clock 87.7 MHz (M2PLL 350.8 / 
 # TOL_STAGE / TOL_ACTIVE: sim stage times shift by <= 1 tick when code moves (2 ms); the ACTIVE time is polled every 20 k instr (~5 ms).
 TOL_REF, TOL_NOM, TOL_STAGE, TOL_ACTIVE = 0.05, (0.70, 1.10), 2, 5
 MAX_STEPS = 400_000                 # DELAY_XUS(1000) is 250 x 21 iterations = 5.3 k steps; guard against a runaway
-DELAY_VARS = {"base5": "d_isr_g_ucDelay5usN_Base", "basex": "d_isr_g_ucDelayXusN_Base", "i5": "d_isr_g_ucDelay5usI", "i5e": "d_isr_g_ucDelay5usI_EXINT",
-              "cx": "d_isr_g_ucDelayXus_Counter", "cxe": "d_isr_g_ucDelayXus_Counter_EXINT",
-              "i5l": "d_g_ucDelay5usI_INTLO", "cxl": "d_g_ucDelayXus_Counter_INTLO"}
-CTX_ISR = (("_exint", "i5e", "cxe"), ("_intlo", "i5l", "cxl"))     # EXINT0 pair, EXINT1 + T0 pair
-ALLOW_FN = ("ScalerMcu5usDelayCalc", "AwtoDiag", "GSINIT")     # writes the bases / the calibration test / C initialisers
+DELAY_VARS = {"base5": "d_isr_g_ucDelay5usN_Base", "basex": "d_isr_g_ucDelayXusN_Base", "cx": "d_g_ucDelayXus_Counter"}
+ALLOW_FN = ("ScalerMcu5usDelayCalc", "AwtoDiag", "GSINIT", "AwtoDelayXus")     # writes the bases / the calibration test / C initialisers
 LOG = None
 
 
@@ -80,16 +77,17 @@ def var_addrs(map_text: str) -> dict:
 
 
 def shapes(v: dict) -> dict:
-    """name -> (regex over code bytes, ...). Single loop: mov counter,base; djnz counter,$. Nest: DELAY_XUS."""
+    """name -> regex over code bytes. Every loop counter is a register Rn (12 clk per count): single loop `mov Rn,base; djnz Rn,$`;
+    polling form `mov Rn,base; L: dec Rn; mov a,Rn; jz out; sjmp L`; nest (DELAY_XUS): `mov Rm,#i; mov Rn,base; djnz Rn,$; djnz Rm,nest`."""
     h = lambda x: re.escape(bytes([x]))
+    r8 = range(8)
+    e = lambda *x: re.escape(bytes(x))
     S = {}
-    for tag, base, cnt in (("5us", "base5", "i5"), ("xus_base", "basex", "i5")) + tuple(x for sfx, i5, _c in CTX_ISR for x in ((f"5us{sfx}", "base5", i5), (f"xus_base{sfx}", "basex", i5))):
-        S[tag] = re.compile(b"\x85" + h(v[base]) + h(v[cnt]) + b"\xd5" + h(v[cnt]) + b"\xfd", re.DOTALL)
-    for tag, base, cnt in (("5us_dec", "base5", "i5"), ("xus_base_dec", "basex", "i5")) + tuple(x for sfx, i5, _c in CTX_ISR for x in ((f"5us_dec{sfx}", "base5", i5), (f"xus_base_dec{sfx}", "basex", i5))):
-        # SDCC form inside a polling `while(flag && ...)`: mov v,base; L: dec v; mov a,v; jz out; sjmp L  (8 cycles/iteration)
-        S[tag] = re.compile(b"\x85" + h(v[base]) + h(v[cnt]) + b"\x15" + h(v[cnt]) + b"\xe5" + h(v[cnt]) + b"\x60(.)\x80\xf8", re.DOTALL)
-    for tag, outer, cnt in (("xus", "cx", "i5"),) + tuple((f"xus{sfx}", c, i5) for sfx, i5, c in CTX_ISR):
-        S[tag] = re.compile(b"\x75" + h(v[outer]) + b"(.)\x85" + h(v["basex"]) + h(v[cnt]) + b"\xd5" + h(v[cnt]) + b"\xfd\xd5" + h(v[outer]) + b"\xf7", re.DOTALL)
+    for tag, base in (("5us", "base5"), ("xus_base", "basex")):
+        S[tag] = re.compile(b"|".join(e(0xA8 + n) + h(v[base]) + e(0xD8 + n, 0xFE) for n in r8), re.DOTALL)
+        S[tag + "_dec"] = re.compile(b"|".join(e(0xA8 + n) + h(v[base]) + e(0x18 + n, 0xE8 + n, 0x60) + b"(.)\\x80\\xf8" for n in r8), re.DOTALL)
+    S["xus"] = re.compile(b"|".join(e(0x78 + m) + b"(.)" + e(0xA8 + n) + h(v["basex"]) + e(0xD8 + n, 0xFE, 0xD8 + m, 0xFA)
+                                    for n in r8 for m in r8 if n != m), re.DOTALL)
     return S
 
 
@@ -104,18 +102,18 @@ def vendor_shapes(img: bytes) -> Counter:
 
 
 def pattern_cycles(kind: str, n_single: int, n_base: int, imm: int) -> int:
-    """Model cycles of the shape from its instruction costs: single = mov d,d (3) + N x djnz (3); nest = mov d,#i (3) +
-    imm x (mov d,d (3) + Nb x djnz (3) + djnz (3))."""
+    """Model cycles of the shape from its instruction costs: single = mov Rn,d (2) + N x djnz Rn (3); nest = mov Rm,#i (2) +
+    imm x (mov Rn,d (2) + Nb x djnz Rn (3) + djnz Rm (3))."""
     if kind == "single":
-        return 3 + 3 * n_single
-    return 3 + imm * (3 + 3 * n_base + 3)
+        return 2 + 3 * n_single
+    return 2 + imm * (2 + 3 * n_base + 3)
 
 
 def scan(im: "L.Image", v: dict, S: dict):
-    """(sites {tag: [(chunk, addr16, imm, end offset from the site start)]}, bad [(chunk name, addr, text)])."""
+    """(sites {tag: [(chunk, addr16, imm, end offset from the site start)]}, bad [(chunk name, addr, text)]).
+    bad = a use of the outer counter (d_g_ucDelayXus_Counter, the one direct byte left) other than the count set before the lcall."""
     sites = defaultdict(list)
     bad = []
-    counters = {v["i5"], v["i5e"], v["cx"], v["cxe"], v["i5l"], v["cxl"]}
     for c in im.chunks:
         if c["kind"] != "fn":
             continue
@@ -123,27 +121,25 @@ def scan(im: "L.Image", v: dict, S: dict):
         cover = set()
         for tag, rx in sorted(S.items(), key=lambda kv: not kv[0].startswith("xus") or kv[0].startswith("xus_base")):
             for m in rx.finditer(code):
-                if tag.startswith("xus_base") and "dec" not in tag and any(x in cover for x in range(m.start(), m.end())):
-                    continue                                      # the inner loop of a nest
-                imm = m.group(1)[0] if tag in ("xus", "xus_exint", "xus_intlo") else 0
-                if "dec" in tag:
-                    rel = m.group(1)[0]
-                    end = 9 + (rel - 256 if rel > 127 else rel)       # JZ at +7 leaves the loop; its target is the end
-                elif tag.startswith("xus") and "base" not in tag:
-                    end = 12
+                if any(x in cover for x in range(m.start(), m.end())):
+                    continue
+                grp = m.lastindex and m.group(m.lastindex)[0]
+                if tag == "xus":
+                    imm, end = grp, len(m.group(0))
+                elif tag.endswith("_dec"):
+                    imm, end = 0, 6 + (grp - 256 if grp > 127 else grp)       # JZ at +4 leaves the loop; its target is the end
                 else:
-                    end = 6
+                    imm, end = 0, 4
                 sites[tag].append((c, base + m.start(), imm, end))
                 cover.update(range(m.start(), m.end()))
         insns = [item[1] for item in L.sweep(code, base) if item[0] == "i"]
-        for k, ins in enumerate(insns):                   # `mov v,base`, a few straight-line moves, then `djnz v,$` (code motion)
-            if ins.off in cover or ins.raw[0] != 0x85 or ins.raw[2] not in (v["i5"], v["i5e"], v["i5l"]) or ins.raw[1] not in (v["base5"], v["basex"]):
+        for k, ins in enumerate(insns):                   # `mov Rn,base`, a few straight-line moves, then `djnz Rn,$` (code motion)
+            if ins.off in cover or not 0xA8 <= ins.raw[0] <= 0xAF or ins.raw[1] not in (v["base5"], v["basex"]):
                 continue
             for j in range(k + 1, min(k + 12, len(insns))):
                 nx = insns[j]
-                if nx.raw[0] == 0xD5 and nx.raw[1] == ins.raw[2] and nx.target == nx.addr:
-                    five = ins.raw[1] == v["base5"]
-                    tag = ("5us" if five else "xus_base") + {v["i5e"]: "_exint", v["i5l"]: "_intlo"}.get(ins.raw[2], "") + "_moved"
+                if nx.raw[0] == 0xD8 + ins.raw[0] - 0xA8 and nx.target == nx.addr:
+                    tag = ("5us" if ins.raw[1] == v["base5"] else "xus_base") + "_moved"
                     sites[tag].append((c, ins.addr, 0, nx.addr + nx.n - ins.addr))
                     cover.update(range(ins.off, nx.off + nx.n))
                     break
@@ -153,8 +149,9 @@ def scan(im: "L.Image", v: dict, S: dict):
             if ins.off in cover or any(ins.off <= x < ins.off + ins.n for x in cover):
                 continue
             ops = [o.strip() for o in ins.text.split(" ", 1)[-1].split(",")] if " " in ins.text else []
-            hit = [o for o in ops if re.fullmatch(r"0?[0-9A-F]{2}h", o) and int(o[:-1], 16) in counters]
-            if hit and not c["name"].lstrip("_").startswith(ALLOW_FN):
+            if ins.text.startswith("MOV ") and "#" in ins.text:
+                continue                                  # DELAY_XUS sets the outer count before its lcall
+            if any(re.fullmatch(r"0?[0-9A-F]{2}h", o) and int(o[:-1], 16) == v["cx"] for o in ops) and not c["name"].lstrip("_").startswith(ALLOW_FN):
                 bad.append((c["name"], ins.addr, ins.text))
     return sites, bad
 

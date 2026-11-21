@@ -655,10 +655,6 @@ void ScalerTMDSRx3SetDFEInitial_EXINT0(void)
     ScalerSetByte_EXINT(P7C_C1_L2_DFE_EN_2, 0x00);
 }
 
-#undef AWTO_DLY5_CNT
-#define AWTO_DLY5_CNT d_isr_g_ucDelay5usI
-#undef AWTO_DLYX_CNT
-#define AWTO_DLYX_CNT d_isr_g_ucDelayXus_Counter
 //--------------------------------------------------
 // Description  : TMDS FLD Band Fine Tune  (EXINT0 Only)
 // Input Value  : None
@@ -757,14 +753,6 @@ void ScalerTMDSRx3FLDBandFineTune_EXINT0(void)
     // Clear Unstable IRQ Flag
     ScalerSetBit_EXINT(P72_E6_HDMI_FREQDET_CTRL, ~_BIT2, _BIT2);
 }
-#undef AWTO_DLY5_CNT
-#define AWTO_DLY5_CNT d_isr_g_ucDelay5usI_EXINT
-#undef AWTO_DLYX_CNT
-#define AWTO_DLYX_CNT d_isr_g_ucDelayXus_Counter_EXINT
-#undef AWTO_DLY5_CNT
-#define AWTO_DLY5_CNT d_isr_g_ucDelay5usI
-#undef AWTO_DLYX_CNT
-#define AWTO_DLYX_CNT d_isr_g_ucDelayXus_Counter
 //--------------------------------------------------
 // Description  : TMDS Set PHY Function (EXINT0 Only)
 // Input Value  : Measured Clk Count for PHY Setting
@@ -1984,10 +1972,6 @@ void ScalerTMDSRx3SetPhy_EXINT0(void)
     // Clear RGB Data Detection Flags
     ScalerSetBit_EXINT(P72_A4_TMDS_CTRL, ~(_BIT7 | _BIT6 | _BIT5 | _BIT4 | _BIT3), (_BIT7 | _BIT6 | _BIT5));
 }
-#undef AWTO_DLY5_CNT
-#define AWTO_DLY5_CNT d_isr_g_ucDelay5usI_EXINT
-#undef AWTO_DLYX_CNT
-#define AWTO_DLYX_CNT d_isr_g_ucDelayXus_Counter_EXINT
 
 //--------------------------------------------------
 // Description  : Freq. stable PHY set-up, run from the main loop with EX0 masked (was inside the EXINT0 handler)

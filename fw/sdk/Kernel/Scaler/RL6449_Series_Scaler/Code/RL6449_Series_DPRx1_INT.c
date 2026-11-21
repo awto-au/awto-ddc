@@ -970,10 +970,6 @@ void ScalerDpRx1Tp2SetPhy_EXINT0(void)
 }
 
 #if(_WD_TIMER_INT_SUPPORT == _ON)
-#undef AWTO_DLY5_CNT
-#define AWTO_DLY5_CNT d_g_ucDelay5usI_INTLO
-#undef AWTO_DLYX_CNT
-#define AWTO_DLYX_CNT d_g_ucDelayXus_Counter_INTLO
 //--------------------------------------------------
 // Description  : Rebuilding DP PHY in WDINT
 // Input Value  : DPCD Bit Rate and Lane Count
@@ -1505,10 +1501,6 @@ void ScalerDpRx1RebuildPhy_WDINT(BYTE ucDpLinkRate)
     isr_g_pusDpRx1ClockCount[2] = isr_g_pusDpRx1ClockCount[0];
     isr_g_pusDpRx1ClockCount[1] = isr_g_pusDpRx1ClockCount[0];
 }
-#undef AWTO_DLY5_CNT
-#define AWTO_DLY5_CNT d_isr_g_ucDelay5usI_EXINT
-#undef AWTO_DLYX_CNT
-#define AWTO_DLYX_CNT d_isr_g_ucDelayXus_Counter_EXINT
 #endif
 
 #endif // End of #if(_D1_DP_EXIST == _ON)

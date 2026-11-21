@@ -34,25 +34,18 @@
 #define _HW_IIC_FD10_14318K                 (tHwI2cSetting[g_ucHwI2cSettingIndex].ucFD10_14318K)
 #define _HW_IIC_FD10_28000K                 (tHwI2cSetting[g_ucHwI2cSettingIndex].ucFD10_28000K)
 
-// One counter pair per context (EXINT0 can preempt EXINT1 / T0 / main). Default EXINT0; a .c file re-points a
-// function block with #undef + #define of both names (_INTLO = EXINT1 + T0, same priority; or the main pair d_isr_g_ucDelay5usI / d_isr_g_ucDelayXus_Counter).
-#ifndef AWTO_DLY5_CNT
-#define AWTO_DLY5_CNT d_isr_g_ucDelay5usI_EXINT
-#define AWTO_DLYX_CNT d_isr_g_ucDelayXus_Counter_EXINT
-#endif
-
 //--------------------------------------------------
 // Macros of 5us Delay
 //--------------------------------------------------
-// Main context: one routine (fw/timer/delay.c, common area, same djnz loop); the EXINT variants stay inline (no call in an ISR)
-// (inline lcall: both routines touch only the IRAM counters, so SDCC must not spill registers around the call)
+// Every loop is `mov Rn,base; djnz Rn,$` on a register local (12 clk per count, AWTO_DELAY_CLK_PER_CNT). Main context: one routine
+// (fw/timer/delay.c, common area, same djnz loop, saves R7); the EXINT variants stay inline (no call in an ISR).
 #define DELAY_5US()                         {\
                                                 __asm lcall _AwtoDelayLoops __endasm;\
                                             }
 
 #define DELAY_5US_EXINT()                   {\
-                                                AWTO_DLY5_CNT = (d_isr_g_ucDelay5usN_Base);\
-                                                while(--AWTO_DLY5_CNT) {};\
+                                                BYTE ucDly5 = (d_isr_g_ucDelay5usN_Base);\
+                                                while(--ucDly5) {};\
                                             }
 
 #define DELAY_10US()                        {\
@@ -192,28 +185,28 @@
                                             }
 
 #define DELAY_XUS_BASE()                    {\
-                                                d_isr_g_ucDelay5usI = (d_isr_g_ucDelayXusN_Base);\
-                                                while(--d_isr_g_ucDelay5usI) {};\
+                                                BYTE ucDly5 = (d_isr_g_ucDelayXusN_Base);\
+                                                while(--ucDly5) {};\
                                             }
 
 #define DELAY_XUS_BASE_EXINT()              {\
-                                                AWTO_DLY5_CNT = (d_isr_g_ucDelayXusN_Base);\
-                                                while(--AWTO_DLY5_CNT) {};\
+                                                BYTE ucDly5 = (d_isr_g_ucDelayXusN_Base);\
+                                                while(--ucDly5) {};\
                                             }
 
 // Delay 50~1000 us
 #define DELAY_XUS(N)                        {\
-                                                d_isr_g_ucDelayXus_Counter = (N) >> 2;\
+                                                d_g_ucDelayXus_Counter = (N) >> 2;\
                                                 __asm lcall _AwtoDelayXus __endasm;\
                                             }
 
 #define DELAY_XUS_EXINT(N)                  {\
-                                                AWTO_DLYX_CNT = (N) >> 2;\
+                                                BYTE ucDlyX = (N) >> 2;\
                                                 do\
                                                 {\
                                                     DELAY_XUS_BASE_EXINT();\
                                                 }\
-                                                while(--AWTO_DLYX_CNT);\
+                                                while(--ucDlyX);\
                                             }
 
 #ifdef AWTO_TP1_WAIT_US
@@ -222,10 +215,10 @@
 #define AWTO_TP1_WAIT()
 #endif
 
-// DPCD index / data port: the first C4 access after an address change reads stale data at 350.8 MHz; gap = loop counts (16 clk each, ~15 clk entry), 0 = off
-#define AWTO_GAP_025US 6
-#define AWTO_GAP_1US 23
-#define AWTO_GAP_5US 109
+// DPCD index / data port: the first C4 access after an address change reads stale data at 350.8 MHz; gap = loop counts (12 clk each, ~8 clk entry), 0 = off
+#define AWTO_GAP_025US 9
+#define AWTO_GAP_1US 32
+#define AWTO_GAP_5US 146
 #ifndef AWTO_DPCD_SETTLE_RD
 #if(AWTO_CLOCK_MHZ == 350)
 #define AWTO_DPCD_SETTLE_RD AWTO_GAP_025US // smallest gap that locks D1 on unit 2 5 / 5 boots (0.25 us); docs/clock-sweep.md
@@ -234,8 +227,8 @@
 #endif
 #endif
 #if(AWTO_DPCD_SETTLE_RD != 0)
-#define AWTO_DPCD_SETTLE_E() {AWTO_DLY5_CNT = (AWTO_DPCD_SETTLE_RD); while(--AWTO_DLY5_CNT) {};}
-#define AWTO_DPCD_SETTLE() {d_isr_g_ucDelay5usI = (AWTO_DPCD_SETTLE_RD); while(--d_isr_g_ucDelay5usI) {};}
+#define AWTO_DPCD_SETTLE_E() {BYTE ucGap = (AWTO_DPCD_SETTLE_RD); while(--ucGap) {};}
+#define AWTO_DPCD_SETTLE() AWTO_DPCD_SETTLE_E()
 #else
 #define AWTO_DPCD_SETTLE_E()
 #define AWTO_DPCD_SETTLE()
@@ -355,12 +348,7 @@ typedef enum
 
 extern volatile BYTE __data d_isr_g_ucDelay5usN_Base;
 extern volatile BYTE __data d_isr_g_ucDelayXusN_Base;
-extern BYTE __data d_isr_g_ucDelay5usI;
-extern BYTE __data d_isr_g_ucDelay5usI_EXINT;
-extern BYTE __data d_g_ucDelay5usI_INTLO;
-extern BYTE __data d_isr_g_ucDelayXus_Counter;
-extern BYTE __data d_isr_g_ucDelayXus_Counter_EXINT;
-extern BYTE __data d_g_ucDelayXus_Counter_INTLO;
+extern volatile BYTE __data d_g_ucDelayXus_Counter;
 extern __xdata _Bool g_bRunDdcciCommand;
 #if(_DDCCI_AUTO_SWITCH_SUPPORT == _ON)
 extern bit g_bReceiveDdcciCmdNotFinish;

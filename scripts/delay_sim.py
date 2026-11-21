@@ -114,7 +114,7 @@ def attach(run, im, mapp):
         c = chunks.get(fn)
         if c is None:
             continue
-        cnt = D.var_addrs(mapp.read_text(errors="replace"))["cx"]         # d_isr_g_ucDelayXus_Counter: the outer passes, set by the caller
+        cnt = D.var_addrs(mapp.read_text(errors="replace"))["cx"]         # d_g_ucDelayXus_Counter: the outer passes, set by the caller
         pr.range(("F", fn, 0, 0, 0), chunk_bank(im, c), c["addr"] & 0xFFFF, rets(im, c),
                  extra=(lambda m, r, cnt=cnt: m.core.iram[cnt]) if fn == "AwtoDelayXus" else (lambda m, r: 0))
         nf += 1
@@ -122,7 +122,7 @@ def attach(run, im, mapp):
     return pr
 
 
-B_FUNCS = ("AwtoDelayLoops", "AwtoDelayXus")      # neither takes an argument: Loops runs d_g_ucDelay5usN_Call (Base - 2); Xus runs d_isr_g_ucDelayXus_Counter outer passes of the 4 us base
+B_FUNCS = ("AwtoDelayLoops", "AwtoDelayXus")      # neither takes an argument: Loops runs d_g_ucDelay5usN_Call (Base - 2); Xus runs d_g_ucDelayXus_Counter outer passes of the 4 us base
 HOT_CALLS = 20                    # a routine group is judged against the upper bound from this many calls on (fewer = cold code fetch after another state)
 
 

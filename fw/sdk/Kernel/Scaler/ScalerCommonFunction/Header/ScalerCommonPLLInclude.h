@@ -58,10 +58,10 @@
 //   DELAY_5US: while(--n) = 16 clk per count, 15 clk entry; DELAY_XUS(N): 4 us base loop, 22 clk per outer pass [emu, 16 clk matches
 //   unit 3 sweep 2026-11-18: 27/22 counts at 87.7 MHz read 102 %/108 %, 57/44 at 175.4 MHz 103..106 %/105 %]
 //--------------------------------------------------
-#define AWTO_DELAY_CLK_PER_CNT                      16UL
-#define AWTO_DELAY5US_OVH_CLK                       15UL
-#define AWTO_DELAYXUS_OVH_CLK                       22UL
-#define AWTO_DELAY_CALL_CNT                         2U       // main-context DELAY_5US is a call (lcall + ret = 32 clk = 2 counts): the routine loops Base - 2, same wait as the inline loop
+#define AWTO_DELAY_CLK_PER_CNT                      12UL     // djnz Rn: 3 machine cycles of 4 clk (DW8051 model)
+#define AWTO_DELAY5US_OVH_CLK                       8UL
+#define AWTO_DELAYXUS_OVH_CLK                       20UL
+#define AWTO_DELAY_CALL_CNT                         4U       // main-context DELAY_5US is a call (lcall + ret + push + pop R7 = 48 clk = 4 counts): the routine loops Base - 4, same wait as the inline loop
 #define AWTO_DELAY_CNT(khz, t_us, ovh)              ((BYTE)((((DWORD)(khz) * (t_us)) + 1000UL * (AWTO_DELAY_CLK_PER_CNT - 1UL - (ovh))) / (1000UL * AWTO_DELAY_CLK_PER_CNT)))
 #define AWTO_CPU_KHZ_M2PLL                          (_M2PLL_CLK_KHZ / (_FLASH_CLK_DIV * _MCU_CLK_DIV))
 #define AWTO_CPU_KHZ_XTAL                           (_EXT_XTAL / (_FLASH_CLK_IN_DIV * _MCU_CLK_IN_DIV))

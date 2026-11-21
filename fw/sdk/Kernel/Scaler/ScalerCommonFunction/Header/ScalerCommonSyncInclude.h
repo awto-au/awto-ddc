@@ -1207,8 +1207,8 @@
                                                                     ScalerSyncDpAuxManualModeSetting_EXINT(_DP_AUX_MANUAL_MODE_SET);\
                                                                     do\
                                                                     {\
-                                                                        d_g_ucDpRxHpdIrqAssertT2EventDelay5usI = d_isr_g_ucDelay5usN_Base;\
-                                                                        while(--d_g_ucDpRxHpdIrqAssertT2EventDelay5usI) {};\
+                                                                        BYTE ucDly5 = d_isr_g_ucDelay5usN_Base;\
+                                                                        while(--ucDly5) {};\
                                                                     }\
                                                                     while(--d_isr_g_ucDpRxHpdIrqAssertT2EventDelayXus_Counter);\
                                                                     ScalerSyncDpAuxManualModeSetting_EXINT(_DP_AUX_MANUAL_MODE_RECOVER);\
@@ -2006,7 +2006,6 @@ extern bit g_bDpRx1HdcpHandshakeWOCap;
 
 #if(_DP_IRQ_HPD_MODE == _DP_IRQ_HPD_T2_MODE)
 extern volatile BYTE __data d_isr_g_ucDpRxHpdIrqAssertT2EventDelayXus_Counter;
-extern BYTE __data d_g_ucDpRxHpdIrqAssertT2EventDelay5usI;
 
 #if(_D0_INPUT_PORT_TYPE == _D0_DP_PORT)
 extern volatile bit g_bDpD0HpdIrqAssertT2Event;

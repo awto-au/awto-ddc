@@ -128,7 +128,6 @@ __xdata _Bool g_bDpIllegalIdlePatternCheck = _FALSE;
 
 #if(_DP_IRQ_HPD_MODE == _DP_IRQ_HPD_T2_MODE)
 volatile BYTE __data d_isr_g_ucDpRxHpdIrqAssertT2EventDelayXus_Counter;
-BYTE __data d_g_ucDpRxHpdIrqAssertT2EventDelay5usI;
 
 #if(_D0_INPUT_PORT_TYPE == _D0_DP_PORT)
 volatile bit g_bDpD0HpdIrqAssertT2Event = _FALSE;
@@ -3554,10 +3553,6 @@ void ScalerSyncDdcDetectDebounce_EXINT1(void)
 }
 #pragma restore
 
-#undef AWTO_DLY5_CNT
-#define AWTO_DLY5_CNT d_g_ucDelay5usI_INTLO
-#undef AWTO_DLYX_CNT
-#define AWTO_DLYX_CNT d_g_ucDelayXus_Counter_INTLO
 //--------------------------------------------------
 // Description  : TMDS Power Saving Detect DDC Handshake
 // Input Value  : None
@@ -3793,10 +3788,6 @@ BYTE ScalerSyncDdcDetect_EXINT1(void)
 
     return _FALSE;
 }
-#undef AWTO_DLY5_CNT
-#define AWTO_DLY5_CNT d_isr_g_ucDelay5usI_EXINT
-#undef AWTO_DLYX_CNT
-#define AWTO_DLYX_CNT d_isr_g_ucDelayXus_Counter_EXINT
 
 //--------------------------------------------------
 // Description  : Initial Setting for TMDS Scanning Port(Power Normal)

@@ -1,10 +1,6 @@
 #include "ScalerCommonFunctionInclude.h"
 
 #if(_AWTO_DBGISR == _ON)
-#undef AWTO_DLY5_CNT
-#define AWTO_DLY5_CNT d_g_ucDelay5usI_INTLO
-#undef AWTO_DLYX_CNT
-#define AWTO_DLYX_CNT d_g_ucDelayXus_Counter_INTLO
 // awto #38: answer 0x3A (XDATA byte) and 0x3C (XDATA block: lo, hi, len, seq) here, FIFO loaded before the SCL release.
 // 0x3C reply = len data bytes + checksum (seq + lo + hi + sum of data); the host rejects a stale or garbled reply.
 // #28: the write staging 0x01 [hi] / 0x03 [val] and the write 0x3B [lo] are done here too, so SCL is held ~30 us, not until
@@ -161,8 +157,4 @@ bit AwtoDbgIsrCmd_EXINT1(void)
     }
     return _FALSE;
 }
-#undef AWTO_DLY5_CNT
-#define AWTO_DLY5_CNT d_isr_g_ucDelay5usI_EXINT
-#undef AWTO_DLYX_CNT
-#define AWTO_DLYX_CNT d_isr_g_ucDelayXus_Counter_EXINT
 #endif
