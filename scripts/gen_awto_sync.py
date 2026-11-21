@@ -36,7 +36,7 @@ def repo_root() -> Path:
 ROOT = repo_root()
 TSV = ROOT / "fw/awto/sync.tsv"
 LOG = ROOT / "tmp/logs/gen_awto_sync.log"
-FMTS = {"-": 0, "vport": 1, "res": 2, "mhz1": 3, "hz1": 4, "hz3": 5, "mhz3": 6, "dp": 7, "src": 8, "harg": 9, "pc": 10, "ms": 11, "n": 12, "x": 13, "htime": 14, "sms": 15, "wdt": 16, "sys": 17, "sysreq": 18, "ms2": 19, "pby": 20, "sname": 21, "nvw": 22, "mon": 23, "cec": 24, "note": 25, "pms": 26, "psrc": 27, "rms": 28, "lim": 29}
+FMTS = {"-": 0, "vport": 1, "res": 2, "mhz1": 3, "hz1": 4, "hz3": 5, "mhz3": 6, "dp": 7, "src": 8, "harg": 9, "pc": 10, "ms": 11, "n": 12, "x": 13, "htime": 14, "sms": 15, "wdt": 16, "sys": 17, "sysreq": 18, "ms2": 19, "pby": 20, "sname": 21, "nvw": 22, "mon": 23, "cec": 24, "note": 25, "pms": 26, "psrc": 27, "rms": 28, "lim": 29, "dly": 30}
 PORT_FLAG = 0x80                                     # fmt bit7: "Dn " prefix from arg
 
 
@@ -373,7 +373,7 @@ def value_segs(f: str, r: list, port: list) -> list:
         "dp": [[card("RBR"), card("RBR+1"), card("RBR+2"), card("HBR3"), "FF"], [" x"], num(3)],
         "src": [["HDMI", "DP", "DVI", "9" * DW]], "harg": [num(2)],
         "pms": [port, [", "], num(5), ["ms"]], "psrc": [port, [" "], ["HDMI", "DP", "DVI", "999"]],
-        "rms": [["FFFF "], num(5), ["ms"]], "lim": [num(5), [" of "], num(5), [" px"]],
+        "rms": [["FFFF "], num(5), ["ms"]], "dly": [num(2), [":"], num(4), [" took "], num(5), [" us +15 more"]], "lim": [num(5), [" of "], num(5), [" px"]],
         "pc": [["STALL TEST, PC ", "STALL, PC "], ["FF", "C"], [":"], num(4)],
         "ms": [num(DW), ["ms"]], "n": [num(DW)], "x": [num(6)],
         "htime": [["2106-02-07T06:28:15+31:45"]], "sms": [["-", "+"], num(DW), ["ms"]],

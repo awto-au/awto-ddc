@@ -133,6 +133,7 @@ void AwtoLoopPace(void)
     unsigned int usD;
     unsigned int usRem;
 
+    AwtoDelayLongPoll();
     if(AwtoLoopBusy() != 0)
     {
         usHold++;

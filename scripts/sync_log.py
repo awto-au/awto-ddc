@@ -110,6 +110,9 @@ def value(fmt: str, arg: int, v: int) -> str:
         return f"{(v >> 16) & 0xFFFF} of {v & 0xFFFF} px"
     if fmt == "rms":                                     # value = register / argument << 16 | ms: "71A4 40ms"
         return f"{(v >> 16) & 0xFFFF:04X} {v & 0xFFFF}ms"
+    if fmt == "dly":                                     # fw/timer/delay.c: arg = bank | (N - 1) << 4, value = caller PC << 16 | us
+        more = f" +{arg >> 4} more" if arg >> 4 else ""
+        return f"{arg & 0x0F:02X}:{(v >> 16) & 0xFFFF:04X} took {v & 0xFFFF} us{more}"
     if fmt == "harg":
         return f"{arg:02X}"
     if fmt == "ms":                                      # #150 NVRAM save timing

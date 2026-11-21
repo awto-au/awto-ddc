@@ -109,3 +109,10 @@ def test_use_colour_follows_the_tty(monkeypatch):
     assert C.use_colour()                                                  # dev.py runs the child on a pipe under a terminal
     monkeypatch.setenv("NO_COLOR", "1")
     assert not C.use_colour()
+
+
+def test_dly_line_decodes():
+    sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "scripts"))
+    import sync_log
+    assert sync_log.value("dly", 0x2B, (0x4F12 << 16) | 123) == "0B:4F12 took 123 us +2 more"
+    assert sync_log.value("dly", 0x0B, (0x4F12 << 16) | 9) == "0B:4F12 took 9 us"

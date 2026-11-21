@@ -115,7 +115,8 @@ def attach(run, im, mapp):
         if c is None:
             continue
         cnt = R6_ADDR                                                     # the outer passes: R6, set by the caller's inline asm
-        pr.range(("F", fn, 0, 0, 0), chunk_bank(im, c), c["addr"] & 0xFFFF, rets(im, c),
+        ce = chunks.get("AwtoDelayEnd") if fn == "AwtoDelayXus" else None         # Xus leaves through the shared tail (long-block check)
+        pr.range(("F", fn, 0, 0, 0), chunk_bank(im, c), c["addr"] & 0xFFFF, rets(im, ce or c),
                  extra=(lambda m, r, cnt=cnt: m.core.iram[cnt]) if fn == "AwtoDelayXus" else (lambda m, r: 0))
         nf += 1
     say(f"probes: {nb} inline class B loop sites, {nf} class B routines, {na} class A functions")

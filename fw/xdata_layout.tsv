@@ -128,6 +128,7 @@ SysAudio	0xe580	80	1
 SysCec	0xe580	81	1
 __ovl	0xe580	82	1
 flash_screen	0xe580	83	1
+delay	0xe580	84	12
 sync	0xe780	37	678
 asteroids	0xe780	715	515
 ScalerCommonDebug	0xe780	1230	363

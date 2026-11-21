@@ -98,3 +98,5 @@ date	commit	image	label	passes	cycles_pass	work	stub_entries	stub_cyc	instr_pass
 2026-11-21T16:14:36+11:00	7d4e5856	AWT26110001-base-be	base													0	350	19.0	0.69
 2026-11-21T16:23:18+11:00	7d4e5856	AWT26110001-d1-be	d1-micro-delays-one-routine	12	163352	88838	48.5	2198	105849	174.9			752190		
 2026-11-21T16:23:19+11:00	7d4e5856	AWT26110001-d1-be	d1-micro-delays-one-routine													0	350	19.1	0.69
+2026-11-21T16:50:10+11:00	935dafc8	AWT26110003-d2-be	d2-long-block-log	12	163355	88863	49.5	2236	105848	174.9			755776		
+2026-11-21T16:50:12+11:00	935dafc8	AWT26110003-d2-be	d2-long-block-log													0	350	18.8	0.69

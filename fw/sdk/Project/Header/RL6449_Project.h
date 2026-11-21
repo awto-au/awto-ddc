@@ -1454,6 +1454,20 @@ extern void AwtoHtSync(unsigned char *puc);
 #define AWTO_SRC_POLL_MS                                        250
 // DDC live: HDCP 1.4 Ri checks run every 2 s (the slowest regular DDC traffic) x 1.25 = 2.5 s -> 3 s = 12 polls; expiry = "ddc-"
 #define AWTO_SRC_DDC_POLLS                                      12
+// Micro-delay long-block record (fw/timer/delay.c): written by AwtoDelayLong in any context, read and cleared by AwtoDelayLongPoll (main)
+#define AWTO_DLY_SLACK_TICKS                                    2       // TH2 ticks (256 counts) a delay may exceed its expected ticks by: sampling floor + call overhead
+#define AWTO_DLY_PASS_CNT                                       4       // counts per AwtoDelayXus pass besides the base loop, for the expected ticks
+typedef struct
+{
+    unsigned char ucN;                          // blocks since the last poll, saturates at 255
+    unsigned char ucPcHi;                       // return address of the delay call (last block)
+    unsigned char ucPcLo;
+    unsigned char ucBank;                       // d_isr_bs_cur at the block
+    unsigned char ucTicks;                      // elapsed TH2 ticks
+    unsigned char ucExp;                        // expected ticks
+} StAwtoDlyLong;
+extern __xdata StAwtoDlyLong isr_g_stAwtoDlyLong;
+extern void AwtoDelayLongPoll(void);
 extern void AwtoSyncInit(void);
 extern void AwtoSyncMark(void);
 extern void AwtoNvEv(unsigned char ucStep);
@@ -1478,6 +1492,7 @@ extern void AwtoSyncFreq(void);
 #define AWTO_SYNC_EV_SCALE                                      0xF8    // scaling: arg = H * 3 + V (0 none, 1 up, 2 down), value = display W << 16 | H
 #define AWTO_SYNC_EV_LIMIT                                      0xF9    // FRC width limit: arg 0 none / 1 bandwidth / 2 space, value = FIFO width << 16 | limit
 #define AWTO_SYNC_EV_WAITSLOW                                   0xFB    // slow / expired wait: arg kind | 0x10 expired, value = register / event << 16 | ms
+#define AWTO_SYNC_EV_DLYLONG                                    0xFD    // micro-delay over its limit: arg bank | (N - 1) << 4, value = caller PC << 16 | us (fw/timer/delay.c)
 #define AWTO_SYNC_EV_DPLT                                       0xFC    // DP link trained: value port << 16 | ms since the main loop first saw the training under way
 #define AWTO_SEL_WHY_FIXED                                      0
 #define AWTO_SEL_WHY_AUTO_LAST                                  1

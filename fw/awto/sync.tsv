@@ -527,3 +527,4 @@ ED	39	-	pop-up opened: saving to memory card
 ED	81	n	pop-up suppressed: the input selector is open and keeps the screen (message %)
 ED	82	n	pop-up suppressed: the console is open and keeps the screen (message %)
 EE	*	note	%
+FD	*	dly	micro-delay over its limit (>= {AWTO_DLY_SLACK_TICKS} ticks): call at %	warning

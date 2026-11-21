@@ -61,7 +61,7 @@
 #define AWTO_DELAY_CLK_PER_CNT                      12UL     // djnz Rn: 3 machine cycles of 4 clk (DW8051 model)
 #define AWTO_DELAY5US_OVH_CLK                       8UL
 #define AWTO_DELAYXUS_OVH_CLK                       20UL
-#define AWTO_DELAY_CALL_CNT                         4U       // main-context DELAY_5US is a call (lcall + ret + push + pop R7 = 48 clk = 4 counts): the routine loops Base - 4, same wait as the inline loop
+#define AWTO_DELAY_CALL_CNT                         4U       // DELAY_5US is a call (lcall + ret + push + pop R7 = 48 clk = 4 counts): the routine loops Base - 4, same wait as an inline loop
 #define AWTO_DELAY_CNT(khz, t_us, ovh)              ((BYTE)((((DWORD)(khz) * (t_us)) + 1000UL * (AWTO_DELAY_CLK_PER_CNT - 1UL - (ovh))) / (1000UL * AWTO_DELAY_CLK_PER_CNT)))
 #define AWTO_CPU_KHZ_M2PLL                          (_M2PLL_CLK_KHZ / (_FLASH_CLK_DIV * _MCU_CLK_DIV))
 #define AWTO_CPU_KHZ_XTAL                           (_EXT_XTAL / (_FLASH_CLK_IN_DIV * _MCU_CLK_IN_DIV))
