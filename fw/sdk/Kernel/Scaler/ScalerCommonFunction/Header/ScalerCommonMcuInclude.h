@@ -353,8 +353,8 @@ typedef enum
 // VARIABLE EXTERN
 //****************************************************************************
 
-extern BYTE __data d_isr_g_ucDelay5usN_Base;
-extern BYTE __data d_isr_g_ucDelayXusN_Base;
+extern volatile BYTE __data d_isr_g_ucDelay5usN_Base;
+extern volatile BYTE __data d_isr_g_ucDelayXusN_Base;
 extern BYTE __data d_isr_g_ucDelay5usI;
 extern BYTE __data d_isr_g_ucDelay5usI_EXINT;
 extern BYTE __data d_g_ucDelay5usI_INTLO;

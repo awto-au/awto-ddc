@@ -130,6 +130,7 @@ sync	0xe780	37	676
 asteroids	0xe780	713	515
 ScalerCommonDebug	0xe780	1228	363
 console	0xe780	1591	318
+RL6449_Series_DP_INT	0xe780	1909	3
 awto_settings_menu	0xe780	1916	135
 fastsw	0xe780	2051	169
 ScalerRotation	0xe780	2220	2

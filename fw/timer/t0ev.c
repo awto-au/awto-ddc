@@ -13,7 +13,7 @@
 
 static __xdata WORD isr_s_pusAwtoT0Ms[_SCALER_WD_TIMER_EVENT_COUNT];   // ms left per event ID (0 = idle; ID 0 is INVALID)
 static __xdata WORD isr_s_usAwtoT0Rl;                                   // reload (RCAP2) of the running tick
-__xdata BYTE isr_g_ucAwtoT0Pos;                                         // 0 = Timer0 ISR not running; else the next ID it decrements
+__xdata volatile BYTE isr_g_ucAwtoT0Pos;                                         // 0 = Timer0 ISR not running; else the next ID it decrements
 
 // Timer0 = one 1 ms tick from now at the current clock (Timer2's reload)
 #define AWTO_T0EV_START()               do { TR0 = 0; TL0 = RCAP2L; TH0 = RCAP2H; TF0 = 0; TR0 = 1; \

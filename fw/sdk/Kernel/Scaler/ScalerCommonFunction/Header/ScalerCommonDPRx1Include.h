@@ -153,9 +153,9 @@ extern bit g_bDpRx1SignaldetectINTHappened;
 #endif
 
 #if(_HW_DP_DPCD_EXT_CAP_PHYSICAL_ADDRESS_SUPPORT != _ON)
-extern BYTE isr_g_ucDpRx1DPCD02200hValue;
-extern BYTE isr_g_ucDpRx1DPCD02201hValue;
-extern BYTE isr_g_ucDpRx1DPCD02210hValue;
+extern volatile BYTE isr_g_ucDpRx1DPCD02200hValue;
+extern volatile BYTE isr_g_ucDpRx1DPCD02201hValue;
+extern volatile BYTE isr_g_ucDpRx1DPCD02210hValue;
 #endif
 
 #if(_DP_VSC_SDP_EXT_FOR_COLORIMETRY_SUPPORT == _ON)

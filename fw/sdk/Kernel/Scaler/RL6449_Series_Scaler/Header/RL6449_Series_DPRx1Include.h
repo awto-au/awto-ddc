@@ -167,7 +167,7 @@
 //****************************************************************************
 // VARIABLE EXTERN
 //****************************************************************************
-extern bit d_isr_g_bDpRx1PSAuxToggle;
+extern volatile bit d_isr_g_bDpRx1PSAuxToggle;
 
 extern __xdata _Bool g_bDpRx1AuxCommandNoReply;
 

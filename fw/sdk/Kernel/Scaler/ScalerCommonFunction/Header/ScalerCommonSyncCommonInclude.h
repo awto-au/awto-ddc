@@ -149,9 +149,9 @@ typedef enum
 // VARIABLE EXTERN
 //****************************************************************************
 extern BYTE g_ucDpRx0LTStatus;
-extern BYTE isr_g_ucDpRx1LTStatus;
+extern volatile BYTE isr_g_ucDpRx1LTStatus;
 extern __xdata _Bool g_bDpRx0NormalLTSetPhyFinish;
-extern bit d_isr_g_bDpRx1NormalLTSetPhyFinish;
+extern volatile bit d_isr_g_bDpRx1NormalLTSetPhyFinish;
 
 //****************************************************************************
 // FUNCTION EXTERN

@@ -903,6 +903,7 @@ void ScalerDpIntHandler_EXINT0(void)
 //--------------------------------------------------
 void ScalerDpWDTimerEventProc_WDINT(EnumScalerWDTimerEventID enumEventID)
 {
+    BYTE ucBackup[3];                               // T0 owns its copy: EXINT0 keeps g_pucDpRx1Backup
     BYTE ucTemp = 0;
 
     switch(enumEventID)
@@ -977,9 +978,9 @@ void ScalerDpWDTimerEventProc_WDINT(EnumScalerWDTimerEventID enumEventID)
                     SET_DP_RX1_AUX_MANUAL_MODE_EXINT();
                 }
 
-                g_pucDpRx1Backup[0] = ScalerGetByte_EXINT(PBA_C1_DPCD_ADDR_PORT_H);
-                g_pucDpRx1Backup[1] = ScalerGetByte_EXINT(PBA_C2_DPCD_ADDR_PORT_M);
-                g_pucDpRx1Backup[2] = ScalerGetByte_EXINT(PBA_C3_DPCD_ADDR_PORT_L);
+                ucBackup[0] = ScalerGetByte_EXINT(PBA_C1_DPCD_ADDR_PORT_H);
+                ucBackup[1] = ScalerGetByte_EXINT(PBA_C2_DPCD_ADDR_PORT_M);
+                ucBackup[2] = ScalerGetByte_EXINT(PBA_C3_DPCD_ADDR_PORT_L);
 
                 ScalerDpRx1RebuildPhy_WDINT(ScalerDpRx1GetDpcdInfo_WDINT(0x00, 0x01, 0x00));
 
@@ -1008,9 +1009,9 @@ void ScalerDpWDTimerEventProc_WDINT(EnumScalerWDTimerEventID enumEventID)
 
                 ScalerDpRx1DecodeErrorCountReset_WDINT();
 
-                ScalerSetByte_EXINT(PBA_C1_DPCD_ADDR_PORT_H, g_pucDpRx1Backup[0]);
-                ScalerSetByte_EXINT(PBA_C2_DPCD_ADDR_PORT_M, g_pucDpRx1Backup[1]);
-                ScalerSetByte_EXINT(PBA_C3_DPCD_ADDR_PORT_L, g_pucDpRx1Backup[2]);
+                ScalerSetByte_EXINT(PBA_C1_DPCD_ADDR_PORT_H, ucBackup[0]);
+                ScalerSetByte_EXINT(PBA_C2_DPCD_ADDR_PORT_M, ucBackup[1]);
+                ScalerSetByte_EXINT(PBA_C3_DPCD_ADDR_PORT_L, ucBackup[2]);
 
                 if((ucTemp & _BIT1) == _BIT1)
                 {

@@ -41,7 +41,7 @@
 //****************************************************************************
 // VARIABLE DECLARATIONS
 //****************************************************************************
-bit d_isr_g_bDpRx1PSAuxToggle = _FALSE;
+volatile bit d_isr_g_bDpRx1PSAuxToggle = _FALSE;
 
 __xdata _Bool g_bDpRx1AuxCommandNoReply = _FALSE;
 

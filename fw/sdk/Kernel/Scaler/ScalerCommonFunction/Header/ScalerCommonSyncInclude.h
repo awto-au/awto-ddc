@@ -1975,7 +1975,7 @@ extern WORD g_usSyncDpCountD10P2LowerBound1000HBR2;
 #endif
 
 extern bit g_bDpMSTRx0BackupLinkStatusFlg_INT;
-extern bit d_isr_g_bDpMSTRx1BackupLinkStatusFlg_INT;
+extern volatile bit d_isr_g_bDpMSTRx1BackupLinkStatusFlg_INT;
 extern BYTE g_pucDpRx0LinkStatusBackup_INT[3];
 extern BYTE g_pucDpRx1LinkStatusBackup_INT[3];
 extern StructDPCapSwitchInfo g_stDpCapSwitch;
