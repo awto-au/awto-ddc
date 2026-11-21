@@ -35,6 +35,7 @@ Design: awto-sdcc#176. Self-test: `./dev.py san` (`scripts/san_test.py`, snippet
   - `__at` hardware registers (scaler / MCU registers outside 0xD000..0xF7FF) are not tracked and their rows stay unresolved by design.
 - Report names: objects with their extent (`_isr_g_stAwtoDiag+22`), bits by their bit object (`_d_isr_g_bNotifyTimer2Int`), else area (`[BIT_BANK]`, `[BSEG_BYTES]+4.bit4`).
 - Reader: `sdcc_san.read_marks`.
+- Producer: `./dev.py san --marks [OUT]` (`scripts/san_marks.py`, default `tmp/san/marks.tsv`) = awto-sdcc `ddc_corpus.py dump` + `isr_volatile_link.py --marks`; exit 0 = no unmarked object left. No allow-list: shared objects carry `[[awto::isr_shared("reason")]]`, READ_ONCE / WRITE_ONCE or volatile.
 
 ## Cost
 - Normal build: no sanitizer code (`#ifdef SDCC_SAN`); `bit_read` / `bit_write` / `@Ri` accesses go through equivalent inline helpers.

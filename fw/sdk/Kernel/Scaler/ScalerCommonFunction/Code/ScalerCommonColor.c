@@ -39,7 +39,7 @@
 //****************************************************************************
 // VARIABLE DECLARATIONS
 //****************************************************************************
-StructColorInfo isr_g_stColorInfo;
+StructColorInfo isr_g_stColorInfo [[awto::isr_shared("main sets it at mode change; EXINT0 only reads the packed colour bits")]];
 
 //****************************************************************************
 // FUNCTION DECLARATIONS

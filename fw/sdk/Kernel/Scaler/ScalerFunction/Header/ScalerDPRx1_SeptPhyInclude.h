@@ -132,7 +132,7 @@
 //****************************************************************************
 extern BYTE g_ucDpRx1PhyCtsCtrl;
 extern EnumHDCPType g_enumDpRx1HdcpMode;
-extern StructDpLanesMapping isr_g_stDpRx1LanesMapping;
+extern StructDpLanesMapping isr_g_stDpRx1LanesMapping [[awto::isr_shared("main sets it at DP Rx1 init; EXINT0 and T0 only read the lane map")]];
 
 #if(_DP_MST_SUPPORT == _ON)
 extern StructDPRxMiscInfo g_stDpRx1MiscInfo;

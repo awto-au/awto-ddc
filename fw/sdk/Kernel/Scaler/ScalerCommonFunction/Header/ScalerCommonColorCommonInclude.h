@@ -92,7 +92,7 @@ typedef struct
 //****************************************************************************
 // VARIABLE EXTERN
 //****************************************************************************
-extern StructColorInfo isr_g_stColorInfo;
+extern StructColorInfo isr_g_stColorInfo [[awto::isr_shared("main sets it at mode change; EXINT0 only reads the packed colour bits")]];
 
 //****************************************************************************
 // FUNCTION EXTERN

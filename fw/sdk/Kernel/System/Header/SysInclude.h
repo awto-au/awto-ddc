@@ -524,7 +524,7 @@ typedef enum
 // VARIABLE EXTERN
 //****************************************************************************
 // __SYSTEM_MODE__
-extern StructModeInfoType isr_g_stModeInfo;
+extern StructModeInfoType isr_g_stModeInfo [[awto::isr_shared("main owns it; the watchdog ISR reads it once for the crash snapshot, reset follows")]];
 
 
 // __SYSTEM_POWER__

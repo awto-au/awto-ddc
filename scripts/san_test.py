@@ -2,6 +2,7 @@
 """sdcc_san self-test: builds fw/sansim/*.c with sdcc, runs each on the -DSDCC_SAN core, checks the findings (docs/sanitizer.md).
 
 usage: san_test.py [name ...]      exit 0 only if every case passes
+       san_test.py --marks [OUT]    write the isr-marks list with awto-sdcc's static check (san_marks.py)
 - Image: plain sdcc build (--model-large, --xram-loc 0xE000 = inside the sanitizer's XDATA pool 0xD000..0xF7FF), 8052 timing, T0 ISR.
 - Run: RUN_INSTR instructions per case (T0 reloads 0xFF00: an IRQ about every 256 cycles).
 Log: tmp/logs/san_test.log; scratch: tmp/scratch/san/<name>
@@ -111,6 +112,10 @@ def one(name: str, log) -> bool:
 
 
 def main() -> int:
+    if sys.argv[1:2] == ["--marks"]:                    # mark list from awto-sdcc's static ISR check (san_marks.py)
+        import san_marks
+        sys.argv[1:2] = []
+        return san_marks.main()
     names = sys.argv[1:] or list(CASES)
     (ROOT / "tmp/logs").mkdir(parents=True, exist_ok=True)
     with (ROOT / "tmp/logs/san_test.log").open("w", buffering=1) as log:

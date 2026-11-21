@@ -3,7 +3,7 @@
 // #139 sync / power-on log: a small I2C-readable ring of stage events (RL6449_Project.h StAwtoSync), one episode per
 // power-on / input switch / wake. Texts: fw/awto/sync.tsv (scripts/gen_awto_sync.py); host decoder: scripts/sync_log.py.
 // Also the port getters the selector rows read (stage, DDC activity, idle TMDS clock).
-extern WORD isr_g_usTmdsOffLineMeasureClk;              // ScalerCommonSync.c: SDK TMDS clock at freq-stable, 0.1 MHz
+extern WORD isr_g_usTmdsOffLineMeasureClk [[awto::isr_shared("main writes it with EX0 masked (TMDS Rx2/Rx3 PhySetDeferred); EXINT0 only reads")]];              // ScalerCommonSync.c: SDK TMDS clock at freq-stable, 0.1 MHz
 __xdata __at(AWTO_SYNC_ADDR) StAwtoSync g_stAwtoSync;
 static __xdata BYTE s_pucAwtoSyncDet[3];          // D1..D3: last predetect (bit0) | source type << 1 seen by the port detect
 __xdata BYTE g_ucAwtoScanStage;                     // input-sync timeline: step a scan stopped at (AWTO_SCAN_STAGE sites in the SDK)

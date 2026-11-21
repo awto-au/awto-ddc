@@ -103,7 +103,7 @@ StructCecTxTransmitInfo g_stCecTxTransmitInfo;
 volatile StructCecGeneralCtrl isr_g_stCecGeneralCtrl;
 
 volatile BYTE isr_g_ucCecRxBackupFifoWaterLevel;
-BYTE isr_g_pucCecRxBackupFifo[_CEC_RX_BACKUP_FIFO_SIZE];
+BYTE isr_g_pucCecRxBackupFifo[_CEC_RX_BACKUP_FIFO_SIZE] [[awto::isr_shared("FIFO: EXINT0 appends at the water level, main drains; the volatile water level orders them")]];
 
 //****************************************************************************
 // FUNCTION DECLARATIONS
