@@ -69,8 +69,14 @@
 - A new wait that pushes a function over its cap fails the gate; raising a cap is a reviewed edit of that TSV. `delay_audit.py --write-budget` adds rows (unreviewed) for functions over their default.
 
 ## Waits the inventory cannot see (rows with `extra_us` in `docs/delay-budget.tsv`)
-- Timer2 HPD-IRQ loop (`ScalerSyncDpHpdIrqAssertTimer2EventProc_EXINT`, `DP_RX_HPD_IRQ_ASSERT_T2_DELAY`): passes of the 4 us base through `AwtoDelayXus`, in the Timer2 ISR; the 1190 us cap is the maximum count. Fix proposal: HPD low for the IRQ pulse width from a Timer0 event (non-blocking) instead of a busy loop. DP timing change: hardware test first (unit 2 DP-1 or unit 3 DP-4).
-- `ScalerDisplayDPTx1AuxRead` / `AuxWrite`: 7 retries of the AUX reply wait (805 us each, 5635 us per call, main context). Fix proposal: shorten the retry bound to what a DP sink needs (AUX reply timeout in the DP spec) or yield to the main loop between tries. DP timing change: hardware test first.
+- Timer2 HPD-IRQ loop (`ScalerSyncDpHpdIrqAssertTimer2EventProc_EXINT`, `DP_RX_HPD_IRQ_ASSERT_T2_DELAY`): passes of the 4 us base through `AwtoDelayXus`, in the Timer2 ISR; the 1190 us cap is the maximum count.
+  - What it does: Timer2 tick -> wait ((95 - GET_DP_IRQ_TIME_10US) x 10) us with AUX in manual mode -> HPD low; the next tick (HPD high process) ends the pulse, so the wait sets the pulse width.
+  - Design (not built): one-shot on Timer1 (16-bit, TMOD 0x11, unused by the firmware; counts what Timer2 counts, 1 count = 1 loop count, so counts = delay us x f_cpu / 12) armed at the tick; its ISR runs the AUX-manual recover and drops HPD. Timer0 events are 1 ms granular and cannot place an edge at 250..950 us.
+  - Cost / risk: new vector (Timer1, `SysTimer1Proc`), ISR stack +3 B, ET1 enable in power-saving states; the edge moves from "tick + loop" to "tick + timer", jitter below the loop's (ISR entry latency only). Pulse-width spec: DP 1.4 HPD_IRQ 0.5..1 ms.
+  - Test plan: unit 2 DP-1 (or unit 3 DP-4): HPD IRQ pulse width on a scope / source-side AUX log, 20 IRQ events, link stays up; sim: Timer1 vector + pulse width from the PC hooks of `stall_sim.py`.
+- `ScalerDisplayDPTx1AuxRead` / `AuxWrite`: per try `DELAY_XUS(400)` blind, then up to 25 x (`DELAY_5US` + AUX-done poll), 7 retries: 805 us per try, 5635 us per call, main context.
+  - Design (not built): poll the AUX-done bit (`P9D_B1` bit 5) from the start of each try at 5 us steps and keep the 525 us bound (400 + 25 x 5, the DP AUX reply timeout of 400 us + margin); the blind 400 us goes away, a try ends when the sink replies (typically ~100..200 us). Retry count 7 unchanged (HW retry semantics). Worst case unchanged, typical call about 3x shorter.
+  - Test plan: unit 2 DP-1 / unit 3 DP-4 link training + DPCD reads 20 x, eDP panel link up at boot (DPTx is the panel side: 10 boots), compare `AwtoWaitLog` durations.
 - Flash sector erase (`ScalerFlashErasePage`): the MCU halts until the flash finishes; capped at the flash datasheet worst case, not shortened by software.
 - Interrupt-masked sections: a function that clears EX0 or EA gets the ISR cap (100 us); PhySetDeferred (EX0 masked) is allowed 5545 us by row until the tmds-phy work shortens it.
 
