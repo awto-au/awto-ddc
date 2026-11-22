@@ -154,6 +154,9 @@ Conditions: warm reset (ISP), n = 5 per image, median, console_mode Always, 4K60
   - Warm reset: no separate no-init byte; the row is current 10 s after the last mode change (gate window), a reset inside that window starts from the previous mode and the lock check corrects it.
   - Lock check still decides: a remembered 1:40 that fails drops the bit, the SDK falls back to 1:10, the successful scan rewrites the row.
   - Log: F2 02 `tried the remembered mode 1:40 first` (learned since the reset), F2 03 `tried 1:40 first, from NVRAM`; no line = no memory (1:10 first).
+  - Measured 2026-11-22 (reset, ISP, n = 5 per row; unit state differs between sessions, compare rows of one session only): unit 1 base image: scan ok 476..480 ms, ACTIVE 1034..1053; same unit, this change: scan ok 349..370 ms, ACTIVE 1020..1041 (median -12 ms). Unit 3, same image, first boot (empty memory) vs n = 5 after the NVRAM write: scan ok 459 vs 330..350, ACTIVE 1031 vs 994..1037 (median 1018).
+  - The failed 1:10 try (69 ms) is gone; the picture gains little: the panel HPD / link chain used to run inside the try's wait and now follows the 160..200 ms measure pass (`panel in HPD for 366ms` vs 155 ms).
+  - The NVRAM row is written by the gate: forced 60 s after the first dirty value, so a reset inside the first minute after a mode change starts from the old value.
 - SCDC 0x20 read again in the scan (instead of memory) was tried and dropped: the sources (Intel on unit 3) leave TMDS_Bit_Clock_Ratio 0 (`./dev.py scdc`: cfg 0x00, scrambler status 1), the SDK's own SCDC test fails the same way, so no failed try was avoided (5 of 5 unchanged).
 
 | unit 3 HDMI D2, switch D1 -> D2, ms from the switch | before | after |

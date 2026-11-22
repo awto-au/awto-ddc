@@ -47,3 +47,10 @@ Status 2026-11-16. Code: `fw/sdk/Kernel/System/Code/SysJudge.c` (system machine)
 
 - `scripts/host_output_drop.py <unit> [--hold-s 5]`: removes that unit's logical monitor with a temporary `gdctl set`, restores the exact layout read before. All outputs: `host_dpms.py` (blanks every screen).
 - Result 2026-11-16, unit 3 (HDMI D2) 5 s drop: fast wake times out after 147 ms in FAST SWITCH, "fast wakes used up", full search, ACTIVE at 1159 ms. Host DPMS (all outputs) instead: fast wake, picture up at 67 ms. Details #78.
+
+## DPMS fast wake gives up (#313, 2026-11-22, image b607180d, host DPMS off 15 s then on)
+
+- Ring lines (`sync.tsv` 99): `fast wake hold start, tries N` (counter the last hold left; the counter is reset at every hold start, no carry-over) and `fast wake failed, reason+try 0xRRTT` per timed-out try (RR = A1 reason bits: 1 measure busy, 2 watchdog, 4 M-domain memory check; TT = try number).
+- Unit 3 (HDMI D2), n = 10 before: 7 fell back to the full path, each with 4 timeouts of ~137 ms, all reason 4 (memory check); 3 took the fast path (picture ~50 ms). No retry after a first failure succeeded (0 of 21).
+- Change: a memory check timeout counts 2 tries (`AWTO_HOLD_TRIES_MEM`) instead of 4; other reasons keep 4. n = 10 after: 10 fell back, 2 timeouts each (the fast path did not succeed in this batch: the first-try result varies between batches); saving per fallback 2 x 137 ms.
+- Unit 1 (HDMI D2, NVIDIA), n = 10 (also the pre-change image, n = 3): the fast wake shows the picture at ~55 ms, 121 ms later `judge:memory / timing gen` sends the mode to SEARCH, ACTIVE at ~855 ms. Cause open.
