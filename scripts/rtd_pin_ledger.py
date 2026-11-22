@@ -8,9 +8,9 @@ pins do not have (and do not need) page-0x10 pin-share assignments.
 import csv
 import json
 import re
-from pathlib import Path
 
-ROOT = Path(__file__).resolve().parent.parent
+from _repo import ROOT
+
 LIVE = ROOT / "docs/monitors/pinshare-live-AWT26110003.tsv"
 OUT = ROOT / "docs/monitors/rtd2795t-216-pin-ledger.tsv"
 OUT_JSON = ROOT / "docs/monitors/rtd2795t-216-pin-ledger.json"

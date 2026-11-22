@@ -22,8 +22,8 @@ import time
 from pathlib import Path
 
 from _log import log_line as _log_line
+from _repo import ROOT
 
-ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "scripts"))
 LOG = ROOT / "tmp/logs/panel_unit.log"
 OUT = ROOT / "tmp/logs/panel_unit"

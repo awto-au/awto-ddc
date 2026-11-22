@@ -20,15 +20,14 @@ Logs: ./tmp/logs/rtk_libsig.log. Repo root: $AWTO_DDC_REPO -> file-relative.
 import argparse
 import collections
 import json
-import os
 import re
 import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import omf51_lib as omf
+from _repo import ROOT as REPO
 
-REPO = Path(os.environ.get("AWTO_DDC_REPO") or Path(__file__).resolve().parent.parent)
 ANALYSIS = Path.home() / "vendors/realtek/analysis"
 SIGDIR = ANALYSIS / "libsigs"
 LOG = REPO / "tmp/logs/rtk_libsig.log"

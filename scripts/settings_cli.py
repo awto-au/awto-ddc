@@ -23,8 +23,8 @@ from _log import log_line as _log_line
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import settings_table as T
+from _repo import ROOT
 
-ROOT = Path(__file__).resolve().parents[1]
 LOG = ROOT / "tmp/logs/settings_cli.log"
 DBG = 0x6A                           # debug slave 0x35, 8-bit address
 SEL, VAL, SCHEMA, CMD = 0xE0, 0xE1, 0xE2, 0xE3

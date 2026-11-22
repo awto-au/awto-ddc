@@ -23,8 +23,8 @@ import isostamp
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import rtd_isp_probe as P
+from _repo import ROOT
 
-ROOT = Path(os.environ.get("AWTO_DDC_REPO") or Path(__file__).resolve().parents[1])
 ADC_REG = {"key0": 0xFF09, "key1": 0xFF0A}           # ladder A0 / A1 result cells (regdb ADC_A0 / ADC_A1)
 
 

@@ -27,8 +27,8 @@ import fw_sim as S
 import led_check as LED
 import osd_test as T
 import sync_log as L
+from _repo import ROOT
 
-ROOT = Path(__file__).resolve().parents[1]
 LOG = ROOT / "tmp/logs/panel_sim.log"
 VDD, BL, BL_EN_N, PWM4 = 0xFE1A, 0xFE25, 0xFE2A, 0xFF50      # RL6449_AWTO_JXC4K.h P7.2 / P8.5 / P9.2; Project_Option.h PWM4 duty
 DPTX_FNS = ("ScalerDisplayDPTxLinkSequence", "ScalerDisplayDPTxStreamHanlder", "ScalerDisplayDPTxPhyInitial",

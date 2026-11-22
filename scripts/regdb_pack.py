@@ -6,11 +6,11 @@ Source TSVs come from scripts/rtd_db_parse.py. Repo must stay PRIVATE (see CLAUD
 Log: ./tmp/logs/regdb_pack.log
 """
 import gzip
-import os
 import shutil
 from pathlib import Path
 
-ROOT = Path(os.environ.get("AWTO_DDC_REPO") or Path(__file__).resolve().parent.parent)
+from _repo import ROOT
+
 SRC = Path.home() / "vendors/realtek/analysis/regdb"
 DST = ROOT / "re" / "regdb"
 DST.mkdir(parents=True, exist_ok=True)

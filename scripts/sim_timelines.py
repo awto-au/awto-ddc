@@ -16,8 +16,8 @@ import sys
 from pathlib import Path
 
 from _log import log_line as _log_line
+from _repo import ROOT
 
-ROOT = Path(__file__).resolve().parents[1]
 LOG = ROOT / "tmp/logs/sim_timelines.log"
 SIMS = ("boot_sim", "wake_sim", "sync_sim", "key_sim_test")
 LINE = re.compile(r"^\s*(\d+):(.*)$")

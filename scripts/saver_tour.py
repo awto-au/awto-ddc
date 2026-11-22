@@ -10,12 +10,11 @@ import argparse
 import subprocess
 import sys
 import threading
-from pathlib import Path
 
 import saver_names
 from _log import log_line as _log_line
+from _repo import ROOT
 
-ROOT = Path(__file__).resolve().parent.parent
 LOG = ROOT / "tmp/logs/saver_tour.log"
 DEV = ROOT / "dev.py"
 TOUR = ("pacman", "scope2", "asteroids")   # VCP 0xEB values come from fw/awto/savers.tsv

@@ -17,7 +17,6 @@ from __future__ import annotations
 
 import argparse
 import json
-import os
 import sys
 import time
 from pathlib import Path
@@ -26,8 +25,8 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 import dbg_xdata as X
 import isostamp
 import reg_live_scan as S
+from _repo import ROOT
 
-ROOT = Path(os.environ.get("AWTO_DDC_REPO") or Path(__file__).resolve().parent.parent)
 LOG = ROOT / "tmp/logs/reg_behind_probe.log"
 TSV = ROOT / "re/regmap/read_behind.tsv"
 CTXS = ("d1", "d2", "d3", "rev", "far", "far2")

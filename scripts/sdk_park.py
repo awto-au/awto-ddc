@@ -18,8 +18,8 @@ import sys
 from pathlib import Path
 
 import isostamp
+from _repo import ROOT
 
-ROOT = Path(__file__).resolve().parent.parent
 SDK, PARK = ROOT / "fw/sdk", ROOT / "fw/sdk-parked"
 SIZE = ROOT / "tmp/sdcc-port/asm_bank/_size"
 CHIP = re.compile(r"RL6(193|369|410|432|463|492)|RLE0779")

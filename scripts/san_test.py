@@ -18,8 +18,8 @@ os.environ["AWTO_SIM_SAN"] = str(HERE.parent / "tmp/scratch/san")
 import fastmachine as FM
 import sdcc_san
 import sdcc_tools as T
+from _repo import ROOT
 
-ROOT = HERE.parent
 SRC = ROOT / "fw/sansim"
 WORK = ROOT / "tmp/scratch/san"
 RUN_INSTR = 400_000      # ~1500 IRQs at one per ~256 cycles; enough for every interleave below, < 1 s per case

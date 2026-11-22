@@ -18,7 +18,6 @@ import csv
 import glob
 import gzip
 import json
-import os
 import re
 import sys
 import time
@@ -27,8 +26,8 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import dbg_xdata as X
 import isostamp
+from _repo import ROOT
 
-ROOT = Path(os.environ.get("AWTO_DDC_REPO") or Path(__file__).resolve().parent.parent)
 LOG = ROOT / "tmp/logs/reg_live_scan.log"
 
 ID_ADDR, ID_VALUE = 0x0000, 0xCF            # ID_REG, regdb reset 0xCF

@@ -11,9 +11,9 @@ import sys
 from pathlib import Path
 
 import isostamp
+from _repo import ROOT
 from PIL import Image, ImageChops
 
-ROOT = Path(__file__).resolve().parents[1]
 LOG = ROOT / "tmp" / "logs" / "screens_diff.log"
 SKIP = {"sheet"}
 

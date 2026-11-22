@@ -13,12 +13,12 @@ Log: ./tmp/logs/regdb_ghidra_labels.log
 """
 import csv
 import gzip
-import os
 import sys
 from collections import defaultdict
 from pathlib import Path
 
-ROOT = Path(os.environ.get("AWTO_DDC_REPO") or Path(__file__).resolve().parent.parent)
+from _repo import ROOT
+
 DB = ROOT / "re" / "regdb"
 RAM = range(0xD700, 0xF700)
 MAX_COMMENT = 240

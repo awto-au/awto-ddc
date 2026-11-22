@@ -10,12 +10,11 @@ import argparse
 import subprocess
 import sys
 import threading
-from pathlib import Path
 
 import saver_names
 from _log import log_line as _log_line
+from _repo import ROOT
 
-ROOT = Path(__file__).resolve().parent.parent
 LOG = ROOT / "tmp/logs/saver_ctl.log"
 TOUR = ("pacman", "scope2", "asteroids")
 HOLD_S = 10.0  # Dan's viewing time per saver (2026-11-19)

@@ -12,7 +12,8 @@ import subprocess
 import sys
 from pathlib import Path
 
-ROOT = Path(os.environ.get("AWTO_DDC_REPO") or Path(__file__).resolve().parents[1])
+from _repo import ROOT
+
 REGMAP = ROOT / "re/regmap"
 REGS = REGMAP / "regs.tsv"
 FIELDS = REGMAP / "fields.tsv"

@@ -20,7 +20,8 @@ from dbg_xdata import BEHIND_PAGES
 from rtd_i2c_bridge import Real
 
 DBG = 0x35 << 1
-ROOT = Path(__file__).resolve().parent.parent
+from _repo import ROOT
+
 LOGF = ROOT / "tmp/logs/p037_test.log"
 
 

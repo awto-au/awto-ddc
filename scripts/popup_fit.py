@@ -12,14 +12,13 @@ usage: popup_fit.py [--list] [--tree DIR]
   of the ported tree (tmp/sdcc-port/src ... FontWidthTable.h). Exit 1 when a row does not fit. Log: tmp/logs/popup_fit.log
 """
 import argparse
-import os
 import re
 import sys
 from pathlib import Path
 
 from _log import log_line as _log_line
+from _repo import ROOT
 
-ROOT = Path(os.environ.get("AWTO_DDC_REPO") or Path(__file__).resolve().parent.parent)
 LOG = ROOT / "tmp/logs/popup_fit.log"
 TEXT_COLS = 24                 # cells 12..35 of the 36 cell map
 LIMIT_PX = 240                 # < 255 (BYTE sum) and < 288 (text area), with margin for the 12 px rounding and the centre pad

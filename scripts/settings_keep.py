@@ -22,7 +22,8 @@ from _log import log_line as _log_line
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
-ROOT = Path(os.environ.get("AWTO_DDC_REPO") or Path(__file__).resolve().parents[1])
+from _repo import ROOT
+
 LOG = ROOT / "tmp/logs/settings_keep.log"
 # a flashed unit answers the mailbox ~1.5 s after the reset (boot log: ACTIVE at ~1.5 s); 5 s = the repo's monitor-wait limit,
 # expiry: nothing restored, the snapshot file stays for a manual `restore`

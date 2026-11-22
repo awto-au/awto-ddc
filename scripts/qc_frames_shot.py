@@ -22,9 +22,9 @@ import card_shot as C
 import numpy as np
 import osd_model as M
 import osd_render as R
+from _repo import ROOT
 from PIL import Image, ImageDraw
 
-ROOT = Path(os.environ.get("AWTO_DDC_REPO") or Path(__file__).resolve().parent.parent)
 LOG = ROOT / "tmp/logs/qc_frames_shot.log"
 TC = 0xB2
 # frame order of Realtek's enum OSDQCFrameDef: _OSD_FRAME_1, 2, 2_1, 2_2, 2_3, 3 .. 20

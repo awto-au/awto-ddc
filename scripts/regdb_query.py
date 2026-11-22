@@ -8,12 +8,12 @@ usage: regdb_query.py <chip> regs  [--name REGEX] [--addr 0xLO-0xHI] [--page 00]
 """
 import csv
 import gzip
-import os
 import re
 import sys
 from pathlib import Path
 
-ROOT = Path(os.environ.get("AWTO_DDC_REPO") or Path(__file__).resolve().parent.parent)
+from _repo import ROOT
+
 CANDIDATES = [ROOT / "re" / "regdb", Path.home() / "vendors/realtek/analysis/regdb"]
 
 

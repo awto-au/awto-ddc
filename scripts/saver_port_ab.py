@@ -11,7 +11,8 @@ import sys
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
-ROOT = Path(__file__).resolve().parent.parent
+from _repo import ROOT
+
 LOG = ROOT / "tmp/logs/saver_port_ab.log"
 JOB_LIMIT_S = 900          # one saver run: 40 frames of Scope 2 at ~0.17 s fw each take ~2-3 min wall; stall limit x3
 

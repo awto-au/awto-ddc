@@ -15,12 +15,12 @@ import csv
 import glob
 import gzip
 import json
-import os
 import re
 import sys
 from pathlib import Path
 
-ROOT = Path(os.environ.get("AWTO_DDC_REPO") or Path(__file__).resolve().parent.parent)
+from _repo import ROOT
+
 SDK_HDR = ROOT / "fw/sdk/Kernel/Scaler/RL6449_Series_Common/Header/RL6449_Series_Common_RegCommonInclude.h"
 RESERVED = re.compile(r"^(reserved|dummy|rsvd|res|resv|reserve|unused)\w*$", re.IGNORECASE)
 

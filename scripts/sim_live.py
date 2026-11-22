@@ -23,8 +23,8 @@ HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE))
 import osd_render as R
 import osd_test as T
+from _repo import ROOT
 
-ROOT = HERE.parent
 LOG = ROOT / "tmp/logs/sim_live.log"
 FRAME_S = 0.5            # wall seconds between frames: a text screen re-renders in about 0.3 s
 STREAM_S = 0.25         # MJPEG client refresh: faster than a frame so a new frame shows within 250 ms

@@ -12,8 +12,8 @@ import sys
 from pathlib import Path
 
 import sdcc_tools as T
+from _repo import ROOT
 
-ROOT = Path(os.environ.get("AWTO_DDC_REPO") or Path(__file__).resolve().parents[1])
 SDCC = Path(os.environ.get("AWTO_SDCC_REPO") or "/mnt/2tb/git/awto-sdcc")
 DUMP_TMO = 120      # port + file list of the firmware tree: seconds when warm; 120 s = host-process backstop
 LINK_TMO = 600      # 456 compiles at -j4 on the shared box: ~60 s measured warm (2026-11-21); 10x backstop

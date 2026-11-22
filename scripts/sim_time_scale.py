@@ -14,7 +14,8 @@ import re
 import sys
 from pathlib import Path
 
-ROOT = Path(__file__).resolve().parents[1]
+from _repo import ROOT
+
 HDR = ROOT / "fw/sdk/Project/Header/RL6449_Project.h"
 FN = "AwtoDiagMainPass"
 FN_SPAN = 0x150          # bytes searched from the function entry (the function is 0x142 long)

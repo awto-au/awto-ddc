@@ -19,8 +19,8 @@ from dataclasses import dataclass
 from pathlib import Path
 
 import numpy as np
+from _repo import ROOT
 
-ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "scripts"))
 import osd_vlc
 

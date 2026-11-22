@@ -6,15 +6,14 @@ usage: pacman_unit.py BUS --serial S --map MAP [--loops N] [--fps F] [--keep]
 Log: ./tmp/logs/pacman_unit.log
 """
 import argparse
-import os
 import re
 import sys
 import time
 from pathlib import Path
 
 from _log import log_line as _log_line
+from _repo import ROOT
 
-ROOT = Path(os.environ.get("AWTO_DDC_REPO") or Path(__file__).resolve().parent.parent)
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 LOG = ROOT / "tmp/logs/pacman_unit.log"
 TESTCMD_OFF = 0x28           # isr_g_stAwtoDiag.ucTestCmd

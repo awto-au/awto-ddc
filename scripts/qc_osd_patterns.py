@@ -12,15 +12,14 @@ usage: qc_osd_patterns.py [--qc FILE] [--out PNG] [--scale N]
 Log: ./tmp/logs/qc_osd_patterns.log
 """
 import argparse
-import os
 import re
 import sys
 from pathlib import Path
 
 import numpy as np
 from _log import log_line as _log_line
+from _repo import ROOT
 
-ROOT = Path(os.environ.get("AWTO_DDC_REPO") or Path(__file__).resolve().parent.parent)
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import osd_vlc as V
 

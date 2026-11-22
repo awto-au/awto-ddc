@@ -21,8 +21,8 @@ from collections import defaultdict
 from pathlib import Path
 
 import isostamp
+from _repo import ROOT
 
-ROOT = Path(__file__).resolve().parents[1]
 LOG = ROOT / "tmp/logs/poke_loops.log"
 POKE_RX = re.compile(r"\bAWTO_WDT_(?:FEED|POKE|PASS)\s*\(")
 FN_RX = re.compile(r"^(?:[A-Za-z_][\w \*]*?)\b([A-Za-z_]\w*)\s*\(([^;{}]*)\)\s*(?:__\w+(?:\(\w*\))?\s*)*\n?\{", re.MULTILINE)

@@ -10,14 +10,13 @@ usage: rb_stale_probe.py --unit N [--label TEXT]      (debug link on, read-only 
 from __future__ import annotations
 
 import argparse
-import os
 import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from _log import log_line as _log_line
+from _repo import ROOT
 
-ROOT = Path(os.environ.get("AWTO_DDC_REPO") or Path(__file__).resolve().parent.parent)
 LOG = ROOT / "tmp/logs/rb_stale_probe.log"
 PAGES = (0xA0, 0xA3, 0xA4, 0xA8, 0xAB, 0x88, 0x8E, 0x8F, 0xC8, 0xCE, 0xCF)   # read-behind pages with stable registers (re/regmap/read_behind.tsv)
 CAND = range(0, 0x100, 4)             # candidate dword offsets per page (lane 0)

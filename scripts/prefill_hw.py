@@ -23,8 +23,8 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 import dbg_link
 import dbg_xdata as X
 import rtd_i2c_bridge as B
+from _repo import ROOT
 
-ROOT = Path(__file__).resolve().parent.parent
 LOG = ROOT / "tmp/logs/prefill_hw.log"
 ENTRY = 2 + 48              # StAwtoSwCache: ucValid, ucSourceType, pucScaler[AWTO_FAST_SCALER_BYTES 48]
 POLL_S = 0.25               # D1 change resolution; one poll = 2 XDATA reads (~10 ms) + 2 sudo dd

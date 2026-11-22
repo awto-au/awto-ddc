@@ -2,10 +2,10 @@
 
 Library: SAVERS (rows), vcp(name) -> int, names() -> list of names that have a VCP value.
 """
-import os
 from pathlib import Path
 
-ROOT = Path(os.environ.get("AWTO_DDC_REPO") or Path(__file__).resolve().parent.parent)
+from _repo import ROOT
+
 TSV = ROOT / "fw/awto/savers.tsv"
 
 
