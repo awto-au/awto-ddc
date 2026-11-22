@@ -331,6 +331,10 @@ void AwtoSwFastPoll(void)                       // once per main-loop pass: fini
             s_ucAwtoHoldLevel = 0;              // backlight / panel already back on
             g_ucAwtoWakePending = 0;
             AwtoSyncPush(AWTO_SYNC_EV_FASTWAKE, 1, ((WORD)ucWhy << 8) | s_ucAwtoHoldTries);
+            if(((ucWhy & AWTO_FAST_WHY_MEM) != 0) && (s_ucAwtoHoldTries >= AWTO_HOLD_TRIES_MEM))
+            {
+                s_ucAwtoHoldTries = AWTO_HOLD_TRIES;    // the next stable receiver takes the full path
+            }
             ScalerGlobalWatchDog(_DISABLE);
             ScalerDDomainBackgroundEnable(_ENABLE);
             AwtoSwEvent(AWTO_SW_EV_FAST_WHY, ucWhy);

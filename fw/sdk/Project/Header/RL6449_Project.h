@@ -1859,6 +1859,8 @@ extern __xdata unsigned char g_ucAwtoFastPending;      // port being brought up 
 #define AWTO_HOLD_AUTO_SEC                                      5       // auto search + a 2nd cable: hold this long, then SDK search
 #define AWTO_REHOLD_MS                                          3000    // no new hold this soon after a fast wake (a post-wake judge fail = full path)
 #define AWTO_HOLD_TRIES                                         4       // fast wakes that time out (8 frames each) before the full path
+#define AWTO_HOLD_TRIES_MEM                                     2       // ... when the timeout is the M-domain memory check (AwtoFastScalerMeasureOk bit 2): the cached frame phase is wrong, more tries never fixed it (#313)
+#define AWTO_FAST_WHY_MEM                                       0x04
 #define AWTO_SW_EV_HOLD                                         0xA8    // 1 L1 entered, 2 L2 released to no signal, 4 tries used up, 5 signal back, 6 backlight on, 7 retry, 9 auto search, another cable, 0x10 SDK reset
 typedef struct
 {
