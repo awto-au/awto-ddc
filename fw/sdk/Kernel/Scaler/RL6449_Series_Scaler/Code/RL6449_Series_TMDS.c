@@ -541,6 +541,24 @@ bit ScalerTMDSNormalPreDetect(BYTE ucInputPort)
     return _FALSE;
 }
 
+#if(_AWTO_TMDS_MODE_MEM == _ON)
+extern unsigned char set_put(unsigned char ucId, int iV, unsigned char ucNow);
+//--------------------------------------------------
+// Description  : #286 a scan succeeded at 1:40 (ucHs) or 1:10: update the memory byte; a changed mode goes to the NVRAM row
+//                (hdmi_ratio_d2 / d3, stored at the NVRAM gate, nothing written when it did not change)
+//--------------------------------------------------
+static void AwtoTmdsMemNote(BYTE ucB, BYTE ucHs)
+{
+    BYTE ucId = (ucB == AWTO_TMDS_MEM_D2) ? AWTO_SET_HDMI_RATIO_D2 : AWTO_SET_HDMI_RATIO_D3;
+
+    isr_g_ucAwtoTmdsMem = ((ucHs != 0) ? (isr_g_ucAwtoTmdsMem | ucB) : (isr_g_ucAwtoTmdsMem & ~ucB)) & ~(ucB << AWTO_TMDS_MEM_NV_SHIFT);
+    if((set_get(AWTO_SET_HDMI_RATIO_MEM) != 0) && (set_get(ucId) != (int)ucHs))
+    {
+        set_put(ucId, (int)ucHs, 0);
+    }
+}
+#endif
+
 //--------------------------------------------------
 // Description  : TMDS Port Source/Sync Scanning and Setting
 // Input Value  : Input Port

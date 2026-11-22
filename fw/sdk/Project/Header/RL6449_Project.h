@@ -1049,11 +1049,12 @@ extern void AwtoDpFrameClear(void);
 #endif
 #define AWTO_TMDS_MEM_D2                                        _BIT0   // isr_g_ucAwtoTmdsMem bit n = port worked at 1:40; bit n + 4 = this try came from the memory (logged by AwtoSyncScan)
 #define AWTO_TMDS_MEM_D3                                        _BIT1
+#define AWTO_TMDS_MEM_NV_SHIFT                                  2       // bit n + 2 = the bit came from the NVRAM at boot, not yet confirmed by a scan
 #if(_AWTO_TMDS_MODE_MEM == _ON)
 extern volatile __xdata BYTE isr_g_ucAwtoTmdsMem;
 #define AWTO_TMDS_MEM_USE(b)                                    (((isr_g_ucAwtoTmdsMem & (b)) != 0) ? ((isr_g_ucAwtoTmdsMem |= ((b) << 4)), _TRUE) : _FALSE)
-#define AWTO_TMDS_MEM_CLR(b)                                    (isr_g_ucAwtoTmdsMem &= ~(b))
-#define AWTO_TMDS_MEM_NOTE(b, r, hs)                            { if((r) != _SOURCE_NONE) { isr_g_ucAwtoTmdsMem = ((hs) != 0) ? (isr_g_ucAwtoTmdsMem | (b)) : (isr_g_ucAwtoTmdsMem & ~(b)); } }
+#define AWTO_TMDS_MEM_CLR(b)                                    (isr_g_ucAwtoTmdsMem &= ~((b) | ((b) << AWTO_TMDS_MEM_NV_SHIFT)))
+#define AWTO_TMDS_MEM_NOTE(b, r, hs)                            { if((r) != _SOURCE_NONE) { AwtoTmdsMemNote((b), ((hs) != 0) ? _TRUE : _FALSE); } }   // AwtoTmdsMemNote: RL6449_Series_TMDS.c
 #else
 #define AWTO_TMDS_MEM_USE(b)                                    _FALSE
 #define AWTO_TMDS_MEM_CLR(b)
@@ -1675,6 +1676,7 @@ extern unsigned char AwtoSysStateNow(void);
 #define AWTO_STG_ACTIVE                                         4       // 11 -> 12
 #define AWTO_SCAN_OK                                            0x01
 #define AWTO_SCAN_MEM                                           0x02    // TMDS: the PHY set-up took 1:40 from the per-port memory (_AWTO_TMDS_MODE_MEM)
+#define AWTO_SCAN_MEM_NV                                        0x03    // ... and the memory came from the NVRAM (hdmi_ratio_d2 / d3), not learned since the reset
 #define AWTO_SCAN_TMDS_PHY                                      0x11    // TMDS: PHY not set, waiting for the clock stable IRQ
 #define AWTO_SCAN_TMDS_LOCK                                     0x11    // + 1 CDR / 2 DFE / 3 video detect; + 3 when the 1:40 try failed (retry 1:10)
 #define AWTO_SCAN_TMDS_HPD                                      0x10

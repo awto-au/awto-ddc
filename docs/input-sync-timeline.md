@@ -148,7 +148,12 @@ Conditions: warm reset (ISP), n = 5 per image, median, console_mode Always, 4K60
 - One XDATA byte: bit n = port Dn+2 worked at 1:40 last. Set / cleared after every successful scan (mode in use); the clock-stable ISR takes 1:40 from it when SCDC does not say so and the clock is in the SDK's 85..150 MHz window; a lock failure drops the bit (the SDK toggle then tries the other mode); cable change on the port clears it. RAM only, no NVRAM.
 - Not cleared when the search leaves the port: the gain is on a later switch back to it.
 - Log: F2 02 `scan:tried the remembered mode 1:40 first (D2, 48ms)` before the outcome line.
-- Cold boot / warm reset: the byte is empty, the 69 ms failed 1:10 try stays (unit 1 and unit 3, 5 of 5 runs). The gain is on an input switch or a re-scan on the same cable.
+- Persistence (#286): registry rows `hdmi_ratio_d2` / `hdmi_ratio_d3` (nv, 1 = 1:40, default 0) hold the memory over reset and power-up; row `hdmi_ratio_mem` (default on) is the off switch (off = RAM memory only, every boot tries 1:10 first).
+  - Boot: `AwtoPortBoot` (after the settings load, before the first scan) seeds `isr_g_ucAwtoTmdsMem` from the rows; bit n + 2 marks a bit that came from the NVRAM until a scan confirms it.
+  - Write: `AwtoTmdsMemNote` (RL6449_Series_TMDS.c) after each successful scan; `set_put` only when the mode differs from the row, flushed by the NVRAM gate (#151: quiet moment, never alone for a no-change). A cable change clears the RAM bit, not the row.
+  - Warm reset: no separate no-init byte; the row is current 10 s after the last mode change (gate window), a reset inside that window starts from the previous mode and the lock check corrects it.
+  - Lock check still decides: a remembered 1:40 that fails drops the bit, the SDK falls back to 1:10, the successful scan rewrites the row.
+  - Log: F2 02 `tried the remembered mode 1:40 first, learned since the reset`, F2 03 `... from NVRAM`; no line = no memory (1:10 first).
 - SCDC 0x20 read again in the scan (instead of memory) was tried and dropped: the sources (Intel on unit 3) leave TMDS_Bit_Clock_Ratio 0 (`./dev.py scdc`: cfg 0x00, scrambler status 1), the SDK's own SCDC test fails the same way, so no failed try was avoided (5 of 5 unchanged).
 
 | unit 3 HDMI D2, switch D1 -> D2, ms from the switch | before | after |

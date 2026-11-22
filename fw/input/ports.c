@@ -11,6 +11,7 @@ volatile __xdata BYTE isr_g_ucAwtoTmdsMem;                  // #78: TMDS ports t
 #ifdef _AWTO_NEW_SETTINGS
 extern unsigned char set_put(unsigned char ucId, int iV, unsigned char ucNow);
 extern unsigned char set_in_boot(void);
+extern int set_get(unsigned char ucId);
 extern void ScalerGDIPhyPowerProc(BYTE ucPortSelect, EnumPowerAction enumPowerAction);     // Scaler-side owner of the receiver power
 
 #define AWTO_PF_ENABLE                  0       // field: port enable (registry dN_enable)
@@ -104,6 +105,27 @@ static void AwtoPortSet(BYTE ucPort, BYTE ucOn, BYTE ucWhy)
     }
 }
 
+#if(_AWTO_TMDS_MODE_MEM == _ON)
+// #286: the stored HDMI ratios (hdmi_ratio_d2 / d3, 1 = 1:40) seed isr_g_ucAwtoTmdsMem before the first scan; the write side is
+// AwtoTmdsMemNote (RL6449_Series_TMDS.c).
+static void AwtoTmdsMemBoot(void)
+{
+    BYTE ucB;
+
+    if(set_get(AWTO_SET_HDMI_RATIO_MEM) == 0)
+    {
+        return;
+    }
+    for(ucB = AWTO_TMDS_MEM_D2; ucB <= AWTO_TMDS_MEM_D3; ucB <<= 1)
+    {
+        if(set_get((ucB == AWTO_TMDS_MEM_D2) ? AWTO_SET_HDMI_RATIO_D2 : AWTO_SET_HDMI_RATIO_D3) != 0)
+        {
+            isr_g_ucAwtoTmdsMem |= (ucB | (ucB << AWTO_TMDS_MEM_NV_SHIFT));
+        }
+    }
+}
+#endif
+
 // UserInterfaceInitial (AwtoSetInit), after the settings load, before the first HPD high of the SDK (DP: SysSourceInitial / the
 // cable detect; HDMI: GPIO init raised it at reset, so a disabled HDMI port goes low here).
 void AwtoPortBoot(void)
@@ -120,6 +142,9 @@ void AwtoPortBoot(void)
             AwtoSyncPush(AWTO_SYNC_EV_PORT, AWTO_PORT_WHY_BOOT, ucPort);
         }
     }
+#if(_AWTO_TMDS_MODE_MEM == _ON)
+    AwtoTmdsMemBoot();
+#endif
     if(AWTO_PORT_OFF(_D2_INPUT_PORT))
     {
         PCB_D2_HOTPLUG(_D2_HOT_PLUG_LOW);

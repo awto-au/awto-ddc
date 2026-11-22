@@ -143,3 +143,6 @@
 125	cec_en	bool	none	signal	nv,live	0	1	1	1	auto	-	-	CEC	-	HDMI CEC sink on (default on, Dan 2026-11-19): block + replies in fw/cec; the board has no proven CEC pad, docs/cec.md (awto-ddc#101)
 126	cec_ctl	bool	none	signal	nv,live	0	1	1	0	auto	-	-	CEC control	-	CEC may act on Standby / Image View On / Active Source / User Control; off = logged only; on = hook rows logged, no action yet (docs/cec.md)
 127	backlight_on_delay	int	ms	display	nv	0	255	5	100	auto	-	-	Backlight on delay	-	ms after power-up (boot and wake) until the backlight pin comes on; read at each panel-up: it cannot change a backlight that is already lit. Camera 2026-11-20: 0 ms (pin at MCU boot + 15 ms) shows a 200-240 ms white flash, 91 ms or more hides it (docs/camera-lcd-timing.md); default 100 (Dan)
+134	hdmi_ratio_mem	bool	none	signal	nv	0	1	1	1	auto	-	-	HDMI ratio memory	-	start the HDMI scan at the last working bit-clock ratio (1:40) of the port, kept over resets and power-up; off = every boot tries 1:10 first; the lock check still decides (awto-ddc#286)
+135	hdmi_ratio_d2	bool	none	service	nv	0	1	1	0	auto	-	-	D2 at 1:40	-	set by the firmware after a successful scan when the mode changed (0 = 1:10, 1 = 1:40); stored at the NVRAM gate (awto-ddc#286)
+136	hdmi_ratio_d3	bool	none	service	nv	0	1	1	0	auto	-	-	D3 at 1:40	-	as D2 at 1:40
