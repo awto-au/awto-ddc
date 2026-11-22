@@ -2913,15 +2913,7 @@ fn	_ScalerPowerGroupADIPowerCut	9	0x37a8	188
 fn	_ScalerPowerGroupAIsolation	9	0x3864	96
 fn	_ScalerPowerGroupAPowerCut	9	0x38c4	32
 fn	_ScalerPowerGroupBIsolation	9	0x38e4	28
-fn	_ScalerPowerGroupD0Isolation	9	0x3900	48
-fn	_ScalerPowerGroupD0PowerCut	9	0x3930	188
-fn	_ScalerPowerGroupD1Isolation	9	0x39ec	48
-fn	_ScalerPowerGroupD1PowerCut	9	0x3a1c	188
-fn	_ScalerPowerGroupD2Isolation	9	0x3ad8	48
-fn	_ScalerPowerGroupD2PowerCut	9	0x3b08	188
-fn	_ScalerPowerGroupD3Isolation	9	0x3bc4	48
-fn	_ScalerPowerGroupD3PowerCut	9	0x3bf4	188
-fn	_ScalerPowerIsolation	9	0x3cb0	216
+fn	_ScalerPowerGroupDPowerCut	9	0x3900	372
 fn	_ScalerSyncGetInputPixelClk	9	0x3d88	56
 fn	_ScalerTMDSHdmiReadRequestTimerEnable_WDINT	9	0x3dc0	20
 fn	_ScalerTMDSInterruptInitial	9	0x3dd4	20
@@ -2999,6 +2991,7 @@ fn	_ScalerMDomainDisplayTimingGenCheck	9	0x7ba0	8
 fn	_ScalerMDomainGetFrameSyncMode	9	0x7ba8	28
 fn	_ScalerMcuCacheInitial	9	0x7bc4	40
 fn	_AwtoDelayLongPoll	9	0x7bec	244
+fn	_ScalerPowerGroupDIsolation	9	0x7ce0	108
 fn	_ScalerMcuSetISPSlaveAddr	9	0x7d70	24
 fn	_ScalerMeasureAutoFuncWaitFinish	9	0x7d88	88
 fn	_ScalerMeasureInitialSetting	9	0x7de0	40
@@ -3040,6 +3033,7 @@ fn	_AwtoTmdsHpd	9	0x9234	204
 fn	_AwtoTmdsHpdTick	9	0x9300	68
 fn	_AwtoTmdsStuck	9	0x9344	104
 fn	_AwtoSyncMark	9	0x93ac	48
+fn	_ScalerPowerIsolation	9	0x93dc	248
 fn	_ScalerDpRx1GetDpcdInfo_WDINT	9	0x94ec	32
 fn	_ScalerTMDSRx3PowerSavingProc	9	0x950c	80
 fn	_AwtoT0EvFire	9	0x95a0	64

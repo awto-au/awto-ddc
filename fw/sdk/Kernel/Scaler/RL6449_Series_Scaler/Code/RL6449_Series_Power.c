@@ -30,6 +30,17 @@
 //****************************************************************************
 // CODE TABLES
 //****************************************************************************
+// Group Dn: control register = P6F_20_D0_POWER_CTRL + n, analog isolation bit in P0_F1_VCCKOFF_CONTROL1 = bit n
+#define _POWER_GROUP_D0                                 0
+#define _POWER_GROUP_D1                                 1
+#define _POWER_GROUP_D2                                 2
+#define _POWER_GROUP_D3                                 3
+#define POWER_GROUP_D_CTRL(ucGroup)                     ((WORD)P6F_20_D0_POWER_CTRL + (ucGroup))
+
+typedef char PowerGroupChkD1[(P6F_21_D1_POWER_CTRL == (P6F_20_D0_POWER_CTRL + 1)) ? 1 : -1];
+typedef char PowerGroupChkD2[(P6F_22_D2_POWER_CTRL == (P6F_20_D0_POWER_CTRL + 2)) ? 1 : -1];
+typedef char PowerGroupChkD3[(P6F_23_D3_POWER_CTRL == (P6F_20_D0_POWER_CTRL + 3)) ? 1 : -1];
+#define POWER_GROUP_D_VCCKOFF_BIT(ucGroup)              ((BYTE)(_BIT0 << (ucGroup)))
 
 //****************************************************************************
 // VARIABLE DECLARATIONS
@@ -42,17 +53,11 @@ BYTE ScalerPowerIsolation(EnumPowerAction enumSwitch);
 void ScalerPowerAllGroupPowerCutReset(BYTE ucOn);
 void ScalerPowerGroupAIsolation(BYTE ucOn);
 void ScalerPowerGroupBIsolation(BYTE ucOn);
+void ScalerPowerGroupDIsolation(BYTE ucGroup, BYTE ucOn);
+void ScalerPowerGroupDPowerCut(BYTE ucGroup, BYTE ucOn);
 void ScalerPowerGroupADIIsolation(BYTE ucOn);
-void ScalerPowerGroupD0Isolation(BYTE ucOn);
-void ScalerPowerGroupD1Isolation(BYTE ucOn);
-void ScalerPowerGroupD2Isolation(BYTE ucOn);
-void ScalerPowerGroupD3Isolation(BYTE ucOn);
 void ScalerPowerGroupAPowerCut(BYTE ucOn);
 void ScalerPowerGroupADIPowerCut(BYTE ucOn);
-void ScalerPowerGroupD0PowerCut(BYTE ucOn);
-void ScalerPowerGroupD1PowerCut(BYTE ucOn);
-void ScalerPowerGroupD2PowerCut(BYTE ucOn);
-void ScalerPowerGroupD3PowerCut(BYTE ucOn);
 void ScalerPowerRecoverAGroupIsolationData(void);
 void ScalerPowerRecoverBGroupIsolationData(void);
 void ScalerPowerRecoverCGroupIsolationData(void);
@@ -96,25 +101,25 @@ BYTE ScalerPowerIsolation(EnumPowerAction enumSwitch)
             ucPowerIsoFlg |= _BIT2;
 
             // Group D2 to D3 block isolation control
-            ScalerPowerGroupD2Isolation(_ON);
-            ScalerPowerGroupD3Isolation(_ON);
+            ScalerPowerGroupDIsolation(_POWER_GROUP_D2, _ON);
+            ScalerPowerGroupDIsolation(_POWER_GROUP_D3, _ON);
             ucPowerIsoFlg |= _BIT3;
 
             // Group D0 to D1 block isolation control
-            ScalerPowerGroupD0Isolation(_ON);
-            ScalerPowerGroupD1Isolation(_ON);
+            ScalerPowerGroupDIsolation(_POWER_GROUP_D0, _ON);
+            ScalerPowerGroupDIsolation(_POWER_GROUP_D1, _ON);
             ucPowerIsoFlg |= _BIT4;
 
             // Group ADI power control
             ScalerPowerGroupADIPowerCut(_ON);
 
             // Group D2 to D3 power control
-            ScalerPowerGroupD2PowerCut(_ON);
-            ScalerPowerGroupD3PowerCut(_ON);
+            ScalerPowerGroupDPowerCut(_POWER_GROUP_D2, _ON);
+            ScalerPowerGroupDPowerCut(_POWER_GROUP_D3, _ON);
 
             // Group D0 to D1 power control
-            ScalerPowerGroupD0PowerCut(_ON);
-            ScalerPowerGroupD1PowerCut(_ON);
+            ScalerPowerGroupDPowerCut(_POWER_GROUP_D0, _ON);
+            ScalerPowerGroupDPowerCut(_POWER_GROUP_D1, _ON);
 
             // Group A power control control by GPIO
             ScalerPowerGroupAPowerCut(_ON);
@@ -135,12 +140,12 @@ BYTE ScalerPowerIsolation(EnumPowerAction enumSwitch)
             ScalerPowerGroupADIPowerCut(_OFF);
 
             // Group D2 to D3 power control
-            ScalerPowerGroupD2PowerCut(_OFF);
-            ScalerPowerGroupD3PowerCut(_OFF);
+            ScalerPowerGroupDPowerCut(_POWER_GROUP_D2, _OFF);
+            ScalerPowerGroupDPowerCut(_POWER_GROUP_D3, _OFF);
 
             // Group D0 to D1 power control
-            ScalerPowerGroupD0PowerCut(_OFF);
-            ScalerPowerGroupD1PowerCut(_OFF);
+            ScalerPowerGroupDPowerCut(_POWER_GROUP_D0, _OFF);
+            ScalerPowerGroupDPowerCut(_POWER_GROUP_D1, _OFF);
 
             // Group A block isolation control
             ScalerPowerGroupAIsolation(_OFF);
@@ -152,12 +157,12 @@ BYTE ScalerPowerIsolation(EnumPowerAction enumSwitch)
             ScalerPowerGroupADIIsolation(_OFF);
 
             // Group D2 to D3 block isolation control
-            ScalerPowerGroupD2Isolation(_OFF);
-            ScalerPowerGroupD3Isolation(_OFF);
+            ScalerPowerGroupDIsolation(_POWER_GROUP_D2, _OFF);
+            ScalerPowerGroupDIsolation(_POWER_GROUP_D3, _OFF);
 
             // Group D0 to D1 block isolation control
-            ScalerPowerGroupD0Isolation(_OFF);
-            ScalerPowerGroupD1Isolation(_OFF);
+            ScalerPowerGroupDIsolation(_POWER_GROUP_D0, _OFF);
+            ScalerPowerGroupDIsolation(_POWER_GROUP_D1, _OFF);
 
             // All power group Relase
             ScalerPowerAllGroupPowerCutReset(_OFF);
@@ -313,102 +318,29 @@ void ScalerPowerGroupADIIsolation(BYTE ucOn)
 }
 
 //--------------------------------------------------
-// Description  : Group D0 Isolation on/off
-// Input Value  : ON --> Group D0 (Low Power) ; OFF --> Group D0 (Normal Operation)
+// Description  : Group D0..D3 Isolation on/off (group = _POWER_GROUP_D0..D3)
+// Input Value  : ON --> Group Dn (Low Power) ; OFF --> Group Dn (Normal Operation)
 // Output Value : None
 //--------------------------------------------------
-void ScalerPowerGroupD0Isolation(BYTE ucOn)
+void ScalerPowerGroupDIsolation(BYTE ucGroup, BYTE ucOn)
 {
+    BYTE ucAnalogBit = POWER_GROUP_D_VCCKOFF_BIT(ucGroup);
+
     if(ucOn == _ON)
     {
-        // D0 Analog isolation on
-        ScalerSetBit(P0_F1_VCCKOFF_CONTROL1, ~_BIT0, _BIT0);
+        // Dn Analog isolation on
+        ScalerSetBit(P0_F1_VCCKOFF_CONTROL1, ~ucAnalogBit, ucAnalogBit);
 
-        // D0 Digital isolation on
-        ScalerSetBit(P6F_20_D0_POWER_CTRL, ~_BIT1, _BIT1);
+        // Dn Digital isolation on
+        ScalerSetBit(POWER_GROUP_D_CTRL(ucGroup), ~_BIT1, _BIT1);
     }
     else
     {
-        // D0 Digital isolation off
-        ScalerSetBit(P6F_20_D0_POWER_CTRL, ~_BIT1, 0x00);
+        // Dn Digital isolation off
+        ScalerSetBit(POWER_GROUP_D_CTRL(ucGroup), ~_BIT1, 0x00);
 
-        // D0 Analog isolation off
-        ScalerSetBit(P0_F1_VCCKOFF_CONTROL1, ~_BIT0, 0x00);
-    }
-}
-
-//--------------------------------------------------
-// Description  : Group D1 Isolation on/off
-// Input Value  : ON --> Group D1 (Low Power) ; OFF --> Group D1 (Normal Operation)
-// Output Value : None
-//--------------------------------------------------
-void ScalerPowerGroupD1Isolation(BYTE ucOn)
-{
-    if(ucOn == _ON)
-    {
-        // D1 Analog isolation on
-        ScalerSetBit(P0_F1_VCCKOFF_CONTROL1, ~_BIT1, _BIT1);
-
-        // D1 Digital isolation on
-        ScalerSetBit(P6F_21_D1_POWER_CTRL, ~_BIT1, _BIT1);
-    }
-    else
-    {
-        // D1 Digital isolation off
-        ScalerSetBit(P6F_21_D1_POWER_CTRL, ~_BIT1, 0x00);
-
-        // D1 Analog isolation off
-        ScalerSetBit(P0_F1_VCCKOFF_CONTROL1, ~_BIT1, 0x00);
-    }
-}
-
-//--------------------------------------------------
-// Description  : Group D2 Isolation on/off
-// Input Value  : ON --> Group D2 (Low Power) ; OFF --> Group D2 (Normal Operation)
-// Output Value : None
-//--------------------------------------------------
-void ScalerPowerGroupD2Isolation(BYTE ucOn)
-{
-    if(ucOn == _ON)
-    {
-        // D2 Analog isolation on
-        ScalerSetBit(P0_F1_VCCKOFF_CONTROL1, ~_BIT2, _BIT2);
-
-        // D2 Digital isolation on
-        ScalerSetBit(P6F_22_D2_POWER_CTRL, ~_BIT1, _BIT1);
-    }
-    else
-    {
-        // D2 Digital isolation off
-        ScalerSetBit(P6F_22_D2_POWER_CTRL, ~_BIT1, 0x00);
-
-        // D2 Analog isolation off
-        ScalerSetBit(P0_F1_VCCKOFF_CONTROL1, ~_BIT2, 0x00);
-    }
-}
-
-//--------------------------------------------------
-// Description  : Group D3 Isolation on/off
-// Input Value  : ON --> Group D3 (Low Power) ; OFF --> Group D3 (Normal Operation)
-// Output Value : None
-//--------------------------------------------------
-void ScalerPowerGroupD3Isolation(BYTE ucOn)
-{
-    if(ucOn == _ON)
-    {
-        // D3 Analog isolation on
-        ScalerSetBit(P0_F1_VCCKOFF_CONTROL1, ~_BIT3, _BIT3);
-
-        // D3 Digital isolation on
-        ScalerSetBit(P6F_23_D3_POWER_CTRL, ~_BIT1, _BIT1);
-    }
-    else
-    {
-        // D3 Digital isolation off
-        ScalerSetBit(P6F_23_D3_POWER_CTRL, ~_BIT1, 0x00);
-
-        // D3 Analog isolation off
-        ScalerSetBit(P0_F1_VCCKOFF_CONTROL1, ~_BIT3, 0x00);
+        // Dn Analog isolation off
+        ScalerSetBit(P0_F1_VCCKOFF_CONTROL1, ~ucAnalogBit, 0x00);
     }
 }
 
@@ -499,178 +431,46 @@ void ScalerPowerGroupADIPowerCut(BYTE ucOn)
 }
 
 //--------------------------------------------------
-// Description  : Group D0 Power on/off
-// Input Value  : ON --> Group D0(Low Power) ; OFF --> Group D0 (Normal Operation)
+// Description  : Group D0..D3 Power on/off (group = _POWER_GROUP_D0..D3)
+// Input Value  : ON --> Group Dn(Low Power) ; OFF --> Group Dn (Normal Operation)
 // Output Value : None
 //--------------------------------------------------
-void ScalerPowerGroupD0PowerCut(BYTE ucOn)
+void ScalerPowerGroupDPowerCut(BYTE ucGroup, BYTE ucOn)
 {
+    WORD usCtrl = POWER_GROUP_D_CTRL(ucGroup);
+    BYTE ucAnalogBit = POWER_GROUP_D_VCCKOFF_BIT(ucGroup);
+
     if(ucOn == _ON)
     {
-        // D0 Strong power off
-        ScalerSetBit(P6F_20_D0_POWER_CTRL, ~_BIT5, 0x00);
+        // Dn Strong power off
+        ScalerSetBit(usCtrl, ~_BIT5, 0x00);
 
-        // D0 Weak power off
-        ScalerSetBit(P6F_20_D0_POWER_CTRL, ~_BIT4, 0x00);
+        // Dn Weak power off
+        ScalerSetBit(usCtrl, ~_BIT4, 0x00);
     }
     else
     {
-        // Group D0 power block power cut on
-        if((ScalerGetBit(P0_F1_VCCKOFF_CONTROL1, _BIT0) == _BIT0) || (ScalerGetBit(P6F_20_D0_POWER_CTRL, _BIT1) == _BIT1))
+        // Group Dn power block power cut on
+        if((ScalerGetBit(P0_F1_VCCKOFF_CONTROL1, ucAnalogBit) == ucAnalogBit) || (ScalerGetBit(usCtrl, _BIT1) == _BIT1))
         {
             // Weak power on
-            ScalerSetBit(P6F_20_D0_POWER_CTRL, ~_BIT4, _BIT4);
+            ScalerSetBit(usCtrl, ~_BIT4, _BIT4);
 
             // Wait for weak power on flag
             pData[0] = 50;
 
-            while((ScalerGetBit(P6F_20_D0_POWER_CTRL, _BIT6) != _BIT6) && (pData[0]-- > 0))
+            while((ScalerGetBit(usCtrl, _BIT6) != _BIT6) && (pData[0]-- > 0))
             {
                 DELAY_5US();
             }
 
             // Strong power on
-            ScalerSetBit(P6F_20_D0_POWER_CTRL, ~_BIT5, _BIT5);
+            ScalerSetBit(usCtrl, ~_BIT5, _BIT5);
 
             // Wait for strong power on flag
             pData[0] = 50;
 
-            while((ScalerGetBit(P6F_20_D0_POWER_CTRL, _BIT7) != _BIT7) && (pData[0]-- > 0))
-            {
-                DELAY_5US();
-            }
-        }
-    }
-}
-
-//--------------------------------------------------
-// Description  : Group D1 Power on/off
-// Input Value  : ON --> Group D1(Low Power) ; OFF --> Group D1 (Normal Operation)
-// Output Value : None
-//--------------------------------------------------
-void ScalerPowerGroupD1PowerCut(BYTE ucOn)
-{
-    if(ucOn == _ON)
-    {
-        // D1 Strong power off
-        ScalerSetBit(P6F_21_D1_POWER_CTRL, ~_BIT5, 0x00);
-
-        // D1 Weak power off
-        ScalerSetBit(P6F_21_D1_POWER_CTRL, ~_BIT4, 0x00);
-    }
-    else
-    {
-        // Group D1 power block power cut on
-        if((ScalerGetBit(P0_F1_VCCKOFF_CONTROL1, _BIT1) == _BIT1) || (ScalerGetBit(P6F_21_D1_POWER_CTRL, _BIT1) == _BIT1))
-        {
-            // Weak power on
-            ScalerSetBit(P6F_21_D1_POWER_CTRL, ~_BIT4, _BIT4);
-
-            // Wait for weak power on flag
-            pData[0] = 50;
-
-            while((ScalerGetBit(P6F_21_D1_POWER_CTRL, _BIT6) != _BIT6) && (pData[0]-- > 0))
-            {
-                DELAY_5US();
-            }
-
-            // Strong power on
-            ScalerSetBit(P6F_21_D1_POWER_CTRL, ~_BIT5, _BIT5);
-
-            // Wait for strong power on flag
-            pData[0] = 50;
-
-            while((ScalerGetBit(P6F_21_D1_POWER_CTRL, _BIT7) != _BIT7) && (pData[0]-- > 0))
-            {
-                DELAY_5US();
-            }
-        }
-    }
-}
-
-//--------------------------------------------------
-// Description  : Group D2 Power on/off
-// Input Value  : ON --> Group D2 (Low Power) ; OFF --> Group D2 (Normal Operation)
-// Output Value : None
-//--------------------------------------------------
-void ScalerPowerGroupD2PowerCut(BYTE ucOn)
-{
-    if(ucOn == _ON)
-    {
-        // D2 Strong power off
-        ScalerSetBit(P6F_22_D2_POWER_CTRL, ~_BIT5, 0x00);
-
-        // D2 Weak power off
-        ScalerSetBit(P6F_22_D2_POWER_CTRL, ~_BIT4, 0x00);
-    }
-    else
-    {
-        // Group D2 power block power cut on
-        if((ScalerGetBit(P0_F1_VCCKOFF_CONTROL1, _BIT2) == _BIT2) || (ScalerGetBit(P6F_22_D2_POWER_CTRL, _BIT1) == _BIT1))
-        {
-            // Weak power on
-            ScalerSetBit(P6F_22_D2_POWER_CTRL, ~_BIT4, _BIT4);
-
-            // Wait for weak power on flag
-            pData[0] = 50;
-
-            while((ScalerGetBit(P6F_22_D2_POWER_CTRL, _BIT6) != _BIT6) && (pData[0]-- > 0))
-            {
-                DELAY_5US();
-            }
-
-            // Strong power on
-            ScalerSetBit(P6F_22_D2_POWER_CTRL, ~_BIT5, _BIT5);
-
-            // Wait for strong power on flag
-            pData[0] = 50;
-
-            while((ScalerGetBit(P6F_22_D2_POWER_CTRL, _BIT7) != _BIT7) && (pData[0]-- > 0))
-            {
-                DELAY_5US();
-            }
-        }
-    }
-}
-
-//--------------------------------------------------
-// Description  : Group D3 Power on/off
-// Input Value  : ON --> Group D3 (Low Power) ; OFF --> Group D3 (Normal Operation)
-// Output Value : None
-//--------------------------------------------------
-void ScalerPowerGroupD3PowerCut(BYTE ucOn)
-{
-    if(ucOn == _ON)
-    {
-        // D3 Strong power off
-        ScalerSetBit(P6F_23_D3_POWER_CTRL, ~_BIT5, 0x00);
-
-        // D3 Weak power off
-        ScalerSetBit(P6F_23_D3_POWER_CTRL, ~_BIT4, 0x00);
-    }
-    else
-    {
-        // Group D3 power block power cut on
-        if((ScalerGetBit(P0_F1_VCCKOFF_CONTROL1, _BIT3) == _BIT3) || (ScalerGetBit(P6F_23_D3_POWER_CTRL, _BIT1) == _BIT1))
-        {
-            // Weak power on
-            ScalerSetBit(P6F_23_D3_POWER_CTRL, ~_BIT4, _BIT4);
-
-            // Wait for weak power on flag
-            pData[0] = 50;
-
-            while((ScalerGetBit(P6F_23_D3_POWER_CTRL, _BIT6) != _BIT6) && (pData[0]-- > 0))
-            {
-                DELAY_5US();
-            }
-
-            // Strong power on
-            ScalerSetBit(P6F_23_D3_POWER_CTRL, ~_BIT5, _BIT5);
-
-            // Wait for strong power on flag
-            pData[0] = 50;
-
-            while((ScalerGetBit(P6F_23_D3_POWER_CTRL, _BIT7) != _BIT7) && (pData[0]-- > 0))
+            while((ScalerGetBit(usCtrl, _BIT7) != _BIT7) && (pData[0]-- > 0))
             {
                 DELAY_5US();
             }
