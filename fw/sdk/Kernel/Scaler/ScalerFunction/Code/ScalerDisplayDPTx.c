@@ -20,6 +20,7 @@
 #define __SCALER_DISPLAY_DP_TX__
 
 #include "ScalerFunctionInclude.h"
+#include <stddef.h>
 
 #if(_PANEL_STYLE == _PANEL_DPTX)
 
@@ -75,14 +76,16 @@ void ScalerDisplayDPTx1TPInitialSet(void);
 BYTE ScalerDisplayDPTx1TrainPattern1(void);
 BYTE ScalerDisplayDPTx1TrainPattern2(void);
 void ScalerDisplayDPTx1TrainPatternEnd(void);
-bit ScalerDisplayDPTx1TP1Lane0Adjust(void);
-bit ScalerDisplayDPTx1TP1Lane1Adjust(void);
-bit ScalerDisplayDPTx1TP1Lane2Adjust(void);
-bit ScalerDisplayDPTx1TP1Lane3Adjust(void);
-void ScalerDisplayDPTx1TP2Lane0Adjust(void);
-void ScalerDisplayDPTx1TP2Lane1Adjust(void);
-void ScalerDisplayDPTx1TP2Lane2Adjust(void);
-void ScalerDisplayDPTx1TP2Lane3Adjust(void);
+static void ScalerDisplayDPTxLaneSetCurrent(BYTE __xdata *pucCur, BYTE ucVol, BYTE ucPre);
+static bit ScalerDisplayDPTx1TP1LaneAdjust(BYTE ucLane);
+static void ScalerDisplayDPTx1TP2LaneAdjust(BYTE ucLane);
+
+// The lane Adjust functions index the lane bytes by pointer arithmetic
+#define DPTX_LANE_CHK(expr, n)                      typedef char DptxLaneChk##n[(expr) ? 1 : -1]
+DPTX_LANE_CHK(offsetof(StructDPTxLTInfo, ucLane1Adjust) == offsetof(StructDPTxLTInfo, ucLane0Adjust) + 1, 1);
+DPTX_LANE_CHK(offsetof(StructDPTxLTInfo, ucLane2Adjust) == offsetof(StructDPTxLTInfo, ucLane0Adjust) + 2, 2);
+DPTX_LANE_CHK(offsetof(StructDPTxLTInfo, ucLane3Adjust) == offsetof(StructDPTxLTInfo, ucLane0Adjust) + 3, 3);
+DPTX_LANE_CHK(offsetof(StructDPTxLTInfo, ucAdjustReqLane23) == offsetof(StructDPTxLTInfo, ucAdjustReqLane01) + 1, 4);
 
 #if(_PANEL_DPTX_FORCE_OUTPUT_SUPPORT == _ON)
 void ScalerDisplayDPTx1LinkForceOutput(void);
@@ -845,10 +848,10 @@ BYTE ScalerDisplayDPTx1TrainPattern1(void)
     {
         case _DP_FOUR_LANE:
 
-            if((ScalerDisplayDPTx1TP1Lane3Adjust() == _FAIL) ||
-               (ScalerDisplayDPTx1TP1Lane2Adjust() == _FAIL) ||
-               (ScalerDisplayDPTx1TP1Lane1Adjust() == _FAIL) ||
-               (ScalerDisplayDPTx1TP1Lane0Adjust() == _FAIL))
+            if((ScalerDisplayDPTx1TP1LaneAdjust(3) == _FAIL) ||
+               (ScalerDisplayDPTx1TP1LaneAdjust(2) == _FAIL) ||
+               (ScalerDisplayDPTx1TP1LaneAdjust(1) == _FAIL) ||
+               (ScalerDisplayDPTx1TP1LaneAdjust(0) == _FAIL))
             {
                 return _DISPLAY_DP_TX_TRAINING_PATTERN1_ADJUST_FAIL;
             }
@@ -857,8 +860,8 @@ BYTE ScalerDisplayDPTx1TrainPattern1(void)
 
         case _DP_TWO_LANE:
 
-            if((ScalerDisplayDPTx1TP1Lane1Adjust() == _FAIL) ||
-               (ScalerDisplayDPTx1TP1Lane0Adjust() == _FAIL))
+            if((ScalerDisplayDPTx1TP1LaneAdjust(1) == _FAIL) ||
+               (ScalerDisplayDPTx1TP1LaneAdjust(0) == _FAIL))
             {
                 return _DISPLAY_DP_TX_TRAINING_PATTERN1_ADJUST_FAIL;
             }
@@ -868,7 +871,7 @@ BYTE ScalerDisplayDPTx1TrainPattern1(void)
         case _DP_ONE_LANE:
         default:
 
-            if(ScalerDisplayDPTx1TP1Lane0Adjust() == _FAIL)
+            if(ScalerDisplayDPTx1TP1LaneAdjust(0) == _FAIL)
             {
                 return _DISPLAY_DP_TX_TRAINING_PATTERN1_ADJUST_FAIL;
             }
@@ -966,22 +969,22 @@ BYTE ScalerDisplayDPTx1TrainPattern2(void)
     {
         case _DP_FOUR_LANE:
 
-            ScalerDisplayDPTx1TP2Lane3Adjust();
-            ScalerDisplayDPTx1TP2Lane2Adjust();
-            ScalerDisplayDPTx1TP2Lane1Adjust();
-            ScalerDisplayDPTx1TP2Lane0Adjust();
+            ScalerDisplayDPTx1TP2LaneAdjust(3);
+            ScalerDisplayDPTx1TP2LaneAdjust(2);
+            ScalerDisplayDPTx1TP2LaneAdjust(1);
+            ScalerDisplayDPTx1TP2LaneAdjust(0);
             break;
 
         case _DP_TWO_LANE:
 
-            ScalerDisplayDPTx1TP2Lane1Adjust();
-            ScalerDisplayDPTx1TP2Lane0Adjust();
+            ScalerDisplayDPTx1TP2LaneAdjust(1);
+            ScalerDisplayDPTx1TP2LaneAdjust(0);
             break;
 
         case _DP_ONE_LANE:
         default:
 
-            ScalerDisplayDPTx1TP2Lane0Adjust();
+            ScalerDisplayDPTx1TP2LaneAdjust(0);
             break;
     }
 
@@ -1064,371 +1067,95 @@ void ScalerDisplayDPTx1TrainPatternEnd(void)
 }
 
 //--------------------------------------------------
-// Description  : DP Tx Link Training 1 Lane0 Adjust
-// Input Value  :
+// Description  : Store a lane's current vol swing / pre-emphasis and their max-reach flags (#295)
+// Input Value  : pucCur = ucLaneNAdjust, level values 0..3
 // Output Value :
 //--------------------------------------------------
-bit ScalerDisplayDPTx1TP1Lane0Adjust(void)
+static void ScalerDisplayDPTxLaneSetCurrent(BYTE __xdata *pucCur, BYTE ucVol, BYTE ucPre)
 {
-    // Check1: (Adjust Vol swing level + Current Vol pre emphasisl) > 3
-    if((GET_DISPLAY_DP_TX1_LANE0_ADJUST_VOL_SWING() + GET_DISPLAY_DP_TX1_LANE0_CURRENT_PRE_EMPHASIS()) > _DISPLAY_DP_TX_LEVEL_3)
+    BYTE ucNew = (*pucCur & (_BIT7 | _BIT6)) | ucVol | (ucPre << 3);
+
+    if(ucVol == _DISPLAY_DP_TX_LEVEL_3)
     {
-        SET_DISPLAY_DP_TX1_LANE0_ADJUST_VOL_SWING((_DISPLAY_DP_TX_LEVEL_3 - GET_DISPLAY_DP_TX1_LANE0_CURRENT_PRE_EMPHASIS()));
+        ucNew |= _BIT2;
+    }
+
+    if(ucPre == _DISPLAY_DP_TX_LEVEL_3)
+    {
+        ucNew |= _BIT5;
+    }
+
+    *pucCur = ucNew;
+}
+
+//--------------------------------------------------
+// Description  : DP Tx Link Training 1 Lane Adjust (lane 0..3, #295)
+// Input Value  : ucLane
+// Output Value : _FAIL when the same voltage level repeats, else _SUCCESS
+//--------------------------------------------------
+static bit ScalerDisplayDPTx1TP1LaneAdjust(BYTE ucLane)
+{
+    BYTE __xdata *pucCur = &g_stDisplayDPTx1LTInfo.ucLane0Adjust + ucLane;
+    BYTE __xdata *pucReq = &g_stDisplayDPTx1LTInfo.ucAdjustReqLane01 + (ucLane >> 1);
+    BYTE ucShift = (ucLane & 1) << 2;
+    BYTE ucAdjVol = (*pucReq >> ucShift) & (_BIT1 | _BIT0);
+    BYTE ucAdjPre = (*pucReq >> (ucShift + 2)) & (_BIT1 | _BIT0);
+    BYTE ucCurPre = (*pucCur & (_BIT4 | _BIT3)) >> 3;
+
+    // Check1: (Adjust Vol swing level + Current Vol pre emphasisl) > 3
+    if((ucAdjVol + ucCurPre) > _DISPLAY_DP_TX_LEVEL_3)
+    {
+        ucAdjVol = _DISPLAY_DP_TX_LEVEL_3 - ucCurPre;
+        *pucReq = (*pucReq & ~((_BIT1 | _BIT0) << ucShift)) | (ucAdjVol << ucShift);
     }
 
     // Check2: Current Vol swing level is the same as adjust Vol swing level
-    if(GET_DISPLAY_DP_TX1_LANE0_CURRENT_VOL_SWING() == GET_DISPLAY_DP_TX1_LANE0_ADJUST_VOL_SWING())
+    if((*pucCur & (_BIT1 | _BIT0)) == ucAdjVol)
     {
-        ADD_DISPLAY_DP_TX1_TP1_LANE0_SAME_VOL_CNT();
+        g_stDisplayDPTx1LTInfo.aucTP1SameVolCnt[ucLane]++;
 
-        if((GET_DISPLAY_DP_TX1_TP1_LANE0_SAME_VOL_CNT() == 5) || ((GET_DISPLAY_DP_TX1_TP1_LANE0_SAME_VOL_CNT() == 1) && (GET_DISPLAY_DP_TX1_LANE0_ADJUST_VOL_SWING() == _DISPLAY_DP_TX_LEVEL_3)))
+        if((g_stDisplayDPTx1LTInfo.aucTP1SameVolCnt[ucLane] == 5) || ((g_stDisplayDPTx1LTInfo.aucTP1SameVolCnt[ucLane] == 1) && (ucAdjVol == _DISPLAY_DP_TX_LEVEL_3)))
         {
-            CLR_DISPLAY_DP_TX1_TP1_LANE0_SAME_VOL_CNT();
+            g_stDisplayDPTx1LTInfo.aucTP1SameVolCnt[ucLane] = 0;
 
             return _FAIL;
         }
     }
     else
     {
-        CLR_DISPLAY_DP_TX1_TP1_LANE0_SAME_VOL_CNT();
+        g_stDisplayDPTx1LTInfo.aucTP1SameVolCnt[ucLane] = 0;
     }
 
-    // Set Tx Current voltage swing based on Rx Adjust voltage(flag)
-    SET_DISPLAY_DP_TX1_LANE0_CURRENT_VOL_SWING(GET_DISPLAY_DP_TX1_LANE0_ADJUST_VOL_SWING());
-    SET_DISPLAY_DP_TX1_LANE0_CURRENT_PRE_EMPHASIS(GET_DISPLAY_DP_TX1_LANE0_ADJUST_PRE_EMPHASIS());
-
-    if(GET_DISPLAY_DP_TX1_LANE0_CURRENT_VOL_SWING() == _DISPLAY_DP_TX_LEVEL_3)
-    {
-        SET_DISPLAY_DP_TX1_LANE0_CURRENT_VOL_SWING_MAX_REACH();
-    }
-    else
-    {
-        CLR_DISPLAY_DP_TX1_LANE0_CURRENT_VOL_SWING_MAX_REACH();
-    }
-
-    if(GET_DISPLAY_DP_TX1_LANE0_CURRENT_PRE_EMPHASIS() == _DISPLAY_DP_TX_LEVEL_3)
-    {
-        SET_DISPLAY_DP_TX1_LANE0_CURRENT_PRE_EMPHASIS_MAX_REACH();
-    }
-    else
-    {
-        CLR_DISPLAY_DP_TX1_LANE0_CURRENT_PRE_EMPHASIS_MAX_REACH();
-    }
+    // Tx current level = Rx adjust request; max-reach flags follow the level
+    ScalerDisplayDPTxLaneSetCurrent(pucCur, ucAdjVol, ucAdjPre);
 
     return _SUCCESS;
 }
 
 //--------------------------------------------------
-// Description  : DP Tx Link Training 1 Lane1 Adjust
-// Input Value  :
+// Description  : DP Tx Link Training 2 Lane Adjust (lane 0..3, #295)
+// Input Value  : ucLane
 // Output Value :
 //--------------------------------------------------
-bit ScalerDisplayDPTx1TP1Lane1Adjust(void)
+static void ScalerDisplayDPTx1TP2LaneAdjust(BYTE ucLane)
 {
-    // Check1: (Adjust Vol swing level + Current Vol pre emphasisl) > 3
-    if((GET_DISPLAY_DP_TX1_LANE1_ADJUST_VOL_SWING() + GET_DISPLAY_DP_TX1_LANE1_CURRENT_PRE_EMPHASIS()) > _DISPLAY_DP_TX_LEVEL_3)
+    BYTE __xdata *pucCur = &g_stDisplayDPTx1LTInfo.ucLane0Adjust + ucLane;
+    BYTE __xdata *pucReq = &g_stDisplayDPTx1LTInfo.ucAdjustReqLane01 + (ucLane >> 1);
+    BYTE ucShift = (ucLane & 1) << 2;
+    BYTE ucCurVol = *pucCur & (_BIT1 | _BIT0);
+    BYTE ucAdjPre = (*pucReq >> (ucShift + 2)) & (_BIT1 | _BIT0);
+
+    // Check: (Current Vol swing level + Adjust pre emphasis level) > 3
+    if((ucCurVol + ucAdjPre) > _DISPLAY_DP_TX_LEVEL_3)
     {
-        SET_DISPLAY_DP_TX1_LANE1_ADJUST_VOL_SWING((_DISPLAY_DP_TX_LEVEL_3 - GET_DISPLAY_DP_TX1_LANE1_CURRENT_PRE_EMPHASIS()));
-    }
-
-    // Check2: Current Vol swing level is the same as adjust Vol swing level
-    if(GET_DISPLAY_DP_TX1_LANE1_CURRENT_VOL_SWING() == GET_DISPLAY_DP_TX1_LANE1_ADJUST_VOL_SWING())
-    {
-        ADD_DISPLAY_DP_TX1_TP1_LANE1_SAME_VOL_CNT();
-
-        if((GET_DISPLAY_DP_TX1_TP1_LANE1_SAME_VOL_CNT() == 5) || ((GET_DISPLAY_DP_TX1_TP1_LANE1_SAME_VOL_CNT() == 1) && (GET_DISPLAY_DP_TX1_LANE1_ADJUST_VOL_SWING() == _DISPLAY_DP_TX_LEVEL_3)))
-        {
-            CLR_DISPLAY_DP_TX1_TP1_LANE1_SAME_VOL_CNT();
-
-            return _FAIL;
-        }
+        ucAdjPre = _DISPLAY_DP_TX_LEVEL_3 - ucCurVol;
     }
     else
     {
-        CLR_DISPLAY_DP_TX1_TP1_LANE1_SAME_VOL_CNT();
+        ucCurVol = (*pucReq >> ucShift) & (_BIT1 | _BIT0);
     }
 
-    // Set Tx Current voltage swing based on Rx Adjust voltage(flag)
-    SET_DISPLAY_DP_TX1_LANE1_CURRENT_VOL_SWING(GET_DISPLAY_DP_TX1_LANE1_ADJUST_VOL_SWING());
-    SET_DISPLAY_DP_TX1_LANE1_CURRENT_PRE_EMPHASIS(GET_DISPLAY_DP_TX1_LANE1_ADJUST_PRE_EMPHASIS());
-
-    if(GET_DISPLAY_DP_TX1_LANE1_CURRENT_VOL_SWING() == _DISPLAY_DP_TX_LEVEL_3)
-    {
-        SET_DISPLAY_DP_TX1_LANE1_CURRENT_VOL_SWING_MAX_REACH();
-    }
-    else
-    {
-        CLR_DISPLAY_DP_TX1_LANE1_CURRENT_VOL_SWING_MAX_REACH();
-    }
-
-    if(GET_DISPLAY_DP_TX1_LANE1_CURRENT_PRE_EMPHASIS() == _DISPLAY_DP_TX_LEVEL_3)
-    {
-        SET_DISPLAY_DP_TX1_LANE1_CURRENT_PRE_EMPHASIS_MAX_REACH();
-    }
-    else
-    {
-        CLR_DISPLAY_DP_TX1_LANE1_CURRENT_PRE_EMPHASIS_MAX_REACH();
-    }
-
-    return _SUCCESS;
-}
-
-//--------------------------------------------------
-// Description  : DP Tx Link Training 1 Lane2 Adjust
-// Input Value  :
-// Output Value :
-//--------------------------------------------------
-bit ScalerDisplayDPTx1TP1Lane2Adjust(void)
-{
-    // Check1: (Adjust Vol swing level + Current Vol pre emphasisl) > 3
-    if((GET_DISPLAY_DP_TX1_LANE2_ADJUST_VOL_SWING() + GET_DISPLAY_DP_TX1_LANE2_CURRENT_PRE_EMPHASIS()) > _DISPLAY_DP_TX_LEVEL_3)
-    {
-        SET_DISPLAY_DP_TX1_LANE2_ADJUST_VOL_SWING((_DISPLAY_DP_TX_LEVEL_3 - GET_DISPLAY_DP_TX1_LANE2_CURRENT_PRE_EMPHASIS()));
-    }
-
-    // Check2: Current Vol swing level is the same as adjust Vol swing level
-    if(GET_DISPLAY_DP_TX1_LANE2_CURRENT_VOL_SWING() == GET_DISPLAY_DP_TX1_LANE2_ADJUST_VOL_SWING())
-    {
-        ADD_DISPLAY_DP_TX1_TP1_LANE2_SAME_VOL_CNT();
-
-        if((GET_DISPLAY_DP_TX1_TP1_LANE2_SAME_VOL_CNT() == 5) || ((GET_DISPLAY_DP_TX1_TP1_LANE2_SAME_VOL_CNT() == 1) && (GET_DISPLAY_DP_TX1_LANE2_ADJUST_VOL_SWING() == _DISPLAY_DP_TX_LEVEL_3)))
-        {
-            CLR_DISPLAY_DP_TX1_TP1_LANE2_SAME_VOL_CNT();
-
-            return _FAIL;
-        }
-    }
-    else
-    {
-        CLR_DISPLAY_DP_TX1_TP1_LANE2_SAME_VOL_CNT();
-    }
-
-    // Set Tx Current voltage swing based on Rx Adjust voltage(flag)
-    SET_DISPLAY_DP_TX1_LANE2_CURRENT_VOL_SWING(GET_DISPLAY_DP_TX1_LANE2_ADJUST_VOL_SWING());
-    SET_DISPLAY_DP_TX1_LANE2_CURRENT_PRE_EMPHASIS(GET_DISPLAY_DP_TX1_LANE2_ADJUST_PRE_EMPHASIS());
-
-    if(GET_DISPLAY_DP_TX1_LANE2_CURRENT_VOL_SWING() == _DISPLAY_DP_TX_LEVEL_3)
-    {
-        SET_DISPLAY_DP_TX1_LANE2_CURRENT_VOL_SWING_MAX_REACH();
-    }
-    else
-    {
-        CLR_DISPLAY_DP_TX1_LANE2_CURRENT_VOL_SWING_MAX_REACH();
-    }
-
-    if(GET_DISPLAY_DP_TX1_LANE2_CURRENT_PRE_EMPHASIS() == _DISPLAY_DP_TX_LEVEL_3)
-    {
-        SET_DISPLAY_DP_TX1_LANE2_CURRENT_PRE_EMPHASIS_MAX_REACH();
-    }
-    else
-    {
-        CLR_DISPLAY_DP_TX1_LANE2_CURRENT_PRE_EMPHASIS_MAX_REACH();
-    }
-
-    return _SUCCESS;
-}
-
-//--------------------------------------------------
-// Description  : DP Tx Link Training 1 Lane3 Adjust
-// Input Value  :
-// Output Value :
-//--------------------------------------------------
-bit ScalerDisplayDPTx1TP1Lane3Adjust(void)
-{
-    // Check1: (Adjust Vol swing level + Current Vol pre emphasisl) > 3
-    if((GET_DISPLAY_DP_TX1_LANE3_ADJUST_VOL_SWING() + GET_DISPLAY_DP_TX1_LANE3_CURRENT_PRE_EMPHASIS()) > _DISPLAY_DP_TX_LEVEL_3)
-    {
-        SET_DISPLAY_DP_TX1_LANE3_ADJUST_VOL_SWING((_DISPLAY_DP_TX_LEVEL_3 - GET_DISPLAY_DP_TX1_LANE3_CURRENT_PRE_EMPHASIS()));
-    }
-
-    // Check2: Current Vol swing level is the same as adjust Vol swing level
-    if(GET_DISPLAY_DP_TX1_LANE3_CURRENT_VOL_SWING() == GET_DISPLAY_DP_TX1_LANE3_ADJUST_VOL_SWING())
-    {
-        ADD_DISPLAY_DP_TX1_TP1_LANE3_SAME_VOL_CNT();
-
-        if((GET_DISPLAY_DP_TX1_TP1_LANE3_SAME_VOL_CNT() == 5) || ((GET_DISPLAY_DP_TX1_TP1_LANE3_SAME_VOL_CNT() == 1) && (GET_DISPLAY_DP_TX1_LANE3_ADJUST_VOL_SWING() == _DISPLAY_DP_TX_LEVEL_3)))
-        {
-            CLR_DISPLAY_DP_TX1_TP1_LANE3_SAME_VOL_CNT();
-
-            return _FAIL;
-        }
-    }
-    else
-    {
-        CLR_DISPLAY_DP_TX1_TP1_LANE3_SAME_VOL_CNT();
-    }
-
-    // Set Tx Current voltage swing based on Rx Adjust voltage(flag)
-    SET_DISPLAY_DP_TX1_LANE3_CURRENT_VOL_SWING(GET_DISPLAY_DP_TX1_LANE3_ADJUST_VOL_SWING());
-    SET_DISPLAY_DP_TX1_LANE3_CURRENT_PRE_EMPHASIS(GET_DISPLAY_DP_TX1_LANE3_ADJUST_PRE_EMPHASIS());
-
-    if(GET_DISPLAY_DP_TX1_LANE3_CURRENT_VOL_SWING() == _DISPLAY_DP_TX_LEVEL_3)
-    {
-        SET_DISPLAY_DP_TX1_LANE3_CURRENT_VOL_SWING_MAX_REACH();
-    }
-    else
-    {
-        CLR_DISPLAY_DP_TX1_LANE3_CURRENT_VOL_SWING_MAX_REACH();
-    }
-
-    if(GET_DISPLAY_DP_TX1_LANE3_CURRENT_PRE_EMPHASIS() == _DISPLAY_DP_TX_LEVEL_3)
-    {
-        SET_DISPLAY_DP_TX1_LANE3_CURRENT_PRE_EMPHASIS_MAX_REACH();
-    }
-    else
-    {
-        CLR_DISPLAY_DP_TX1_LANE3_CURRENT_PRE_EMPHASIS_MAX_REACH();
-    }
-
-    return _SUCCESS;
-}
-
-//--------------------------------------------------
-// Description  : DP Tx Link Training 2 Lane0  Adjust
-// Input Value  :
-// Output Value :
-//--------------------------------------------------
-void ScalerDisplayDPTx1TP2Lane0Adjust(void)
-{
-    // Check: (Current Vol swing level + Adjust Vol swing level) > 3
-    if((GET_DISPLAY_DP_TX1_LANE0_CURRENT_VOL_SWING() + GET_DISPLAY_DP_TX1_LANE0_ADJUST_PRE_EMPHASIS()) > _DISPLAY_DP_TX_LEVEL_3)
-    {
-        SET_DISPLAY_DP_TX1_LANE0_CURRENT_PRE_EMPHASIS((_DISPLAY_DP_TX_LEVEL_3 - GET_DISPLAY_DP_TX1_LANE0_CURRENT_VOL_SWING()));
-    }
-    else
-    {
-        SET_DISPLAY_DP_TX1_LANE0_CURRENT_PRE_EMPHASIS(GET_DISPLAY_DP_TX1_LANE0_ADJUST_PRE_EMPHASIS());
-        SET_DISPLAY_DP_TX1_LANE0_CURRENT_VOL_SWING(GET_DISPLAY_DP_TX1_LANE0_ADJUST_VOL_SWING());
-    }
-
-    if(GET_DISPLAY_DP_TX1_LANE0_CURRENT_VOL_SWING() == _DISPLAY_DP_TX_LEVEL_3)
-    {
-        SET_DISPLAY_DP_TX1_LANE0_CURRENT_VOL_SWING_MAX_REACH();
-    }
-    else
-    {
-        CLR_DISPLAY_DP_TX1_LANE0_CURRENT_VOL_SWING_MAX_REACH();
-    }
-
-    if(GET_DISPLAY_DP_TX1_LANE0_CURRENT_PRE_EMPHASIS() == _DISPLAY_DP_TX_LEVEL_3)
-    {
-        SET_DISPLAY_DP_TX1_LANE0_CURRENT_PRE_EMPHASIS_MAX_REACH();
-    }
-    else
-    {
-        CLR_DISPLAY_DP_TX1_LANE0_CURRENT_PRE_EMPHASIS_MAX_REACH();
-    }
-}
-
-//--------------------------------------------------
-// Description  : DP Tx Link Training 2 Lane1  Adjust
-// Input Value  :
-// Output Value :
-//--------------------------------------------------
-void ScalerDisplayDPTx1TP2Lane1Adjust(void)
-{
-    // Check: (Current Vol swing level + Adjust Vol swing level) > 3
-    if((GET_DISPLAY_DP_TX1_LANE1_CURRENT_VOL_SWING() + GET_DISPLAY_DP_TX1_LANE1_ADJUST_PRE_EMPHASIS()) > _DISPLAY_DP_TX_LEVEL_3)
-    {
-        SET_DISPLAY_DP_TX1_LANE1_CURRENT_PRE_EMPHASIS((_DISPLAY_DP_TX_LEVEL_3 - GET_DISPLAY_DP_TX1_LANE1_CURRENT_VOL_SWING()));
-    }
-    else
-    {
-        SET_DISPLAY_DP_TX1_LANE1_CURRENT_PRE_EMPHASIS(GET_DISPLAY_DP_TX1_LANE1_ADJUST_PRE_EMPHASIS());
-        SET_DISPLAY_DP_TX1_LANE1_CURRENT_VOL_SWING(GET_DISPLAY_DP_TX1_LANE1_ADJUST_VOL_SWING());
-    }
-
-    if(GET_DISPLAY_DP_TX1_LANE1_CURRENT_VOL_SWING() == _DISPLAY_DP_TX_LEVEL_3)
-    {
-        SET_DISPLAY_DP_TX1_LANE1_CURRENT_VOL_SWING_MAX_REACH();
-    }
-    else
-    {
-        CLR_DISPLAY_DP_TX1_LANE1_CURRENT_VOL_SWING_MAX_REACH();
-    }
-
-    if(GET_DISPLAY_DP_TX1_LANE1_CURRENT_PRE_EMPHASIS() == _DISPLAY_DP_TX_LEVEL_3)
-    {
-        SET_DISPLAY_DP_TX1_LANE1_CURRENT_PRE_EMPHASIS_MAX_REACH();
-    }
-    else
-    {
-        CLR_DISPLAY_DP_TX1_LANE1_CURRENT_PRE_EMPHASIS_MAX_REACH();
-    }
-}
-
-//--------------------------------------------------
-// Description  : DP Tx Link Training 2 Lane2  Adjust
-// Input Value  :
-// Output Value :
-//--------------------------------------------------
-void ScalerDisplayDPTx1TP2Lane2Adjust(void)
-{
-    // Check: (Current Vol swing level + Adjust Vol swing level) > 3
-    if((GET_DISPLAY_DP_TX1_LANE2_CURRENT_VOL_SWING() + GET_DISPLAY_DP_TX1_LANE2_ADJUST_PRE_EMPHASIS()) > _DISPLAY_DP_TX_LEVEL_3)
-    {
-        SET_DISPLAY_DP_TX1_LANE2_CURRENT_PRE_EMPHASIS((_DISPLAY_DP_TX_LEVEL_3 - GET_DISPLAY_DP_TX1_LANE2_CURRENT_VOL_SWING()));
-    }
-    else
-    {
-        SET_DISPLAY_DP_TX1_LANE2_CURRENT_PRE_EMPHASIS(GET_DISPLAY_DP_TX1_LANE2_ADJUST_PRE_EMPHASIS());
-        SET_DISPLAY_DP_TX1_LANE2_CURRENT_VOL_SWING(GET_DISPLAY_DP_TX1_LANE2_ADJUST_VOL_SWING());
-    }
-
-    if(GET_DISPLAY_DP_TX1_LANE2_CURRENT_VOL_SWING() == _DISPLAY_DP_TX_LEVEL_3)
-    {
-        SET_DISPLAY_DP_TX1_LANE2_CURRENT_VOL_SWING_MAX_REACH();
-    }
-    else
-    {
-        CLR_DISPLAY_DP_TX1_LANE2_CURRENT_VOL_SWING_MAX_REACH();
-    }
-
-    if(GET_DISPLAY_DP_TX1_LANE2_CURRENT_PRE_EMPHASIS() == _DISPLAY_DP_TX_LEVEL_3)
-    {
-        SET_DISPLAY_DP_TX1_LANE2_CURRENT_PRE_EMPHASIS_MAX_REACH();
-    }
-    else
-    {
-        CLR_DISPLAY_DP_TX1_LANE2_CURRENT_PRE_EMPHASIS_MAX_REACH();
-    }
-}
-
-//--------------------------------------------------
-// Description  : DP Tx Link Training 2 Lane3  Adjust
-// Input Value  :
-// Output Value :
-//--------------------------------------------------
-void ScalerDisplayDPTx1TP2Lane3Adjust(void)
-{
-    // Check: (Current Vol swing level + Adjust Vol swing level) > 3
-    if((GET_DISPLAY_DP_TX1_LANE3_CURRENT_VOL_SWING() + GET_DISPLAY_DP_TX1_LANE3_ADJUST_PRE_EMPHASIS()) > _DISPLAY_DP_TX_LEVEL_3)
-    {
-        SET_DISPLAY_DP_TX1_LANE3_CURRENT_PRE_EMPHASIS((_DISPLAY_DP_TX_LEVEL_3 - GET_DISPLAY_DP_TX1_LANE3_CURRENT_VOL_SWING()));
-    }
-    else
-    {
-        SET_DISPLAY_DP_TX1_LANE3_CURRENT_PRE_EMPHASIS(GET_DISPLAY_DP_TX1_LANE3_ADJUST_PRE_EMPHASIS());
-        SET_DISPLAY_DP_TX1_LANE3_CURRENT_VOL_SWING(GET_DISPLAY_DP_TX1_LANE3_ADJUST_VOL_SWING());
-    }
-
-    if(GET_DISPLAY_DP_TX1_LANE3_CURRENT_VOL_SWING() == _DISPLAY_DP_TX_LEVEL_3)
-    {
-        SET_DISPLAY_DP_TX1_LANE3_CURRENT_VOL_SWING_MAX_REACH();
-    }
-    else
-    {
-        CLR_DISPLAY_DP_TX1_LANE3_CURRENT_VOL_SWING_MAX_REACH();
-    }
-
-    if(GET_DISPLAY_DP_TX1_LANE3_CURRENT_PRE_EMPHASIS() == _DISPLAY_DP_TX_LEVEL_3)
-    {
-        SET_DISPLAY_DP_TX1_LANE3_CURRENT_PRE_EMPHASIS_MAX_REACH();
-    }
-    else
-    {
-        CLR_DISPLAY_DP_TX1_LANE3_CURRENT_PRE_EMPHASIS_MAX_REACH();
-    }
+    ScalerDisplayDPTxLaneSetCurrent(pucCur, ucCurVol, ucAdjPre);
 }
 
 #if(_PANEL_DPTX_FORCE_OUTPUT_SUPPORT == _ON)
