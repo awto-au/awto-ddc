@@ -64,10 +64,13 @@ typedef struct
     BYTE ucAdjustReqLane01;
     BYTE ucAdjustReqLane23;
 
-    BYTE aucTP1SameVolCnt[4];
+    BYTE b3TP1Lane0SameVolCnt : 3;
+    BYTE b3TP1Lane1SameVolCnt : 3;
     BYTE b2LinkTrainingState : 2;
 
     WORD b4LinkTrainingResult : 4;
+    WORD b3TP1Lane2SameVolCnt : 3;
+    WORD b3TP1Lane3SameVolCnt : 3;
     WORD b3TP2count : 3;
 } StructDPTxLTInfo;
 

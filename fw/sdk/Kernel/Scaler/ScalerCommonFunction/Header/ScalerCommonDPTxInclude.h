@@ -324,21 +324,21 @@
 #define GET_DP_TX_LINK_PBN_PER_TIMESOLT()                   (g_stTxLTInfo.ucLinkPBNPerTimeSlot)
 #define SET_DP_TX_LINK_PBN_PER_TIMESOLT(x)                  (g_stTxLTInfo.ucLinkPBNPerTimeSlot = (x))
 
-#define GET_DP_TX_TP1_LANE0_SAME_VOL_CNT()                  (g_stTxLTInfo.aucTP1SameVolCnt[0])
-#define ADD_DP_TX_TP1_LANE0_SAME_VOL_CNT()                  (g_stTxLTInfo.aucTP1SameVolCnt[0]++)
-#define CLR_DP_TX_TP1_LANE0_SAME_VOL_CNT()                  (g_stTxLTInfo.aucTP1SameVolCnt[0] = 0)
+#define GET_DP_TX_TP1_LANE0_SAME_VOL_CNT()                  (g_stTxLTInfo.b3TP1Lane0SameVolCnt)
+#define ADD_DP_TX_TP1_LANE0_SAME_VOL_CNT()                  (g_stTxLTInfo.b3TP1Lane0SameVolCnt++)
+#define CLR_DP_TX_TP1_LANE0_SAME_VOL_CNT()                  (g_stTxLTInfo.b3TP1Lane0SameVolCnt = 0)
 
-#define GET_DP_TX_TP1_LANE1_SAME_VOL_CNT()                  (g_stTxLTInfo.aucTP1SameVolCnt[1])
-#define ADD_DP_TX_TP1_LANE1_SAME_VOL_CNT()                  (g_stTxLTInfo.aucTP1SameVolCnt[1]++)
-#define CLR_DP_TX_TP1_LANE1_SAME_VOL_CNT()                  (g_stTxLTInfo.aucTP1SameVolCnt[1] = 0)
+#define GET_DP_TX_TP1_LANE1_SAME_VOL_CNT()                  (g_stTxLTInfo.b3TP1Lane1SameVolCnt)
+#define ADD_DP_TX_TP1_LANE1_SAME_VOL_CNT()                  (g_stTxLTInfo.b3TP1Lane1SameVolCnt++)
+#define CLR_DP_TX_TP1_LANE1_SAME_VOL_CNT()                  (g_stTxLTInfo.b3TP1Lane1SameVolCnt = 0)
 
-#define GET_DP_TX_TP1_LANE2_SAME_VOL_CNT()                  (g_stTxLTInfo.aucTP1SameVolCnt[2])
-#define ADD_DP_TX_TP1_LANE2_SAME_VOL_CNT()                  (g_stTxLTInfo.aucTP1SameVolCnt[2]++)
-#define CLR_DP_TX_TP1_LANE2_SAME_VOL_CNT()                  (g_stTxLTInfo.aucTP1SameVolCnt[2] = 0)
+#define GET_DP_TX_TP1_LANE2_SAME_VOL_CNT()                  (g_stTxLTInfo.b3TP1Lane2SameVolCnt)
+#define ADD_DP_TX_TP1_LANE2_SAME_VOL_CNT()                  (g_stTxLTInfo.b3TP1Lane2SameVolCnt++)
+#define CLR_DP_TX_TP1_LANE2_SAME_VOL_CNT()                  (g_stTxLTInfo.b3TP1Lane2SameVolCnt = 0)
 
-#define GET_DP_TX_TP1_LANE3_SAME_VOL_CNT()                  (g_stTxLTInfo.aucTP1SameVolCnt[3])
-#define ADD_DP_TX_TP1_LANE3_SAME_VOL_CNT()                  (g_stTxLTInfo.aucTP1SameVolCnt[3]++)
-#define CLR_DP_TX_TP1_LANE3_SAME_VOL_CNT()                  (g_stTxLTInfo.aucTP1SameVolCnt[3] = 0)
+#define GET_DP_TX_TP1_LANE3_SAME_VOL_CNT()                  (g_stTxLTInfo.b3TP1Lane3SameVolCnt)
+#define ADD_DP_TX_TP1_LANE3_SAME_VOL_CNT()                  (g_stTxLTInfo.b3TP1Lane3SameVolCnt++)
+#define CLR_DP_TX_TP1_LANE3_SAME_VOL_CNT()                  (g_stTxLTInfo.b3TP1Lane3SameVolCnt = 0)
 
 #define GET_DP_TX_TP2_CNT()                                 (g_stTxLTInfo.b3TP2count)
 #define ADD_DP_TX_TP2_CNT()                                 (g_stTxLTInfo.b3TP2count++)

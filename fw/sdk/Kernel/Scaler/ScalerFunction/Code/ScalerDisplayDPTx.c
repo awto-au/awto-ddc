@@ -77,6 +77,7 @@ BYTE ScalerDisplayDPTx1TrainPattern1(void);
 BYTE ScalerDisplayDPTx1TrainPattern2(void);
 void ScalerDisplayDPTx1TrainPatternEnd(void);
 static void ScalerDisplayDPTxLaneSetCurrent(BYTE __xdata *pucCur, BYTE ucVol, BYTE ucPre);
+static BYTE ScalerDisplayDPTx1TP1SameVolCnt(BYTE ucLane, bit bAdd);
 static bit ScalerDisplayDPTx1TP1LaneAdjust(BYTE ucLane);
 static void ScalerDisplayDPTx1TP2LaneAdjust(BYTE ucLane);
 
@@ -1067,6 +1068,66 @@ void ScalerDisplayDPTx1TrainPatternEnd(void)
 }
 
 //--------------------------------------------------
+// Description  : TP1 same-voltage counter of a lane: bAdd = 1 counts up and returns it, 0 clears it
+// Input Value  : ucLane, bAdd
+// Output Value : counter
+//--------------------------------------------------
+static BYTE ScalerDisplayDPTx1TP1SameVolCnt(BYTE ucLane, bit bAdd)
+{
+    switch(ucLane)
+    {
+        case 0:
+
+            if(bAdd == _TRUE)
+            {
+                ADD_DISPLAY_DP_TX1_TP1_LANE0_SAME_VOL_CNT();
+            }
+            else
+            {
+                CLR_DISPLAY_DP_TX1_TP1_LANE0_SAME_VOL_CNT();
+            }
+
+            return GET_DISPLAY_DP_TX1_TP1_LANE0_SAME_VOL_CNT();
+        case 1:
+
+            if(bAdd == _TRUE)
+            {
+                ADD_DISPLAY_DP_TX1_TP1_LANE1_SAME_VOL_CNT();
+            }
+            else
+            {
+                CLR_DISPLAY_DP_TX1_TP1_LANE1_SAME_VOL_CNT();
+            }
+
+            return GET_DISPLAY_DP_TX1_TP1_LANE1_SAME_VOL_CNT();
+        case 2:
+
+            if(bAdd == _TRUE)
+            {
+                ADD_DISPLAY_DP_TX1_TP1_LANE2_SAME_VOL_CNT();
+            }
+            else
+            {
+                CLR_DISPLAY_DP_TX1_TP1_LANE2_SAME_VOL_CNT();
+            }
+
+            return GET_DISPLAY_DP_TX1_TP1_LANE2_SAME_VOL_CNT();
+        default:
+
+            if(bAdd == _TRUE)
+            {
+                ADD_DISPLAY_DP_TX1_TP1_LANE3_SAME_VOL_CNT();
+            }
+            else
+            {
+                CLR_DISPLAY_DP_TX1_TP1_LANE3_SAME_VOL_CNT();
+            }
+
+            return GET_DISPLAY_DP_TX1_TP1_LANE3_SAME_VOL_CNT();
+    }
+}
+
+//--------------------------------------------------
 // Description  : Store a lane's current vol swing / pre-emphasis and their max-reach flags (#295)
 // Input Value  : pucCur = ucLaneNAdjust, level values 0..3
 // Output Value :
@@ -1101,6 +1162,7 @@ static bit ScalerDisplayDPTx1TP1LaneAdjust(BYTE ucLane)
     BYTE ucAdjVol = (*pucReq >> ucShift) & (_BIT1 | _BIT0);
     BYTE ucAdjPre = (*pucReq >> (ucShift + 2)) & (_BIT1 | _BIT0);
     BYTE ucCurPre = (*pucCur & (_BIT4 | _BIT3)) >> 3;
+    BYTE ucCnt;
 
     // Check1: (Adjust Vol swing level + Current Vol pre emphasisl) > 3
     if((ucAdjVol + ucCurPre) > _DISPLAY_DP_TX_LEVEL_3)
@@ -1112,18 +1174,18 @@ static bit ScalerDisplayDPTx1TP1LaneAdjust(BYTE ucLane)
     // Check2: Current Vol swing level is the same as adjust Vol swing level
     if((*pucCur & (_BIT1 | _BIT0)) == ucAdjVol)
     {
-        g_stDisplayDPTx1LTInfo.aucTP1SameVolCnt[ucLane]++;
+        ucCnt = ScalerDisplayDPTx1TP1SameVolCnt(ucLane, 1);
 
-        if((g_stDisplayDPTx1LTInfo.aucTP1SameVolCnt[ucLane] == 5) || ((g_stDisplayDPTx1LTInfo.aucTP1SameVolCnt[ucLane] == 1) && (ucAdjVol == _DISPLAY_DP_TX_LEVEL_3)))
+        if((ucCnt == 5) || ((ucCnt == 1) && (ucAdjVol == _DISPLAY_DP_TX_LEVEL_3)))
         {
-            g_stDisplayDPTx1LTInfo.aucTP1SameVolCnt[ucLane] = 0;
+            ScalerDisplayDPTx1TP1SameVolCnt(ucLane, 0);
 
             return _FAIL;
         }
     }
     else
     {
-        g_stDisplayDPTx1LTInfo.aucTP1SameVolCnt[ucLane] = 0;
+        ScalerDisplayDPTx1TP1SameVolCnt(ucLane, 0);
     }
 
     // Tx current level = Rx adjust request; max-reach flags follow the level

@@ -51,6 +51,7 @@ typedef uint8_t BYTE; typedef uint16_t WORD; typedef unsigned char bit;
 #define _BIT7 0x80
 #define _SUCCESS 1
 #define _FAIL 0
+#define _TRUE 1
 #define _DISPLAY_DP_TX_LEVEL_3 3
 """
 
@@ -76,7 +77,7 @@ def git_show(ref, path):
 
 def func(text, name):
     m = re.search(
-        r"^(?:static )?(?:bit|void) " + name + r"\([^)]*\)\n\{.*?\n\}\n",
+        r"^(?:static )?(?:bit|void|BYTE) " + name + r"\([^)]*\)\n\{.*?\n\}\n",
         text,
         re.DOTALL | re.MULTILINE,
     )
@@ -109,6 +110,7 @@ def build(ref, new):
         )
         body += (
             "\n"
+            + func(src, "ScalerDisplayDPTx1TP1SameVolCnt")
             + func(src, "ScalerDisplayDPTxLaneSetCurrent")
             + func(src, "ScalerDisplayDPTx1TP1LaneAdjust")
             + func(src, "ScalerDisplayDPTx1TP2LaneAdjust")
@@ -119,7 +121,7 @@ def build(ref, new):
         )
         body = (
             "static void ScalerDisplayDPTxLaneSetCurrent(BYTE __xdata *, BYTE, BYTE);\n"
-            + body
+            "static BYTE ScalerDisplayDPTx1TP1SameVolCnt(BYTE, bit);\n" + body
         )
     else:
         for n in range(4):
@@ -167,7 +169,7 @@ int main(void) {
 }
 """
     if new:
-        cnt = [f"aucTP1SameVolCnt[{i}]" for i in range(4)]
+        cnt = [f"b3TP1Lane{i}SameVolCnt" for i in range(4)]
         call2 = "ScalerDisplayDPTx1TP2LaneAdjust(L)"
     else:
         cnt = [f"b3TP1Lane{i}SameVolCnt" for i in range(4)]
