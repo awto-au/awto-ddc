@@ -272,9 +272,7 @@ void ScalerFmtCnvFinalSetting(void)
     {
         if(ScalerFmtCnvGetSourceType() != _FC_SOURCE_ADC)
         {
-            // Wait 4 IVS after format conversion setting
-            ScalerTimerWaitForEvent(_EVENT_IVS);
-            ScalerTimerWaitForEvent(_EVENT_IVS);
+            // 2 IVS (SDK: 4); the auto-function re-check after this waits 2 more before its result is read.
             ScalerTimerWaitForEvent(_EVENT_IVS);
             ScalerTimerWaitForEvent(_EVENT_IVS);
 
