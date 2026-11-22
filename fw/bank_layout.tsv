@@ -2919,7 +2919,9 @@ fn	_ScalerTMDSHdmiReadRequestTimerEnable_WDINT	9	0x3dc0	20
 fn	_ScalerTMDSInterruptInitial	9	0x3dd4	20
 fn	_ScalerTMDSYUV420SupportCheck	9	0x3de8	20
 fn	_ScalerMeasureUpdateInputTimingPolarity	9	0x3e60	516
+fn	_ScalerDisplayDPTx1TP2LaneAdjust	9	0x4064	156
 fn	_AwtoSyncScan	9	0x41a4	508
+fn	_ScalerDisplayDPTx1TP1SameVolCnt	9	0x43a0	204
 fn	_ScalerVgipInputInitial	9	0x4484	92
 fn	_UserInterfaceGetDpLaneCount	9	0x44e0	16
 fn	_UserInterfaceGetFreeSyncEnable	9	0x44f0	8
@@ -2964,14 +2966,6 @@ fn	_ScalerDisplayDPTx1MeasureInputInfo	9	0x5d68	760
 fn	_ScalerDisplayDPTx1NativeAuxRead	9	0x6060	56
 fn	_ScalerDisplayDPTx1NativeAuxWrite	9	0x6098	56
 fn	_ScalerDisplayDPTx1SignalReset	9	0x60d0	168
-fn	_ScalerDisplayDPTx1TP1Lane0Adjust	9	0x6178	332
-fn	_ScalerDisplayDPTx1TP1Lane1Adjust	9	0x62c4	396
-fn	_ScalerDisplayDPTx1TP1Lane2Adjust	9	0x6450	336
-fn	_ScalerDisplayDPTx1TP1Lane3Adjust	9	0x65a0	388
-fn	_ScalerDisplayDPTx1TP2Lane0Adjust	9	0x6724	208
-fn	_ScalerDisplayDPTx1TP2Lane1Adjust	9	0x67f4	232
-fn	_ScalerDisplayDPTx1TP2Lane2Adjust	9	0x68dc	208
-fn	_ScalerDisplayDPTx1TP2Lane3Adjust	9	0x69ac	232
 fn	_ScalerDisplayDPTx1TPInitialSet	9	0x6a94	356
 fn	_ScalerDisplayDPTx1TrainPattern1	9	0x6bf8	508
 fn	_ScalerDisplayDPTx1TrainPattern2	9	0x6df4	776
@@ -3039,6 +3033,7 @@ fn	_ScalerTMDSRx3PowerSavingProc	9	0x950c	80
 fn	_AwtoT0EvFire	9	0x95a0	64
 fn	_AwtoSyncDetect	9	0x95e0	948
 fn	_AwtoSyncT2Start	9	0x9994	336
+fn	_ScalerDisplayDPTxLaneSetCurrent	9	0x9ae4	64
 fn	_ScalerTimerWDInitial	9	0x9b24	100
 fn	_AwtoWdtProbe	9	0x9b88	156
 fn	_AwtoT0EvClock	9	0x9c24	216
@@ -3050,6 +3045,7 @@ fn	_AwtoFastScalerApply	9	0xa65c	472
 fn	_ScalerSyncTMDSRxHdmiColorInfoChanged	9	0xa834	756
 fn	_ScalerSyncTMDSRxHdmiQuantizationSetting	9	0xab28	372
 fn	_ScalerSyncTMDSRxHdmiVideoSetting	9	0xac9c	560
+fn	_ScalerDisplayDPTx1TP1LaneAdjust	9	0xaecc	292
 const	_font_blob_spleen	10	0x0000	1300
 const	_font_blob_spleen5	10	0x0514	916
 const	_font_blob_spleen6	10	0x08a8	1000
