@@ -17,7 +17,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import asteroids_dvg as D
 import isostamp
-import osd_gfx as OG
+from _repo import repo_root
 
 STEPS = 16                      # ship angles per quarter turn
 STEP_DEG = 90.0 / STEPS
@@ -155,9 +155,6 @@ def preview(sh, path):
         for pl in sh[i]:
             dr.line([(cx + x * k, cy - y * k) for x, y in pl], fill=(230, 230, 230))
     img.save(path)
-
-
-repo_root = OG.repo_root
 
 
 def main():
