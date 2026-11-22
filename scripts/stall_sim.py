@@ -20,8 +20,8 @@ from _log import log_line as _log_line
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import fw_link_check as L
 import panel_sim as P
+from _repo import ROOT
 
-ROOT = Path(__file__).resolve().parents[1]
 LOG = ROOT / "tmp/logs/stall_sim.log"
 TSV = ROOT / "tmp/logs/stall_sim.tsv"
 VECTORS = {0x03: "EXINT0", 0x0B: "Timer0", 0x13: "EXINT1", 0x1B: "Timer1", 0x23: "Serial", 0x2B: "Timer2", 0x33: "EXINT2", 0x3B: "EXINT3", 0x43: "EXINT4", 0x4B: "EXINT5"}

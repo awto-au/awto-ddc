@@ -32,10 +32,10 @@ import osd_render as R
 import osd_test as T
 import rtd_crash as C
 import sync_log as L
+from _repo import ROOT
 from boot_sim import CON_COLS
 from PIL import Image
 
-ROOT = Path(__file__).resolve().parents[1]
 LOG = ROOT / "tmp/logs/wake_sim.log"
 ADC_A0, ADC_A1, ADC_IDLE, KEY_UP_A0, KEY_DOWN_A1 = 0xFF09, 0xFF0A, 0xF8, 0x38, 0x38   # key_sim_test KEY_ADC band centres
 SYS_REQ_EV, SYS_BY_KEY_CONSOLE = 0x14, 0x1D     # sync.tsv id 14 (system request), RL6449_Project.h AWTO_SYS_BY_KEY_CONSOLE

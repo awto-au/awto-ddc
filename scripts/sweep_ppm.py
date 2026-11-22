@@ -11,7 +11,8 @@ import statistics
 import sys
 from pathlib import Path
 
-ROOT = Path(__file__).resolve().parent.parent
+from _repo import ROOT
+
 RX = re.compile(r"(\d+)x(\d+)@([\d.]+)")
 
 

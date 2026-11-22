@@ -13,8 +13,8 @@ import sys
 from pathlib import Path
 
 from _log import log_line as _log_line
+from _repo import ROOT
 
-ROOT = Path(__file__).resolve().parents[1]
 LOG = ROOT / "tmp/logs/warn_policy_renum.log"
 DEFAULT_POLICY = Path("/mnt/2tb/git/awto-ddc-ui/fw/warn_policy.tsv")
 

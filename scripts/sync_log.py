@@ -25,8 +25,8 @@ from pathlib import Path
 
 import isostamp
 import sync_classes
+from _repo import ROOT
 
-ROOT = Path(os.environ.get("AWTO_DDC_REPO") or Path(__file__).resolve().parents[1])
 LOG = ROOT / "tmp/logs/sync_log.log"
 NOTE_EV = 0xEE                            # RL6449_Project.h AWTO_SYNC_EV_NOTE: arg = length, value = note sequence (#273)
 HDR, EV = 14, 8                           # header bytes, bytes per entry; N = header[12], seq wrap = header[13]

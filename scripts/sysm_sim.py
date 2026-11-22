@@ -30,9 +30,9 @@ import fw_sim as S
 import led_check as LED
 import osd_test as T
 import sync_log as L
+from _repo import ROOT
 from ddc_sim import DdcEngine, Mccs
 
-ROOT = Path(__file__).resolve().parents[1]
 LOG = ROOT / "tmp/logs/sysm_sim.log"
 POWER_KEY, K_SOURCE, SEL_D2, SEL_D3 = 0x3E, 0x05, 0x32, 0x33     # test cmds (fw/test/testcmd.c)
 PWR_OFF, PWR_NORMAL, PWR_SAVING = 1, 2, 3                        # Global.h EnumPowerStatus (isr_g_stPowerInfo high nibble)

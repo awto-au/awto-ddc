@@ -13,8 +13,8 @@ import sys
 from pathlib import Path
 
 import isostamp
+from _repo import ROOT
 
-ROOT = Path(__file__).resolve().parents[1]
 LOG = ROOT / "tmp/logs/worktree_review.log"
 OUT = ROOT / "tmp/worktree_review.tsv"
 GIT_S = 20          # one git status on the largest tree takes ~2 s (2026-11-16); 10x margin, expiry = row marked TIMEOUT

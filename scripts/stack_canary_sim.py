@@ -5,13 +5,12 @@ zone; the next main pass must flag it (g_ucAwtoStackFatal = 1, high-water >= gua
 usage: stack_canary_sim.py BIN [MAP]
 Log: tmp/logs/stack_canary_sim.log
 """
-import os
 import sys
 from pathlib import Path
 
 from _log import log_line as _log_line
+from _repo import ROOT
 
-ROOT = Path(os.environ.get("AWTO_DDC_REPO") or Path(__file__).resolve().parents[1])
 sys.path.insert(0, str(ROOT / "scripts"))
 import fw_sim as S
 

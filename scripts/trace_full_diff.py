@@ -16,7 +16,8 @@ import sys
 from collections import defaultdict
 from pathlib import Path
 
-ROOT = Path(__file__).resolve().parents[1]
+from _repo import ROOT
+
 BENIGN_ADDR = {0x0002: "status/W1C", 0x000C: "status/W1C", 0x1603: "status/W1C", 0x1616: "status/W1C", 0x3003: "status/W1C",
                0x3016: "status/W1C", 0x0037: "P0_37 (ruled out)"}
 ROT = {0x20F0, 0x0549, 0x4549, 0x05AE, 0x0026, 0x4026, 0x01DC, 0x37B0}

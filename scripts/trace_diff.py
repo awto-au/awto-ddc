@@ -12,7 +12,8 @@ import difflib
 import sys
 from pathlib import Path
 
-ROOT = Path(__file__).resolve().parents[1]
+from _repo import ROOT
+
 NOISE = {0x0090, 0x0091, 0x0092, 0x0094, 0x006C, 0x006D, 0x0003, 0x0005, 0x4003, 0x0002, 0x000C, 0x0060, 0x0061, 0x0062}
 MARK = {"VGIP_CTRL P0_10": 0x0010, "M1 FIFO/SF P0_30": 0x0030, "P0_28 display ctrl": 0x0028, "P0_2F disp DB": 0x002F, "P31_C0 I_DB": 0x31C0,
         "P5_27 CAP DDR ctrl1": 0x0527, "P5_AC DISP ctrl1": 0x05AC, "P1_C3 DPLL cal": 0x01C3, "P0_32 scale": 0x0032, "P31_06 FtoP": 0x3106,

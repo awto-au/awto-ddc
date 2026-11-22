@@ -16,11 +16,10 @@ import statistics
 import subprocess
 import sys
 import time
-from pathlib import Path
 
 from _log import log_line as _log_line
+from _repo import ROOT
 
-ROOT = Path(__file__).resolve().parent.parent
 LOG = ROOT / "tmp/logs/sync_bench.log"
 RUN_LIMIT_S = 5.0       # picture comes ~1.5 s after the reset; synclog itself takes ~1.5 s per read: 3 reads max
 LINE = re.compile(r"^\S+\s+(\d+):(.*)$")

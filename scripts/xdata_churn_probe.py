@@ -14,8 +14,8 @@ import sys
 from pathlib import Path
 
 from _log import log_line as _log_line
+from _repo import ROOT
 
-ROOT = Path(__file__).resolve().parents[1]
 LOG = ROOT / "tmp/logs/xdata_churn_probe.log"
 BUILD_LIMIT = 300         # s: build ~40 s warm, ~90 s cold (2026-11-19); 3x cold worst case, stall guard in dev.py
 

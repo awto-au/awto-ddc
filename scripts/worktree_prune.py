@@ -9,14 +9,13 @@ usage: worktree_prune.py [--remove] [--keep NAME ...]
 Log: ./tmp/logs/worktree_prune.log
 """
 import argparse
-import os
 import subprocess
 import sys
 from pathlib import Path
 
 from _log import log_line as _log_line
+from _repo import ROOT as REPO
 
-REPO = Path(os.environ.get("AWTO_DDC_REPO") or Path(__file__).resolve().parent.parent)
 LOG = REPO / "tmp/logs/worktree_prune.log"
 
 

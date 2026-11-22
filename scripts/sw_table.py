@@ -11,11 +11,10 @@ import re
 import statistics
 import subprocess
 import sys
-from pathlib import Path
 
 import isostamp
+from _repo import ROOT
 
-ROOT = Path(__file__).resolve().parent.parent
 ACTIVE = re.compile(r"\+\s*(\d+) ms\s+mode ACTIVE")
 UNBLANK = re.compile(r"\+\s*(\d+) ms\s+UNBLANK")
 # phase boundaries: first event matching each name (sw_timeline decoded lines); a phase = next boundary - this one

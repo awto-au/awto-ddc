@@ -12,8 +12,8 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import fw_sim as S
 import isostamp
+from _repo import ROOT
 
-ROOT = Path(__file__).resolve().parents[1]
 LOG = ROOT / "tmp/logs/startup_clear_cost.log"
 BUDGET = 200_000         # instr: clear + copy ~ 25k; expiry = FAIL
 

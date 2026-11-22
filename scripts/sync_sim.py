@@ -28,9 +28,9 @@ import osd_render as R
 import osd_test as T
 import rtd_crash as C
 import sync_log as S
+from _repo import ROOT
 from PIL import Image
 
-ROOT = Path(__file__).resolve().parents[1]
 LOG = ROOT / "tmp/logs/sync_sim.log"
 K_MENU, K_SOURCE, CON_CLOSE = 0x04, 0x05, 0x44     # injected MENU / SOURCE; test cmd 0x44 = console close (fw/test/testcmd.c)
 POWER_KEY = 0x3E                                    # test cmd 0x3E = the POWER key (soft off / on, #151)

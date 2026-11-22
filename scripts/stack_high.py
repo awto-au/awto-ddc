@@ -5,13 +5,12 @@ usage: stack_high.py BUS --serial S --map MAP
 Log: ./tmp/logs/stack_high.log
 """
 import argparse
-import os
 import sys
 from pathlib import Path
 
 import isostamp
+from _repo import ROOT
 
-ROOT = Path(os.environ.get("AWTO_DDC_REPO") or Path(__file__).resolve().parent.parent)
 LOG = ROOT / "tmp/logs/stack_high.log"
 GUARD = 0xF0            # AWTO_STACK_GUARD
 

@@ -10,14 +10,13 @@ usage: strip_funcs.py FILE.c [--from-tsv tmp/logs/dead_code.tsv | NAME ...] [--h
 Log: ./tmp/logs/strip_funcs.log
 """
 import argparse
-import os
 import re
 import sys
 from pathlib import Path
 
 from _log import log_line as _log_line
+from _repo import ROOT
 
-ROOT = Path(os.environ.get("AWTO_DDC_REPO") or Path(__file__).resolve().parents[1])
 LOG = ROOT / "tmp/logs/strip_funcs.log"
 
 

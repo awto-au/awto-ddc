@@ -21,8 +21,8 @@ from _log import log_line as _log_line
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import fw_sim as S
+from _repo import ROOT
 
-ROOT = Path(__file__).resolve().parents[1]
 LOG = ROOT / "tmp/logs/wdt_sim.log"
 BOOT_WATCH = ("main", "SysMainSystemInitial", "ScalerMcuInitial", "ScalerTimerWDInitial", "AwtoWdtCheck", "AwtoDiagMainPass")
 BOOT_BUDGET = 40_000_000       # instr to the first main-loop pass: ~6 M in the sim (docs/delays.md stage 5 at 506 ms); x6

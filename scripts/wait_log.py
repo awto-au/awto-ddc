@@ -10,14 +10,13 @@ Log: ./tmp/logs/wait_log.log
 """
 import argparse
 import bisect
-import os
 import re
 import sys
 from pathlib import Path
 
 from _log import log_line as _log_line
+from _repo import ROOT
 
-ROOT = Path(os.environ.get("AWTO_DDC_REPO") or Path(__file__).resolve().parent.parent)
 LOG = ROOT / "tmp/logs/wait_log.log"
 N = 64                      # AWTO_WAIT_N
 HDR = 3                     # ucTotal, ucQuick, ucSpMax

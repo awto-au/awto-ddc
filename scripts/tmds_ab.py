@@ -26,9 +26,9 @@ import i2cbus
 import kvm
 import rtd_i2c_bridge as B
 import unit_health as U
+from _repo import ROOT
 from rtd_flash_sector import Rtd
 
-ROOT = Path(__file__).resolve().parents[1]
 LOG = ROOT / "tmp/logs/tmds_ab.log"
 TSV = ROOT / "tmp/logs/tmds_ab.tsv"
 ISP_EN, ISP_EN_VAL, RESET, RESET_VAL = 0x6F, 0x80, 0xEE, 0x02

@@ -29,8 +29,8 @@ import isostamp
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import rtd_crash as C
+from _repo import ROOT
 
-ROOT = Path(__file__).resolve().parents[1]
 LOG = ROOT / "tmp/logs/wdt_test.log"
 CNT3_MS = 4096 * 2048 / 14318.18          # regdb CNT3 12 bit x 2048 XTAL clocks
 TICK_MS = 2048 / 14318.18

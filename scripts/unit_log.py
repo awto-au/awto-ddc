@@ -18,15 +18,14 @@ from __future__ import annotations
 import argparse
 import datetime as dt
 import json
-import os
 import subprocess
 import sys
 import time
 from pathlib import Path
 
 from _log import log_line as _log_line
+from _repo import ROOT
 
-ROOT = Path(os.environ.get("AWTO_DDC_REPO") or Path(__file__).resolve().parents[1])
 LOGDIR = ROOT / "tmp/logs/units"
 LOG = ROOT / "tmp/logs/unit_log.log"
 INTERVAL_S = 30
