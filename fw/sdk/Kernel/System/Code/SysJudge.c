@@ -420,6 +420,7 @@ static void SysMachinePowerStep(void)
         {
             SYS_AT(AWTO_SYS_WAKE, s_ucSysPwrBy);
             SysPowerSwitch(_POWER_ACTION_PS_TO_NORMAL);
+            SysSourceSearchLastPort();
             SysMachineGo(AWTO_SYS_WAKE, s_ucSysPwrBy, _FALSE);
         }
         else if(GET_TARGET_POWER_STATUS() == _POWER_STATUS_OFF)

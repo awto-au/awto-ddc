@@ -616,6 +616,7 @@ extern bit SysSourceStableCheck(void);
 extern void SysSourceClearDetectingEvent(void);
 extern void SysSourceSwitchInputPort(BYTE ucInputPort);
 extern void SysSourceInfoReset(void);
+extern void SysSourceSearchLastPort(void);
 extern BYTE SysSourceGetInputPort(void);
 extern BYTE SysSourceGetInputPortType(BYTE ucInputPort);
 extern BYTE SysSourceGetSourceType(void);

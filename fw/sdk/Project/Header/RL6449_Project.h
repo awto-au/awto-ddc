@@ -2457,6 +2457,7 @@ extern bit SysMachineOffOrGoing(void);
 #define _SOURCE_DEFAULT_SEARCH_TIME_DVI                         SEC(2)
 #define _SOURCE_DEFAULT_SEARCH_TIME_DP                          SEC(3)
 #define _SOURCE_DEFAULT_SEARCH_TIME_TYPE_C                      SEC(4.5)
+#define _SOURCE_DEFAULT_SEARCH_TIME_NO_CABLE_PORT               SEC(0.1)    // one search pass: worst source handler pass 80 ms x 1.25 (awto-ddc#290)
 
 
 //////////////////

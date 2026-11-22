@@ -185,6 +185,7 @@ BYTE SysSourceGetAudioPlaybackPort(void);
 
 void SysSourceSwitchInputPort(BYTE ucInputPort);
 void SysSourceInfoReset(void);
+void SysSourceSearchLastPort(void);
 void SysSourceCableDetection(void);
 
 #if(_DP_HDMI_COMPATIBLE_MODE == _ON)
@@ -939,7 +940,8 @@ void SysSourceSearchTimeInitial(BYTE ucSearchIndex)
 
 #if(_SOURCE_AUTO_SEARCH_STYLE == _SOURCE_POLLING_IN_SEARCH_STATE)
 
-                ScalerTimerReactiveTimerEvent(_SOURCE_DEFAULT_SEARCH_TIME_ALL_PORT, _SYSTEM_TIMER_EVENT_SOURCE_CLEAR_DETECTING);
+                // No cable (sense pin low): nothing can lock, one search pass is enough (awto-ddc#290)
+                ScalerTimerReactiveTimerEvent((GET_CABLE_DETECT(ucSearchIndex) == _TRUE) ? _SOURCE_DEFAULT_SEARCH_TIME_ALL_PORT : _SOURCE_DEFAULT_SEARCH_TIME_NO_CABLE_PORT, _SYSTEM_TIMER_EVENT_SOURCE_CLEAR_DETECTING);
 #else
                 switch(GET_PORT_TYPE(GET_INPUTPORT_TYPE(ucSearchIndex)))
                 {
@@ -3644,6 +3646,13 @@ void SysSourceSwitchInputPort(BYTE ucInputPort)
 // Input Value  : None
 // Output Value : None
 //--------------------------------------------------
+void SysSourceSearchLastPort(void)      // wake: search from the port in use before the sleep, not where the wake poll left the index
+{
+    g_ucSearchIndex = SysSourceConvertSearchPort(UserCommonNVRamGetSystemData(_SEARCH_PORT));
+    SET_SOURCE_SEARCH_PORT_INITIAL();
+    SET_SOURCE_SEARCH_TIME_INITIAL();
+}
+
 void SysSourceInfoReset(void)
 {
     BYTE ucCnt = 0x00;
