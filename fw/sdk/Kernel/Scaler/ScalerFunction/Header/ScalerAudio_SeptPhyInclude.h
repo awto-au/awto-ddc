@@ -72,64 +72,22 @@ extern void ScalerAudioD1DPSetDVCWindowSize(bit bAdjustType, EnumAudioSamplingFr
 #endif
 
 #if(_HDMI_SUPPORT == _ON)
-#if(_D2_HDMI_SUPPORT == _ON)
-extern void ScalerAudioD2DigitalDetectProc(void);
-extern bit ScalerAudioD2GetAudioDetected(void);
-extern void ScalerAudioD2LoadStableICodeEvent(void);
-extern void ScalerAudioD2WatchDogProc(bit bOn);
+#if((_D2_HDMI_SUPPORT == _ON) && (_D3_HDMI_SUPPORT == _ON))
+extern void ScalerAudioHdmiDigitalDetectProc(BYTE ucPort);
+extern bit ScalerAudioHdmiGetAudioDetected(BYTE ucPort);
+extern void ScalerAudioHdmiAudioInitial(BYTE ucPort);
+extern void ScalerAudioHdmiLoadInitialICode(BYTE ucPort);
+extern void ScalerAudioHdmiLoadStableICodeEvent(BYTE ucPort);
+extern EnumAudioSamplingFreqType ScalerAudioHdmiSamplingFreqDetect(BYTE ucPort);
+extern void ScalerAudioHdmiSetAudioPLL(BYTE ucPort);
+extern void ScalerAudioHdmiWatchDogProc(BYTE ucPort, bit bOn);
 
 #if(_INTERNAL_AUDIO_TEST_SUPPORT == _ON)
-extern bit ScalerAudioD2GetInternalAudioGenEnable(void);
-extern void ScalerAudioD2InternalAudioGenSwitch(bit bOn);
+extern bit ScalerAudioHdmiGetInternalAudioGenEnable(BYTE ucPort);
+extern void ScalerAudioHdmiInternalAudioGenSwitch(BYTE ucPort, bit bOn);
 #endif
 
 #endif
-
-#if(_D3_HDMI_SUPPORT == _ON)
-extern void ScalerAudioD3DigitalDetectProc(void);
-extern bit ScalerAudioD3GetAudioDetected(void);
-extern void ScalerAudioD3HDMIAudioInitial(void);
-extern void ScalerAudioD3LoadStableICodeEvent(void);
-extern EnumAudioSamplingFreqType ScalerAudioD3SamplingFreqDetect(void);
-extern void ScalerAudioD3WatchDogProc(bit bOn);
-
-#if(_INTERNAL_AUDIO_TEST_SUPPORT == _ON)
-extern bit ScalerAudioD3GetInternalAudioGenEnable(void);
-extern void ScalerAudioD3InternalAudioGenSwitch(bit bOn);
-#endif
-
-#endif
-
-#if(_D4_HDMI_SUPPORT == _ON)
-extern void ScalerAudioD4DigitalDetectProc(void);
-extern bit ScalerAudioD4GetAudioDetected(void);
-extern void ScalerAudioD4HDMIAudioInitial(void);
-extern void ScalerAudioD4LoadStableICodeEvent(void);
-extern EnumAudioSamplingFreqType ScalerAudioD4SamplingFreqDetect(void);
-extern void ScalerAudioD4WatchDogProc(bit bOn);
-
-#if(_INTERNAL_AUDIO_TEST_SUPPORT == _ON)
-extern bit ScalerAudioD4GetInternalAudioGenEnable(void);
-extern void ScalerAudioD4InternalAudioGenSwitch(bit bOn);
-#endif
-
-#endif
-
-#if(_D5_HDMI_SUPPORT == _ON)
-extern void ScalerAudioD5DigitalDetectProc(void);
-extern bit ScalerAudioD5GetAudioDetected(void);
-extern void ScalerAudioD5HDMIAudioInitial(void);
-extern void ScalerAudioD5LoadStableICodeEvent(void);
-extern EnumAudioSamplingFreqType ScalerAudioD5SamplingFreqDetect(void);
-extern void ScalerAudioD5WatchDogProc(bit bOn);
-
-#if(_INTERNAL_AUDIO_TEST_SUPPORT == _ON)
-extern bit ScalerAudioD5GetInternalAudioGenEnable(void);
-extern void ScalerAudioD5InternalAudioGenSwitch(bit bOn);
-#endif
-
-#endif
-
 #endif
 
 #if(_LINE_IN_SUPPORT == _ON)

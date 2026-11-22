@@ -54,36 +54,25 @@
 #define SET_D1_DIGITAL_AUDIO_SOURCE(x)              (g_stAudioD1DigtalInfo.b2AudioDigitalSource = (x))
 #endif
 
-#if(_D2_HDMI_SUPPORT == _ON)
-#define GET_AUDIO_D2_ICODE_RELOADED()               (bit)(g_stAudioD2DigtalInfo.b1AudioICodeReloaded)
-#define SET_AUDIO_D2_ICODE_RELOADED()               (g_stAudioD2DigtalInfo.b1AudioICodeReloaded = _TRUE)
-#define CLR_AUDIO_D2_ICODE_RELOADED()               (g_stAudioD2DigtalInfo.b1AudioICodeReloaded = _FALSE)
+#if((_D2_HDMI_SUPPORT == _ON) && (_D3_HDMI_SUPPORT == _ON))
+#define _AUDIO_HDMI_D2                              0
+#define _AUDIO_HDMI_D3                              1
+#define AUDIO_HDMI_SEL(ucPort, d2, d3)              ((ucPort) ? (d3) : (d2))
+#define AUDIO_HDMI_REG(ucPort, usAddrD2)            ((WORD)(usAddrD2) + ((WORD)(ucPort) << 8))
 
-#define GET_AUDIO_D2_SAMPLING_FREQ()                (g_stAudioD2DigtalInfo.b4AudioSamplingFreq)
-#define SET_AUDIO_D2_SAMPLING_FREQ(x)               (g_stAudioD2DigtalInfo.b4AudioSamplingFreq = (x))
+#define GET_AUDIO_HDMI_ICODE_RELOADED(p)            (bit)(g_astAudioHdmiInfo[p].b1AudioICodeReloaded)
+#define SET_AUDIO_HDMI_ICODE_RELOADED(p)            (g_astAudioHdmiInfo[p].b1AudioICodeReloaded = _TRUE)
+#define CLR_AUDIO_HDMI_ICODE_RELOADED(p)            (g_astAudioHdmiInfo[p].b1AudioICodeReloaded = _FALSE)
 
-#define GET_AUDIO_D2_PACKET_DETECT()                (bit)(g_stAudioD2DigtalInfo.b1AudioDetected)
-#define SET_AUDIO_D2_PACKET_DETECT()                (g_stAudioD2DigtalInfo.b1AudioDetected = _TRUE)
-#define CLR_AUDIO_D2_PACKET_DETECT()                (g_stAudioD2DigtalInfo.b1AudioDetected = _FALSE)
+#define GET_AUDIO_HDMI_SAMPLING_FREQ(p)             (g_astAudioHdmiInfo[p].b4AudioSamplingFreq)
+#define SET_AUDIO_HDMI_SAMPLING_FREQ(p, x)          (g_astAudioHdmiInfo[p].b4AudioSamplingFreq = (x))
 
-#define GET_D2_DIGITAL_AUDIO_SOURCE()               (g_stAudioD2DigtalInfo.b2AudioDigitalSource)
-#define SET_D2_DIGITAL_AUDIO_SOURCE(x)              (g_stAudioD2DigtalInfo.b2AudioDigitalSource = (x))
-#endif
+#define GET_AUDIO_HDMI_PACKET_DETECT(p)             (bit)(g_astAudioHdmiInfo[p].b1AudioDetected)
+#define SET_AUDIO_HDMI_PACKET_DETECT(p)             (g_astAudioHdmiInfo[p].b1AudioDetected = _TRUE)
+#define CLR_AUDIO_HDMI_PACKET_DETECT(p)             (g_astAudioHdmiInfo[p].b1AudioDetected = _FALSE)
 
-#if(_D3_HDMI_SUPPORT == _ON)
-#define GET_AUDIO_D3_ICODE_RELOADED()               (bit)(g_stAudioD3DigtalInfo.b1AudioICodeReloaded)
-#define SET_AUDIO_D3_ICODE_RELOADED()               (g_stAudioD3DigtalInfo.b1AudioICodeReloaded = _TRUE)
-#define CLR_AUDIO_D3_ICODE_RELOADED()               (g_stAudioD3DigtalInfo.b1AudioICodeReloaded = _FALSE)
-
-#define GET_AUDIO_D3_SAMPLING_FREQ()                (g_stAudioD3DigtalInfo.b4AudioSamplingFreq)
-#define SET_AUDIO_D3_SAMPLING_FREQ(x)               (g_stAudioD3DigtalInfo.b4AudioSamplingFreq = (x))
-
-#define GET_AUDIO_D3_PACKET_DETECT()                (bit)(g_stAudioD3DigtalInfo.b1AudioDetected)
-#define SET_AUDIO_D3_PACKET_DETECT()                (g_stAudioD3DigtalInfo.b1AudioDetected = _TRUE)
-#define CLR_AUDIO_D3_PACKET_DETECT()                (g_stAudioD3DigtalInfo.b1AudioDetected = _FALSE)
-
-#define GET_D3_DIGITAL_AUDIO_SOURCE()               (g_stAudioD3DigtalInfo.b2AudioDigitalSource)
-#define SET_D3_DIGITAL_AUDIO_SOURCE(x)              (g_stAudioD3DigtalInfo.b2AudioDigitalSource = (x))
+#define GET_AUDIO_HDMI_DIGITAL_SOURCE(p)            (g_astAudioHdmiInfo[p].b2AudioDigitalSource)
+#define SET_AUDIO_HDMI_DIGITAL_SOURCE(p, x)         (g_astAudioHdmiInfo[p].b2AudioDigitalSource = (x))
 #endif
 
 //****************************************************************************
@@ -102,12 +91,8 @@ extern StructAudioDigitalInfo g_stAudioD0DigtalInfo;
 extern StructAudioDigitalInfo g_stAudioD1DigtalInfo;
 #endif
 
-#if(_D2_HDMI_SUPPORT == _ON)
-extern StructAudioDigitalInfo g_stAudioD2DigtalInfo;
-#endif
-
-#if(_D3_HDMI_SUPPORT == _ON)
-extern StructAudioDigitalInfo g_stAudioD3DigtalInfo;
+#if((_D2_HDMI_SUPPORT == _ON) && (_D3_HDMI_SUPPORT == _ON))
+extern StructAudioDigitalInfo g_astAudioHdmiInfo[2];
 #endif
 
 //****************************************************************************
@@ -120,12 +105,6 @@ extern void ScalerAudioDigitalOutputMute(bit bMute);
 extern void ScalerAudioWatchDogProc(bit bOn, BYTE ucInputPort);
 extern void ScalerAudioLoadStableICodeEvent(EnumScalerTimerEventID enumEventID);
 extern EnumSourceSearchPort ScalerAudioGetDigitalAudioPortMapping(void);
-
-#if(_HDMI_SUPPORT == _ON)
-#if(_D2_HDMI_SUPPORT == _ON)
-extern EnumAudioSamplingFreqType ScalerAudioD2SamplingFreqDetect(void);
-#endif
-#endif
 
 #if(_DP_SUPPORT == _ON)
 

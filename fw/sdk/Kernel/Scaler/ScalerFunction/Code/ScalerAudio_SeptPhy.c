@@ -63,72 +63,23 @@ void ScalerAudioD1DPSetDVCVolumeAdjustType(bit bAdjustType);
 #endif // End of #if(_DP_SUPPORT == _ON)
 
 #if(_HDMI_SUPPORT == _ON)
-#if(_D2_HDMI_SUPPORT == _ON)
-void ScalerAudioD2DigitalDetectProc(void);
-bit ScalerAudioD2GetAudioDetected(void);
-void ScalerAudioD2LoadInitialICode(void);
-void ScalerAudioD2LoadStableICodeEvent(void);
-void ScalerAudioD2WatchDogProc(bit bOn);
+#if((_D2_HDMI_SUPPORT == _ON) && (_D3_HDMI_SUPPORT == _ON))
+void ScalerAudioHdmiDigitalDetectProc(BYTE ucPort);
+bit ScalerAudioHdmiGetAudioDetected(BYTE ucPort);
+void ScalerAudioHdmiAudioInitial(BYTE ucPort);
+void ScalerAudioHdmiLoadInitialICode(BYTE ucPort);
+void ScalerAudioHdmiLoadStableICodeEvent(BYTE ucPort);
+EnumAudioSamplingFreqType ScalerAudioHdmiSamplingFreqDetect(BYTE ucPort);
+void ScalerAudioHdmiSetAudioPLL(BYTE ucPort);
+void ScalerAudioHdmiWatchDogProc(BYTE ucPort, bit bOn);
 
 #if(_INTERNAL_AUDIO_TEST_SUPPORT == _ON)
-bit ScalerAudioD2GetInternalAudioGenEnable(void);
-void ScalerAudioD2InternalAudioGenSwitch(bit bOn);
-#endif
-
-#endif // End of #if(_HDMI_SUPPORT == _ON)
-
-#if(_D3_HDMI_SUPPORT == _ON)
-void ScalerAudioD3DigitalDetectProc(void);
-bit ScalerAudioD3GetAudioDetected(void);
-void ScalerAudioD3HDMIAudioInitial(void);
-void ScalerAudioD3LoadInitialICode(void);
-void ScalerAudioD3LoadStableICodeEvent(void);
-EnumAudioSamplingFreqType ScalerAudioD3SamplingFreqDetect(void);
-void ScalerAudioD3SetAudioPLL(void);
-void ScalerAudioD3WatchDogProc(bit bOn);
-
-#if(_INTERNAL_AUDIO_TEST_SUPPORT == _ON)
-bit ScalerAudioD3GetInternalAudioGenEnable(void);
-void ScalerAudioD3InternalAudioGenSwitch(bit bOn);
+bit ScalerAudioHdmiGetInternalAudioGenEnable(BYTE ucPort);
+void ScalerAudioHdmiInternalAudioGenSwitch(BYTE ucPort, bit bOn);
 #endif
 
 #endif
-
-#if(_D4_HDMI_SUPPORT == _ON)
-void ScalerAudioD4DigitalDetectProc(void);
-bit ScalerAudioD4GetAudioDetected(void);
-void ScalerAudioD4HDMIAudioInitial(void);
-void ScalerAudioD4LoadInitialICode(void);
-void ScalerAudioD4LoadStableICodeEvent(void);
-EnumAudioSamplingFreqType ScalerAudioD4SamplingFreqDetect(void);
-void ScalerAudioD4SetAudioPLL(void);
-void ScalerAudioD4WatchDogProc(bit bOn);
-
-#if(_INTERNAL_AUDIO_TEST_SUPPORT == _ON)
-bit ScalerAudioD4GetInternalAudioGenEnable(void);
-void ScalerAudioD4InternalAudioGenSwitch(bit bOn);
 #endif
-
-#endif
-
-#if(_D5_HDMI_SUPPORT == _ON)
-void ScalerAudioD5DigitalDetectProc(void);
-bit ScalerAudioD5GetAudioDetected(void);
-void ScalerAudioD5HDMIAudioInitial(void);
-void ScalerAudioD5LoadInitialICode(void);
-void ScalerAudioD5LoadStableICodeEvent(void);
-EnumAudioSamplingFreqType ScalerAudioD5SamplingFreqDetect(void);
-void ScalerAudioD5SetAudioPLL(void);
-void ScalerAudioD5WatchDogProc(bit bOn);
-
-#if(_INTERNAL_AUDIO_TEST_SUPPORT == _ON)
-bit ScalerAudioD5GetInternalAudioGenEnable(void);
-void ScalerAudioD5InternalAudioGenSwitch(bit bOn);
-#endif
-
-#endif
-
-#endif // End of #if(_HDMI_SUPPORT == _ON)
 
 #if(_LINE_IN_SUPPORT == _ON)
 void ScalerAudioSetADCAudioPLL(void);
@@ -701,372 +652,151 @@ void ScalerAudioD1DPSetDVCVolumeAdjustType(bit bAdjustType)
 #endif // End of #if(_DP_SUPPORT == _ON)
 
 #if(_HDMI_SUPPORT == _ON)
-#if(_D2_HDMI_SUPPORT == _ON)
+#if((_D2_HDMI_SUPPORT == _ON) && (_D3_HDMI_SUPPORT == _ON))
 //--------------------------------------------------
-// Description  : Detect D2 digital audio for HDMI/DP interface
+// Description  : HDMI audio register access of port ucPort (0 = D2, 1 = D3): data port and status register of page 0x71 + port
+//--------------------------------------------------
+static void AudioHdmiSetDpBit(BYTE ucPort, BYTE ucIndex, BYTE ucAnd, BYTE ucOr)
+{
+    ScalerSetDataPortBit(AUDIO_HDMI_REG(ucPort, P71_C9_HDMI_AP), ucIndex, ucAnd, ucOr);
+}
+
+static void AudioHdmiSetDpByte(BYTE ucPort, BYTE ucIndex, BYTE ucValue)
+{
+    ScalerSetDataPortByte(AUDIO_HDMI_REG(ucPort, P71_C9_HDMI_AP), ucIndex, ucValue);
+}
+
+static BYTE AudioHdmiGetDpBit(BYTE ucPort, BYTE ucIndex, BYTE ucAnd)
+{
+    return ScalerGetDataPortBit(AUDIO_HDMI_REG(ucPort, P71_C9_HDMI_AP), ucIndex, ucAnd);
+}
+
+static BYTE AudioHdmiGetSr(BYTE ucPort, BYTE ucAnd)
+{
+    return ScalerGetBit(AUDIO_HDMI_REG(ucPort, P71_CB_HDMI_SR), ucAnd);
+}
+
+static void AudioHdmiSetSr(BYTE ucPort, BYTE ucAnd, BYTE ucOr)
+{
+    ScalerSetBit(AUDIO_HDMI_REG(ucPort, P71_CB_HDMI_SR), ucAnd, ucOr);
+}
+
+//--------------------------------------------------
+// Description  : Detect HDMI digital audio for HDMI/DP interface
 // Input Value  : None
 // Output Value : None
 //--------------------------------------------------
-void ScalerAudioD2DigitalDetectProc(void)
+void ScalerAudioHdmiDigitalDetectProc(BYTE ucPort)
 {
-    if(ScalerAudioD2SamplingFreqDetect() != 0x00)
+    if(ScalerAudioHdmiSamplingFreqDetect(ucPort) != 0x00)
     {
-        if(ScalerGetDataPortBit(P71_C9_HDMI_AP, _P71_CA_PT_15_PORT_PAGE71_HDMI_PSCR, (_BIT3 | _BIT2)) == 0x00)
+        if(AudioHdmiGetDpBit(ucPort, _P71_CA_PT_15_PORT_PAGE71_HDMI_PSCR, (_BIT3 | _BIT2)) == 0x00)
         {
             // Enable Audio FIFO Tracking
-            ScalerSetDataPortBit(P71_C9_HDMI_AP, _P71_CA_PT_15_PORT_PAGE71_HDMI_PSCR, ~(_BIT3 | _BIT2), (_BIT3 | _BIT2));
+            AudioHdmiSetDpBit(ucPort, _P71_CA_PT_15_PORT_PAGE71_HDMI_PSCR, ~(_BIT3 | _BIT2), (_BIT3 | _BIT2));
 
             // Set Double Buffer bit
-            ScalerSetDataPortBit(P71_C9_HDMI_AP, _P71_CA_PT_10_PORT_PAGE71_HDMI_CMCR, ~_BIT4, _BIT4);
+            AudioHdmiSetDpBit(ucPort, _P71_CA_PT_10_PORT_PAGE71_HDMI_CMCR, ~_BIT4, _BIT4);
 
             // Clear Audio Freq Changed Flag
-            ScalerSetDataPortBit(P71_C9_HDMI_AP, _P71_CA_PT_8A_PORT_PAGE71_AUDIO_FREQDET, ~(_BIT1 | _BIT0), _BIT1);
+            AudioHdmiSetDpBit(ucPort, _P71_CA_PT_8A_PORT_PAGE71_AUDIO_FREQDET, ~(_BIT1 | _BIT0), _BIT1);
 
             // Enable Audio Freq Changed INT
-            ScalerSetDataPortBit(P71_C9_HDMI_AP, _P71_CA_PT_8A_PORT_PAGE71_AUDIO_FREQDET, ~(_BIT3 | _BIT1 | _BIT0), _BIT3);
+            AudioHdmiSetDpBit(ucPort, _P71_CA_PT_8A_PORT_PAGE71_AUDIO_FREQDET, ~(_BIT3 | _BIT1 | _BIT0), _BIT3);
 
-            DebugMessageAudio("D2 Audio Tracking Enable", 0);
+            DebugMessageAudio("HDMI Audio Tracking Enable", 0);
         }
 
-        SET_AUDIO_D2_PACKET_DETECT();
-        SET_D2_DIGITAL_AUDIO_SOURCE(_DIGITAL_AUDIO_SOURCE_HDMI);
+        SET_AUDIO_HDMI_PACKET_DETECT(ucPort);
+        SET_AUDIO_HDMI_DIGITAL_SOURCE(ucPort, _DIGITAL_AUDIO_SOURCE_HDMI);
 
-        if(GET_AUDIO_D2_ICODE_RELOADED() == _FALSE)
+        if(GET_AUDIO_HDMI_ICODE_RELOADED(ucPort) == _FALSE)
         {
-            ScalerTimerReactiveTimerEvent(_AUDIO_DYNAMIC_I_CODE_TIMER_MS, _SCALER_TIMER_EVENT_AUDIO_D2_LOAD_STABLE_I_CODE);
+            ScalerTimerReactiveTimerEvent(_AUDIO_DYNAMIC_I_CODE_TIMER_MS, AUDIO_HDMI_SEL(ucPort, _SCALER_TIMER_EVENT_AUDIO_D2_LOAD_STABLE_I_CODE, _SCALER_TIMER_EVENT_AUDIO_D3_LOAD_STABLE_I_CODE));
 
-            SET_AUDIO_D2_ICODE_RELOADED();
+            SET_AUDIO_HDMI_ICODE_RELOADED(ucPort);
         }
     }
     else
     {
-        if(ScalerGetDataPortBit(P71_C9_HDMI_AP, _P71_CA_PT_15_PORT_PAGE71_HDMI_PSCR, (_BIT3 | _BIT2)) != 0x00)
+        if(AudioHdmiGetDpBit(ucPort, _P71_CA_PT_15_PORT_PAGE71_HDMI_PSCR, (_BIT3 | _BIT2)) != 0x00)
         {
             // Diable Audio Freq Changed INT
-            ScalerSetDataPortBit(P71_C9_HDMI_AP, _P71_CA_PT_8A_PORT_PAGE71_AUDIO_FREQDET, ~(_BIT3 | _BIT1 | _BIT0), 0x00);
+            AudioHdmiSetDpBit(ucPort, _P71_CA_PT_8A_PORT_PAGE71_AUDIO_FREQDET, ~(_BIT3 | _BIT1 | _BIT0), 0x00);
 
             // Disable Audio FIFO Tracking
-            ScalerSetDataPortBit(P71_C9_HDMI_AP, _P71_CA_PT_15_PORT_PAGE71_HDMI_PSCR, ~(_BIT3 | _BIT2), 0x00);
+            AudioHdmiSetDpBit(ucPort, _P71_CA_PT_15_PORT_PAGE71_HDMI_PSCR, ~(_BIT3 | _BIT2), 0x00);
 
             // Set Double Buffer bit
-            ScalerSetDataPortBit(P71_C9_HDMI_AP, _P71_CA_PT_10_PORT_PAGE71_HDMI_CMCR, ~_BIT4, _BIT4);
+            AudioHdmiSetDpBit(ucPort, _P71_CA_PT_10_PORT_PAGE71_HDMI_CMCR, ~_BIT4, _BIT4);
 
             // Reload D __code
-            ScalerSetDataPortBit(P71_C9_HDMI_AP, _P71_CA_PT_31_PORT_PAGE71_HDMI_WDCR0, ~_BIT6, _BIT6);
-            ScalerSetDataPortBit(P71_C9_HDMI_AP, _P71_CA_PT_31_PORT_PAGE71_HDMI_WDCR0, ~_BIT6, 0x00);
+            AudioHdmiSetDpBit(ucPort, _P71_CA_PT_31_PORT_PAGE71_HDMI_WDCR0, ~_BIT6, _BIT6);
+            AudioHdmiSetDpBit(ucPort, _P71_CA_PT_31_PORT_PAGE71_HDMI_WDCR0, ~_BIT6, 0x00);
 
-            DebugMessageAudio("D2 Audio Tracking Disable", 0);
+            DebugMessageAudio("HDMI Audio Tracking Disable", 0);
         }
 
-        CLR_AUDIO_D2_PACKET_DETECT();
-        SET_D2_DIGITAL_AUDIO_SOURCE(_DIGITAL_AUDIO_SOURCE_NONE);
+        CLR_AUDIO_HDMI_PACKET_DETECT(ucPort);
+        SET_AUDIO_HDMI_DIGITAL_SOURCE(ucPort, _DIGITAL_AUDIO_SOURCE_NONE);
 
-        if(GET_AUDIO_D2_ICODE_RELOADED() == _TRUE)
+        if(GET_AUDIO_HDMI_ICODE_RELOADED(ucPort) == _TRUE)
         {
-            ScalerTimerCancelTimerEvent(_SCALER_TIMER_EVENT_AUDIO_D2_LOAD_STABLE_I_CODE);
+            ScalerTimerCancelTimerEvent(AUDIO_HDMI_SEL(ucPort, _SCALER_TIMER_EVENT_AUDIO_D2_LOAD_STABLE_I_CODE, _SCALER_TIMER_EVENT_AUDIO_D3_LOAD_STABLE_I_CODE));
 
-            ScalerAudioD2LoadInitialICode();
+            ScalerAudioHdmiLoadInitialICode(ucPort);
 
-            CLR_AUDIO_D2_ICODE_RELOADED();
+            CLR_AUDIO_HDMI_ICODE_RELOADED(ucPort);
         }
     }
 }
 //--------------------------------------------------
-// Description  : Get D2 Audio Detected
+// Description  : Get HDMI Audio Detected
 // Input Value  : None
 // Output Value : TRUE => Audio Detected
 //--------------------------------------------------
-bit ScalerAudioD2GetAudioDetected(void)
+bit ScalerAudioHdmiGetAudioDetected(BYTE ucPort)
 {
     // Check audio packet
-    if(GET_AUDIO_D2_PACKET_DETECT() == _FALSE)
-    {
-        DebugMessageAudio("False : D2 Audio Packet", 0);
-        return _FALSE;
-    }
-
-    // Check AVMute
-    if(ScalerGetBit(P71_CB_HDMI_SR, _BIT6) == _BIT6)
-    {
-        DebugMessageAudio("False : D2 AVMute", 0);
-        return _FALSE;
-    }
-
-    // Check Audio Tracking
-    if(ScalerGetDataPortBit(P71_C9_HDMI_AP, _P71_CA_PT_15_PORT_PAGE71_HDMI_PSCR, (_BIT3 | _BIT2)) == 0x00)
-    {
-        DebugMessageAudio("False : D2 HDMI Audio Tracking Disable", 0);
-        return _FALSE;
-    }
-
-    // Check HDMI audio FIFO overflow and underflow
-    if(ScalerGetBit(P71_CB_HDMI_SR, (_BIT2 | _BIT1)) != 0x00)
-    {
-        DebugMessageAudio("False : D2 HDMI Audio FIFO", ScalerGetBit(P71_CB_HDMI_SR, (_BIT2 | _BIT1)));
-
-        if(ScalerGetDataPortBit(P71_C9_HDMI_AP, _P71_CA_PT_31_PORT_PAGE71_HDMI_WDCR0, (_BIT2 | _BIT1)) == 0x00)
-        {
-            // Clear HDMI audio FIFO overflow and underflow status
-            ScalerSetBit(P71_CB_HDMI_SR, ~(_BIT2 | _BIT1), (_BIT2 | _BIT1));
-
-            if(ScalerGetBit(P71_CB_HDMI_SR, (_BIT2 | _BIT1)) != 0x00)
-            {
-                DebugMessageAudio("False : D2 HDMI Audio DB Retry", ScalerGetBit(P71_CB_HDMI_SR, (_BIT2 | _BIT1)));
-
-                // Set Double Buffer bit
-                ScalerSetDataPortBit(P71_C9_HDMI_AP, _P71_CA_PT_10_PORT_PAGE71_HDMI_CMCR, ~_BIT4, _BIT4);
-
-                // Clear HDMI audio FIFO overflow and underflow status
-                ScalerSetBit(P71_CB_HDMI_SR, ~(_BIT2 | _BIT1), (_BIT2 | _BIT1));
-            }
-        }
-
-        return _FALSE;
-    }
-
-    return _TRUE;
-}
-//--------------------------------------------------
-// Description  : Load initial I Code
-// Input Value  : None
-// Output Value : None
-//--------------------------------------------------
-void ScalerAudioD2LoadInitialICode(void)
-{
-    // Set high byte of I __code for boundary tracking for HDMI audio
-    ScalerSetDataPortByte(P71_C9_HDMI_AP, _P71_CA_PT_24_PORT_PAGE71_HDMI_ICBPSR0, HIBYTE(_INITIAL_I_CODE));
-
-    // Set low byte of I __code for boundary tracking for HDMI audio
-    ScalerSetDataPortByte(P71_C9_HDMI_AP, _P71_CA_PT_25_PORT_PAGE71_HDMI_ICBPSR1, LOBYTE(_INITIAL_I_CODE));
-
-    DebugMessageAudio("Load initial I code", _INITIAL_I_CODE);
-}
-//--------------------------------------------------
-// Description  : Timer Event to Load Stable I Code
-// Input Value  : None
-// Output Value : None
-//--------------------------------------------------
-void ScalerAudioD2LoadStableICodeEvent(void)
-{
-    // Set high byte of I __code for boundary tracking
-    ScalerSetDataPortByte(P71_C9_HDMI_AP, _P71_CA_PT_24_PORT_PAGE71_HDMI_ICBPSR0, HIBYTE(_STABLE_I_CODE));
-
-    // Set low byte of I __code for boundary tracking
-    ScalerSetDataPortByte(P71_C9_HDMI_AP, _P71_CA_PT_25_PORT_PAGE71_HDMI_ICBPSR1, LOBYTE(_STABLE_I_CODE));
-
-    DebugMessageAudio("Load stable I code", _STABLE_I_CODE);
-}
-//--------------------------------------------------
-// Description  : D2 Audio Watch Dog Proc
-// Input Value  : bOn
-// Output Value : None
-//--------------------------------------------------
-void ScalerAudioD2WatchDogProc(bit bOn)
-{
-    if(bOn == _ON)
-    {
-        // Clear audio FIFO overflow and underflow status
-        ScalerSetBit(P71_CB_HDMI_SR, ~(_BIT2 | _BIT1), (_BIT2 | _BIT1));
-
-        // Enable Audio Watch Dog for FIFO Overflow/Underflow
-        ScalerSetDataPortBit(P71_C9_HDMI_AP, _P71_CA_PT_31_PORT_PAGE71_HDMI_WDCR0, ~(_BIT2 | _BIT1), (_BIT2 | _BIT1));
-    }
-    else
-    {
-        // Disable Audio Watch Dog for FIFO Overflow/Underflow
-        ScalerSetDataPortBit(P71_C9_HDMI_AP, _P71_CA_PT_31_PORT_PAGE71_HDMI_WDCR0, ~(_BIT2 | _BIT1), 0x00);
-    }
-}
-
-#if(_INTERNAL_AUDIO_TEST_SUPPORT == _ON)
-//--------------------------------------------------
-// Description  : Get Whether Internal Audio Pattern Gen is Enabled
-// Input Value  : None
-// Output Value : _ENABLE or _DISABLE
-//--------------------------------------------------
-bit ScalerAudioD2GetInternalAudioGenEnable(void)
-{
-    if(ScalerGetDataPortBit(P71_C9_HDMI_AP, _P71_CA_PT_03_PORT_PAGE71_HDMI_AFCR, _BIT4) == _BIT4)
-    {
-        return _ENABLE;
-    }
-    else
-    {
-        return _DISABLE;
-    }
-}
-//--------------------------------------------------
-// Description  : D2 Auido Speaker Testing Process
-// Input Value  : Enable or Disable
-// Output Value : None
-//--------------------------------------------------
-void ScalerAudioD2InternalAudioGenSwitch(bit bOn)
-{
-    if(bOn == _ON)
-    {
-        DebugMessageAudio("D2 Audio Test On", ScalerGetDataPortBit(P71_C9_HDMI_AP, _P71_CA_PT_03_PORT_PAGE71_HDMI_AFCR, _BIT4));
-
-        // Disable audio FIFO and Enable audio internal generator
-        ScalerSetDataPortBit(P71_C9_HDMI_AP, _P71_CA_PT_03_PORT_PAGE71_HDMI_AFCR, ~(_BIT6 | _BIT4 | _BIT3 | _BIT2 | _BIT1 | _BIT0), _BIT4);
-
-        // Disbale DPLL Freq. Tuning
-        ScalerSetDataPortBit(P71_C9_HDMI_AP, _P71_CA_PT_3A_PORT_PAGE71_HDMI_DPCR2, ~_BIT1, 0x00);
-
-        // Set S __code
-        ScalerSetDataPortByte(P71_C9_HDMI_AP, _P71_CA_PT_12_PORT_PAGE71_HDMI_SCAPR, _HDMI_SAMPLING_FREQ_48K_GROUP_S_CODE);
-
-        // Set D __code
-        ScalerSetDataPortByte(P71_C9_HDMI_AP, _P71_CA_PT_13_PORT_PAGE71_HDMI_DCAPR0, HIBYTE(_HDMI_SAMPLING_FREQ_48K_GROUP_D_CODE));
-        ScalerSetDataPortByte(P71_C9_HDMI_AP, _P71_CA_PT_14_PORT_PAGE71_HDMI_DCAPR1, LOBYTE(_HDMI_SAMPLING_FREQ_48K_GROUP_D_CODE));
-
-        // Disable sample freq. detection and auto load S code / D __code
-        ScalerSetDataPortBit(P71_C9_HDMI_AP, _P71_CA_PT_8A_PORT_PAGE71_AUDIO_FREQDET, ~(_BIT7 | _BIT6), 0x00);
-
-        // Enable double buffer
-        ScalerSetDataPortBit(P71_C9_HDMI_AP, _P71_CA_PT_10_PORT_PAGE71_HDMI_CMCR, ~_BIT4, _BIT4);
-
-        ScalerAudioDigitalOutputMute(_OFF);
-    }
-    else
-    {
-        DebugMessageAudio("D2 Aduio Test Off", ScalerGetDataPortBit(P71_C9_HDMI_AP, _P71_CA_PT_03_PORT_PAGE71_HDMI_AFCR, _BIT4));
-
-        ScalerAudioDigitalOutputMute(_ON);
-
-        // Enable sample freq. detection and auto load S __code
-        ScalerSetDataPortBit(P71_C9_HDMI_AP, _P71_CA_PT_8A_PORT_PAGE71_AUDIO_FREQDET, ~(_BIT7 | _BIT6), (_BIT7 | _BIT6));
-
-        // Enable double buffer
-        ScalerSetDataPortBit(P71_C9_HDMI_AP, _P71_CA_PT_10_PORT_PAGE71_HDMI_CMCR, ~_BIT4, _BIT4);
-
-        // Enable DPLL Freq. Tuning
-        ScalerSetDataPortBit(P71_C9_HDMI_AP, _P71_CA_PT_3A_PORT_PAGE71_HDMI_DPCR2, ~_BIT1, _BIT1);
-
-        // Enable audio FIFO and Disable audio internal generator
-        ScalerSetDataPortBit(P71_C9_HDMI_AP, _P71_CA_PT_03_PORT_PAGE71_HDMI_AFCR, ~(_BIT6 | _BIT4 | _BIT3 | _BIT2 | _BIT1 | _BIT0), (_BIT6 | _BIT2 | _BIT1));
-    }
-}
-#endif
-
-#endif
-
-#if(_D3_HDMI_SUPPORT == _ON)
-//--------------------------------------------------
-// Description  : Detect D3 digital audio for HDMI/DP interface
-// Input Value  : None
-// Output Value : None
-//--------------------------------------------------
-void ScalerAudioD3DigitalDetectProc(void)
-{
-    if(ScalerAudioD3SamplingFreqDetect() != 0x00)
-    {
-        if(ScalerGetDataPortBit(P72_C9_HDMI_AP, _P72_CA_PT_15_PORT_PAGE72_HDMI_PSCR, (_BIT3 | _BIT2)) == 0x00)
-        {
-            // Enable Audio FIFO Tracking
-            ScalerSetDataPortBit(P72_C9_HDMI_AP, _P72_CA_PT_15_PORT_PAGE72_HDMI_PSCR, ~(_BIT3 | _BIT2), (_BIT3 | _BIT2));
-
-            // Set Double Buffer bit
-            ScalerSetDataPortBit(P72_C9_HDMI_AP, _P72_CA_PT_10_PORT_PAGE72_HDMI_CMCR, ~_BIT4, _BIT4);
-
-            // Clear Audio Freq Changed Flag
-            ScalerSetDataPortBit(P72_C9_HDMI_AP, _P72_CA_PT_8A_PORT_PAGE72_AUDIO_FREQDET, ~(_BIT1 | _BIT0), _BIT1);
-
-            // Enable Audio Freq Changed INT
-            ScalerSetDataPortBit(P72_C9_HDMI_AP, _P72_CA_PT_8A_PORT_PAGE72_AUDIO_FREQDET, ~(_BIT3 | _BIT1 | _BIT0), _BIT3);
-
-            DebugMessageAudio("D3 Audio Tracking Enable", 0);
-        }
-
-        SET_AUDIO_D3_PACKET_DETECT();
-        SET_D3_DIGITAL_AUDIO_SOURCE(_DIGITAL_AUDIO_SOURCE_HDMI);
-
-        if(GET_AUDIO_D3_ICODE_RELOADED() == _FALSE)
-        {
-            ScalerTimerReactiveTimerEvent(_AUDIO_DYNAMIC_I_CODE_TIMER_MS, _SCALER_TIMER_EVENT_AUDIO_D3_LOAD_STABLE_I_CODE);
-
-            SET_AUDIO_D3_ICODE_RELOADED();
-        }
-    }
-    else
-    {
-        if(ScalerGetDataPortBit(P72_C9_HDMI_AP, _P72_CA_PT_15_PORT_PAGE72_HDMI_PSCR, (_BIT3 | _BIT2)) != 0x00)
-        {
-            // Diable Audio Freq Changed INT
-            ScalerSetDataPortBit(P72_C9_HDMI_AP, _P72_CA_PT_8A_PORT_PAGE72_AUDIO_FREQDET, ~(_BIT3 | _BIT1 | _BIT0), 0x00);
-
-            // Disable Audio FIFO Tracking
-            ScalerSetDataPortBit(P72_C9_HDMI_AP, _P72_CA_PT_15_PORT_PAGE72_HDMI_PSCR, ~(_BIT3 | _BIT2), 0x00);
-
-            // Set Double Buffer bit
-            ScalerSetDataPortBit(P72_C9_HDMI_AP, _P72_CA_PT_10_PORT_PAGE72_HDMI_CMCR, ~_BIT4, _BIT4);
-
-            // Reload D __code
-            ScalerSetDataPortBit(P72_C9_HDMI_AP, _P72_CA_PT_31_PORT_PAGE72_HDMI_WDCR0, ~_BIT6, _BIT6);
-            ScalerSetDataPortBit(P72_C9_HDMI_AP, _P72_CA_PT_31_PORT_PAGE72_HDMI_WDCR0, ~_BIT6, 0x00);
-
-            DebugMessageAudio("D3 Audio Tracking Disable", 0);
-        }
-
-        CLR_AUDIO_D3_PACKET_DETECT();
-        SET_D3_DIGITAL_AUDIO_SOURCE(_DIGITAL_AUDIO_SOURCE_NONE);
-
-        if(GET_AUDIO_D3_ICODE_RELOADED() == _TRUE)
-        {
-            ScalerTimerCancelTimerEvent(_SCALER_TIMER_EVENT_AUDIO_D3_LOAD_STABLE_I_CODE);
-
-            ScalerAudioD3LoadInitialICode();
-
-            CLR_AUDIO_D3_ICODE_RELOADED();
-        }
-    }
-}
-//--------------------------------------------------
-// Description  : Get D3 Audio Detected
-// Input Value  : None
-// Output Value : TRUE => Audio Detected
-//--------------------------------------------------
-bit ScalerAudioD3GetAudioDetected(void)
-{
-    // Check audio packet
-    if(GET_AUDIO_D3_PACKET_DETECT() == _FALSE)
+    if(GET_AUDIO_HDMI_PACKET_DETECT(ucPort) == _FALSE)
     {
         DebugMessageAudio("False : D3 Audio Packet", 0);
         return _FALSE;
     }
 
     // Check AVMute
-    if(ScalerGetBit(P72_CB_HDMI_SR, _BIT6) == _BIT6)
+    if(AudioHdmiGetSr(ucPort, _BIT6) == _BIT6)
     {
         DebugMessageAudio("False : D3 AVMute", 0);
         return _FALSE;
     }
 
     // Check Audio Tracking
-    if(ScalerGetDataPortBit(P72_C9_HDMI_AP, _P72_CA_PT_15_PORT_PAGE72_HDMI_PSCR, (_BIT3 | _BIT2)) == 0x00)
+    if(AudioHdmiGetDpBit(ucPort, _P71_CA_PT_15_PORT_PAGE71_HDMI_PSCR, (_BIT3 | _BIT2)) == 0x00)
     {
         DebugMessageAudio("False : D3 HDMI Audio Tracking Disable", 0);
         return _FALSE;
     }
 
     // Check HDMI audio FIFO overflow and underflow
-    if(ScalerGetBit(P72_CB_HDMI_SR, (_BIT2 | _BIT1)) != 0x00)
+    if(AudioHdmiGetSr(ucPort, (_BIT2 | _BIT1)) != 0x00)
     {
-        DebugMessageAudio("False : D3 HDMI Audio FIFO", ScalerGetBit(P72_CB_HDMI_SR, (_BIT2 | _BIT1)));
+        DebugMessageAudio("False : D3 HDMI Audio FIFO", AudioHdmiGetSr(ucPort, (_BIT2 | _BIT1)));
 
-        if(ScalerGetDataPortBit(P72_C9_HDMI_AP, _P72_CA_PT_31_PORT_PAGE72_HDMI_WDCR0, (_BIT2 | _BIT1)) == 0x00)
+        if(AudioHdmiGetDpBit(ucPort, _P71_CA_PT_31_PORT_PAGE71_HDMI_WDCR0, (_BIT2 | _BIT1)) == 0x00)
         {
             // Clear HDMI audio FIFO overflow and underflow status
-            ScalerSetBit(P72_CB_HDMI_SR, ~(_BIT2 | _BIT1), (_BIT2 | _BIT1));
+            AudioHdmiSetSr(ucPort, ~(_BIT2 | _BIT1), (_BIT2 | _BIT1));
 
-            if(ScalerGetBit(P72_CB_HDMI_SR, (_BIT2 | _BIT1)) != 0x00)
+            if(AudioHdmiGetSr(ucPort, (_BIT2 | _BIT1)) != 0x00)
             {
-                DebugMessageAudio("False : D3 HDMI Audio DB Retry", ScalerGetBit(P72_CB_HDMI_SR, (_BIT2 | _BIT1)));
+                DebugMessageAudio("False : D3 HDMI Audio DB Retry", AudioHdmiGetSr(ucPort, (_BIT2 | _BIT1)));
 
                 // Set Double Buffer bit
-                ScalerSetDataPortBit(P72_C9_HDMI_AP, _P72_CA_PT_10_PORT_PAGE72_HDMI_CMCR, ~_BIT4, _BIT4);
+                AudioHdmiSetDpBit(ucPort, _P71_CA_PT_10_PORT_PAGE71_HDMI_CMCR, ~_BIT4, _BIT4);
 
                 // Clear HDMI audio FIFO overflow and underflow status
-                ScalerSetBit(P72_CB_HDMI_SR, ~(_BIT2 | _BIT1), (_BIT2 | _BIT1));
+                AudioHdmiSetSr(ucPort, ~(_BIT2 | _BIT1), (_BIT2 | _BIT1));
             }
         }
 
@@ -1076,187 +806,187 @@ bit ScalerAudioD3GetAudioDetected(void)
     return _TRUE;
 }
 //--------------------------------------------------
-// Description  : Initial D3 HDMI audio setting
+// Description  : Initial HDMI audio setting
 // Input Value  : None
 // Output Value : None
 //--------------------------------------------------
-void ScalerAudioD3HDMIAudioInitial(void)
+void ScalerAudioHdmiAudioInitial(BYTE ucPort)
 {
-    ScalerAudioD3SetAudioPLL();
+    ScalerAudioHdmiSetAudioPLL(ucPort);
 
     // Disable sine wave generator
-    ScalerSetDataPortBit(P72_C9_HDMI_AP, _P72_CA_PT_03_PORT_PAGE72_HDMI_AFCR, ~_BIT4, 0x00);
+    AudioHdmiSetDpBit(ucPort, _P71_CA_PT_03_PORT_PAGE71_HDMI_AFCR, ~_BIT4, 0x00);
 
     // Disable AVMUTE function and enable Audio FIFO Tracking main control (I/P code)
-    ScalerSetDataPortBit(P72_C9_HDMI_AP, _P72_CA_PT_31_PORT_PAGE72_HDMI_WDCR0, ~(_BIT7 | _BIT5), _BIT5);
+    AudioHdmiSetDpBit(ucPort, _P71_CA_PT_31_PORT_PAGE71_HDMI_WDCR0, ~(_BIT7 | _BIT5), _BIT5);
 
     // Disable FIFO Boundary Tracking, Disable Trend Tracking
-    ScalerSetDataPortBit(P72_C9_HDMI_AP, _P72_CA_PT_15_PORT_PAGE72_HDMI_PSCR, ~(_BIT7 | _BIT6 | _BIT5 | _BIT3 | _BIT2), (_BIT7 | _BIT6 | _BIT5));
+    AudioHdmiSetDpBit(ucPort, _P71_CA_PT_15_PORT_PAGE71_HDMI_PSCR, ~(_BIT7 | _BIT6 | _BIT5 | _BIT3 | _BIT2), (_BIT7 | _BIT6 | _BIT5));
 
     // Enable SDM
-    ScalerSetDataPortBit(P72_C9_HDMI_AP, _P72_CA_PT_2D_PORT_PAGE72_HDMI_AAPNR, ~_BIT1, _BIT1);
+    AudioHdmiSetDpBit(ucPort, _P71_CA_PT_2D_PORT_PAGE71_HDMI_AAPNR, ~_BIT1, _BIT1);
 
     // Set auto gain delay mode and final gain = full gain
-    ScalerSetDataPortBit(P72_C9_HDMI_AP, _P72_CA_PT_07_PORT_PAGE72_HDMI_MAG_M_FINAL, ~_BIT3, 0x00);
+    AudioHdmiSetDpBit(ucPort, _P71_CA_PT_07_PORT_PAGE71_HDMI_MAG_M_FINAL, ~_BIT3, 0x00);
 
     // Set wait time for load parameter
-    ScalerSetDataPortBit(P72_C9_HDMI_AP, _P72_CA_PT_0A_PORT_PAGE72_AUDIO_LD_P_TIME_M, ~(_BIT1 | _BIT0), 0x00);
-    ScalerSetDataPortByte(P72_C9_HDMI_AP, _P72_CA_PT_0B_PORT_PAGE72_AUDIO_LD_P_TIME_N, 0x10);
+    AudioHdmiSetDpBit(ucPort, _P71_CA_PT_0A_PORT_PAGE71_AUDIO_LD_P_TIME_M, ~(_BIT1 | _BIT0), 0x00);
+    AudioHdmiSetDpByte(ucPort, _P71_CA_PT_0B_PORT_PAGE71_AUDIO_LD_P_TIME_N, 0x10);
 
     // Set ZCD timeout
-    ScalerSetDataPortBit(P72_C9_HDMI_AP, _P72_CA_PT_0D_PORT_PAGE72_ZCD_TIMEOUT, ~(_BIT6 | _BIT5 | _BIT4 | _BIT3 | _BIT2 | _BIT1 | _BIT0), _ZCD_TIMEOUT_DEFAULT);
+    AudioHdmiSetDpBit(ucPort, _P71_CA_PT_0D_PORT_PAGE71_ZCD_TIMEOUT, ~(_BIT6 | _BIT5 | _BIT4 | _BIT3 | _BIT2 | _BIT1 | _BIT0), _ZCD_TIMEOUT_DEFAULT);
 
     // Set Boundary Address = 5 for Boundary Tracking
-    ScalerSetDataPortBit(P72_C9_HDMI_AP, _P72_CA_PT_1B_PORT_PAGE72_HDMI_FBR, ~(_BIT2 | _BIT1 | _BIT0), (_BIT2 | _BIT0));
+    AudioHdmiSetDpBit(ucPort, _P71_CA_PT_1B_PORT_PAGE71_HDMI_FBR, ~(_BIT2 | _BIT1 | _BIT0), (_BIT2 | _BIT0));
 
     // Set I __code of trend
-    ScalerSetDataPortByte(P72_C9_HDMI_AP, _P72_CA_PT_20_PORT_PAGE72_HDMI_ICTPSR0, 0x00);
-    ScalerSetDataPortByte(P72_C9_HDMI_AP, _P72_CA_PT_21_PORT_PAGE72_HDMI_ICTPSR1, 0x02);
+    AudioHdmiSetDpByte(ucPort, _P71_CA_PT_20_PORT_PAGE71_HDMI_ICTPSR0, 0x00);
+    AudioHdmiSetDpByte(ucPort, _P71_CA_PT_21_PORT_PAGE71_HDMI_ICTPSR1, 0x02);
 
     // Set P __code of trend
-    ScalerSetDataPortByte(P72_C9_HDMI_AP, _P72_CA_PT_22_PORT_PAGE72_HDMI_PCTPSR0, 0x7F);
-    ScalerSetDataPortByte(P72_C9_HDMI_AP, _P72_CA_PT_23_PORT_PAGE72_HDMI_PCTPSR1, 0xFF);
+    AudioHdmiSetDpByte(ucPort, _P71_CA_PT_22_PORT_PAGE71_HDMI_PCTPSR0, 0x7F);
+    AudioHdmiSetDpByte(ucPort, _P71_CA_PT_23_PORT_PAGE71_HDMI_PCTPSR1, 0xFF);
 
     // Set I __code of boundary
-    ScalerSetDataPortByte(P72_C9_HDMI_AP, _P72_CA_PT_24_PORT_PAGE72_HDMI_ICBPSR0, HIBYTE(_INITIAL_I_CODE));
-    ScalerSetDataPortByte(P72_C9_HDMI_AP, _P72_CA_PT_25_PORT_PAGE72_HDMI_ICBPSR1, LOBYTE(_INITIAL_I_CODE));
+    AudioHdmiSetDpByte(ucPort, _P71_CA_PT_24_PORT_PAGE71_HDMI_ICBPSR0, HIBYTE(_INITIAL_I_CODE));
+    AudioHdmiSetDpByte(ucPort, _P71_CA_PT_25_PORT_PAGE71_HDMI_ICBPSR1, LOBYTE(_INITIAL_I_CODE));
 
     // Set P __code of boundary
-    ScalerSetDataPortByte(P72_C9_HDMI_AP, _P72_CA_PT_26_PORT_PAGE72_HDMI_PCBPSR0, 0x7F);
-    ScalerSetDataPortByte(P72_C9_HDMI_AP, _P72_CA_PT_27_PORT_PAGE72_HDMI_PCBPSR1, 0xFF);
+    AudioHdmiSetDpByte(ucPort, _P71_CA_PT_26_PORT_PAGE71_HDMI_PCBPSR0, 0x7F);
+    AudioHdmiSetDpByte(ucPort, _P71_CA_PT_27_PORT_PAGE71_HDMI_PCBPSR1, 0xFF);
 
     // Audio Normal Output
-    ScalerSetDataPortBit(P72_C9_HDMI_AP, _P72_CA_PT_30_PORT_PAGE72_HDMI_AVMCR, ~(_BIT6 | _BIT5), (_BIT6 | _BIT5));
+    AudioHdmiSetDpBit(ucPort, _P71_CA_PT_30_PORT_PAGE71_HDMI_AVMCR, ~(_BIT6 | _BIT5), (_BIT6 | _BIT5));
 
     // Disable Audio Watchdog for FIFO Overflow/Underflow
-    ScalerSetDataPortBit(P72_C9_HDMI_AP, _P72_CA_PT_31_PORT_PAGE72_HDMI_WDCR0, ~(_BIT2 | _BIT1), 0x00);
+    AudioHdmiSetDpBit(ucPort, _P71_CA_PT_31_PORT_PAGE71_HDMI_WDCR0, ~(_BIT2 | _BIT1), 0x00);
 
     // Set X Value
-    ScalerSetDataPortBit(P72_C9_HDMI_AP, _P72_CA_PT_32_PORT_PAGE72_HDMI_WDCR1, ~(_BIT3 | _BIT2 | _BIT1 | _BIT0), (_BIT1 | _BIT0));
+    AudioHdmiSetDpBit(ucPort, _P71_CA_PT_32_PORT_PAGE71_HDMI_WDCR1, ~(_BIT3 | _BIT2 | _BIT1 | _BIT0), (_BIT1 | _BIT0));
 
     // Set Y Value
-    ScalerSetDataPortBit(P72_C9_HDMI_AP, _P72_CA_PT_33_PORT_PAGE72_HDMI_WDCR2, ~(_BIT3 | _BIT2 | _BIT1 | _BIT0), (_BIT1 | _BIT0));
+    AudioHdmiSetDpBit(ucPort, _P71_CA_PT_33_PORT_PAGE71_HDMI_WDCR2, ~(_BIT3 | _BIT2 | _BIT1 | _BIT0), (_BIT1 | _BIT0));
 
     // Bit2: When no audio or changing sampling rate, AFSM load double buffer one more.
-    ScalerSetDataPortBit(P72_C9_HDMI_AP, _P72_CA_PT_9F_PORT_PAGE72_PRESET_AFSM_MOD, ~(_BIT7 | _BIT6 | _BIT5 | _BIT4 | _BIT2), (_BIT7 | _BIT6 | _BIT5 | _BIT4 | _BIT2));
+    AudioHdmiSetDpBit(ucPort, _P71_CA_PT_9F_PORT_PAGE71_PRESET_AFSM_MOD, ~(_BIT7 | _BIT6 | _BIT5 | _BIT4 | _BIT2), (_BIT7 | _BIT6 | _BIT5 | _BIT4 | _BIT2));
 
     // Seperate the detected sampling frequency
-    ScalerSetDataPortBit(P72_C9_HDMI_AP, _P72_CA_PT_8B_PORT_PAGE72_AUDIO_FREQ_RESULT, ~(_BIT6 | _BIT5 | _BIT4), 0x00);
+    AudioHdmiSetDpBit(ucPort, _P71_CA_PT_8B_PORT_PAGE71_AUDIO_FREQ_RESULT, ~(_BIT6 | _BIT5 | _BIT4), 0x00);
 
     // Set 2ms for auto frequency detecttion
-    ScalerSetDataPortBit(P72_C9_HDMI_AP, _P72_CA_PT_8C_PORT_PAGE72_AUDIO_FREQ_RESULT_M, ~(_BIT6 | _BIT5), _BIT5);
+    AudioHdmiSetDpBit(ucPort, _P71_CA_PT_8C_PORT_PAGE71_AUDIO_FREQ_RESULT_M, ~(_BIT6 | _BIT5), _BIT5);
 
     // Change audio clk divider according to SYSCLK = 27MHz
-    ScalerSetDataPortByte(P72_C9_HDMI_AP, _P72_CA_PT_8E_PORT_PAGE72_XTAL_DIV, _AUTO_FREQ_DETECT_XTAL_DIV);
+    AudioHdmiSetDpByte(ucPort, _P71_CA_PT_8E_PORT_PAGE71_XTAL_DIV, _AUTO_FREQ_DETECT_XTAL_DIV);
 
     // Set threshold to sepeerate sampling frequency
-    ScalerSetDataPortByte(P72_C9_HDMI_AP, _P72_CA_PT_90_PORT_PAGE72_TH1, 0x00);
-    ScalerSetDataPortByte(P72_C9_HDMI_AP, _P72_CA_PT_91_PORT_PAGE72_TH2, 0x28);
-    ScalerSetDataPortByte(P72_C9_HDMI_AP, _P72_CA_PT_92_PORT_PAGE72_TH3, 0x4C);
-    ScalerSetDataPortByte(P72_C9_HDMI_AP, _P72_CA_PT_93_PORT_PAGE72_TH4, 0x5C);
-    ScalerSetDataPortByte(P72_C9_HDMI_AP, _P72_CA_PT_94_PORT_PAGE72_TH5, 0x70);
+    AudioHdmiSetDpByte(ucPort, _P71_CA_PT_90_PORT_PAGE71_TH1, 0x00);
+    AudioHdmiSetDpByte(ucPort, _P71_CA_PT_91_PORT_PAGE71_TH2, 0x28);
+    AudioHdmiSetDpByte(ucPort, _P71_CA_PT_92_PORT_PAGE71_TH3, 0x4C);
+    AudioHdmiSetDpByte(ucPort, _P71_CA_PT_93_PORT_PAGE71_TH4, 0x5C);
+    AudioHdmiSetDpByte(ucPort, _P71_CA_PT_94_PORT_PAGE71_TH5, 0x70);
 
 #if(_AUDIO_MANUAL_SAMPLING_FREQ_SUPPORT == _ON)
 
     // Disable Auto Load S Code
-    ScalerSetDataPortBit(P72_C9_HDMI_AP, _P72_CA_PT_8A_PORT_PAGE72_AUDIO_FREQDET, ~_BIT6, 0x00);
+    AudioHdmiSetDpBit(ucPort, _P71_CA_PT_8A_PORT_PAGE71_AUDIO_FREQDET, ~_BIT6, 0x00);
 
 #if(_FIX_SAMPLING_FREQ_TYPE == _FIX_FREQ_32KHZ)
 
     // Set S __code for 32kHz
-    ScalerSetDataPortByte(P72_C9_HDMI_AP, _P72_CA_PT_12_PORT_PAGE72_HDMI_SCAPR, _HDMI_SAMPLING_FREQ_32K_GROUP_S_CODE);
+    AudioHdmiSetDpByte(ucPort, _P71_CA_PT_12_PORT_PAGE71_HDMI_SCAPR, _HDMI_SAMPLING_FREQ_32K_GROUP_S_CODE);
 
     // Set D __code for 32kHz
-    ScalerSetDataPortByte(P72_C9_HDMI_AP, _P72_CA_PT_13_PORT_PAGE72_HDMI_DCAPR0, HIBYTE(_HDMI_SAMPLING_FREQ_32K_GROUP_D_CODE));
-    ScalerSetDataPortByte(P72_C9_HDMI_AP, _P72_CA_PT_14_PORT_PAGE72_HDMI_DCAPR1, LOBYTE(_HDMI_SAMPLING_FREQ_32K_GROUP_D_CODE));
+    AudioHdmiSetDpByte(ucPort, _P71_CA_PT_13_PORT_PAGE71_HDMI_DCAPR0, HIBYTE(_HDMI_SAMPLING_FREQ_32K_GROUP_D_CODE));
+    AudioHdmiSetDpByte(ucPort, _P71_CA_PT_14_PORT_PAGE71_HDMI_DCAPR1, LOBYTE(_HDMI_SAMPLING_FREQ_32K_GROUP_D_CODE));
 
 #elif(_FIX_SAMPLING_FREQ_TYPE == _FIX_FREQ_44_1KHZ)
 
     // Set S __code for 44.1kHz
-    ScalerSetDataPortByte(P72_C9_HDMI_AP, _P72_CA_PT_12_PORT_PAGE72_HDMI_SCAPR, _HDMI_SAMPLING_FREQ_44K_GROUP_S_CODE);
+    AudioHdmiSetDpByte(ucPort, _P71_CA_PT_12_PORT_PAGE71_HDMI_SCAPR, _HDMI_SAMPLING_FREQ_44K_GROUP_S_CODE);
 
     // Set D __code for 44.1kHz
-    ScalerSetDataPortByte(P72_C9_HDMI_AP, _P72_CA_PT_13_PORT_PAGE72_HDMI_DCAPR0, HIBYTE(_HDMI_SAMPLING_FREQ_44K_GROUP_D_CODE));
-    ScalerSetDataPortByte(P72_C9_HDMI_AP, _P72_CA_PT_14_PORT_PAGE72_HDMI_DCAPR1, LOBYTE(_HDMI_SAMPLING_FREQ_44K_GROUP_D_CODE));
+    AudioHdmiSetDpByte(ucPort, _P71_CA_PT_13_PORT_PAGE71_HDMI_DCAPR0, HIBYTE(_HDMI_SAMPLING_FREQ_44K_GROUP_D_CODE));
+    AudioHdmiSetDpByte(ucPort, _P71_CA_PT_14_PORT_PAGE71_HDMI_DCAPR1, LOBYTE(_HDMI_SAMPLING_FREQ_44K_GROUP_D_CODE));
 
 #else // _FIX_SAMPLING_FREQ_TYPE == _FIX_FREQ_48KHZ
 
     // Set S __code for 48kHz
-    ScalerSetDataPortByte(P72_C9_HDMI_AP, _P72_CA_PT_12_PORT_PAGE72_HDMI_SCAPR, _HDMI_SAMPLING_FREQ_48K_GROUP_S_CODE);
+    AudioHdmiSetDpByte(ucPort, _P71_CA_PT_12_PORT_PAGE71_HDMI_SCAPR, _HDMI_SAMPLING_FREQ_48K_GROUP_S_CODE);
 
     // Set D __code for 48kHz
-    ScalerSetDataPortByte(P72_C9_HDMI_AP, _P72_CA_PT_13_PORT_PAGE72_HDMI_DCAPR0, HIBYTE(_HDMI_SAMPLING_FREQ_48K_GROUP_D_CODE));
-    ScalerSetDataPortByte(P72_C9_HDMI_AP, _P72_CA_PT_14_PORT_PAGE72_HDMI_DCAPR1, LOBYTE(_HDMI_SAMPLING_FREQ_48K_GROUP_D_CODE));
+    AudioHdmiSetDpByte(ucPort, _P71_CA_PT_13_PORT_PAGE71_HDMI_DCAPR0, HIBYTE(_HDMI_SAMPLING_FREQ_48K_GROUP_D_CODE));
+    AudioHdmiSetDpByte(ucPort, _P71_CA_PT_14_PORT_PAGE71_HDMI_DCAPR1, LOBYTE(_HDMI_SAMPLING_FREQ_48K_GROUP_D_CODE));
 
 #endif
 
     // Set Double Buffer bit
-    ScalerSetDataPortBit(P72_C9_HDMI_AP, _P72_CA_PT_10_PORT_PAGE72_HDMI_CMCR, ~_BIT4, _BIT4);
+    AudioHdmiSetDpBit(ucPort, _P71_CA_PT_10_PORT_PAGE71_HDMI_CMCR, ~_BIT4, _BIT4);
 
     // Load D __code
-    ScalerSetDataPortBit(P72_C9_HDMI_AP, _P72_CA_PT_31_PORT_PAGE72_HDMI_WDCR0, ~_BIT6, _BIT6);
-    ScalerSetDataPortBit(P72_C9_HDMI_AP, _P72_CA_PT_31_PORT_PAGE72_HDMI_WDCR0, ~_BIT6, 0x00);
+    AudioHdmiSetDpBit(ucPort, _P71_CA_PT_31_PORT_PAGE71_HDMI_WDCR0, ~_BIT6, _BIT6);
+    AudioHdmiSetDpBit(ucPort, _P71_CA_PT_31_PORT_PAGE71_HDMI_WDCR0, ~_BIT6, 0x00);
 
 #else
 
     // Disable Auto Load S Code
-    ScalerSetDataPortBit(P72_C9_HDMI_AP, _P72_CA_PT_8A_PORT_PAGE72_AUDIO_FREQDET, ~_BIT6, 0x00);
+    AudioHdmiSetDpBit(ucPort, _P71_CA_PT_8A_PORT_PAGE71_AUDIO_FREQDET, ~_BIT6, 0x00);
 
     // Set S __code for 32kHz
-    ScalerSetDataPortByte(P72_C9_HDMI_AP, _P72_CA_PT_12_PORT_PAGE72_HDMI_SCAPR, _HDMI_SAMPLING_FREQ_32K_GROUP_S_CODE);
+    AudioHdmiSetDpByte(ucPort, _P71_CA_PT_12_PORT_PAGE71_HDMI_SCAPR, _HDMI_SAMPLING_FREQ_32K_GROUP_S_CODE);
 
     // Set D __code for 32kHz
-    ScalerSetDataPortByte(P72_C9_HDMI_AP, _P72_CA_PT_13_PORT_PAGE72_HDMI_DCAPR0, HIBYTE(_HDMI_SAMPLING_FREQ_32K_GROUP_D_CODE));
-    ScalerSetDataPortByte(P72_C9_HDMI_AP, _P72_CA_PT_14_PORT_PAGE72_HDMI_DCAPR1, LOBYTE(_HDMI_SAMPLING_FREQ_32K_GROUP_D_CODE));
+    AudioHdmiSetDpByte(ucPort, _P71_CA_PT_13_PORT_PAGE71_HDMI_DCAPR0, HIBYTE(_HDMI_SAMPLING_FREQ_32K_GROUP_D_CODE));
+    AudioHdmiSetDpByte(ucPort, _P71_CA_PT_14_PORT_PAGE71_HDMI_DCAPR1, LOBYTE(_HDMI_SAMPLING_FREQ_32K_GROUP_D_CODE));
 
     // Set Double Buffer bit
-    ScalerSetDataPortBit(P72_C9_HDMI_AP, _P72_CA_PT_10_PORT_PAGE72_HDMI_CMCR, ~_BIT4, _BIT4);
+    AudioHdmiSetDpBit(ucPort, _P71_CA_PT_10_PORT_PAGE71_HDMI_CMCR, ~_BIT4, _BIT4);
 
     // Load D __code
-    ScalerSetDataPortBit(P72_C9_HDMI_AP, _P72_CA_PT_31_PORT_PAGE72_HDMI_WDCR0, ~_BIT6, _BIT6);
-    ScalerSetDataPortBit(P72_C9_HDMI_AP, _P72_CA_PT_31_PORT_PAGE72_HDMI_WDCR0, ~_BIT6, 0x00);
+    AudioHdmiSetDpBit(ucPort, _P71_CA_PT_31_PORT_PAGE71_HDMI_WDCR0, ~_BIT6, _BIT6);
+    AudioHdmiSetDpBit(ucPort, _P71_CA_PT_31_PORT_PAGE71_HDMI_WDCR0, ~_BIT6, 0x00);
 
     // Set S __code for auto load mode
-    ScalerSetDataPortByte(P72_C9_HDMI_AP, _P72_CA_PT_95_PORT_PAGE72_PRESET_S_CODE0, _HDMI_SAMPLING_FREQ_32K_GROUP_S_CODE);
-    ScalerSetDataPortByte(P72_C9_HDMI_AP, _P72_CA_PT_96_PORT_PAGE72_PRESET_S_CODE1, _HDMI_SAMPLING_FREQ_44K_GROUP_S_CODE);
-    ScalerSetDataPortByte(P72_C9_HDMI_AP, _P72_CA_PT_97_PORT_PAGE72_PRESET_S_CODE2, _HDMI_SAMPLING_FREQ_48K_GROUP_S_CODE);
+    AudioHdmiSetDpByte(ucPort, _P71_CA_PT_95_PORT_PAGE71_PRESET_S_CODE0, _HDMI_SAMPLING_FREQ_32K_GROUP_S_CODE);
+    AudioHdmiSetDpByte(ucPort, _P71_CA_PT_96_PORT_PAGE71_PRESET_S_CODE1, _HDMI_SAMPLING_FREQ_44K_GROUP_S_CODE);
+    AudioHdmiSetDpByte(ucPort, _P71_CA_PT_97_PORT_PAGE71_PRESET_S_CODE2, _HDMI_SAMPLING_FREQ_48K_GROUP_S_CODE);
 
     // Set D __code for auto load mode
-    ScalerSetDataPortByte(P72_C9_HDMI_AP, _P72_CA_PT_99_PORT_PAGE72_PRESET_D_CODE_0, HIBYTE(_HDMI_SAMPLING_FREQ_32K_GROUP_D_CODE));
-    ScalerSetDataPortByte(P72_C9_HDMI_AP, _P72_CA_PT_9A_PORT_PAGE72_PRESET_D_CODE_1, LOBYTE(_HDMI_SAMPLING_FREQ_32K_GROUP_D_CODE));
-    ScalerSetDataPortByte(P72_C9_HDMI_AP, _P72_CA_PT_9B_PORT_PAGE72_PRESET_D_CODE_2, HIBYTE(_HDMI_SAMPLING_FREQ_44K_GROUP_D_CODE));
-    ScalerSetDataPortByte(P72_C9_HDMI_AP, _P72_CA_PT_9C_PORT_PAGE72_PRESET_D_CODE_3, LOBYTE(_HDMI_SAMPLING_FREQ_44K_GROUP_D_CODE));
-    ScalerSetDataPortByte(P72_C9_HDMI_AP, _P72_CA_PT_9D_PORT_PAGE72_PRESET_D_CODE_4, HIBYTE(_HDMI_SAMPLING_FREQ_48K_GROUP_D_CODE));
-    ScalerSetDataPortByte(P72_C9_HDMI_AP, _P72_CA_PT_9E_PORT_PAGE72_PRESET_D_CODE_5, LOBYTE(_HDMI_SAMPLING_FREQ_48K_GROUP_D_CODE));
+    AudioHdmiSetDpByte(ucPort, _P71_CA_PT_99_PORT_PAGE71_PRESET_D_CODE_0, HIBYTE(_HDMI_SAMPLING_FREQ_32K_GROUP_D_CODE));
+    AudioHdmiSetDpByte(ucPort, _P71_CA_PT_9A_PORT_PAGE71_PRESET_D_CODE_1, LOBYTE(_HDMI_SAMPLING_FREQ_32K_GROUP_D_CODE));
+    AudioHdmiSetDpByte(ucPort, _P71_CA_PT_9B_PORT_PAGE71_PRESET_D_CODE_2, HIBYTE(_HDMI_SAMPLING_FREQ_44K_GROUP_D_CODE));
+    AudioHdmiSetDpByte(ucPort, _P71_CA_PT_9C_PORT_PAGE71_PRESET_D_CODE_3, LOBYTE(_HDMI_SAMPLING_FREQ_44K_GROUP_D_CODE));
+    AudioHdmiSetDpByte(ucPort, _P71_CA_PT_9D_PORT_PAGE71_PRESET_D_CODE_4, HIBYTE(_HDMI_SAMPLING_FREQ_48K_GROUP_D_CODE));
+    AudioHdmiSetDpByte(ucPort, _P71_CA_PT_9E_PORT_PAGE71_PRESET_D_CODE_5, LOBYTE(_HDMI_SAMPLING_FREQ_48K_GROUP_D_CODE));
 
     // Enable Auto Load S Code
-    ScalerSetDataPortBit(P72_C9_HDMI_AP, _P72_CA_PT_8A_PORT_PAGE72_AUDIO_FREQDET, ~_BIT6, _BIT6);
+    AudioHdmiSetDpBit(ucPort, _P71_CA_PT_8A_PORT_PAGE71_AUDIO_FREQDET, ~_BIT6, _BIT6);
 
     // Set Double Buffer bit
-    ScalerSetDataPortBit(P72_C9_HDMI_AP, _P72_CA_PT_10_PORT_PAGE72_HDMI_CMCR, ~_BIT4, _BIT4);
+    AudioHdmiSetDpBit(ucPort, _P71_CA_PT_10_PORT_PAGE71_HDMI_CMCR, ~_BIT4, _BIT4);
 
 #endif // End of #if(_AUDIO_MANUAL_SAMPLING_FREQ_SUPPORT == _ON)
 
     // Enable Audio Freq Detect, Disable Samping Freq. Change INT
-    ScalerSetDataPortBit(P72_C9_HDMI_AP, _P72_CA_PT_8A_PORT_PAGE72_AUDIO_FREQDET, ~(_BIT7 | _BIT3 | _BIT1 | _BIT0), _BIT7);
+    AudioHdmiSetDpBit(ucPort, _P71_CA_PT_8A_PORT_PAGE71_AUDIO_FREQDET, ~(_BIT7 | _BIT3 | _BIT1 | _BIT0), _BIT7);
 
     // Enable SPDIF/I2S Output
-    ScalerSetDataPortByte(P72_C9_HDMI_AP, _P72_CA_PT_62_PORT_PAGE72_HDMI_AOCR, 0xFF);
+    AudioHdmiSetDpByte(ucPort, _P71_CA_PT_62_PORT_PAGE71_HDMI_AOCR, 0xFF);
 
-    CLR_AUDIO_D3_ICODE_RELOADED();
+    CLR_AUDIO_HDMI_ICODE_RELOADED(ucPort);
 }
 //--------------------------------------------------
 // Description  : Load initial I Code
 // Input Value  : None
 // Output Value : None
 //--------------------------------------------------
-void ScalerAudioD3LoadInitialICode(void)
+void ScalerAudioHdmiLoadInitialICode(BYTE ucPort)
 {
     // Set high byte of I __code for boundary tracking for HDMI audio
-    ScalerSetDataPortByte(P72_C9_HDMI_AP, _P72_CA_PT_24_PORT_PAGE72_HDMI_ICBPSR0, HIBYTE(_INITIAL_I_CODE));
+    AudioHdmiSetDpByte(ucPort, _P71_CA_PT_24_PORT_PAGE71_HDMI_ICBPSR0, HIBYTE(_INITIAL_I_CODE));
 
     // Set low byte of I __code for boundary tracking for HDMI audio
-    ScalerSetDataPortByte(P72_C9_HDMI_AP, _P72_CA_PT_25_PORT_PAGE72_HDMI_ICBPSR1, LOBYTE(_INITIAL_I_CODE));
+    AudioHdmiSetDpByte(ucPort, _P71_CA_PT_25_PORT_PAGE71_HDMI_ICBPSR1, LOBYTE(_INITIAL_I_CODE));
 
     DebugMessageAudio("Load initial I code", _INITIAL_I_CODE);
 }
@@ -1265,38 +995,38 @@ void ScalerAudioD3LoadInitialICode(void)
 // Input Value  : None
 // Output Value : None
 //--------------------------------------------------
-void ScalerAudioD3LoadStableICodeEvent(void)
+void ScalerAudioHdmiLoadStableICodeEvent(BYTE ucPort)
 {
     // Set high byte of I __code for boundary tracking
-    ScalerSetDataPortByte(P72_C9_HDMI_AP, _P72_CA_PT_24_PORT_PAGE72_HDMI_ICBPSR0, HIBYTE(_STABLE_I_CODE));
+    AudioHdmiSetDpByte(ucPort, _P71_CA_PT_24_PORT_PAGE71_HDMI_ICBPSR0, HIBYTE(_STABLE_I_CODE));
 
     // Set low byte of I __code for boundary tracking
-    ScalerSetDataPortByte(P72_C9_HDMI_AP, _P72_CA_PT_25_PORT_PAGE72_HDMI_ICBPSR1, LOBYTE(_STABLE_I_CODE));
+    AudioHdmiSetDpByte(ucPort, _P71_CA_PT_25_PORT_PAGE71_HDMI_ICBPSR1, LOBYTE(_STABLE_I_CODE));
 
     DebugMessageAudio("Load stable I code", _STABLE_I_CODE);
 }
 //--------------------------------------------------
-// Description  : Detect D3 Audio Sampling Freq
+// Description  : Detect HDMI Audio Sampling Freq
 // Input Value  : None
 // Output Value : Audio Sampling Freq
 //--------------------------------------------------
-EnumAudioSamplingFreqType ScalerAudioD3SamplingFreqDetect(void)
+EnumAudioSamplingFreqType ScalerAudioHdmiSamplingFreqDetect(BYTE ucPort)
 {
     EnumAudioSamplingFreqType enumAudioFreq = _AUDIO_FREQ_NO_AUDIO;
 
 #if(_INTERNAL_AUDIO_TEST_SUPPORT == _ON)
-    if(ScalerAudioD3GetInternalAudioGenEnable() == _ENABLE)
+    if(ScalerAudioHdmiGetInternalAudioGenEnable(ucPort) == _ENABLE)
     {
         // For Audio test pattern
-        SET_AUDIO_D3_SAMPLING_FREQ(_AUDIO_FREQ_48K);
+        SET_AUDIO_HDMI_SAMPLING_FREQ(ucPort, _AUDIO_FREQ_48K);
         return _AUDIO_FREQ_48K;
     }
 #endif
 
-    enumAudioFreq = ScalerGetDataPortBit(P72_C9_HDMI_AP, _P72_CA_PT_8B_PORT_PAGE72_AUDIO_FREQ_RESULT, (_BIT3 | _BIT2 | _BIT1 | _BIT0));
+    enumAudioFreq = AudioHdmiGetDpBit(ucPort, _P71_CA_PT_8B_PORT_PAGE71_AUDIO_FREQ_RESULT, (_BIT3 | _BIT2 | _BIT1 | _BIT0));
 
 #if(_EMBEDDED_DAC_SUPPORT == _ON)
-    if(enumAudioFreq != GET_AUDIO_D3_SAMPLING_FREQ())
+    if(enumAudioFreq != GET_AUDIO_HDMI_SAMPLING_FREQ(ucPort))
     {
         if(enumAudioFreq <= _AUDIO_FREQ_64K)
         {
@@ -1313,7 +1043,7 @@ EnumAudioSamplingFreqType ScalerAudioD3SamplingFreqDetect(void)
     }
 #endif
 
-    SET_AUDIO_D3_SAMPLING_FREQ(enumAudioFreq);
+    SET_AUDIO_HDMI_SAMPLING_FREQ(ucPort, enumAudioFreq);
 
     return enumAudioFreq;
 }
@@ -1323,74 +1053,74 @@ EnumAudioSamplingFreqType ScalerAudioD3SamplingFreqDetect(void)
 // Input Value  : None
 // Output Value : None
 //--------------------------------------------------
-void ScalerAudioD3SetAudioPLL(void)
+void ScalerAudioHdmiSetAudioPLL(BYTE ucPort)
 {
     // DPLL power down
-    ScalerSetDataPortBit(P72_C9_HDMI_AP, _P72_CA_PT_38_PORT_PAGE72_HDMI_DPCR0, ~_BIT7, _BIT7);
+    AudioHdmiSetDpBit(ucPort, _P71_CA_PT_38_PORT_PAGE71_HDMI_DPCR0, ~_BIT7, _BIT7);
 
     // Set M __code
-    ScalerSetDataPortByte(P72_C9_HDMI_AP, _P72_CA_PT_11_PORT_PAGE72_HDMI_MCAPR, (_AUDIO_PLL_M - 2));
+    AudioHdmiSetDpByte(ucPort, _P71_CA_PT_11_PORT_PAGE71_HDMI_MCAPR, (_AUDIO_PLL_M - 2));
 
     // Set O __code
-    ScalerSetDataPortBit(P72_C9_HDMI_AP, _P72_CA_PT_38_PORT_PAGE72_HDMI_DPCR0, ~(_BIT5 | _BIT4), 0x00);
+    AudioHdmiSetDpBit(ucPort, _P71_CA_PT_38_PORT_PAGE71_HDMI_DPCR0, ~(_BIT5 | _BIT4), 0x00);
 
     // Set K __code and enable double buffer
-    ScalerSetDataPortBit(P72_C9_HDMI_AP, _P72_CA_PT_10_PORT_PAGE72_HDMI_CMCR, ~(_BIT4 | _BIT3 | _BIT2 | _BIT1 | _BIT0), (_BIT4 | ((_AUDIO_PLL_K - 2) & 0x0F)));
+    AudioHdmiSetDpBit(ucPort, _P71_CA_PT_10_PORT_PAGE71_HDMI_CMCR, ~(_BIT4 | _BIT3 | _BIT2 | _BIT1 | _BIT0), (_BIT4 | ((_AUDIO_PLL_K - 2) & 0x0F)));
 
     // Initial VCO Band = 10
-    ScalerSetDataPortBit(P72_C9_HDMI_AP, _P72_CA_PT_3A_PORT_PAGE72_HDMI_DPCR2, ~(_BIT4 | _BIT3), _BIT4);
+    AudioHdmiSetDpBit(ucPort, _P71_CA_PT_3A_PORT_PAGE71_HDMI_DPCR2, ~(_BIT4 | _BIT3), _BIT4);
 
     // Set MN PLL Path1 => [2]: 1 = Path1, 0 = Path2
-    ScalerSetDataPortBit(P72_C9_HDMI_AP, _P72_CA_PT_3A_PORT_PAGE72_HDMI_DPCR2, ~(_BIT7 | _BIT2), _BIT2);
+    AudioHdmiSetDpBit(ucPort, _P71_CA_PT_3A_PORT_PAGE71_HDMI_DPCR2, ~(_BIT7 | _BIT2), _BIT2);
 
 #if(_HW_PLL_EDGE_SELECT_TYPE == _PLL_EDGE_GEN_1_DEFAULT_POSITIVE)
     // Set PLL Edge = Negative
-    ScalerSetDataPortBit(P72_C9_HDMI_AP, _P72_CA_PT_3F_PORT_PAGE72_DPLL_LDO, ~_BIT1, _BIT1);
+    AudioHdmiSetDpBit(ucPort, _P71_CA_PT_3F_PORT_PAGE71_DPLL_LDO, ~_BIT1, _BIT1);
 #endif
 
     // DPLL VCORSTB Set to Normal
-    ScalerSetDataPortBit(P72_C9_HDMI_AP, _P72_CA_PT_3B_PORT_PAGE72_HDMI_DPCR3, ~_BIT0, _DPLL_VCORSTB_NORMAL_VALUE);
+    AudioHdmiSetDpBit(ucPort, _P71_CA_PT_3B_PORT_PAGE71_HDMI_DPCR3, ~_BIT0, _DPLL_VCORSTB_NORMAL_VALUE);
 
     // DPLL power up
-    ScalerSetDataPortBit(P72_C9_HDMI_AP, _P72_CA_PT_38_PORT_PAGE72_HDMI_DPCR0, ~_BIT7, 0x00);
+    AudioHdmiSetDpBit(ucPort, _P71_CA_PT_38_PORT_PAGE71_HDMI_DPCR0, ~_BIT7, 0x00);
 
     // Delay 2000us
     ScalerTimerDelayXms(2);
 
     // DPLL CMP enable
-    ScalerSetDataPortBit(P72_C9_HDMI_AP, _P72_CA_PT_38_PORT_PAGE72_HDMI_DPCR0, ~_BIT0, _BIT0);
+    AudioHdmiSetDpBit(ucPort, _P71_CA_PT_38_PORT_PAGE71_HDMI_DPCR0, ~_BIT0, _BIT0);
 
     // Delay 1000us
     ScalerTimerDelayXms(2);
 
     // DPLL latch calibration enable
-    ScalerSetDataPortBit(P72_C9_HDMI_AP, _P72_CA_PT_38_PORT_PAGE72_HDMI_DPCR0, ~_BIT1, _BIT1);
+    AudioHdmiSetDpBit(ucPort, _P71_CA_PT_38_PORT_PAGE71_HDMI_DPCR0, ~_BIT1, _BIT1);
 
     // Delay 1000us
     ScalerTimerDelayXms(2);
 
     // DPLL calibration validated
-    ScalerSetDataPortBit(P72_C9_HDMI_AP, _P72_CA_PT_38_PORT_PAGE72_HDMI_DPCR0, ~_BIT2, _BIT2);
+    AudioHdmiSetDpBit(ucPort, _P71_CA_PT_38_PORT_PAGE71_HDMI_DPCR0, ~_BIT2, _BIT2);
 }
 //--------------------------------------------------
 // Description  : D3 Audio Watch Dog Proc
 // Input Value  : bOn
 // Output Value : None
 //--------------------------------------------------
-void ScalerAudioD3WatchDogProc(bit bOn)
+void ScalerAudioHdmiWatchDogProc(BYTE ucPort, bit bOn)
 {
     if(bOn == _ON)
     {
         // Clear audio FIFO overflow and underflow status
-        ScalerSetBit(P72_CB_HDMI_SR, ~(_BIT2 | _BIT1), (_BIT2 | _BIT1));
+        AudioHdmiSetSr(ucPort, ~(_BIT2 | _BIT1), (_BIT2 | _BIT1));
 
         // Enable Audio Watch Dog for FIFO Overflow/Underflow
-        ScalerSetDataPortBit(P72_C9_HDMI_AP, _P72_CA_PT_31_PORT_PAGE72_HDMI_WDCR0, ~(_BIT2 | _BIT1), (_BIT2 | _BIT1));
+        AudioHdmiSetDpBit(ucPort, _P71_CA_PT_31_PORT_PAGE71_HDMI_WDCR0, ~(_BIT2 | _BIT1), (_BIT2 | _BIT1));
     }
     else
     {
         // Disable Audio Watch Dog for FIFO Overflow/Underflow
-        ScalerSetDataPortBit(P72_C9_HDMI_AP, _P72_CA_PT_31_PORT_PAGE72_HDMI_WDCR0, ~(_BIT2 | _BIT1), 0x00);
+        AudioHdmiSetDpBit(ucPort, _P71_CA_PT_31_PORT_PAGE71_HDMI_WDCR0, ~(_BIT2 | _BIT1), 0x00);
     }
 }
 
@@ -1400,9 +1130,9 @@ void ScalerAudioD3WatchDogProc(bit bOn)
 // Input Value  : None
 // Output Value : _ENABLE or _DISABLE
 //--------------------------------------------------
-bit ScalerAudioD3GetInternalAudioGenEnable(void)
+bit ScalerAudioHdmiGetInternalAudioGenEnable(BYTE ucPort)
 {
-    if(ScalerGetDataPortBit(P72_C9_HDMI_AP, _P72_CA_PT_03_PORT_PAGE72_HDMI_AFCR, _BIT4) == _BIT4)
+    if(AudioHdmiGetDpBit(ucPort, _P71_CA_PT_03_PORT_PAGE71_HDMI_AFCR, _BIT4) == _BIT4)
     {
         return _ENABLE;
     }
@@ -1416,1089 +1146,56 @@ bit ScalerAudioD3GetInternalAudioGenEnable(void)
 // Input Value  : Enable or Disable
 // Output Value : None
 //--------------------------------------------------
-void ScalerAudioD3InternalAudioGenSwitch(bit bOn)
+void ScalerAudioHdmiInternalAudioGenSwitch(BYTE ucPort, bit bOn)
 {
     if(bOn == _ON)
     {
-        DebugMessageAudio("D3 Audio Test On", ScalerGetDataPortBit(P72_C9_HDMI_AP, _P72_CA_PT_03_PORT_PAGE72_HDMI_AFCR, _BIT4));
+        DebugMessageAudio("HDMI Audio Test On", AudioHdmiGetDpBit(ucPort, _P71_CA_PT_03_PORT_PAGE71_HDMI_AFCR, _BIT4));
 
         // Disable audio FIFO and Enable audio internal generator
-        ScalerSetDataPortBit(P72_C9_HDMI_AP, _P72_CA_PT_03_PORT_PAGE72_HDMI_AFCR, ~(_BIT6 | _BIT4 | _BIT3 | _BIT2 | _BIT1 | _BIT0), _BIT4);
+        AudioHdmiSetDpBit(ucPort, _P71_CA_PT_03_PORT_PAGE71_HDMI_AFCR, ~(_BIT6 | _BIT4 | _BIT3 | _BIT2 | _BIT1 | _BIT0), _BIT4);
 
         // Disbale DPLL Freq. Tuning
-        ScalerSetDataPortBit(P72_C9_HDMI_AP, _P72_CA_PT_3A_PORT_PAGE72_HDMI_DPCR2, ~_BIT1, 0x00);
+        AudioHdmiSetDpBit(ucPort, _P71_CA_PT_3A_PORT_PAGE71_HDMI_DPCR2, ~_BIT1, 0x00);
 
         // Set S __code
-        ScalerSetDataPortByte(P72_C9_HDMI_AP, _P72_CA_PT_12_PORT_PAGE72_HDMI_SCAPR, _HDMI_SAMPLING_FREQ_48K_GROUP_S_CODE);
+        AudioHdmiSetDpByte(ucPort, _P71_CA_PT_12_PORT_PAGE71_HDMI_SCAPR, _HDMI_SAMPLING_FREQ_48K_GROUP_S_CODE);
 
         // Set D __code
-        ScalerSetDataPortByte(P72_C9_HDMI_AP, _P72_CA_PT_13_PORT_PAGE72_HDMI_DCAPR0, HIBYTE(_HDMI_SAMPLING_FREQ_48K_GROUP_D_CODE));
-        ScalerSetDataPortByte(P72_C9_HDMI_AP, _P72_CA_PT_14_PORT_PAGE72_HDMI_DCAPR1, LOBYTE(_HDMI_SAMPLING_FREQ_48K_GROUP_D_CODE));
+        AudioHdmiSetDpByte(ucPort, _P71_CA_PT_13_PORT_PAGE71_HDMI_DCAPR0, HIBYTE(_HDMI_SAMPLING_FREQ_48K_GROUP_D_CODE));
+        AudioHdmiSetDpByte(ucPort, _P71_CA_PT_14_PORT_PAGE71_HDMI_DCAPR1, LOBYTE(_HDMI_SAMPLING_FREQ_48K_GROUP_D_CODE));
 
         // Disable sample freq. detection and auto load S code / D __code
-        ScalerSetDataPortBit(P72_C9_HDMI_AP, _P72_CA_PT_8A_PORT_PAGE72_AUDIO_FREQDET, ~(_BIT7 | _BIT6), 0x00);
+        AudioHdmiSetDpBit(ucPort, _P71_CA_PT_8A_PORT_PAGE71_AUDIO_FREQDET, ~(_BIT7 | _BIT6), 0x00);
 
         // Enable double buffer
-        ScalerSetDataPortBit(P72_C9_HDMI_AP, _P72_CA_PT_10_PORT_PAGE72_HDMI_CMCR, ~_BIT4, _BIT4);
+        AudioHdmiSetDpBit(ucPort, _P71_CA_PT_10_PORT_PAGE71_HDMI_CMCR, ~_BIT4, _BIT4);
 
         ScalerAudioDigitalOutputMute(_OFF);
     }
     else
     {
-        DebugMessageAudio("D3 Aduio Test Off", ScalerGetDataPortBit(P72_C9_HDMI_AP, _P72_CA_PT_03_PORT_PAGE72_HDMI_AFCR, _BIT4));
+        DebugMessageAudio("HDMI Aduio Test Off", AudioHdmiGetDpBit(ucPort, _P71_CA_PT_03_PORT_PAGE71_HDMI_AFCR, _BIT4));
 
         ScalerAudioDigitalOutputMute(_ON);
 
         // Enable sample freq. detection and auto load S __code
-        ScalerSetDataPortBit(P72_C9_HDMI_AP, _P72_CA_PT_8A_PORT_PAGE72_AUDIO_FREQDET, ~(_BIT7 | _BIT6), (_BIT7 | _BIT6));
+        AudioHdmiSetDpBit(ucPort, _P71_CA_PT_8A_PORT_PAGE71_AUDIO_FREQDET, ~(_BIT7 | _BIT6), (_BIT7 | _BIT6));
 
         // Enable double buffer
-        ScalerSetDataPortBit(P72_C9_HDMI_AP, _P72_CA_PT_10_PORT_PAGE72_HDMI_CMCR, ~_BIT4, _BIT4);
+        AudioHdmiSetDpBit(ucPort, _P71_CA_PT_10_PORT_PAGE71_HDMI_CMCR, ~_BIT4, _BIT4);
 
         // Enable DPLL Freq. Tuning
-        ScalerSetDataPortBit(P72_C9_HDMI_AP, _P72_CA_PT_3A_PORT_PAGE72_HDMI_DPCR2, ~_BIT1, _BIT1);
+        AudioHdmiSetDpBit(ucPort, _P71_CA_PT_3A_PORT_PAGE71_HDMI_DPCR2, ~_BIT1, _BIT1);
 
         // Enable audio FIFO and Disable audio internal generator
-        ScalerSetDataPortBit(P72_C9_HDMI_AP, _P72_CA_PT_03_PORT_PAGE72_HDMI_AFCR, ~(_BIT6 | _BIT4 | _BIT3 | _BIT2 | _BIT1 | _BIT0), (_BIT6 | _BIT2 | _BIT1));
+        AudioHdmiSetDpBit(ucPort, _P71_CA_PT_03_PORT_PAGE71_HDMI_AFCR, ~(_BIT6 | _BIT4 | _BIT3 | _BIT2 | _BIT1 | _BIT0), (_BIT6 | _BIT2 | _BIT1));
     }
 }
 #endif
 
 #endif
-
-#if(_D4_HDMI_SUPPORT == _ON)
-//--------------------------------------------------
-// Description  : Detect D4 digital audio for HDMI/DP interface
-// Input Value  : None
-// Output Value : None
-//--------------------------------------------------
-void ScalerAudioD4DigitalDetectProc(void)
-{
-    if(ScalerAudioD4SamplingFreqDetect() != 0x00)
-    {
-        if(ScalerGetDataPortBit(P73_C9_HDMI_AP, _P73_CA_PT_15_PORT_PAGE73_HDMI_PSCR, (_BIT3 | _BIT2)) == 0x00)
-        {
-            // Enable Audio FIFO Tracking
-            ScalerSetDataPortBit(P73_C9_HDMI_AP, _P73_CA_PT_15_PORT_PAGE73_HDMI_PSCR, ~(_BIT3 | _BIT2), (_BIT3 | _BIT2));
-
-            // Set Double Buffer bit
-            ScalerSetDataPortBit(P73_C9_HDMI_AP, _P73_CA_PT_10_PORT_PAGE73_HDMI_CMCR, ~_BIT4, _BIT4);
-
-            // Clear Audio Freq Changed Flag
-            ScalerSetDataPortBit(P73_C9_HDMI_AP, _P73_CA_PT_8A_PORT_PAGE73_AUDIO_FREQDET, ~(_BIT1 | _BIT0), _BIT1);
-
-            // Enable Audio Freq Changed INT
-            ScalerSetDataPortBit(P73_C9_HDMI_AP, _P73_CA_PT_8A_PORT_PAGE73_AUDIO_FREQDET, ~(_BIT3 | _BIT1 | _BIT0), _BIT3);
-
-            DebugMessageAudio("D4 Audio Tracking Enable", 0);
-        }
-
-        SET_AUDIO_D4_PACKET_DETECT();
-        SET_D4_DIGITAL_AUDIO_SOURCE(_DIGITAL_AUDIO_SOURCE_HDMI);
-
-        if(GET_AUDIO_D4_ICODE_RELOADED() == _FALSE)
-        {
-            ScalerTimerReactiveTimerEvent(_AUDIO_DYNAMIC_I_CODE_TIMER_MS, _SCALER_TIMER_EVENT_AUDIO_D4_LOAD_STABLE_I_CODE);
-
-            SET_AUDIO_D4_ICODE_RELOADED();
-        }
-    }
-    else
-    {
-        if(ScalerGetDataPortBit(P73_C9_HDMI_AP, _P73_CA_PT_15_PORT_PAGE73_HDMI_PSCR, (_BIT3 | _BIT2)) != 0x00)
-        {
-            // Diable Audio Freq Changed INT
-            ScalerSetDataPortBit(P73_C9_HDMI_AP, _P73_CA_PT_8A_PORT_PAGE73_AUDIO_FREQDET, ~(_BIT3 | _BIT1 | _BIT0), 0x00);
-
-            // Disable Audio FIFO Tracking
-            ScalerSetDataPortBit(P73_C9_HDMI_AP, _P73_CA_PT_15_PORT_PAGE73_HDMI_PSCR, ~(_BIT3 | _BIT2), 0x00);
-
-            // Set Double Buffer bit
-            ScalerSetDataPortBit(P73_C9_HDMI_AP, _P73_CA_PT_10_PORT_PAGE73_HDMI_CMCR, ~_BIT4, _BIT4);
-
-            // Reload D __code
-            ScalerSetDataPortBit(P73_C9_HDMI_AP, _P73_CA_PT_31_PORT_PAGE73_HDMI_WDCR0, ~_BIT6, _BIT6);
-            ScalerSetDataPortBit(P73_C9_HDMI_AP, _P73_CA_PT_31_PORT_PAGE73_HDMI_WDCR0, ~_BIT6, 0x00);
-
-            DebugMessageAudio("D4 Audio Tracking Disable", 0);
-        }
-
-        CLR_AUDIO_D4_PACKET_DETECT();
-        SET_D4_DIGITAL_AUDIO_SOURCE(_DIGITAL_AUDIO_SOURCE_NONE);
-
-        if(GET_AUDIO_D4_ICODE_RELOADED() == _TRUE)
-        {
-            ScalerTimerCancelTimerEvent(_SCALER_TIMER_EVENT_AUDIO_D4_LOAD_STABLE_I_CODE);
-
-            ScalerAudioD4LoadInitialICode();
-
-            CLR_AUDIO_D4_ICODE_RELOADED();
-        }
-    }
-}
-//--------------------------------------------------
-// Description  : Get D4 Audio Detected
-// Input Value  : None
-// Output Value : TRUE => Audio Detected
-//--------------------------------------------------
-bit ScalerAudioD4GetAudioDetected(void)
-{
-    // Check audio packet
-    if(GET_AUDIO_D4_PACKET_DETECT() == _FALSE)
-    {
-        DebugMessageAudio("False : D4 Audio Packet", 0);
-        return _FALSE;
-    }
-
-    // Check AVMute
-    if(ScalerGetBit(P73_CB_HDMI_SR, _BIT6) == _BIT6)
-    {
-        DebugMessageAudio("False : D4 AVMute", 0);
-        return _FALSE;
-    }
-
-    // Check Audio Tracking
-    if(ScalerGetDataPortBit(P73_C9_HDMI_AP, _P73_CA_PT_15_PORT_PAGE73_HDMI_PSCR, (_BIT3 | _BIT2)) == 0x00)
-    {
-        DebugMessageAudio("False : D4 HDMI Audio Tracking Disable", 0);
-        return _FALSE;
-    }
-
-    // Check HDMI audio FIFO overflow and underflow
-    if(ScalerGetBit(P73_CB_HDMI_SR, (_BIT2 | _BIT1)) != 0x00)
-    {
-        DebugMessageAudio("False : D4 HDMI Audio FIFO", ScalerGetBit(P73_CB_HDMI_SR, (_BIT2 | _BIT1)));
-
-        if(ScalerGetDataPortBit(P73_C9_HDMI_AP, _P73_CA_PT_31_PORT_PAGE73_HDMI_WDCR0, (_BIT2 | _BIT1)) == 0x00)
-        {
-            // Clear HDMI audio FIFO overflow and underflow status
-            ScalerSetBit(P73_CB_HDMI_SR, ~(_BIT2 | _BIT1), (_BIT2 | _BIT1));
-
-            if(ScalerGetBit(P73_CB_HDMI_SR, (_BIT2 | _BIT1)) != 0x00)
-            {
-                DebugMessageAudio("False : D4 HDMI Audio DB Retry", ScalerGetBit(P73_CB_HDMI_SR, (_BIT2 | _BIT1)));
-
-                // Set Double Buffer bit
-                ScalerSetDataPortBit(P73_C9_HDMI_AP, _P73_CA_PT_10_PORT_PAGE73_HDMI_CMCR, ~_BIT4, _BIT4);
-
-                // Clear HDMI audio FIFO overflow and underflow status
-                ScalerSetBit(P73_CB_HDMI_SR, ~(_BIT2 | _BIT1), (_BIT2 | _BIT1));
-            }
-        }
-
-        return _FALSE;
-    }
-
-    return _TRUE;
-}
-//--------------------------------------------------
-// Description  : Initial D4 HDMI audio setting
-// Input Value  : None
-// Output Value : None
-//--------------------------------------------------
-void ScalerAudioD4HDMIAudioInitial(void)
-{
-    ScalerAudioD4SetAudioPLL();
-
-    // Disable sine wave generator
-    ScalerSetDataPortBit(P73_C9_HDMI_AP, _P73_CA_PT_03_PORT_PAGE73_HDMI_AFCR, ~_BIT4, 0x00);
-
-    // Disable AVMUTE function and enable Audio FIFO Tracking main control (I/P code)
-    ScalerSetDataPortBit(P73_C9_HDMI_AP, _P73_CA_PT_31_PORT_PAGE73_HDMI_WDCR0, ~(_BIT7 | _BIT5), _BIT5);
-
-    // Disable FIFO Boundary Tracking, Disable Trend Tracking
-    ScalerSetDataPortBit(P73_C9_HDMI_AP, _P73_CA_PT_15_PORT_PAGE73_HDMI_PSCR, ~(_BIT7 | _BIT6 | _BIT5 | _BIT3 | _BIT2), (_BIT7 | _BIT6 | _BIT5));
-
-    // Enable SDM
-    ScalerSetDataPortBit(P73_C9_HDMI_AP, _P73_CA_PT_2D_PORT_PAGE73_HDMI_AAPNR, ~_BIT1, _BIT1);
-
-    // Set auto gain delay mode and final gain = full gain
-    ScalerSetDataPortBit(P73_C9_HDMI_AP, _P73_CA_PT_07_PORT_PAGE73_HDMI_MAG_M_FINAL, ~_BIT3, 0x00);
-
-    // Set wait time for load parameter
-    ScalerSetDataPortBit(P73_C9_HDMI_AP, _P73_CA_PT_0A_PORT_PAGE73_AUDIO_LD_P_TIME_M, ~(_BIT1 | _BIT0), 0x00);
-    ScalerSetDataPortByte(P73_C9_HDMI_AP, _P73_CA_PT_0B_PORT_PAGE73_AUDIO_LD_P_TIME_N, 0x10);
-
-    // Set ZCD timeout
-    ScalerSetDataPortBit(P73_C9_HDMI_AP, _P73_CA_PT_0D_PORT_PAGE73_ZCD_TIMEOUT, ~(_BIT6 | _BIT5 | _BIT4 | _BIT3 | _BIT2 | _BIT1 | _BIT0), _ZCD_TIMEOUT_DEFAULT);
-
-    // Set Boundary Address = 5 for Boundary Tracking
-    ScalerSetDataPortBit(P73_C9_HDMI_AP, _P73_CA_PT_1B_PORT_PAGE73_HDMI_FBR, ~(_BIT2 | _BIT1 | _BIT0), (_BIT2 | _BIT0));
-
-    // Set I __code of trend
-    ScalerSetDataPortByte(P73_C9_HDMI_AP, _P73_CA_PT_20_PORT_PAGE73_HDMI_ICTPSR0, 0x00);
-    ScalerSetDataPortByte(P73_C9_HDMI_AP, _P73_CA_PT_21_PORT_PAGE73_HDMI_ICTPSR1, 0x02);
-
-    // Set P __code of trend
-    ScalerSetDataPortByte(P73_C9_HDMI_AP, _P73_CA_PT_22_PORT_PAGE73_HDMI_PCTPSR0, 0x7F);
-    ScalerSetDataPortByte(P73_C9_HDMI_AP, _P73_CA_PT_23_PORT_PAGE73_HDMI_PCTPSR1, 0xFF);
-
-    // Set I __code of boundary
-    ScalerSetDataPortByte(P73_C9_HDMI_AP, _P73_CA_PT_24_PORT_PAGE73_HDMI_ICBPSR0, HIBYTE(_INITIAL_I_CODE));
-    ScalerSetDataPortByte(P73_C9_HDMI_AP, _P73_CA_PT_25_PORT_PAGE73_HDMI_ICBPSR1, LOBYTE(_INITIAL_I_CODE));
-
-    // Set P __code of boundary
-    ScalerSetDataPortByte(P73_C9_HDMI_AP, _P73_CA_PT_26_PORT_PAGE73_HDMI_PCBPSR0, 0x7F);
-    ScalerSetDataPortByte(P73_C9_HDMI_AP, _P73_CA_PT_27_PORT_PAGE73_HDMI_PCBPSR1, 0xFF);
-
-    // Audio Normal Output
-    ScalerSetDataPortBit(P73_C9_HDMI_AP, _P73_CA_PT_30_PORT_PAGE73_HDMI_AVMCR, ~(_BIT6 | _BIT5), (_BIT6 | _BIT5));
-
-    // Disable Audio Watchdog for FIFO Overflow/Underflow
-    ScalerSetDataPortBit(P73_C9_HDMI_AP, _P73_CA_PT_31_PORT_PAGE73_HDMI_WDCR0, ~(_BIT2 | _BIT1), 0x00);
-
-    // Set X Value
-    ScalerSetDataPortBit(P73_C9_HDMI_AP, _P73_CA_PT_32_PORT_PAGE73_HDMI_WDCR1, ~(_BIT3 | _BIT2 | _BIT1 | _BIT0), (_BIT1 | _BIT0));
-
-    // Set Y Value
-    ScalerSetDataPortBit(P73_C9_HDMI_AP, _P73_CA_PT_33_PORT_PAGE73_HDMI_WDCR2, ~(_BIT3 | _BIT2 | _BIT1 | _BIT0), (_BIT1 | _BIT0));
-
-    // Bit2: When no audio or changing sampling rate, AFSM load double buffer one more.
-    ScalerSetDataPortBit(P73_C9_HDMI_AP, _P73_CA_PT_9F_PORT_PAGE73_PRESET_AFSM_MOD, ~(_BIT7 | _BIT6 | _BIT5 | _BIT4 | _BIT2), (_BIT7 | _BIT6 | _BIT5 | _BIT4 | _BIT2));
-
-    // Seperate the detected sampling frequency
-    ScalerSetDataPortBit(P73_C9_HDMI_AP, _P73_CA_PT_8B_PORT_PAGE73_AUDIO_FREQ_RESULT, ~(_BIT6 | _BIT5 | _BIT4), 0x00);
-
-    // Set 2ms for auto frequency detecttion
-    ScalerSetDataPortBit(P73_C9_HDMI_AP, _P73_CA_PT_8C_PORT_PAGE73_AUDIO_FREQ_RESULT_M, ~(_BIT6 | _BIT5), _BIT5);
-
-    // Change audio clk divider according to SYSCLK = 27MHz
-    ScalerSetDataPortByte(P73_C9_HDMI_AP, _P73_CA_PT_8E_PORT_PAGE73_XTAL_DIV, _AUTO_FREQ_DETECT_XTAL_DIV);
-
-    // Set threshold to sepeerate sampling frequency
-    ScalerSetDataPortByte(P73_C9_HDMI_AP, _P73_CA_PT_90_PORT_PAGE73_TH1, 0x00);
-    ScalerSetDataPortByte(P73_C9_HDMI_AP, _P73_CA_PT_91_PORT_PAGE73_TH2, 0x28);
-    ScalerSetDataPortByte(P73_C9_HDMI_AP, _P73_CA_PT_92_PORT_PAGE73_TH3, 0x4C);
-    ScalerSetDataPortByte(P73_C9_HDMI_AP, _P73_CA_PT_93_PORT_PAGE73_TH4, 0x5C);
-    ScalerSetDataPortByte(P73_C9_HDMI_AP, _P73_CA_PT_94_PORT_PAGE73_TH5, 0x70);
-
-#if(_AUDIO_MANUAL_SAMPLING_FREQ_SUPPORT == _ON)
-
-    // Disable Auto Load S Code
-    ScalerSetDataPortBit(P73_C9_HDMI_AP, _P73_CA_PT_8A_PORT_PAGE73_AUDIO_FREQDET, ~_BIT6, 0x00);
-
-#if(_FIX_SAMPLING_FREQ_TYPE == _FIX_FREQ_32KHZ)
-
-    // Set S __code for 32kHz
-    ScalerSetDataPortByte(P73_C9_HDMI_AP, _P73_CA_PT_12_PORT_PAGE73_HDMI_SCAPR, _HDMI_SAMPLING_FREQ_32K_GROUP_S_CODE);
-
-    // Set D __code for 32kHz
-    ScalerSetDataPortByte(P73_C9_HDMI_AP, _P73_CA_PT_13_PORT_PAGE73_HDMI_DCAPR0, HIBYTE(_HDMI_SAMPLING_FREQ_32K_GROUP_D_CODE));
-    ScalerSetDataPortByte(P73_C9_HDMI_AP, _P73_CA_PT_14_PORT_PAGE73_HDMI_DCAPR1, LOBYTE(_HDMI_SAMPLING_FREQ_32K_GROUP_D_CODE));
-
-#elif(_FIX_SAMPLING_FREQ_TYPE == _FIX_FREQ_44_1KHZ)
-
-    // Set S __code for 44.1kHz
-    ScalerSetDataPortByte(P73_C9_HDMI_AP, _P73_CA_PT_12_PORT_PAGE73_HDMI_SCAPR, _HDMI_SAMPLING_FREQ_44K_GROUP_S_CODE);
-
-    // Set D __code for 44.1kHz
-    ScalerSetDataPortByte(P73_C9_HDMI_AP, _P73_CA_PT_13_PORT_PAGE73_HDMI_DCAPR0, HIBYTE(_HDMI_SAMPLING_FREQ_44K_GROUP_D_CODE));
-    ScalerSetDataPortByte(P73_C9_HDMI_AP, _P73_CA_PT_14_PORT_PAGE73_HDMI_DCAPR1, LOBYTE(_HDMI_SAMPLING_FREQ_44K_GROUP_D_CODE));
-
-#else // _FIX_SAMPLING_FREQ_TYPE == _FIX_FREQ_48KHZ
-
-    // Set S __code for 48kHz
-    ScalerSetDataPortByte(P73_C9_HDMI_AP, _P73_CA_PT_12_PORT_PAGE73_HDMI_SCAPR, _HDMI_SAMPLING_FREQ_48K_GROUP_S_CODE);
-
-    // Set D __code for 48kHz
-    ScalerSetDataPortByte(P73_C9_HDMI_AP, _P73_CA_PT_13_PORT_PAGE73_HDMI_DCAPR0, HIBYTE(_HDMI_SAMPLING_FREQ_48K_GROUP_D_CODE));
-    ScalerSetDataPortByte(P73_C9_HDMI_AP, _P73_CA_PT_14_PORT_PAGE73_HDMI_DCAPR1, LOBYTE(_HDMI_SAMPLING_FREQ_48K_GROUP_D_CODE));
-
 #endif
-
-    // Set Double Buffer bit
-    ScalerSetDataPortBit(P73_C9_HDMI_AP, _P73_CA_PT_10_PORT_PAGE73_HDMI_CMCR, ~_BIT4, _BIT4);
-
-    // Load D __code
-    ScalerSetDataPortBit(P73_C9_HDMI_AP, _P73_CA_PT_31_PORT_PAGE73_HDMI_WDCR0, ~_BIT6, _BIT6);
-    ScalerSetDataPortBit(P73_C9_HDMI_AP, _P73_CA_PT_31_PORT_PAGE73_HDMI_WDCR0, ~_BIT6, 0x00);
-
-#else
-
-    // Disable Auto Load S Code
-    ScalerSetDataPortBit(P73_C9_HDMI_AP, _P73_CA_PT_8A_PORT_PAGE73_AUDIO_FREQDET, ~_BIT6, 0x00);
-
-    // Set S __code for 32kHz
-    ScalerSetDataPortByte(P73_C9_HDMI_AP, _P73_CA_PT_12_PORT_PAGE73_HDMI_SCAPR, _HDMI_SAMPLING_FREQ_32K_GROUP_S_CODE);
-
-    // Set D __code for 32kHz
-    ScalerSetDataPortByte(P73_C9_HDMI_AP, _P73_CA_PT_13_PORT_PAGE73_HDMI_DCAPR0, HIBYTE(_HDMI_SAMPLING_FREQ_32K_GROUP_D_CODE));
-    ScalerSetDataPortByte(P73_C9_HDMI_AP, _P73_CA_PT_14_PORT_PAGE73_HDMI_DCAPR1, LOBYTE(_HDMI_SAMPLING_FREQ_32K_GROUP_D_CODE));
-
-    // Set Double Buffer bit
-    ScalerSetDataPortBit(P73_C9_HDMI_AP, _P73_CA_PT_10_PORT_PAGE73_HDMI_CMCR, ~_BIT4, _BIT4);
-
-    // Load D __code
-    ScalerSetDataPortBit(P73_C9_HDMI_AP, _P73_CA_PT_31_PORT_PAGE73_HDMI_WDCR0, ~_BIT6, _BIT6);
-    ScalerSetDataPortBit(P73_C9_HDMI_AP, _P73_CA_PT_31_PORT_PAGE73_HDMI_WDCR0, ~_BIT6, 0x00);
-
-    // Set S __code for auto load mode
-    ScalerSetDataPortByte(P73_C9_HDMI_AP, _P73_CA_PT_95_PORT_PAGE73_PRESET_S_CODE0, _HDMI_SAMPLING_FREQ_32K_GROUP_S_CODE);
-    ScalerSetDataPortByte(P73_C9_HDMI_AP, _P73_CA_PT_96_PORT_PAGE73_PRESET_S_CODE1, _HDMI_SAMPLING_FREQ_44K_GROUP_S_CODE);
-    ScalerSetDataPortByte(P73_C9_HDMI_AP, _P73_CA_PT_97_PORT_PAGE73_PRESET_S_CODE2, _HDMI_SAMPLING_FREQ_48K_GROUP_S_CODE);
-
-    // Set D __code for auto load mode
-    ScalerSetDataPortByte(P73_C9_HDMI_AP, _P73_CA_PT_99_PORT_PAGE73_PRESET_D_CODE_0, HIBYTE(_HDMI_SAMPLING_FREQ_32K_GROUP_D_CODE));
-    ScalerSetDataPortByte(P73_C9_HDMI_AP, _P73_CA_PT_9A_PORT_PAGE73_PRESET_D_CODE_1, LOBYTE(_HDMI_SAMPLING_FREQ_32K_GROUP_D_CODE));
-    ScalerSetDataPortByte(P73_C9_HDMI_AP, _P73_CA_PT_9B_PORT_PAGE73_PRESET_D_CODE_2, HIBYTE(_HDMI_SAMPLING_FREQ_44K_GROUP_D_CODE));
-    ScalerSetDataPortByte(P73_C9_HDMI_AP, _P73_CA_PT_9C_PORT_PAGE73_PRESET_D_CODE_3, LOBYTE(_HDMI_SAMPLING_FREQ_44K_GROUP_D_CODE));
-    ScalerSetDataPortByte(P73_C9_HDMI_AP, _P73_CA_PT_9D_PORT_PAGE73_PRESET_D_CODE_4, HIBYTE(_HDMI_SAMPLING_FREQ_48K_GROUP_D_CODE));
-    ScalerSetDataPortByte(P73_C9_HDMI_AP, _P73_CA_PT_9E_PORT_PAGE73_PRESET_D_CODE_5, LOBYTE(_HDMI_SAMPLING_FREQ_48K_GROUP_D_CODE));
-
-    // Enable Auto Load S Code
-    ScalerSetDataPortBit(P73_C9_HDMI_AP, _P73_CA_PT_8A_PORT_PAGE73_AUDIO_FREQDET, ~_BIT6, _BIT6);
-
-    // Set Double Buffer bit
-    ScalerSetDataPortBit(P73_C9_HDMI_AP, _P73_CA_PT_10_PORT_PAGE73_HDMI_CMCR, ~_BIT4, _BIT4);
-
-#endif // End of #if(_AUDIO_MANUAL_SAMPLING_FREQ_SUPPORT == _ON)
-
-    // Enable Audio Freq Detect, Disable Samping Freq. Change INT
-    ScalerSetDataPortBit(P73_C9_HDMI_AP, _P73_CA_PT_8A_PORT_PAGE73_AUDIO_FREQDET, ~(_BIT7 | _BIT3 | _BIT1 | _BIT0), _BIT7);
-
-    // Enable SPDIF/I2S Output
-    ScalerSetDataPortByte(P73_C9_HDMI_AP, _P73_CA_PT_62_PORT_PAGE73_HDMI_AOCR, 0xFF);
-
-    CLR_AUDIO_D4_ICODE_RELOADED();
-}
-//--------------------------------------------------
-// Description  : Load initial I Code
-// Input Value  : None
-// Output Value : None
-//--------------------------------------------------
-void ScalerAudioD4LoadInitialICode(void)
-{
-    // Set high byte of I __code for boundary tracking for HDMI audio
-    ScalerSetDataPortByte(P73_C9_HDMI_AP, _P73_CA_PT_24_PORT_PAGE73_HDMI_ICBPSR0, HIBYTE(_INITIAL_I_CODE));
-
-    // Set low byte of I __code for boundary tracking for HDMI audio
-    ScalerSetDataPortByte(P73_C9_HDMI_AP, _P73_CA_PT_25_PORT_PAGE73_HDMI_ICBPSR1, LOBYTE(_INITIAL_I_CODE));
-
-    DebugMessageAudio("Load initial I code", _INITIAL_I_CODE);
-}
-//--------------------------------------------------
-// Description  : Timer Event to Load Stable I Code
-// Input Value  : None
-// Output Value : None
-//--------------------------------------------------
-void ScalerAudioD4LoadStableICodeEvent(void)
-{
-    // Set high byte of I __code for boundary tracking
-    ScalerSetDataPortByte(P73_C9_HDMI_AP, _P73_CA_PT_24_PORT_PAGE73_HDMI_ICBPSR0, HIBYTE(_STABLE_I_CODE));
-
-    // Set low byte of I __code for boundary tracking
-    ScalerSetDataPortByte(P73_C9_HDMI_AP, _P73_CA_PT_25_PORT_PAGE73_HDMI_ICBPSR1, LOBYTE(_STABLE_I_CODE));
-
-    DebugMessageAudio("Load stable I code", _STABLE_I_CODE);
-}
-//--------------------------------------------------
-// Description  : Detect D4 Audio Sampling Freq
-// Input Value  : None
-// Output Value : Audio Sampling Freq
-//--------------------------------------------------
-EnumAudioSamplingFreqType ScalerAudioD4SamplingFreqDetect(void)
-{
-    EnumAudioSamplingFreqType enumAudioFreq = _AUDIO_FREQ_NO_AUDIO;
-
-#if(_INTERNAL_AUDIO_TEST_SUPPORT == _ON)
-    if(ScalerAudioD4GetInternalAudioGenEnable() == _ENABLE)
-    {
-        // For Audio test pattern
-        SET_AUDIO_D4_SAMPLING_FREQ(_AUDIO_FREQ_48K);
-        return _AUDIO_FREQ_48K;
-    }
-#endif
-
-    enumAudioFreq = ScalerGetDataPortBit(P73_C9_HDMI_AP, _P73_CA_PT_8B_PORT_PAGE73_AUDIO_FREQ_RESULT, (_BIT3 | _BIT2 | _BIT1 | _BIT0));
-
-#if(_EMBEDDED_DAC_SUPPORT == _ON)
-    if(enumAudioFreq != GET_AUDIO_D4_SAMPLING_FREQ())
-    {
-        if(enumAudioFreq <= _AUDIO_FREQ_64K)
-        {
-            ScalerSetBit(P6_D4_DA_CLK_CTRL, ~(_BIT7 | _BIT6), 0x00);
-        }
-        else if(enumAudioFreq <= _AUDIO_FREQ_128K)
-        {
-            ScalerSetBit(P6_D4_DA_CLK_CTRL, ~(_BIT7 | _BIT6), _BIT6);
-        }
-        else
-        {
-            ScalerSetBit(P6_D4_DA_CLK_CTRL, ~(_BIT7 | _BIT6), _BIT7);
-        }
-    }
-#endif
-
-    SET_AUDIO_D4_SAMPLING_FREQ(enumAudioFreq);
-
-    return enumAudioFreq;
-}
-
-//--------------------------------------------------
-// Description  : Initial D4 Auido PLL Settings
-// Input Value  : None
-// Output Value : None
-//--------------------------------------------------
-void ScalerAudioD4SetAudioPLL(void)
-{
-    // DPLL power down
-    ScalerSetDataPortBit(P73_C9_HDMI_AP, _P73_CA_PT_38_PORT_PAGE73_HDMI_DPCR0, ~_BIT7, _BIT7);
-
-    // Set M __code
-    ScalerSetDataPortByte(P73_C9_HDMI_AP, _P73_CA_PT_11_PORT_PAGE73_HDMI_MCAPR, (_AUDIO_PLL_M - 2));
-
-    // Set O __code
-    ScalerSetDataPortBit(P73_C9_HDMI_AP, _P73_CA_PT_38_PORT_PAGE73_HDMI_DPCR0, ~(_BIT5 | _BIT4), 0x00);
-
-    // Set K __code and enable double buffer
-    ScalerSetDataPortBit(P73_C9_HDMI_AP, _P73_CA_PT_10_PORT_PAGE73_HDMI_CMCR, ~(_BIT4 | _BIT3 | _BIT2 | _BIT1 | _BIT0), (_BIT4 | ((_AUDIO_PLL_K - 2) & 0x0F)));
-
-    // Initial VCO Band = 10
-    ScalerSetDataPortBit(P73_C9_HDMI_AP, _P73_CA_PT_3A_PORT_PAGE73_HDMI_DPCR2, ~(_BIT4 | _BIT3), _BIT4);
-
-    // Set MN PLL Path1 => [2]: 1 = Path1, 0 = Path2
-    ScalerSetDataPortBit(P73_C9_HDMI_AP, _P73_CA_PT_3A_PORT_PAGE73_HDMI_DPCR2, ~(_BIT7 | _BIT2), _BIT2);
-
-#if(_HW_PLL_EDGE_SELECT_TYPE == _PLL_EDGE_GEN_1_DEFAULT_POSITIVE)
-    // Set PLL Edge = Negative
-    ScalerSetDataPortBit(P73_C9_HDMI_AP, _P73_CA_PT_3F_PORT_PAGE73_DPLL_LDO, ~_BIT1, _BIT1);
-#endif
-
-    // DPLL VCORSTB Set to Normal
-    ScalerSetDataPortBit(P73_C9_HDMI_AP, _P73_CA_PT_3B_PORT_PAGE73_HDMI_DPCR3, ~_BIT0, _DPLL_VCORSTB_NORMAL_VALUE);
-
-    // DPLL power up
-    ScalerSetDataPortBit(P73_C9_HDMI_AP, _P73_CA_PT_38_PORT_PAGE73_HDMI_DPCR0, ~_BIT7, 0x00);
-
-    // Delay 2000us
-    ScalerTimerDelayXms(2);
-
-    // DPLL CMP enable
-    ScalerSetDataPortBit(P73_C9_HDMI_AP, _P73_CA_PT_38_PORT_PAGE73_HDMI_DPCR0, ~_BIT0, _BIT0);
-
-    // Delay 1000us
-    ScalerTimerDelayXms(2);
-
-    // DPLL latch calibration enable
-    ScalerSetDataPortBit(P73_C9_HDMI_AP, _P73_CA_PT_38_PORT_PAGE73_HDMI_DPCR0, ~_BIT1, _BIT1);
-
-    // Delay 1000us
-    ScalerTimerDelayXms(2);
-
-    // DPLL calibration validated
-    ScalerSetDataPortBit(P73_C9_HDMI_AP, _P73_CA_PT_38_PORT_PAGE73_HDMI_DPCR0, ~_BIT2, _BIT2);
-}
-//--------------------------------------------------
-// Description  : D4 Audio Watch Dog Proc
-// Input Value  : bOn
-// Output Value : None
-//--------------------------------------------------
-void ScalerAudioD4WatchDogProc(bit bOn)
-{
-    if(bOn == _ON)
-    {
-        // Clear audio FIFO overflow and underflow status
-        ScalerSetBit(P73_CB_HDMI_SR, ~(_BIT2 | _BIT1), (_BIT2 | _BIT1));
-
-        // Enable Audio Watch Dog for FIFO Overflow/Underflow
-        ScalerSetDataPortBit(P73_C9_HDMI_AP, _P73_CA_PT_31_PORT_PAGE73_HDMI_WDCR0, ~(_BIT2 | _BIT1), (_BIT2 | _BIT1));
-    }
-    else
-    {
-        // Disable Audio Watch Dog for FIFO Overflow/Underflow
-        ScalerSetDataPortBit(P73_C9_HDMI_AP, _P73_CA_PT_31_PORT_PAGE73_HDMI_WDCR0, ~(_BIT2 | _BIT1), 0x00);
-    }
-}
-
-#if(_INTERNAL_AUDIO_TEST_SUPPORT == _ON)
-//--------------------------------------------------
-// Description  : Get Whether Internal Audio Pattern Gen is Enabled
-// Input Value  : None
-// Output Value : _ENABLE or _DISABLE
-//--------------------------------------------------
-bit ScalerAudioD4GetInternalAudioGenEnable(void)
-{
-    if(ScalerGetDataPortBit(P73_C9_HDMI_AP, _P73_CA_PT_03_PORT_PAGE73_HDMI_AFCR, _BIT4) == _BIT4)
-    {
-        return _ENABLE;
-    }
-    else
-    {
-        return _DISABLE;
-    }
-}
-//--------------------------------------------------
-// Description  : D4 Auido Speaker Testing Process
-// Input Value  : Enable or Disable
-// Output Value : None
-//--------------------------------------------------
-void ScalerAudioD4InternalAudioGenSwitch(bit bOn)
-{
-    if(bOn == _ON)
-    {
-        DebugMessageAudio("D4 Audio Test On", ScalerGetDataPortBit(P73_C9_HDMI_AP, _P73_CA_PT_03_PORT_PAGE73_HDMI_AFCR, _BIT4));
-
-        // Disable audio FIFO and Enable audio internal generator
-        ScalerSetDataPortBit(P73_C9_HDMI_AP, _P73_CA_PT_03_PORT_PAGE73_HDMI_AFCR, ~(_BIT6 | _BIT4 | _BIT3 | _BIT2 | _BIT1 | _BIT0), _BIT4);
-
-        // Disbale DPLL Freq. Tuning
-        ScalerSetDataPortBit(P73_C9_HDMI_AP, _P73_CA_PT_3A_PORT_PAGE73_HDMI_DPCR2, ~_BIT1, 0x00);
-
-        // Set S __code
-        ScalerSetDataPortByte(P73_C9_HDMI_AP, _P73_CA_PT_12_PORT_PAGE73_HDMI_SCAPR, _HDMI_SAMPLING_FREQ_48K_GROUP_S_CODE);
-
-        // Set D __code
-        ScalerSetDataPortByte(P73_C9_HDMI_AP, _P73_CA_PT_13_PORT_PAGE73_HDMI_DCAPR0, HIBYTE(_HDMI_SAMPLING_FREQ_48K_GROUP_D_CODE));
-        ScalerSetDataPortByte(P73_C9_HDMI_AP, _P73_CA_PT_14_PORT_PAGE73_HDMI_DCAPR1, LOBYTE(_HDMI_SAMPLING_FREQ_48K_GROUP_D_CODE));
-
-        // Disable sample freq. detection and auto load S code / D __code
-        ScalerSetDataPortBit(P73_C9_HDMI_AP, _P73_CA_PT_8A_PORT_PAGE73_AUDIO_FREQDET, ~(_BIT7 | _BIT6), 0x00);
-
-        // Enable double buffer
-        ScalerSetDataPortBit(P73_C9_HDMI_AP, _P73_CA_PT_10_PORT_PAGE73_HDMI_CMCR, ~_BIT4, _BIT4);
-
-        ScalerAudioDigitalOutputMute(_OFF);
-    }
-    else
-    {
-        DebugMessageAudio("D4 Aduio Test Off", ScalerGetDataPortBit(P73_C9_HDMI_AP, _P73_CA_PT_03_PORT_PAGE73_HDMI_AFCR, _BIT4));
-
-        ScalerAudioDigitalOutputMute(_ON);
-
-        // Enable sample freq. detection and auto load S __code
-        ScalerSetDataPortBit(P73_C9_HDMI_AP, _P73_CA_PT_8A_PORT_PAGE73_AUDIO_FREQDET, ~(_BIT7 | _BIT6), (_BIT7 | _BIT6));
-
-        // Enable double buffer
-        ScalerSetDataPortBit(P73_C9_HDMI_AP, _P73_CA_PT_10_PORT_PAGE73_HDMI_CMCR, ~_BIT4, _BIT4);
-
-        // Enable DPLL Freq. Tuning
-        ScalerSetDataPortBit(P73_C9_HDMI_AP, _P73_CA_PT_3A_PORT_PAGE73_HDMI_DPCR2, ~_BIT1, _BIT1);
-
-        // Enable audio FIFO and Disable audio internal generator
-        ScalerSetDataPortBit(P73_C9_HDMI_AP, _P73_CA_PT_03_PORT_PAGE73_HDMI_AFCR, ~(_BIT6 | _BIT4 | _BIT3 | _BIT2 | _BIT1 | _BIT0), (_BIT6 | _BIT2 | _BIT1));
-    }
-}
-#endif
-
-#endif
-
-#if(_D5_HDMI_SUPPORT == _ON)
-//--------------------------------------------------
-// Description  : Detect D5 digital audio for HDMI/DP interface
-// Input Value  : None
-// Output Value : None
-//--------------------------------------------------
-void ScalerAudioD5DigitalDetectProc(void)
-{
-    if(ScalerAudioD5SamplingFreqDetect() != 0x00)
-    {
-        if(ScalerGetDataPortBit(P74_C9_HDMI_AP, _P74_CA_PT_15_PORT_PAGE74_HDMI_PSCR, (_BIT3 | _BIT2)) == 0x00)
-        {
-            // Enable Audio FIFO Tracking
-            ScalerSetDataPortBit(P74_C9_HDMI_AP, _P74_CA_PT_15_PORT_PAGE74_HDMI_PSCR, ~(_BIT3 | _BIT2), (_BIT3 | _BIT2));
-
-            // Set Double Buffer bit
-            ScalerSetDataPortBit(P74_C9_HDMI_AP, _P74_CA_PT_10_PORT_PAGE74_HDMI_CMCR, ~_BIT4, _BIT4);
-
-            // Clear Audio Freq Changed Flag
-            ScalerSetDataPortBit(P74_C9_HDMI_AP, _P74_CA_PT_8A_PORT_PAGE74_AUDIO_FREQDET, ~(_BIT1 | _BIT0), _BIT1);
-
-            // Enable Audio Freq Changed INT
-            ScalerSetDataPortBit(P74_C9_HDMI_AP, _P74_CA_PT_8A_PORT_PAGE74_AUDIO_FREQDET, ~(_BIT3 | _BIT1 | _BIT0), _BIT3);
-
-            DebugMessageAudio("D5 Audio Tracking Enable", 0);
-        }
-
-        SET_AUDIO_D5_PACKET_DETECT();
-        SET_D5_DIGITAL_AUDIO_SOURCE(_DIGITAL_AUDIO_SOURCE_HDMI);
-
-        if(GET_AUDIO_D5_ICODE_RELOADED() == _FALSE)
-        {
-            ScalerTimerReactiveTimerEvent(_AUDIO_DYNAMIC_I_CODE_TIMER_MS, _SCALER_TIMER_EVENT_AUDIO_D5_LOAD_STABLE_I_CODE);
-
-            SET_AUDIO_D5_ICODE_RELOADED();
-        }
-    }
-    else
-    {
-        if(ScalerGetDataPortBit(P74_C9_HDMI_AP, _P74_CA_PT_15_PORT_PAGE74_HDMI_PSCR, (_BIT3 | _BIT2)) != 0x00)
-        {
-            // Diable Audio Freq Changed INT
-            ScalerSetDataPortBit(P74_C9_HDMI_AP, _P74_CA_PT_8A_PORT_PAGE74_AUDIO_FREQDET, ~(_BIT3 | _BIT1 | _BIT0), 0x00);
-
-            // Disable Audio FIFO Tracking
-            ScalerSetDataPortBit(P74_C9_HDMI_AP, _P74_CA_PT_15_PORT_PAGE74_HDMI_PSCR, ~(_BIT3 | _BIT2), 0x00);
-
-            // Set Double Buffer bit
-            ScalerSetDataPortBit(P74_C9_HDMI_AP, _P74_CA_PT_10_PORT_PAGE74_HDMI_CMCR, ~_BIT4, _BIT4);
-
-            // Reload D __code
-            ScalerSetDataPortBit(P74_C9_HDMI_AP, _P74_CA_PT_31_PORT_PAGE74_HDMI_WDCR0, ~_BIT6, _BIT6);
-            ScalerSetDataPortBit(P74_C9_HDMI_AP, _P74_CA_PT_31_PORT_PAGE74_HDMI_WDCR0, ~_BIT6, 0x00);
-
-            DebugMessageAudio("D5 Audio Tracking Disable", 0);
-        }
-
-        CLR_AUDIO_D5_PACKET_DETECT();
-        SET_D5_DIGITAL_AUDIO_SOURCE(_DIGITAL_AUDIO_SOURCE_NONE);
-
-        if(GET_AUDIO_D5_ICODE_RELOADED() == _TRUE)
-        {
-            ScalerTimerCancelTimerEvent(_SCALER_TIMER_EVENT_AUDIO_D5_LOAD_STABLE_I_CODE);
-
-            ScalerAudioD5LoadInitialICode();
-
-            CLR_AUDIO_D5_ICODE_RELOADED();
-        }
-    }
-}
-//--------------------------------------------------
-// Description  : Get D5 Audio Detected
-// Input Value  : None
-// Output Value : TRUE => Audio Detected
-//--------------------------------------------------
-bit ScalerAudioD5GetAudioDetected(void)
-{
-    // Check audio packet
-    if(GET_AUDIO_D5_PACKET_DETECT() == _FALSE)
-    {
-        DebugMessageAudio("False : D5 Audio Packet", 0);
-        return _FALSE;
-    }
-
-    // Check AVMute
-    if(ScalerGetBit(P74_CB_HDMI_SR, _BIT6) == _BIT6)
-    {
-        DebugMessageAudio("False : D5 AVMute", 0);
-        return _FALSE;
-    }
-
-    // Check Audio Tracking
-    if(ScalerGetDataPortBit(P74_C9_HDMI_AP, _P74_CA_PT_15_PORT_PAGE74_HDMI_PSCR, (_BIT3 | _BIT2)) == 0x00)
-    {
-        DebugMessageAudio("False : D5 HDMI Audio Tracking Disable", 0);
-        return _FALSE;
-    }
-
-    // Check HDMI audio FIFO overflow and underflow
-    if(ScalerGetBit(P74_CB_HDMI_SR, (_BIT2 | _BIT1)) != 0x00)
-    {
-        DebugMessageAudio("False : D5 HDMI Audio FIFO", ScalerGetBit(P74_CB_HDMI_SR, (_BIT2 | _BIT1)));
-
-        if(ScalerGetDataPortBit(P74_C9_HDMI_AP, _P74_CA_PT_31_PORT_PAGE74_HDMI_WDCR0, (_BIT2 | _BIT1)) == 0x00)
-        {
-            // Clear HDMI audio FIFO overflow and underflow status
-            ScalerSetBit(P74_CB_HDMI_SR, ~(_BIT2 | _BIT1), (_BIT2 | _BIT1));
-
-            if(ScalerGetBit(P74_CB_HDMI_SR, (_BIT2 | _BIT1)) != 0x00)
-            {
-                DebugMessageAudio("False : D5 HDMI Audio DB Retry", ScalerGetBit(P74_CB_HDMI_SR, (_BIT2 | _BIT1)));
-
-                // Set Double Buffer bit
-                ScalerSetDataPortBit(P74_C9_HDMI_AP, _P74_CA_PT_10_PORT_PAGE74_HDMI_CMCR, ~_BIT4, _BIT4);
-
-                // Clear HDMI audio FIFO overflow and underflow status
-                ScalerSetBit(P74_CB_HDMI_SR, ~(_BIT2 | _BIT1), (_BIT2 | _BIT1));
-            }
-        }
-
-        return _FALSE;
-    }
-
-    return _TRUE;
-}
-//--------------------------------------------------
-// Description  : Initial D5 HDMI audio setting
-// Input Value  : None
-// Output Value : None
-//--------------------------------------------------
-void ScalerAudioD5HDMIAudioInitial(void)
-{
-    ScalerAudioD5SetAudioPLL();
-
-    // Disable sine wave generator
-    ScalerSetDataPortBit(P74_C9_HDMI_AP, _P74_CA_PT_03_PORT_PAGE74_HDMI_AFCR, ~_BIT4, 0x00);
-
-    // Disable AVMUTE function and enable Audio FIFO Tracking main control (I/P code)
-    ScalerSetDataPortBit(P74_C9_HDMI_AP, _P74_CA_PT_31_PORT_PAGE74_HDMI_WDCR0, ~(_BIT7 | _BIT5), _BIT5);
-
-    // Disable FIFO Boundary Tracking, Disable Trend Tracking
-    ScalerSetDataPortBit(P74_C9_HDMI_AP, _P74_CA_PT_15_PORT_PAGE74_HDMI_PSCR, ~(_BIT7 | _BIT6 | _BIT5 | _BIT3 | _BIT2), (_BIT7 | _BIT6 | _BIT5));
-
-    // Enable SDM
-    ScalerSetDataPortBit(P74_C9_HDMI_AP, _P74_CA_PT_2D_PORT_PAGE74_HDMI_AAPNR, ~_BIT1, _BIT1);
-
-    // Set auto gain delay mode and final gain = full gain
-    ScalerSetDataPortBit(P74_C9_HDMI_AP, _P74_CA_PT_07_PORT_PAGE74_HDMI_MAG_M_FINAL, ~_BIT3, 0x00);
-
-    // Set wait time for load parameter
-    ScalerSetDataPortBit(P74_C9_HDMI_AP, _P74_CA_PT_0A_PORT_PAGE74_AUDIO_LD_P_TIME_M, ~(_BIT1 | _BIT0), 0x00);
-    ScalerSetDataPortByte(P74_C9_HDMI_AP, _P74_CA_PT_0B_PORT_PAGE74_AUDIO_LD_P_TIME_N, 0x10);
-
-    // Set ZCD timeout
-    ScalerSetDataPortBit(P74_C9_HDMI_AP, _P74_CA_PT_0D_PORT_PAGE74_ZCD_TIMEOUT, ~(_BIT6 | _BIT5 | _BIT4 | _BIT3 | _BIT2 | _BIT1 | _BIT0), _ZCD_TIMEOUT_DEFAULT);
-
-    // Set Boundary Address = 5 for Boundary Tracking
-    ScalerSetDataPortBit(P74_C9_HDMI_AP, _P74_CA_PT_1B_PORT_PAGE74_HDMI_FBR, ~(_BIT2 | _BIT1 | _BIT0), (_BIT2 | _BIT0));
-
-    // Set I __code of trend
-    ScalerSetDataPortByte(P74_C9_HDMI_AP, _P74_CA_PT_20_PORT_PAGE74_HDMI_ICTPSR0, 0x00);
-    ScalerSetDataPortByte(P74_C9_HDMI_AP, _P74_CA_PT_21_PORT_PAGE74_HDMI_ICTPSR1, 0x02);
-
-    // Set P __code of trend
-    ScalerSetDataPortByte(P74_C9_HDMI_AP, _P74_CA_PT_22_PORT_PAGE74_HDMI_PCTPSR0, 0x7F);
-    ScalerSetDataPortByte(P74_C9_HDMI_AP, _P74_CA_PT_23_PORT_PAGE74_HDMI_PCTPSR1, 0xFF);
-
-    // Set I __code of boundary
-    ScalerSetDataPortByte(P74_C9_HDMI_AP, _P74_CA_PT_24_PORT_PAGE74_HDMI_ICBPSR0, HIBYTE(_INITIAL_I_CODE));
-    ScalerSetDataPortByte(P74_C9_HDMI_AP, _P74_CA_PT_25_PORT_PAGE74_HDMI_ICBPSR1, LOBYTE(_INITIAL_I_CODE));
-
-    // Set P __code of boundary
-    ScalerSetDataPortByte(P74_C9_HDMI_AP, _P74_CA_PT_26_PORT_PAGE74_HDMI_PCBPSR0, 0x7F);
-    ScalerSetDataPortByte(P74_C9_HDMI_AP, _P74_CA_PT_27_PORT_PAGE74_HDMI_PCBPSR1, 0xFF);
-
-    // Audio Normal Output
-    ScalerSetDataPortBit(P74_C9_HDMI_AP, _P74_CA_PT_30_PORT_PAGE74_HDMI_AVMCR, ~(_BIT6 | _BIT5), (_BIT6 | _BIT5));
-
-    // Disable Audio Watchdog for FIFO Overflow/Underflow
-    ScalerSetDataPortBit(P74_C9_HDMI_AP, _P74_CA_PT_31_PORT_PAGE74_HDMI_WDCR0, ~(_BIT2 | _BIT1), 0x00);
-
-    // Set X Value
-    ScalerSetDataPortBit(P74_C9_HDMI_AP, _P74_CA_PT_32_PORT_PAGE74_HDMI_WDCR1, ~(_BIT3 | _BIT2 | _BIT1 | _BIT0), (_BIT1 | _BIT0));
-
-    // Set Y Value
-    ScalerSetDataPortBit(P74_C9_HDMI_AP, _P74_CA_PT_33_PORT_PAGE74_HDMI_WDCR2, ~(_BIT3 | _BIT2 | _BIT1 | _BIT0), (_BIT1 | _BIT0));
-
-    // Bit2: When no audio or changing sampling rate, AFSM load double buffer one more.
-    ScalerSetDataPortBit(P74_C9_HDMI_AP, _P74_CA_PT_9F_PORT_PAGE74_PRESET_AFSM_MOD, ~(_BIT7 | _BIT6 | _BIT5 | _BIT4 | _BIT2), (_BIT7 | _BIT6 | _BIT5 | _BIT4 | _BIT2));
-
-    // Seperate the detected sampling frequency
-    ScalerSetDataPortBit(P74_C9_HDMI_AP, _P74_CA_PT_8B_PORT_PAGE74_AUDIO_FREQ_RESULT, ~(_BIT6 | _BIT5 | _BIT4), 0x00);
-
-    // Set 2ms for auto frequency detecttion
-    ScalerSetDataPortBit(P74_C9_HDMI_AP, _P74_CA_PT_8C_PORT_PAGE74_AUDIO_FREQ_RESULT_M, ~(_BIT6 | _BIT5), _BIT5);
-
-    // Change audio clk divider according to SYSCLK = 27MHz
-    ScalerSetDataPortByte(P74_C9_HDMI_AP, _P74_CA_PT_8E_PORT_PAGE74_XTAL_DIV, _AUTO_FREQ_DETECT_XTAL_DIV);
-
-    // Set threshold to sepeerate sampling frequency
-    ScalerSetDataPortByte(P74_C9_HDMI_AP, _P74_CA_PT_90_PORT_PAGE74_TH1, 0x00);
-    ScalerSetDataPortByte(P74_C9_HDMI_AP, _P74_CA_PT_91_PORT_PAGE74_TH2, 0x28);
-    ScalerSetDataPortByte(P74_C9_HDMI_AP, _P74_CA_PT_92_PORT_PAGE74_TH3, 0x4C);
-    ScalerSetDataPortByte(P74_C9_HDMI_AP, _P74_CA_PT_93_PORT_PAGE74_TH4, 0x5C);
-    ScalerSetDataPortByte(P74_C9_HDMI_AP, _P74_CA_PT_94_PORT_PAGE74_TH5, 0x70);
-
-#if(_AUDIO_MANUAL_SAMPLING_FREQ_SUPPORT == _ON)
-
-    // Disable Auto Load S Code D __code
-    ScalerSetDataPortBit(P74_C9_HDMI_AP, _P74_CA_PT_8A_PORT_PAGE74_AUDIO_FREQDET, ~_BIT6, 0x00);
-
-#if(_FIX_SAMPLING_FREQ_TYPE == _FIX_FREQ_32KHZ)
-
-    // Set S __code for 32kHz
-    ScalerSetDataPortByte(P74_C9_HDMI_AP, _P74_CA_PT_12_PORT_PAGE74_HDMI_SCAPR, _HDMI_SAMPLING_FREQ_32K_GROUP_S_CODE);
-
-    // Set D __code for 32kHz
-    ScalerSetDataPortByte(P74_C9_HDMI_AP, _P74_CA_PT_13_PORT_PAGE74_HDMI_DCAPR0, HIBYTE(_HDMI_SAMPLING_FREQ_32K_GROUP_D_CODE));
-    ScalerSetDataPortByte(P74_C9_HDMI_AP, _P74_CA_PT_14_PORT_PAGE74_HDMI_DCAPR1, LOBYTE(_HDMI_SAMPLING_FREQ_32K_GROUP_D_CODE));
-
-#elif(_FIX_SAMPLING_FREQ_TYPE == _FIX_FREQ_44_1KHZ)
-
-    // Set S __code for 44.1kHz
-    ScalerSetDataPortByte(P74_C9_HDMI_AP, _P74_CA_PT_12_PORT_PAGE74_HDMI_SCAPR, _HDMI_SAMPLING_FREQ_44K_GROUP_S_CODE);
-
-    // Set D __code for 44.1kHz
-    ScalerSetDataPortByte(P74_C9_HDMI_AP, _P74_CA_PT_13_PORT_PAGE74_HDMI_DCAPR0, HIBYTE(_HDMI_SAMPLING_FREQ_44K_GROUP_D_CODE));
-    ScalerSetDataPortByte(P74_C9_HDMI_AP, _P74_CA_PT_14_PORT_PAGE74_HDMI_DCAPR1, LOBYTE(_HDMI_SAMPLING_FREQ_44K_GROUP_D_CODE));
-
-#else // _FIX_SAMPLING_FREQ_TYPE == _FIX_FREQ_48KHZ
-
-    // Set S __code for 48kHz
-    ScalerSetDataPortByte(P74_C9_HDMI_AP, _P74_CA_PT_12_PORT_PAGE74_HDMI_SCAPR, _HDMI_SAMPLING_FREQ_48K_GROUP_S_CODE);
-
-    // Set D __code for 48kHz
-    ScalerSetDataPortByte(P74_C9_HDMI_AP, _P74_CA_PT_13_PORT_PAGE74_HDMI_DCAPR0, HIBYTE(_HDMI_SAMPLING_FREQ_48K_GROUP_D_CODE));
-    ScalerSetDataPortByte(P74_C9_HDMI_AP, _P74_CA_PT_14_PORT_PAGE74_HDMI_DCAPR1, LOBYTE(_HDMI_SAMPLING_FREQ_48K_GROUP_D_CODE));
-
-#endif
-
-    // Set Double Buffer bit
-    ScalerSetDataPortBit(P74_C9_HDMI_AP, _P74_CA_PT_10_PORT_PAGE74_HDMI_CMCR, ~_BIT4, _BIT4);
-
-    // Load D __code
-    ScalerSetDataPortBit(P74_C9_HDMI_AP, _P74_CA_PT_31_PORT_PAGE74_HDMI_WDCR0, ~_BIT6, _BIT6);
-    ScalerSetDataPortBit(P74_C9_HDMI_AP, _P74_CA_PT_31_PORT_PAGE74_HDMI_WDCR0, ~_BIT6, 0x00);
-
-#else
-
-    // Disable Auto Load S Code D __code
-    ScalerSetDataPortBit(P74_C9_HDMI_AP, _P74_CA_PT_8A_PORT_PAGE74_AUDIO_FREQDET, ~_BIT6, 0x00);
-
-    // Set S __code for 32kHz
-    ScalerSetDataPortByte(P74_C9_HDMI_AP, _P74_CA_PT_12_PORT_PAGE74_HDMI_SCAPR, _HDMI_SAMPLING_FREQ_32K_GROUP_S_CODE);
-
-    // Set D __code for 32kHz
-    ScalerSetDataPortByte(P74_C9_HDMI_AP, _P74_CA_PT_13_PORT_PAGE74_HDMI_DCAPR0, HIBYTE(_HDMI_SAMPLING_FREQ_32K_GROUP_D_CODE));
-    ScalerSetDataPortByte(P74_C9_HDMI_AP, _P74_CA_PT_14_PORT_PAGE74_HDMI_DCAPR1, LOBYTE(_HDMI_SAMPLING_FREQ_32K_GROUP_D_CODE));
-
-    // Set Double Buffer bit
-    ScalerSetDataPortBit(P74_C9_HDMI_AP, _P74_CA_PT_10_PORT_PAGE74_HDMI_CMCR, ~_BIT4, _BIT4);
-
-    // Load D __code
-    ScalerSetDataPortBit(P74_C9_HDMI_AP, _P74_CA_PT_31_PORT_PAGE74_HDMI_WDCR0, ~_BIT6, _BIT6);
-    ScalerSetDataPortBit(P74_C9_HDMI_AP, _P74_CA_PT_31_PORT_PAGE74_HDMI_WDCR0, ~_BIT6, 0x00);
-
-    // Set S __code for auto load mode
-    ScalerSetDataPortByte(P74_C9_HDMI_AP, _P74_CA_PT_95_PORT_PAGE74_PRESET_S_CODE0, _HDMI_SAMPLING_FREQ_32K_GROUP_S_CODE);
-    ScalerSetDataPortByte(P74_C9_HDMI_AP, _P74_CA_PT_96_PORT_PAGE74_PRESET_S_CODE1, _HDMI_SAMPLING_FREQ_44K_GROUP_S_CODE);
-    ScalerSetDataPortByte(P74_C9_HDMI_AP, _P74_CA_PT_97_PORT_PAGE74_PRESET_S_CODE2, _HDMI_SAMPLING_FREQ_48K_GROUP_S_CODE);
-
-    // Set D __code for auto load mode
-    ScalerSetDataPortByte(P74_C9_HDMI_AP, _P74_CA_PT_99_PORT_PAGE74_PRESET_D_CODE_0, HIBYTE(_HDMI_SAMPLING_FREQ_32K_GROUP_D_CODE));
-    ScalerSetDataPortByte(P74_C9_HDMI_AP, _P74_CA_PT_9A_PORT_PAGE74_PRESET_D_CODE_1, LOBYTE(_HDMI_SAMPLING_FREQ_32K_GROUP_D_CODE));
-    ScalerSetDataPortByte(P74_C9_HDMI_AP, _P74_CA_PT_9B_PORT_PAGE74_PRESET_D_CODE_2, HIBYTE(_HDMI_SAMPLING_FREQ_44K_GROUP_D_CODE));
-    ScalerSetDataPortByte(P74_C9_HDMI_AP, _P74_CA_PT_9C_PORT_PAGE74_PRESET_D_CODE_3, LOBYTE(_HDMI_SAMPLING_FREQ_44K_GROUP_D_CODE));
-    ScalerSetDataPortByte(P74_C9_HDMI_AP, _P74_CA_PT_9D_PORT_PAGE74_PRESET_D_CODE_4, HIBYTE(_HDMI_SAMPLING_FREQ_48K_GROUP_D_CODE));
-    ScalerSetDataPortByte(P74_C9_HDMI_AP, _P74_CA_PT_9E_PORT_PAGE74_PRESET_D_CODE_5, LOBYTE(_HDMI_SAMPLING_FREQ_48K_GROUP_D_CODE));
-
-    // Enable Auto Load S Code
-    ScalerSetDataPortBit(P74_C9_HDMI_AP, _P74_CA_PT_8A_PORT_PAGE74_AUDIO_FREQDET, ~_BIT6, _BIT6);
-
-    // Set Double Buffer bit
-    ScalerSetDataPortBit(P74_C9_HDMI_AP, _P74_CA_PT_10_PORT_PAGE74_HDMI_CMCR, ~_BIT4, _BIT4);
-
-#endif // End of #if(_AUDIO_MANUAL_SAMPLING_FREQ_SUPPORT == _ON)
-
-    // Enable Audio Freq Detect, Disable Samping Freq. Change INT
-    ScalerSetDataPortBit(P74_C9_HDMI_AP, _P74_CA_PT_8A_PORT_PAGE74_AUDIO_FREQDET, ~(_BIT7 | _BIT3 | _BIT1 | _BIT0), _BIT7);
-
-    // Enable SPDIF/I2S Output
-    ScalerSetDataPortByte(P74_C9_HDMI_AP, _P74_CA_PT_62_PORT_PAGE74_HDMI_AOCR, 0xFF);
-
-    CLR_AUDIO_D5_ICODE_RELOADED();
-}
-//--------------------------------------------------
-// Description  : Load initial I Code
-// Input Value  : None
-// Output Value : None
-//--------------------------------------------------
-void ScalerAudioD5LoadInitialICode(void)
-{
-    // Set high byte of I __code for boundary tracking for HDMI audio
-    ScalerSetDataPortByte(P74_C9_HDMI_AP, _P74_CA_PT_24_PORT_PAGE74_HDMI_ICBPSR0, HIBYTE(_INITIAL_I_CODE));
-
-    // Set low byte of I __code for boundary tracking for HDMI audio
-    ScalerSetDataPortByte(P74_C9_HDMI_AP, _P74_CA_PT_25_PORT_PAGE74_HDMI_ICBPSR1, LOBYTE(_INITIAL_I_CODE));
-
-    DebugMessageAudio("Load initial I code", _INITIAL_I_CODE);
-}
-//--------------------------------------------------
-// Description  : Timer Event to Load Stable I Code
-// Input Value  : None
-// Output Value : None
-//--------------------------------------------------
-void ScalerAudioD5LoadStableICodeEvent(void)
-{
-    // Set high byte of I __code for boundary tracking
-    ScalerSetDataPortByte(P74_C9_HDMI_AP, _P74_CA_PT_24_PORT_PAGE74_HDMI_ICBPSR0, HIBYTE(_STABLE_I_CODE));
-
-    // Set low byte of I __code for boundary tracking
-    ScalerSetDataPortByte(P74_C9_HDMI_AP, _P74_CA_PT_25_PORT_PAGE74_HDMI_ICBPSR1, LOBYTE(_STABLE_I_CODE));
-
-    DebugMessageAudio("Load stable I code", _STABLE_I_CODE);
-}
-//--------------------------------------------------
-// Description  : Detect D5 Audio Sampling Freq
-// Input Value  : None
-// Output Value : Audio Sampling Freq
-//--------------------------------------------------
-EnumAudioSamplingFreqType ScalerAudioD5SamplingFreqDetect(void)
-{
-    EnumAudioSamplingFreqType enumAudioFreq = _AUDIO_FREQ_NO_AUDIO;
-
-#if(_INTERNAL_AUDIO_TEST_SUPPORT == _ON)
-    if(ScalerAudioD5GetInternalAudioGenEnable() == _ENABLE)
-    {
-        // For Audio test pattern
-        SET_AUDIO_D5_SAMPLING_FREQ(_AUDIO_FREQ_48K);
-        return _AUDIO_FREQ_48K;
-    }
-#endif
-
-    enumAudioFreq = ScalerGetDataPortBit(P74_C9_HDMI_AP, _P74_CA_PT_8B_PORT_PAGE74_AUDIO_FREQ_RESULT, (_BIT3 | _BIT2 | _BIT1 | _BIT0));
-
-#if(_EMBEDDED_DAC_SUPPORT == _ON)
-    if(enumAudioFreq != GET_AUDIO_D5_SAMPLING_FREQ())
-    {
-        if(enumAudioFreq <= _AUDIO_FREQ_64K)
-        {
-            ScalerSetBit(P6_D4_DA_CLK_CTRL, ~(_BIT7 | _BIT6), 0x00);
-        }
-        else if(enumAudioFreq <= _AUDIO_FREQ_128K)
-        {
-            ScalerSetBit(P6_D4_DA_CLK_CTRL, ~(_BIT7 | _BIT6), _BIT6);
-        }
-        else
-        {
-            ScalerSetBit(P6_D4_DA_CLK_CTRL, ~(_BIT7 | _BIT6), _BIT7);
-        }
-    }
-#endif
-
-    SET_AUDIO_D5_SAMPLING_FREQ(enumAudioFreq);
-
-    return enumAudioFreq;
-}
-
-//--------------------------------------------------
-// Description  : Initial D5 Auido PLL Settings
-// Input Value  : None
-// Output Value : None
-//--------------------------------------------------
-void ScalerAudioD5SetAudioPLL(void)
-{
-    // DPLL power dwon
-    ScalerSetDataPortBit(P74_C9_HDMI_AP, _P74_CA_PT_38_PORT_PAGE74_HDMI_DPCR0, ~_BIT7, _BIT7);
-
-    // Set M __code
-    ScalerSetDataPortByte(P74_C9_HDMI_AP, _P74_CA_PT_11_PORT_PAGE74_HDMI_MCAPR, (_AUDIO_PLL_M - 2));
-
-    // Set O __code
-    ScalerSetDataPortBit(P74_C9_HDMI_AP, _P74_CA_PT_38_PORT_PAGE74_HDMI_DPCR0, ~(_BIT5 | _BIT4), 0x00);
-
-    // Set K __code and enable double buffer
-    ScalerSetDataPortBit(P74_C9_HDMI_AP, _P74_CA_PT_10_PORT_PAGE74_HDMI_CMCR, ~(_BIT4 | _BIT3 | _BIT2 | _BIT1 | _BIT0), (_BIT4 | ((_AUDIO_PLL_K - 2) & 0x0F)));
-
-    // Initial VCO Band = 10
-    ScalerSetDataPortBit(P74_C9_HDMI_AP, _P74_CA_PT_3A_PORT_PAGE74_HDMI_DPCR2, ~(_BIT4 | _BIT3), _BIT4);
-
-    // Set MN PLL Path1 => [2]: 1 = Path1, 0 = Path2
-    ScalerSetDataPortBit(P74_C9_HDMI_AP, _P74_CA_PT_3A_PORT_PAGE74_HDMI_DPCR2, ~(_BIT7 | _BIT2), _BIT2);
-
-#if(_HW_PLL_EDGE_SELECT_TYPE == _PLL_EDGE_GEN_1_DEFAULT_POSITIVE)
-    // Set PLL Edge = Negative
-    ScalerSetDataPortBit(P74_C9_HDMI_AP, _P74_CA_PT_3F_PORT_PAGE74_DPLL_LDO, ~_BIT1, _BIT1);
-#endif
-
-    // DPLL VCORSTB Set to Normal
-    ScalerSetDataPortBit(P74_C9_HDMI_AP, _P74_CA_PT_3B_PORT_PAGE74_HDMI_DPCR3, ~_BIT0, _DPLL_VCORSTB_NORMAL_VALUE);
-
-    // DPLL power up
-    ScalerSetDataPortBit(P74_C9_HDMI_AP, _P74_CA_PT_38_PORT_PAGE74_HDMI_DPCR0, ~_BIT7, 0x00);
-
-    // Delay 2000us
-    ScalerTimerDelayXms(2);
-
-    // DPLL CMP enable
-    ScalerSetDataPortBit(P74_C9_HDMI_AP, _P74_CA_PT_38_PORT_PAGE74_HDMI_DPCR0, ~_BIT0, _BIT0);
-
-    // Delay 1000us
-    ScalerTimerDelayXms(2);
-
-    // DPLL latch calibration enable
-    ScalerSetDataPortBit(P74_C9_HDMI_AP, _P74_CA_PT_38_PORT_PAGE74_HDMI_DPCR0, ~_BIT1, _BIT1);
-
-    // Delay 1000us
-    ScalerTimerDelayXms(2);
-
-    // DPLL calibration validated
-    ScalerSetDataPortBit(P74_C9_HDMI_AP, _P74_CA_PT_38_PORT_PAGE74_HDMI_DPCR0, ~_BIT2, _BIT2);
-}
-//--------------------------------------------------
-// Description  : D5 Audio Watch Dog Proc
-// Input Value  : bOn
-// Output Value : None
-//--------------------------------------------------
-void ScalerAudioD5WatchDogProc(bit bOn)
-{
-    if(bOn == _ON)
-    {
-        // Clear audio FIFO overflow and underflow status
-        ScalerSetBit(P74_CB_HDMI_SR, ~(_BIT2 | _BIT1), (_BIT2 | _BIT1));
-
-        // Enable Audio Watch Dog for FIFO Overflow/Underflow
-        ScalerSetDataPortBit(P74_C9_HDMI_AP, _P74_CA_PT_31_PORT_PAGE74_HDMI_WDCR0, ~(_BIT2 | _BIT1), (_BIT2 | _BIT1));
-    }
-    else
-    {
-        // Disable Audio Watch Dog for FIFO Overflow/Underflow
-        ScalerSetDataPortBit(P74_C9_HDMI_AP, _P74_CA_PT_31_PORT_PAGE74_HDMI_WDCR0, ~(_BIT2 | _BIT1), 0x00);
-    }
-}
-
-#if(_INTERNAL_AUDIO_TEST_SUPPORT == _ON)
-//--------------------------------------------------
-// Description  : Get Whether Internal Audio Pattern Gen is Enabled
-// Input Value  : None
-// Output Value : _ENABLE or _DISABLE
-//--------------------------------------------------
-bit ScalerAudioD5GetInternalAudioGenEnable(void)
-{
-    if(ScalerGetDataPortBit(P74_C9_HDMI_AP, _P74_CA_PT_03_PORT_PAGE74_HDMI_AFCR, _BIT4) == _BIT4)
-    {
-        return _ENABLE;
-    }
-    else
-    {
-        return _DISABLE;
-    }
-}
-//--------------------------------------------------
-// Description  : D5 Auido Speaker Testing Process
-// Input Value  : Enable or Disable
-// Output Value : None
-//--------------------------------------------------
-void ScalerAudioD5InternalAudioGenSwitch(bit bOn)
-{
-    if(bOn == _ON)
-    {
-        DebugMessageAudio("D5 Audio Test On", ScalerGetDataPortBit(P74_C9_HDMI_AP, _P74_CA_PT_03_PORT_PAGE74_HDMI_AFCR, _BIT4));
-
-        // Disable audio FIFO and Enable audio internal generator
-        ScalerSetDataPortBit(P74_C9_HDMI_AP, _P74_CA_PT_03_PORT_PAGE74_HDMI_AFCR, ~(_BIT6 | _BIT4 | _BIT3 | _BIT2 | _BIT1 | _BIT0), _BIT4);
-
-        // Disbale DPLL Freq. Tuning
-        ScalerSetDataPortBit(P74_C9_HDMI_AP, _P74_CA_PT_3A_PORT_PAGE74_HDMI_DPCR2, ~_BIT1, 0x00);
-
-        // Set S __code
-        ScalerSetDataPortByte(P74_C9_HDMI_AP, _P74_CA_PT_12_PORT_PAGE74_HDMI_SCAPR, _HDMI_SAMPLING_FREQ_48K_GROUP_S_CODE);
-
-        // Set D __code
-        ScalerSetDataPortByte(P74_C9_HDMI_AP, _P74_CA_PT_13_PORT_PAGE74_HDMI_DCAPR0, HIBYTE(_HDMI_SAMPLING_FREQ_48K_GROUP_D_CODE));
-        ScalerSetDataPortByte(P74_C9_HDMI_AP, _P74_CA_PT_14_PORT_PAGE74_HDMI_DCAPR1, LOBYTE(_HDMI_SAMPLING_FREQ_48K_GROUP_D_CODE));
-
-        // Disable sample freq. detection and auto load S code / D __code
-        ScalerSetDataPortBit(P74_C9_HDMI_AP, _P74_CA_PT_8A_PORT_PAGE74_AUDIO_FREQDET, ~(_BIT7 | _BIT6), 0x00);
-
-        // Enable double buffer
-        ScalerSetDataPortBit(P74_C9_HDMI_AP, _P74_CA_PT_10_PORT_PAGE74_HDMI_CMCR, ~_BIT4, _BIT4);
-
-        ScalerAudioDigitalOutputMute(_OFF);
-    }
-    else
-    {
-        DebugMessageAudio("D5 Aduio Test Off", ScalerGetDataPortBit(P74_C9_HDMI_AP, _P74_CA_PT_03_PORT_PAGE74_HDMI_AFCR, _BIT4));
-
-        ScalerAudioDigitalOutputMute(_ON);
-
-        // Enable sample freq. detection and auto load S __code
-        ScalerSetDataPortBit(P74_C9_HDMI_AP, _P74_CA_PT_8A_PORT_PAGE74_AUDIO_FREQDET, ~(_BIT7 | _BIT6), (_BIT7 | _BIT6));
-
-        // Enable double buffer
-        ScalerSetDataPortBit(P74_C9_HDMI_AP, _P74_CA_PT_10_PORT_PAGE74_HDMI_CMCR, ~_BIT4, _BIT4);
-
-        // Enable DPLL Freq. Tuning
-        ScalerSetDataPortBit(P74_C9_HDMI_AP, _P74_CA_PT_3A_PORT_PAGE74_HDMI_DPCR2, ~_BIT1, _BIT1);
-
-        // Enable audio FIFO and Disable audio internal generator
-        ScalerSetDataPortBit(P74_C9_HDMI_AP, _P74_CA_PT_03_PORT_PAGE74_HDMI_AFCR, ~(_BIT6 | _BIT4 | _BIT3 | _BIT2 | _BIT1 | _BIT0), (_BIT6 | _BIT2 | _BIT1));
-    }
-}
-#endif
-
-#endif
-
-#endif // End of #if(_HDMI_SUPPORT == _ON)
 
 #if(_LINE_IN_SUPPORT == _ON)
 //--------------------------------------------------

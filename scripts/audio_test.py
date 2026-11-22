@@ -233,7 +233,7 @@ class Unit:
         import dbg_xdata as X
         import rtd_i2c_bridge as B
         self.X, self.B, self.mp = X, B, mp
-        self.sym = {n: xsym(mp, n) for n in ("g_stAudioInfo", "g_stAudioDACInfo", "g_stAudioD2DigtalInfo",
+        self.sym = {n: xsym(mp, n) for n in ("g_stAudioInfo", "g_stAudioDACInfo", "g_astAudioHdmiInfo",
                                               "isr_g_stPowerInfo", "isr_g_stModeInfo")}
         for n in ("g_ucAwtoAudioTestN",):
             try:
@@ -279,15 +279,15 @@ class Unit:
             g = (got[0x08A5] << 8 | got[0x08A6]) & 0x3FFF
             db = 20 * math.log10(g / 0x3FFF) if g else float("-inf")
             say(f"  DVC gain set 0x{g:04X} = {db:.1f} dB (0x3FFF = 0 dB, 0 = silent)")
-        for n in ("g_stAudioInfo", "g_stAudioDACInfo", "g_stAudioD2DigtalInfo", "isr_g_stPowerInfo", "isr_g_stModeInfo"):
+        for n in ("g_stAudioInfo", "g_stAudioDACInfo", "g_astAudioHdmiInfo", "isr_g_stPowerInfo", "isr_g_stModeInfo"):
             v = self.rd(rio, self.sym[n])
             got[n] = None if v is None else v[0]
         if got["g_stAudioInfo"] is not None:
             say(f"  SDK audio state {AUDIO_STATE[(got['g_stAudioInfo'] >> 4) & 3]}")
         if got["g_stAudioDACInfo"] is not None:
             say(f"  SDK DAC state {DAC_STATE[got['g_stAudioDACInfo'] & 7]}")
-        if got["g_stAudioD2DigtalInfo"] is not None:
-            d = got["g_stAudioD2DigtalInfo"]
+        if got["g_astAudioHdmiInfo"] is not None:
+            d = got["g_astAudioHdmiInfo"]
             say(f"  D2 HDMI audio: detected {d >> 4 & 1}, sampling {FREQ.get(d & 0xF, d & 0xF)}")
         if got["isr_g_stModeInfo"] is not None:
             say(f"  power {got['isr_g_stPowerInfo'] >> 4 if got['isr_g_stPowerInfo'] is not None else '?'} (2 = NORMAL), "

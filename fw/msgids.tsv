@@ -26,8 +26,8 @@
 0b15	Rx2	Kernel/Scaler/ScalerCommonFunction/Code/ScalerCommonSync.c:6516	Get Pixel Repetition 6	0
 0cff	Rx2	Kernel/Scaler/RL6449_Series_Scaler/Code/RL6449_Series_TMDSRx2.c:3970	HDMI 2.0 Error Boundary set High Byte	0
 0d09	Rx1	Kernel/Scaler/ScalerCommonFunction/Code/ScalerCommonDPRx1.c:1720	Misc change: Color Format, _COLOR_SPACE_Y_ONLY	0
-0d2a	Audio	Kernel/Scaler/RL6449_Series_Scaler/Code/RL6449_Series_Audio.c:1457	D1 Audio Tracking Disable	0
-0d2a	Audio	Kernel/Scaler/RL6449_Series_Scaler/Code/RL6449_Series_Audio.c:1534	D1 Audio Tracking Disable	0
+0d2a	Audio	Kernel/Scaler/RL6449_Series_Scaler/Code/RL6449_Series_Audio.c:1177	D1 Audio Tracking Disable	0
+0d2a	Audio	Kernel/Scaler/RL6449_Series_Scaler/Code/RL6449_Series_Audio.c:1254	D1 Audio Tracking Disable	0
 0dae	Rx1	Kernel/Scaler/ScalerCommonFunction/Code/ScalerCommonDPRx1.c:1495	_COLORIMETRY_RGB_SRGB	0
 0e39	Audio	Kernel/Scaler/ScalerFunction/Code/ScalerAudio.c:299	Fs = 176.4kHz	0
 0ea1	CheckMDomain	Kernel/Scaler/ScalerFunction/Code/ScalerMDomain.c:1874	OD use bit	1
@@ -39,7 +39,7 @@
 1192	Digital	Kernel/Scaler/ScalerFunction/Code/ScalerPLL.c:625	6. DPLL TBASE	1
 123b	Rx2	Kernel/Scaler/ScalerCommonFunction/Code/ScalerCommonSync.c:6459	Get Color Space YUV420	0
 12e5	Analog	Kernel/Scaler/ScalerFunction/Code/ScalerPLL.c:2957	ucNcode	0
-12ee	Audio	Kernel/Scaler/RL6449_Series_Scaler/Code/RL6449_Series_Audio.c:431	Audio D2: WatchDog	0
+12ee	Audio	Kernel/Scaler/RL6449_Series_Scaler/Code/RL6449_Series_Audio.c:421	Audio D2: WatchDog	0
 1363	Scaler	Kernel/System/Code/SysMode.c:687	DRR Get IVF from SPD info	0
 13c0	Rx1	Kernel/Scaler/ScalerCommonFunction/Code/ScalerCommonSync.c:1497	Rx1 got the HDCP!	0
 1446	Analog	Kernel/User Common Function/Code/UserCommonNVRamSystem.c:1482	4. Match presetmode	0
@@ -53,11 +53,10 @@
 163b	Rx2	Kernel/Scaler/ScalerCommonFunction/Code/ScalerCommonSync.c:6848	Get RGB FULL RANGE	0
 1693	Rx1	Kernel/Scaler/ScalerCommonFunction/Code/ScalerCommonDPRx1.c:975	HTotal Count	0
 16a2	Rx1	Kernel/Scaler/ScalerCommonFunction/Code/ScalerCommonDPRx1.c:1432	_COLORIMETRY_YCC_XVYCC601	0
-176b	Audio	Kernel/Scaler/ScalerFunction/Code/ScalerAudio_SeptPhy.c:1047	False : D3 HDMI Audio Tracking Disable	0
-182c	Audio	Kernel/Scaler/ScalerFunction/Code/ScalerAudio_SeptPhy.c:2039	D5 Audio Tracking Disable	0
+176b	Audio	Kernel/Scaler/ScalerFunction/Code/ScalerAudio_SeptPhy.c:777	False : D3 HDMI Audio Tracking Disable	0
 188d	Rx1	Kernel/Scaler/ScalerCommonFunction/Code/ScalerCommonDPRx1.c:1181	VSC DB16	0
 1903	FS	Kernel/Scaler/RL6449_Series_Scaler/Code/RL6449_Series_Memory.c:240	2. No Further IVS2DVSDelay Can Be Added	1
-19a0	Audio	Kernel/Scaler/RL6449_Series_Scaler/Code/RL6449_Series_Audio.c:423	Audio D1: WatchDog	0
+19a0	Audio	Kernel/Scaler/RL6449_Series_Scaler/Code/RL6449_Series_Audio.c:413	Audio D1: WatchDog	0
 1a13	Scaler	User/RTD Series/RTD2014Function/Code/RTD2014UserInterface.c:4227	ucIndex if Drr user define timing 	0
 1a1e	CEC	Kernel/Scaler/ScalerFunction/Code/ScalerCec.c:789	<= Cec Rx Read: DB	0
 1a4a	Rx2	Kernel/Scaler/RL6449_Series_Scaler/Code/RL6449_Series_TMDSRx2.c:4590	Pixel Repetition Not Received and not Pixel repetition 0	0
@@ -99,7 +98,7 @@
 2afb	Rx1	Kernel/Scaler/ScalerCommonFunction/Code/ScalerCommonDPRx1.c:1597	_COLORIMETRY_EXT_RGB_DCI_P3	0
 2b0b	Rx1	Kernel/Scaler/RL6449_Series_Scaler/Code/RL6449_Series_DPRx1.c:2187	modified M code	0
 2b7e	Rx2	Kernel/Scaler/ScalerFunction/Code/ScalerTMDSRx2_SeptPhy.c:856	7. PowerSaving D2 DDC	0
-2bc8	Audio	Kernel/Scaler/ScalerFunction/Code/ScalerAudio_SeptPhy.c:1033	False : D3 Audio Packet	0
+2bc8	Audio	Kernel/Scaler/ScalerFunction/Code/ScalerAudio_SeptPhy.c:763	False : D3 Audio Packet	0
 2d7e	Rx0	Kernel/Scaler/ScalerFunction/Code/ScalerDP_SeptPhy.c:950	7. DP HDCP Long HPD	0
 2dc9	Rx1	Kernel/Scaler/ScalerCommonFunction/Code/ScalerCommonDPRx1.c:1915	VSC change: Color Space, _COLOR_SPACE_YCBCR422	0
 2de2	FRC	Kernel/Scaler/RL6449_Series_Scaler/Code/RL6449_Series_Rotation.c:68	R-OH	1
@@ -111,16 +110,15 @@
 2ea5	Rx1	Kernel/Scaler/ScalerFunction/Code/ScalerDPRx1_SeptPhy.c:3942	7. DP 8b/10b Decode Error	0
 2ed3	Rx1	Kernel/Scaler/ScalerCommonFunction/Code/ScalerCommonDPRx1.c:1641	_YCC_QUANTIZATION_FULL_RANGE	0
 2ee4	Rx1	Kernel/Scaler/ScalerCommonFunction/Header/ScalerCommonSyncInclude.h:599	SET_DP_RX1_HOTPLUG_ASSERT_TYPE	0
-2ee8	Audio	Kernel/Scaler/ScalerFunction/Code/ScalerAudio_SeptPhy.c:784	False : D2 Audio Packet	0
 2f29	System	Kernel/System/Code/SysSource.c:2831	7. Switch Port No Cable Finish	1
 2f32	Rx1	Kernel/Scaler/ScalerCommonFunction/Code/ScalerCommonDPRx1.c:1962	VSC change: Color Space	0
-2f64	Audio	Kernel/Scaler/ScalerFunction/Code/ScalerAudio_SeptPhy.c:1054	False : D3 HDMI Audio FIFO	0
+2f64	Audio	Kernel/Scaler/ScalerFunction/Code/ScalerAudio_SeptPhy.c:784	False : D3 HDMI Audio FIFO	0
 2f69	Rx1	Kernel/Scaler/ScalerFunction/Code/ScalerDPRx1_SeptPhy.c:1615	DP Lane	0
 3025	Rx1	Kernel/Scaler/ScalerCommonFunction/Code/ScalerCommonDPRx1.c:1001	7. Frame diff ABS	0
 30a2	System	Kernel/User Common Function/Code/UserCommonInterface.c:3461	DP Version	1
 3109	Analog	Kernel/Scaler/ScalerFunction/Code/ScalerPLL.c:3550	Measure edge phase	0
 310d	System	Kernel/System/Code/SysSource.c:4091	0. Cable Status Changed D1	1
-3113	Audio	Kernel/Scaler/RL6449_Series_Scaler/Code/RL6449_Series_Audio.c:415	Audio D0: WatchDog	0
+3113	Audio	Kernel/Scaler/RL6449_Series_Scaler/Code/RL6449_Series_Audio.c:405	Audio D0: WatchDog	0
 31da	Rx1	Kernel/Scaler/ScalerCommonFunction/Code/ScalerCommonDPRx1.c:1532	_COLORIMETRY_EXT_YCC_ITUR_BT709	0
 3259	System	Kernel/System/Code/SysJudge.c:793	Input Timing HSyncWidth	1
 3277	System	Kernel/System/Code/SysSource.c:4524	0. Cable Status Changed D5	1
@@ -129,25 +127,21 @@
 33e4	System	Kernel/User Common Function/Code/UserCommonInterface.c:3757	OSD -- MST On/Off Switch	1
 33e4	System	Kernel/User Common Function/Code/UserCommonInterface.c:3767	OSD -- MST On/Off Switch	1
 33e4	System	Kernel/User Common Function/Code/UserCommonInterface.c:3785	OSD -- MST On/Off Switch	1
-33f5	Audio	Kernel/Scaler/ScalerFunction/Code/ScalerAudio_SeptPhy.c:907	D2 Audio Test On	0
 342a	Rx2	Kernel/Scaler/RL6449_Series_Scaler/Code/RL6449_Series_TMDSRx2.c:3976	Format Detect HDMI	0
 343d	System	Kernel/System/Code/SysJudge.c:798	Input Timing VSyncSWidth	1
 34c3	Rx1	Kernel/Scaler/ScalerFunction/Code/ScalerDPRx1_SeptPhy.c:5401	7. DP Video Stream Fail	0
 34c3	Rx1	Kernel/Scaler/ScalerFunction/Code/ScalerDPRx1_SeptPhy.c:5837	7. DP Video Stream Fail	0
-3561	Audio	Kernel/Scaler/ScalerFunction/Code/ScalerAudio_SeptPhy.c:2079	False : D5 HDMI Audio Tracking Disable	0
 3584	Rx1	Kernel/Scaler/ScalerCommonFunction/Code/ScalerCommonDPRx1.c:262	VBIOS_Lane_Count_MST	0
 35ec	Rx1	Kernel/Scaler/ScalerCommonFunction/Code/ScalerCommonDPRx1.c:1480	_COLORIMETRY_RGB_ADOBERGB	0
-3606	Audio	Kernel/Scaler/ScalerFunction/Code/ScalerAudio_SeptPhy.c:1523	D4 Audio Tracking Disable	0
 3666	System	Kernel/System/Code/SysSource.c:384	bH_Select == 0,bP_Select ==1	1
 366e	Rx1	Kernel/Scaler/ScalerFunction/Code/ScalerDPRx1_SeptPhy.c:5466	7. DP SteamClk Fail	0
 36d8	Scaler	Kernel/Scaler/ScalerFunction/Code/ScalerMDomain.c:1961	Accuracy IVF	0
 36ec	CheckMDomain	Kernel/Scaler/ScalerFunction/Code/ScalerMDomain.c:1852	FrameSync Line Buffer	1
 36ed	Check	Kernel/Scaler/ScalerFunction/Code/ScalerDisplayDPTx.c:2760	eDP Tx2 LTend Pass	1
 37db	FS	Kernel/Scaler/ScalerFunction/Code/ScalerMemory.c:569	7. Target Dt Value	1
-3883	Audio	Kernel/Scaler/RL6449_Series_Scaler/Code/RL6449_Series_Audio.c:1692	WD : D1 DP Audio Over/Underflow	0
+3883	Audio	Kernel/Scaler/RL6449_Series_Scaler/Code/RL6449_Series_Audio.c:1412	WD : D1 DP Audio Over/Underflow	0
 3a26	Rx2	Kernel/Scaler/RL6449_Series_Scaler/Code/RL6449_Series_TMDSRx2.c:4563	Pixel Repetition Info Changed	0
 3aab	FRC	Kernel/Scaler/RL6449_Series_Scaler/Code/RL6449_Series_Scaling.c:588	ulHSDSpace	1
-3b0b	Audio	Kernel/Scaler/ScalerFunction/Code/ScalerAudio_SeptPhy.c:1423	D3 Audio Test On	0
 3b83	Rx2	Kernel/Scaler/RL6449_Series_Scaler/Code/RL6449_Series_TMDSRx2.c:3397	4. reset Icp	0
 3b9b	Mst	Kernel/System/Code/SysPower.c:1214	SysPower Check Fake Saving	0
 3bef	FRC	Kernel/Scaler/RL6449_Series_Scaler/Code/RL6449_Series_FRC.c:1049	Error4-input faster/slower mis-match: DHF'	1
@@ -155,17 +149,14 @@
 3c14	Measure	Kernel/Scaler/RL6449_Series_Scaler/Code/RL6449_Series_Measure.c:524	Digital check V height fail	1
 3c15	Measure	Kernel/Scaler/RL6449_Series_Scaler/Code/RL6449_Series_Measure.c:446	Digital off-line measure fail	1
 3c5c	System	Kernel/System/Code/SysSource.c:2064	7. wuanne test : Search Initial : 3	1
-3cb1	Audio	Kernel/Scaler/ScalerFunction/Code/ScalerAudio_SeptPhy.c:1493	D4 Audio Tracking Enable	0
 3cdc	Scaler	Kernel/Scaler/ScalerFunction/Code/ScalerIDomain.c:180	9. Set Capture usHStart	0
 3ce1	Rx2	Kernel/Scaler/RL6449_Series_Scaler/Code/RL6449_Series_TMDSRx2.c:4412	Rx2 HPD Toggle!!	0
 3ce1	Rx2	Kernel/Scaler/RL6449_Series_Scaler/Code/RL6449_Series_TMDSRx2.c:4724	Rx2 HPD Toggle!!	0
 3d09	Rx1	Kernel/Scaler/ScalerCommonFunction/Code/ScalerCommonDPRx1.c:1547	_COLORIMETRY_EXT_YCC_SYCC601	0
-3dc4	Audio	Kernel/Scaler/ScalerFunction/Code/ScalerAudio_SeptPhy.c:805	False : D2 HDMI Audio FIFO	0
 3e5d	Scaler	Kernel/Scaler/ScalerCommonFunction/Code/ScalerCommonMcu.c:2615	- IIC Write Time Out: Transmit	0
-3f9c	Audio	Kernel/Scaler/RL6449_Series_Scaler/Code/RL6449_Series_Audio.c:1582	False : D1 DP Audio Tracking Disable	0
+3f9c	Audio	Kernel/Scaler/RL6449_Series_Scaler/Code/RL6449_Series_Audio.c:1302	False : D1 DP Audio Tracking Disable	0
 3fd3	FRC	Kernel/Scaler/ScalerFunction/Code/ScalerMDomain.c:1585	4. OD bit	1
 3fd7	Rx2	Kernel/Scaler/ScalerCommonFunction/Code/ScalerCommonSync.c:6737	Get Colorimetry EXT_YCC_ITUR_BT2020_CL	0
-408a	Audio	Kernel/Scaler/ScalerFunction/Code/ScalerAudio_SeptPhy.c:1579	False : D4 HDMI Audio DB Retry	0
 41fa	Rx2	Kernel/Scaler/ScalerCommonFunction/Code/ScalerCommonSync.c:6729	Get Colorimetry EXT_YCC_ADOBEYCC601	0
 430b	Rx1	Kernel/Scaler/ScalerCommonFunction/Code/ScalerCommonDPRx1.c:1460	_COLORIMETRY_RGB_SRGB_VESA	0
 4319	Scaler	Kernel/User Common Function/Code/UserCommonInterface.c:4360	MBR: Sequence Ctrl Enable	0
@@ -176,12 +167,9 @@
 44c8	Analog	User/RTD Series/RTD2014Function/Code/RTD2014UserInterface.c:3107	Detected by Special Case to _MODE_640x350_70HZ	0
 44ef	Digital	Kernel/Scaler/ScalerFunction/Code/ScalerPLL.c:623	6. DPLL SSCG Step	1
 4553	Rx1	Kernel/Scaler/ScalerCommonFunction/Code/ScalerCommonDPRx1.c:378	VBIOS_Link_Rate	0
-4608	Audio	Kernel/Scaler/RL6449_Series_Scaler/Code/RL6449_Series_Audio.c:1051	Load initial I code	0
-4608	Audio	Kernel/Scaler/RL6449_Series_Scaler/Code/RL6449_Series_Audio.c:1415	Load initial I code	0
-4608	Audio	Kernel/Scaler/ScalerFunction/Code/ScalerAudio_SeptPhy.c:1261	Load initial I code	0
-4608	Audio	Kernel/Scaler/ScalerFunction/Code/ScalerAudio_SeptPhy.c:1777	Load initial I code	0
-4608	Audio	Kernel/Scaler/ScalerFunction/Code/ScalerAudio_SeptPhy.c:2293	Load initial I code	0
-4608	Audio	Kernel/Scaler/ScalerFunction/Code/ScalerAudio_SeptPhy.c:842	Load initial I code	0
+4608	Audio	Kernel/Scaler/RL6449_Series_Scaler/Code/RL6449_Series_Audio.c:1135	Load initial I code	0
+4608	Audio	Kernel/Scaler/RL6449_Series_Scaler/Code/RL6449_Series_Audio.c:771	Load initial I code	0
+4608	Audio	Kernel/Scaler/ScalerFunction/Code/ScalerAudio_SeptPhy.c:991	Load initial I code	0
 4673	CheckMDomain	Kernel/Scaler/ScalerFunction/Code/ScalerMDomain.c:1883	[Warning]!!!!!! OD Disable	1
 473b	FS	Kernel/Scaler/ScalerFunction/Code/ScalerMDomain.c:1424	DVT	1
 4857	System	Kernel/Scaler/ScalerFunction/Code/ScalerMDomain.c:614	FS fine tune, Dclk larger than panel spec => Modify Htotal'	1
@@ -202,16 +190,14 @@
 4e23	Scaler	Kernel/User Common Function/Code/UserCommonInterface.c:4397	MBR: User Backlight Mode	0
 4f5d	Rx2	Kernel/Scaler/ScalerCommonFunction/Code/ScalerCommonSync.c:6776	Get Colorimetry EXT_RGB_ITUR_BT2020	0
 5078	Rx1	Kernel/Scaler/ScalerCommonFunction/Code/ScalerCommonDPRx1.c:1624	_COLORIMETRY_EXT_RAW_CUSTOM_COLOR_PROFILE	0
-53ad	Audio	Kernel/Scaler/ScalerFunction/Code/ScalerAudio_SeptPhy.c:1448	D3 Aduio Test Off	0
 53ce	Rx2	Kernel/Scaler/ScalerCommonFunction/Code/ScalerCommonSync.c:6481	Get Pixel Repetition 1	0
-53e7	Audio	Kernel/Scaler/ScalerFunction/Code/ScalerAudio_SeptPhy.c:977	D3 Audio Tracking Enable	0
 5429	FS	Kernel/Scaler/ScalerFunction/Code/ScalerMDomain.c:1423	usIvs2dvsDelay	1
 54d3	Rx2	Kernel/Scaler/RL6449_Series_Scaler/Code/RL6449_Series_TMDSRx2.c:3907	TMDS Rx2 First 1:10 set phy not success	0
+54d6	Audio	Kernel/Scaler/ScalerFunction/Code/ScalerAudio_SeptPhy.c:737	HDMI Audio Tracking Disable	0
 54ea	FS	Kernel/Scaler/RL6449_Series_Scaler/Code/RL6449_Series_Memory.c:272	2. Target IVS2DVS Delay too Large	1
 558c	Rx1	Kernel/Scaler/ScalerCommonFunction/Code/ScalerCommonDPRx1.c:1447	_COLORIMETRY_YCC_ITUR_BT709	0
 55ba	Rx1	Kernel/Scaler/ScalerCommonFunction/Code/ScalerCommonDPRx1.c:1646	_YCC_QUANTIZATION_LIMIT_RANGE	0
 566c	CheckMDomain	Kernel/Scaler/ScalerFunction/Code/ScalerMDomain.c:1864	MN FrameSync Frame Buffer	1
-567b	Audio	Kernel/Scaler/ScalerFunction/Code/ScalerAudio_SeptPhy.c:2455	D5 Audio Test On	0
 568c	CEC	Kernel/User Common Function/Code/UserCommonCec.c:64	CEC RX Read: HB 	0
 56a4	Rx1	Kernel/Scaler/ScalerCommonFunction/Code/ScalerCommonDPRx1.c:1728	Misc change: Color Format, _COLOR_SPACE_RAW	0
 56c0	Scaler	Kernel/Scaler/ScalerFunction/Code/ScalerPLL.c:2166	Dclk fine tune	0
@@ -232,23 +218,18 @@
 5c1c	System	Kernel/System/Code/SysJudge.c:791	Input Timing HStart	1
 5c3a	Rx1	Kernel/Scaler/ScalerCommonFunction/Code/ScalerCommonDPRx1.c:1933	VSC change: Color Space, _COLOR_SPACE_Y_ONLY	0
 5cc1	System	Kernel/System/Code/SysSource.c:3135	7. Dual DVI Initial	1
-5d6f	Audio	Kernel/Scaler/ScalerFunction/Code/ScalerAudio_SeptPhy.c:791	False : D2 AVMute	0
 5dcc	CEC	Kernel/Scaler/ScalerFunction/Code/ScalerCec.c:856	=> Cec Tx send: DB	0
 5ea8	CheckMDomain	Kernel/Scaler/ScalerFunction/Code/ScalerMDomain.c:1860	Free Run Mode	1
-5f4a	Audio	Kernel/Scaler/RL6449_Series_Scaler/Code/RL6449_Series_Audio.c:1567	False : D1 Audio Packet	0
-609c	Audio	Kernel/Scaler/RL6449_Series_Scaler/Code/RL6449_Series_Audio.c:1067	Load stable I code	0
-609c	Audio	Kernel/Scaler/RL6449_Series_Scaler/Code/RL6449_Series_Audio.c:1431	Load stable I code	0
-609c	Audio	Kernel/Scaler/ScalerFunction/Code/ScalerAudio_SeptPhy.c:1276	Load stable I code	0
-609c	Audio	Kernel/Scaler/ScalerFunction/Code/ScalerAudio_SeptPhy.c:1792	Load stable I code	0
-609c	Audio	Kernel/Scaler/ScalerFunction/Code/ScalerAudio_SeptPhy.c:2308	Load stable I code	0
-609c	Audio	Kernel/Scaler/ScalerFunction/Code/ScalerAudio_SeptPhy.c:857	Load stable I code	0
+5f4a	Audio	Kernel/Scaler/RL6449_Series_Scaler/Code/RL6449_Series_Audio.c:1287	False : D1 Audio Packet	0
+609c	Audio	Kernel/Scaler/RL6449_Series_Scaler/Code/RL6449_Series_Audio.c:1151	Load stable I code	0
+609c	Audio	Kernel/Scaler/RL6449_Series_Scaler/Code/RL6449_Series_Audio.c:787	Load stable I code	0
+609c	Audio	Kernel/Scaler/ScalerFunction/Code/ScalerAudio_SeptPhy.c:1006	Load stable I code	0
 615b	Rx1	Kernel/Scaler/ScalerCommonFunction/Code/ScalerCommonDPRx1.c:1485	_COLORIMETRY_RGB_DCI_P3	0
 616d	CheckMDomain	Kernel/Scaler/ScalerFunction/Code/ScalerMDomain.c:1797	== DISP_CHECK_START ==	1
 619d	Rx2	Kernel/Scaler/ScalerCommonFunction/Code/ScalerCommonSync.c:6945	Ext Colorimetry Changed	0
 61df	Rx1	Kernel/Scaler/ScalerCommonFunction/Code/ScalerCommonDPRx1.c:2611	MST ####Calculated usVTotal####	0
 6233	Check	Kernel/Scaler/ScalerFunction/Code/ScalerDisplayDPTx.c:2754	eDP Tx2 LTend Fail	1
 6247	Rx1	Kernel/Scaler/ScalerFunction/Code/ScalerDPRx1_SeptPhy.c:574	DP RX1 VGIP VS Bypass Mode	0
-6367	Audio	Kernel/Scaler/ScalerFunction/Code/ScalerAudio_SeptPhy.c:1570	False : D4 HDMI Audio FIFO	0
 6590	System	Kernel/System/Code/SysSource.c:2319	7. Bingo Defautlt!!!!!!!	1
 6590	System	Kernel/System/Code/SysSource.c:2975	7. Bingo Defautlt!!!!!!!	1
 65b8	CEC	Kernel/Scaler/ScalerFunction/Code/ScalerCec.c:286	CEC0 RX Backup Fifo Finished	0
@@ -257,7 +238,6 @@
 67bd	Rx0	Kernel/Scaler/ScalerCommonFunction/Code/ScalerCommonSync.c:1863	Flag Clear_Hotplug Event_D0	0
 67bd	Rx0	Kernel/Scaler/ScalerCommonFunction/Code/ScalerCommonSync.c:1924	Flag Clear_Hotplug Event_D0	0
 67d7	Analog	Kernel/Scaler/ScalerFunction/Code/ScalerPLL.c:3072	5. usPEValue	0
-6839	Audio	Kernel/Scaler/ScalerFunction/Code/ScalerAudio_SeptPhy.c:1964	D4 Aduio Test Off	0
 6877	Rx2	Kernel/Scaler/ScalerCommonFunction/Code/ScalerCommonSync.c:6809	Get YCC FULL RANGE	0
 68b5	CEC	Kernel/Scaler/ScalerFunction/Code/ScalerCec.c:719	CEC TX has been Nack	0
 68c3	Rx1	Kernel/Scaler/ScalerCommonFunction/Code/ScalerCommonDPRx1.c:2540	MST Current Link Clk	0
@@ -280,8 +260,6 @@
 6df3	Scaler	Kernel/Scaler/ScalerCommonFunction/Code/ScalerCommonMcu.c:2585	- IIC Write Time Out: Burst Mode	0
 6dfd	Check	Kernel/Scaler/ScalerFunction/Code/ScalerDisplayDPTx.c:2743	eDP Tx2 LT2 Lane or PN Fail	1
 6e46	Rx1	Kernel/Scaler/ScalerFunction/Code/ScalerDPRx1_SeptPhy.c:4208	7. IIIIIInterLace Vtotal	0
-6e77	Audio	Kernel/Scaler/ScalerFunction/Code/ScalerAudio_SeptPhy.c:798	False : D2 HDMI Audio Tracking Disable	0
-6eb6	Audio	Kernel/Scaler/ScalerFunction/Code/ScalerAudio_SeptPhy.c:758	D2 Audio Tracking Disable	0
 6f80	CEC	Kernel/Scaler/ScalerFunction/Code/ScalerCec.c:705	CEC TX DB Nack Happened!!	0
 6fbb	System	Kernel/System/Code/SysJudge.c:794	Input Timing VFreq	1
 7020	System	Kernel/System/Code/SysSource.c:5449	Background source judge!!	1
@@ -304,7 +282,7 @@
 7750	Rx1	Kernel/Scaler/ScalerFunction/Code/ScalerDPRx1_SeptPhy.c:2058	7. DP Freesync Get MSA Htotal Fail	0
 775a	Scaler	Kernel/User Common Function/Code/UserCommonInterface.c:4434	MBR: Strobe to Constant	0
 7774	Rx2	Kernel/Scaler/ScalerCommonFunction/Code/ScalerCommonSync.c:6661	Get Colorimetry RGB_SRGB	0
-7886	Audio	Kernel/Scaler/RL6449_Series_Scaler/Code/RL6449_Series_Audio.c:1127	D0 Audio Tracking Enable	0
+7886	Audio	Kernel/Scaler/RL6449_Series_Scaler/Code/RL6449_Series_Audio.c:847	D0 Audio Tracking Enable	0
 7892	System	Kernel/System/Code/SysSource.c:4417	0. Cable Status Changed D4	1
 79d7	Rx1	Kernel/Scaler/ScalerFunction/Code/ScalerDPRx1_SeptPhy.c:6300	7. MST PPPPProgressive	0
 7a39	FRC	Kernel/Scaler/ScalerFunction/Code/ScalerMemory.c:940	3Block-addr3	1
@@ -356,13 +334,12 @@
 8adb	Scaler	Kernel/System/Code/SysMode.c:714	DRR Get IVF from user define	0
 8b05	Rx2	Kernel/Scaler/RL6449_Series_Scaler/Code/RL6449_Series_TMDSRx2.c:3410	4. VCO is not band10, reset Icp	0
 8b29	Rx1	Kernel/Scaler/ScalerCommonFunction/Code/ScalerCommonDPRx1.c:1587	_COLORIMETRY_EXT_RGB_SCRGB	0
-8b2a	Audio	Kernel/Scaler/ScalerFunction/Code/ScalerAudio_SeptPhy.c:1563	False : D4 HDMI Audio Tracking Disable	0
 8b60	Rx1	Kernel/Scaler/ScalerFunction/Code/ScalerDP_SeptPhy.c:1020	7. DP Long HPD	0
 8b92	Rx1	Kernel/Scaler/ScalerCommonFunction/Code/ScalerCommonDPRx1.c:1537	_COLORIMETRY_EXT_YCC_XVYCC601	0
 8d5e	Rx1	Kernel/Scaler/RL6449_Series_Scaler/Code/RL6449_Series_DPRx1.c:2487	2nd PE Max Record	0
 8db7	Rx2	Kernel/Scaler/ScalerCommonFunction/Code/ScalerCommonSync.c:6488	Get Pixel Repetition 2	0
 8dec	Scaler	User/RTD Series/RTD2014Function/Code/RTD2014UserInterface.c:2204	MBR: ucBacklightPos	0
-8e9c	Audio	Kernel/Scaler/RL6449_Series_Scaler/Code/RL6449_Series_Audio.c:1218	False : D0 DP Audio Tracking Disable	0
+8e9c	Audio	Kernel/Scaler/RL6449_Series_Scaler/Code/RL6449_Series_Audio.c:938	False : D0 DP Audio Tracking Disable	0
 8ecd	Rx1	Kernel/Scaler/ScalerFunction/Code/ScalerDPRx1_SeptPhy.c:5830	7. DP Link Fail	0
 8f07	Rx1	Kernel/Scaler/ScalerCommonFunction/Code/ScalerCommonDPRx1.c:1736	Misc change: Color Format, _COLOR_SPACE_RGB	0
 8f0e	Rx2	Kernel/Scaler/RL6449_Series_Scaler/Code/RL6449_Series_TMDSRx2.c:4616	HDMI GCP PACKET Not Received and not 8 bit	0
@@ -373,9 +350,9 @@
 92b7	FRC	Kernel/Scaler/RL6449_Series_Scaler/Code/RL6449_Series_FRC.c:1059	Error3-input faster/slower mis-match: IHF'	1
 93bc	Measure	Kernel/Scaler/ScalerFunction/Code/ScalerMeasure.c:222	Interlace: detect by half line	0
 9442	CEC	Kernel/Scaler/ScalerFunction/Code/ScalerCec.c:682	CEC TX has been Ack	0
+9530	Audio	Kernel/Scaler/ScalerFunction/Code/ScalerAudio_SeptPhy.c:1178	HDMI Aduio Test Off	0
 956f	Rx1	Kernel/Scaler/ScalerCommonFunction/Code/ScalerCommonDPRx1.c:1000	7. Frame[N + 1] VBS2BS Counter	0
 9595	System	Kernel/System/Code/SysSource.c:3534	7. OSD Switch Port to --> 	1
-959d	Audio	Kernel/Scaler/ScalerFunction/Code/ScalerAudio_SeptPhy.c:2095	False : D5 HDMI Audio DB Retry	0
 9612	Rx2	Kernel/Scaler/RL6449_Series_Scaler/Code/RL6449_Series_TMDSRx2.c:3971	HDMI 2.0 Error Boundary set Low Byte	0
 9672	Rx2	Kernel/Scaler/ScalerCommonFunction/Code/ScalerCommonSync.c:6838	Get RGB LIMIT RANGE	0
 971e	Analog	User/RTD Series/RTD2014Function/Code/RTD2014UserInterface.c:3097	Detected by Special Case to 720x480-60	0
@@ -393,7 +370,6 @@
 9a8d	Rx1	Kernel/Scaler/ScalerCommonFunction/Code/ScalerCommonDPRx1.c:916	Current Link Clk	0
 9a8d	Rx1	Kernel/Scaler/ScalerFunction/Code/ScalerDPRx1_SeptPhy.c:4527	Current Link Clk	0
 9b2d	Rx1	Kernel/Scaler/ScalerFunction/Code/ScalerDP_SeptPhy.c:1033	7. DP Margin Link Long HPD	0
-9b9c	Audio	Kernel/Scaler/ScalerFunction/Code/ScalerAudio_SeptPhy.c:1939	D4 Audio Test On	0
 9bce	System	Kernel/User Common Function/Code/UserCommonInterface.c:3889	OSD -- Pin Assignment E Support On/Off Switch	1
 9c3c	Rx1	Kernel/Scaler/ScalerCommonFunction/Code/ScalerCommonDPRx1.c:1182	VSC DB17	0
 9cfb	Rx1	Kernel/Scaler/RL6449_Series_Scaler/Code/RL6449_Series_DPRx1.c:2486	2nd PE Loop	0
@@ -403,23 +379,22 @@
 a0d1	Rx1	Kernel/Scaler/ScalerFunction/Code/ScalerDPRx1_SeptPhy.c:4128	FREESYNC Mode Enabled!!	0
 a10f	Scaler	User/RTD Series/RTD2014Function/Code/RTD2014UserInterface.c:1591	D Clock Exceed Panel Supported Range	0
 a14d	Rx0	Kernel/Scaler/ScalerFunction/Code/ScalerDP_SeptPhy.c:394	_D0_HOT_PLUG_LOW	0
+a15a	Audio	Kernel/Scaler/ScalerFunction/Code/ScalerAudio_SeptPhy.c:1153	HDMI Audio Test On	0
 a1c7	Rx2	Kernel/Scaler/ScalerCommonFunction/Code/ScalerCommonSync.c:7015	RGB Quantization Range Changed	0
 a2d1	Rx1	Kernel/Scaler/ScalerCommonFunction/Code/ScalerCommonDPRx1.c:1897	VSC change: Color Space, _COLOR_SPACE_RGB	0
 a2d1	Rx1	Kernel/Scaler/ScalerCommonFunction/Code/ScalerCommonDPRx1.c:1951	VSC change: Color Space, _COLOR_SPACE_RGB	0
 a337	Rx2	Kernel/Scaler/ScalerCommonFunction/Code/ScalerCommonSync.c:6900	Color Space Changed	0
 a413	Rx1	Kernel/Scaler/ScalerFunction/Code/ScalerDPRx1_SeptPhy.c:6358	MST FREESYNC Mode Disabled!!	0
-a415	Audio	Kernel/Scaler/ScalerFunction/Code/ScalerAudio_SeptPhy.c:2009	D5 Audio Tracking Enable	0
 a46f	FRC	Kernel/Scaler/RL6449_Series_Scaler/Code/RL6449_Series_Scaling.c:702	4. FRC truncate color bit	1
 a4da	Rx1	Kernel/Scaler/ScalerFunction/Code/ScalerDPRx1_SeptPhy.c:5421	7. DP MSA Fail	0
 a590	System	Kernel/System/Code/SysSource.c:2732	7. Search Finish3 !!!!!!!!!!!!!!!!!!!	1
-a595	Audio	Kernel/Scaler/RL6449_Series_Scaler/Code/RL6449_Series_Audio.c:1203	False : D0 Audio Packet	0
+a595	Audio	Kernel/Scaler/RL6449_Series_Scaler/Code/RL6449_Series_Audio.c:923	False : D0 Audio Packet	0
 a60c	Rx1	Kernel/Scaler/ScalerCommonFunction/Code/ScalerCommonDPRx1.c:1582	_COLORIMETRY_EXT_RGB_XRRGB	0
 a680	Digital	Kernel/Scaler/ScalerFunction/Code/ScalerPLL.c:624	6. DPLL SSCG Step Weighting	1
 a68e	Rx1	Kernel/Scaler/ScalerCommonFunction/Code/ScalerCommonDPRx1.c:1437	_COLORIMETRY_YCC_ITUR_BT601	0
-a69c	Audio	Kernel/Scaler/RL6449_Series_Scaler/Code/RL6449_Series_Audio.c:1602	False : D1 DP Audio FSM Reset	0
+a69c	Audio	Kernel/Scaler/RL6449_Series_Scaler/Code/RL6449_Series_Audio.c:1322	False : D1 DP Audio FSM Reset	0
 a6ce	System	Kernel/Scaler/ScalerCommonFunction/Code/ScalerCommonTimerFunction.c:2329	No More Available Storage for Simultaneous Event!!!!!!	1
 a6de	FS	Kernel/Scaler/ScalerFunction/Code/ScalerIDomain.c:217	warning !!! Aspect ratio/ overscan maybe have garbage	1
-a731	Audio	Kernel/Scaler/ScalerFunction/Code/ScalerAudio_SeptPhy.c:2072	False : D5 AVMute	0
 a74b	Rx1	Kernel/Scaler/ScalerCommonFunction/Code/ScalerCommonDPRx1.c:1391	_COLOR_SPACE_YCBCR420	0
 a76e	Rx2	Kernel/Scaler/RL6449_Series_Scaler/Code/RL6449_Series_TMDSRx2.c:4418	CDR Unstable!!	0
 a877	Rx1	Kernel/Scaler/ScalerCommonFunction/Code/ScalerCommonDPRx1.c:1567	_COLORIMETRY_EXT_RESERVED	0
@@ -448,7 +423,7 @@ af5e	System	Kernel/User Common Function/Code/UserCommonInterface.c:4144	OSD -- D
 af80	Rx1	Kernel/Scaler/ScalerCommonFunction/Code/ScalerCommonDPRx1.c:1712	Misc change: Color Format, _COLOR_SPACE_YCBCR444	0
 b159	CEC	Kernel/Scaler/ScalerFunction/Code/ScalerCec.c:358	Cec Rx Read: DB (load to backup)	0
 b181	Rx1	Kernel/Scaler/RL6449_Series_Scaler/Code/RL6449_Series_DPRx1.c:2428	1st PE Loop	0
-b1cf	Audio	Kernel/Scaler/RL6449_Series_Scaler/Code/RL6449_Series_Audio.c:1491	D1 Audio Tracking Enable	0
+b1cf	Audio	Kernel/Scaler/RL6449_Series_Scaler/Code/RL6449_Series_Audio.c:1211	D1 Audio Tracking Enable	0
 b1ec	Audio	Kernel/Scaler/ScalerFunction/Code/ScalerAudio.c:304	Fs = 192kHz	0
 b209	Scaler	Kernel/Scaler/ScalerCommonFunction/Code/ScalerCommonSync.c:7405	Warning :  VGA DDC wait SCL idle timeout	0
 b236	Rx1	Kernel/Scaler/ScalerFunction/Code/ScalerDPRx1_SeptPhy.c:1082	_D1_HOT_PLUG_LOW	0
@@ -457,14 +432,11 @@ b236	Rx1	Kernel/Scaler/ScalerFunction/Code/ScalerDP_SeptPhy.c:408	_D1_HOT_PLUG_L
 b243	Rx2	Kernel/Scaler/RL6449_Series_Scaler/Code/RL6449_Series_TMDSRx2.c:3295	Deep Color Charge Pump icp =	0
 b2f0	Rx1	Kernel/Scaler/ScalerCommonFunction/Code/ScalerCommonDPRx1.c:1924	VSC change: Color Space, _COLOR_SPACE_YCBCR420	0
 b327	Measure	Kernel/Scaler/ScalerFunction/Code/ScalerMeasure.c:246	VGA off-line double check fail	1
-b352	Audio	Kernel/Scaler/ScalerFunction/Code/ScalerAudio_SeptPhy.c:728	D2 Audio Tracking Enable	0
 b380	Scaler	Kernel/Scaler/ScalerFunction/Code/ScalerMDomain.c:247	Memory Work Select	0
 b3cc	Rx1	Kernel/Scaler/ScalerCommonFunction/Code/ScalerCommonDPRx1.c:1602	_COLORIMETRY_EXT_RGB_CUSTOM_COLOR_PROFILE	0
 b427	Rx1	Kernel/Scaler/ScalerFunction/Code/ScalerDPRx1_SeptPhy.c:5858	7. MSA Timing Change	0
-b4d9	Audio	Kernel/Scaler/ScalerFunction/Code/ScalerAudio_SeptPhy.c:2065	False : D5 Audio Packet	0
 b4dd	Rx1	Kernel/Scaler/ScalerCommonFunction/Code/ScalerCommonDPRx1.c:1376	_COLOR_SPACE_RGB	0
 b4e3	Scaler	User/RTD Series/RTD2014Function/Code/RTD2014UserInterface.c:2203	MBR: ucBacklightDuty	0
-b524	Audio	Kernel/Scaler/ScalerFunction/Code/ScalerAudio_SeptPhy.c:2480	D5 Aduio Test Off	0
 b553	Rx1	Kernel/Scaler/ScalerCommonFunction/Code/ScalerCommonDPRx1.c:1465	_COLORIMETRY_RGB_SRGB_CEA	0
 b571	CEC	Kernel/Scaler/ScalerFunction/Code/ScalerCec.c:739	CEC TX MSG Sned!!	0
 b5b5	System	Kernel/User Common Function/Code/UserCommonNVRamSystem.c:1300	FlashSaveItem : Retry	1
@@ -490,7 +462,7 @@ bb1d	Measure	Kernel/Scaler/ScalerFunction/Code/ScalerMeasure.c:194	VGA auto-func
 bbff	Audio	Kernel/System/Code/SysAudio.c:371	Audio Dac Charge	0
 bc93	Rx1	Kernel/Scaler/ScalerFunction/Code/ScalerDPRx1_SeptPhy.c:2034	7.FREESYNC ignore MSA 0 -> 1	0
 bd53	System	Kernel/System/Code/SysSource.c:4311	0. Cable Status Changed D3	1
-bd5c	Audio	Kernel/Scaler/ScalerFunction/Code/ScalerAudio_SeptPhy.c:1040	False : D3 AVMute	0
+bd5c	Audio	Kernel/Scaler/ScalerFunction/Code/ScalerAudio_SeptPhy.c:770	False : D3 AVMute	0
 be1b	Rx1	Kernel/Scaler/ScalerCommonFunction/Code/ScalerCommonDPRx1.c:1661	_RGB_QUANTIZATION_FULL_RANGE	0
 be63	Rx1	Kernel/Scaler/ScalerCommonFunction/Code/ScalerCommonDPRx1.c:1542	_COLORIMETRY_EXT_YCC_XVYCC709	0
 be8d	Rx1	Kernel/Scaler/ScalerCommonFunction/Code/ScalerCommonDPRx1.c:2590	MST HTotal Count	0
@@ -523,7 +495,7 @@ c670	FRC	Kernel/Scaler/RL6449_Series_Scaler/Code/RL6449_Series_Scaling.c:600	IDE
 c6a8	Check	Kernel/Scaler/ScalerFunction/Code/ScalerDisplayDPTx.c:684	eDP Tx1 LT2 Pass	1
 c702	System	Kernel/System/Code/SysJudge.c:484	Measured Input HV Changed	1
 c7a8	Scaler	User/RTD Series/RTD2014Function/Code/RTD2014UserInterface.c:1601	FRC only supports dos-mode timing	0
-c899	Audio	Kernel/Scaler/RL6449_Series_Scaler/Code/RL6449_Series_Audio.c:1210	False : D0 DP Audio Fsm Disable	0
+c899	Audio	Kernel/Scaler/RL6449_Series_Scaler/Code/RL6449_Series_Audio.c:930	False : D0 DP Audio Fsm Disable	0
 c964	Scaler	Kernel/User Common Function/Code/UserCommonInterface.c:4275	MBR: Backlight Control Start	0
 ca4f	Rx1	Kernel/Scaler/ScalerFunction/Code/ScalerDPRx1_SeptPhy.c:6206	MST FREESYNC Mode Enabled!!	0
 ca5e	CEC	Kernel/Scaler/ScalerFunction/Code/ScalerCec.c:670	CEC TX is Busy	0
@@ -533,19 +505,17 @@ cacb	Rx2	Kernel/Scaler/ScalerCommonFunction/Code/ScalerCommonSync.c:6705	Get Col
 cb01	Rx1	Kernel/Scaler/ScalerCommonFunction/Code/ScalerCommonDPRx1.c:1747	Misc change: Color Space	0
 cb3c	Rx2	Kernel/Scaler/RL6449_Series_Scaler/Code/RL6449_Series_TMDSRx2.c:4626	HDMI Freesync Status Change	0
 cb3c	Rx2	Kernel/Scaler/RL6449_Series_Scaler/Code/RL6449_Series_TMDSRx2.c:4634	HDMI Freesync Status Change	0
-cc91	Audio	Kernel/Scaler/ScalerFunction/Code/ScalerAudio_SeptPhy.c:1007	D3 Audio Tracking Disable	0
 ccf2	Measure	Kernel/Scaler/ScalerFunction/Code/ScalerMeasure.c:143	VGA off-line measure fail	1
 cd12	Rx1	Kernel/Scaler/ScalerCommonFunction/Code/ScalerCommonDPRx1.c:1396	_COLOR_SPACE_Y_ONLY	0
 cd9e	Rx2	Kernel/Scaler/RL6449_Series_Scaler/Code/RL6449_Series_TMDSRx2.c:3961	7. TMDS Lane0 LE Max	0
 cdc5	FS	Kernel/Scaler/ScalerFunction/Code/ScalerPLL.c:2127	Estimated last-line	1
-ce63	Audio	Kernel/Scaler/ScalerFunction/Code/ScalerAudio_SeptPhy.c:932	D2 Aduio Test Off	0
 ce77	Check	Kernel/Scaler/ScalerFunction/Code/ScalerDisplayDPTx.c:665	eDP Tx1 LT1 Pass	1
 cf73	Scaler	Kernel/User Common Function/Code/UserCommonInterface.c:4496	MBR: ucToggleTimeTotal	0
 cf88	System	Kernel/System/Code/SysJudge.c:797	Input Timing VHeight	1
 d029	Scaler	Kernel/User Common Function/Code/UserCommonInterface.c:4462	MBR: Transition	0
 d16e	Rx2	Kernel/Scaler/ScalerCommonFunction/Code/ScalerCommonSync.c:6474	Get Pixel Repetition 0	0
 d1e2	System	Kernel/System/Code/SysSource.c:2802	7. Switch Port No Cable	1
-d1fb	Audio	Kernel/Scaler/RL6449_Series_Scaler/Code/RL6449_Series_Audio.c:1328	WD : D0 DP Audio Over/Underflow	0
+d1fb	Audio	Kernel/Scaler/RL6449_Series_Scaler/Code/RL6449_Series_Audio.c:1048	WD : D0 DP Audio Over/Underflow	0
 d210	FS	Kernel/Scaler/ScalerFunction/Code/ScalerMemory.c:445	Error condition	1
 d221	System	Kernel/System/Code/SysSource.c:2219	7. == SearchIndex ==	1
 d221	System	Kernel/System/Code/SysSource.c:2475	7. == SearchIndex ==	1
@@ -571,7 +541,6 @@ d8a5	System	Kernel/System/Code/SysSource.c:3871	0. Cable Status Chanaged A2	1
 d8a7	Rx1	Kernel/Scaler/ScalerCommonFunction/Code/ScalerCommonDPRx1.c:999	7. Frame[N] VBS2BS Counter	0
 d9b0	FS	Kernel/Scaler/ScalerFunction/Code/ScalerMDomain.c:1425	DVS	1
 daab	System	Kernel/System/Code/SysJudge.c:789	Input Timing HFreq	1
-dabe	Audio	Kernel/Scaler/ScalerFunction/Code/ScalerAudio_SeptPhy.c:814	False : D2 HDMI Audio DB Retry	0
 dae5	Scaler	Kernel/Scaler/ScalerFunction/Code/ScalerIDomain.c:179	9. Set Capture usHWidth	0
 db47	Rx1	Kernel/Scaler/ScalerFunction/Code/ScalerDP_SeptPhy.c:1276	DP Rx1 MST reset	0
 db5c	CheckMDomain	Kernel/Scaler/ScalerFunction/Code/ScalerMDomain.c:1893	FRC Efficiency(%)	1
@@ -583,7 +552,7 @@ de0b	Rx1	Kernel/Scaler/ScalerFunction/Code/ScalerDPRx1_SeptPhy.c:4955	7. DP Rebu
 de27	Audio	Kernel/System/Code/SysAudio.c:408	Audio Dac Ready	0
 de41	CEC	Kernel/Scaler/ScalerFunction/Code/ScalerCec.c:283	<= Cec0 Rx Backup Fifo: DB 	0
 de82	FRC	Kernel/Scaler/RL6449_Series_Scaler/Code/RL6449_Series_Rotation.c:66	R-IH	1
-dea9	Audio	Kernel/Scaler/RL6449_Series_Scaler/Code/RL6449_Series_Audio.c:1590	False : D1 DP Audio Buffer	0
+dea9	Audio	Kernel/Scaler/RL6449_Series_Scaler/Code/RL6449_Series_Audio.c:1310	False : D1 DP Audio Buffer	0
 dec4	Rx2	Kernel/Scaler/ScalerCommonFunction/Code/ScalerCommonSync.c:6626	Get Colorimetry 709	0
 df0b	System	Kernel/User Common Function/Code/UserCommonInterface.c:4258	OSD -- Reset	1
 df38	Rx2	Kernel/Scaler/RL6449_Series_Scaler/Code/RL6449_Series_TMDSRx2.c:4557	Color Info Changed	0
@@ -602,7 +571,7 @@ e385	Rx1	Kernel/Scaler/RL6449_Series_Scaler/Code/RL6449_Series_DPRx1.c:2429	1st 
 e3cf	Rx1	Kernel/Scaler/ScalerCommonFunction/Code/ScalerCommonDPRx1.c:2015	VSC change: Dynamic Range	0
 e3cf	Rx1	Kernel/Scaler/ScalerCommonFunction/Code/ScalerCommonDPRx1.c:2035	VSC change: Dynamic Range	0
 e3ee	Mst	Kernel/Scaler/ScalerCommonFunction/Code/ScalerCommonSync.c:1582	MST Switch Long Plug : 1	0
-e449	Audio	Kernel/Scaler/RL6449_Series_Scaler/Code/RL6449_Series_Audio.c:1574	False : D1 DP Audio Fsm Disable	0
+e449	Audio	Kernel/Scaler/RL6449_Series_Scaler/Code/RL6449_Series_Audio.c:1294	False : D1 DP Audio Fsm Disable	0
 e48f	Check	Kernel/Scaler/ScalerFunction/Code/ScalerDisplayDPTx.c:701	eDP Tx1 LTend Fail	1
 e4bb	Rx1	Kernel/Scaler/ScalerCommonFunction/Code/ScalerCommonDPRx1.c:1442	_COLORIMETRY_YCC_XVYCC709	0
 e52f	FS	Kernel/Scaler/ScalerFunction/Code/ScalerIDomain.c:253	IVDelay step step	1
@@ -611,7 +580,6 @@ e58c	Check	Kernel/Scaler/ScalerFunction/Code/ScalerDisplayDPTx.c:671	eDP Tx1 LT1
 e5ce	FRC	Kernel/Scaler/RL6449_Series_Scaler/Code/RL6449_Series_FRC.c:1046	Error1-input faster/slower mis-match: IDEN	1
 e5ce	FRC	Kernel/Scaler/RL6449_Series_Scaler/Code/RL6449_Series_FRC.c:1057	Error1-input faster/slower mis-match: IDEN	1
 e624	System	Kernel/System/Code/SysSource.c:379	bH_Select == 1,bP_Select ==0	1
-e6c9	Audio	Kernel/Scaler/ScalerFunction/Code/ScalerAudio_SeptPhy.c:2086	False : D5 HDMI Audio FIFO	0
 e6da	Rx1	Kernel/Scaler/ScalerCommonFunction/Code/ScalerCommonDPRx1.c:1124	Fake Interlace	0
 e810	Rx1	Kernel/Scaler/ScalerFunction/Code/ScalerDPRx1_SeptPhy.c:5844	7. DP Misc Change	0
 e866	System	Kernel/User Common Function/Code/UserCommonNVRamSystem.c:1317	FlashSaveItem : Fail	1
@@ -621,8 +589,7 @@ e91a	Scaler	Kernel/Scaler/ScalerFunction/Code/ScalerPLL.c:2034	DisplayRegionCoun
 e9a6	Rx2	Kernel/Scaler/RL6449_Series_Scaler/Code/RL6449_Series_TMDSRx2.c:3958	7. TMDS Lane0 LE Min	0
 e9cd	Rx1	Kernel/Scaler/ScalerFunction/Code/ScalerDPRx1_SeptPhy.c:5569	Source DP Rx1 Found	0
 eb1d	Rx2	Kernel/Scaler/RL6449_Series_Scaler/Code/RL6449_Series_TMDSRx2.c:3195	Color Depth	0
-eb6d	Audio	Kernel/Scaler/RL6449_Series_Scaler/Code/RL6449_Series_Audio.c:1226	False : D0 DP Audio Buffer	0
-ebe8	Audio	Kernel/Scaler/ScalerFunction/Code/ScalerAudio_SeptPhy.c:1549	False : D4 Audio Packet	0
+eb6d	Audio	Kernel/Scaler/RL6449_Series_Scaler/Code/RL6449_Series_Audio.c:946	False : D0 DP Audio Buffer	0
 ed72	Scaler	Kernel/Scaler/ScalerFunction/Code/ScalerMDomain.c:1489	DVBG end > DVtotal	0
 ed8d	Analog	User/RTD Series/RTD2014Function/Code/RTD2014UserInterface.c:3091	Detected by Special Case to 720x480-60_GTF	0
 ee4e	System	Kernel/Scaler/ScalerFunction/Code/ScalerMDomain.c:577	_Last_line_Dclk_larger	1
@@ -632,13 +599,14 @@ eead	Rx1	Kernel/Scaler/ScalerCommonFunction/Code/ScalerCommonDPRx1.c:998	7. Dela
 eef4	Rx2	Kernel/Scaler/ScalerCommonFunction/Code/ScalerCommonSync.c:6768	Get Colorimetry EXT_RGB_ADOBERGB	0
 ef42	Rx1	Kernel/Scaler/ScalerFunction/Code/ScalerDPRx1_SeptPhy.c:4285	FREESYNC Mode Disabled	0
 efb0	Rx1	Kernel/Scaler/ScalerCommonFunction/Code/ScalerCommonDPRx1.c:1942	VSC change: Color Space, _COLOR_SPACE_RAW	0
-f118	Audio	Kernel/Scaler/RL6449_Series_Scaler/Code/RL6449_Series_Audio.c:1238	False : D0 DP Audio FSM Reset	0
+f118	Audio	Kernel/Scaler/RL6449_Series_Scaler/Code/RL6449_Series_Audio.c:958	False : D0 DP Audio FSM Reset	0
 f123	System	Kernel/Scaler/ScalerFunction/Code/ScalerMDomain.c:630	FS fine tune, Dclk smaller than panel spec => Modify Htotal'	1
 f13b	Rx1	Kernel/Scaler/ScalerFunction/Code/ScalerDPRx1_SeptPhy.c:4990	7. Rebuild Phy Pass	0
 f152	Rx1	Kernel/Scaler/ScalerFunction/Code/ScalerDPRx1_SeptPhy.c:1616	DP Lane Burst Error	0
 f172	Rx1	Kernel/Scaler/ScalerFunction/Code/ScalerDPRx1_SeptPhy.c:1693	7. Valid Video Check	0
 f1d2	Rx1	Kernel/Scaler/ScalerCommonFunction/Code/ScalerCommonDPRx1.c:1502	_COLORIMETRY_Y_ONLY	0
 f1e6	Rx2	Kernel/Scaler/ScalerCommonFunction/Code/ScalerCommonSync.c:6721	Get Colorimetry EXT_YCC_SYCC601	0
+f1f7	Audio	Kernel/Scaler/ScalerFunction/Code/ScalerAudio_SeptPhy.c:707	HDMI Audio Tracking Enable	0
 f214	Check	Kernel/Scaler/ScalerFunction/Code/ScalerDisplayDPTx.c:2718	eDP Tx2 LT1 Pass	1
 f316	Measure	Kernel/Scaler/ScalerFunction/Code/ScalerMeasure.c:228	Interlace: detect by full line	0
 f37c	CEC	Kernel/Scaler/ScalerFunction/Code/ScalerCec.c:150	CEC Initial	0
@@ -650,11 +618,10 @@ f4b9	Rx2	Kernel/Scaler/RL6449_Series_Scaler/Code/RL6449_Series_TMDSRx2.c:4445	TM
 f4b9	Rx2	Kernel/Scaler/RL6449_Series_Scaler/Code/RL6449_Series_TMDSRx2.c:4466	TMDS Format Changed	0
 f4b9	Rx2	Kernel/Scaler/RL6449_Series_Scaler/Code/RL6449_Series_TMDSRx2.c:4483	TMDS Format Changed	0
 f4b9	Rx2	Kernel/Scaler/RL6449_Series_Scaler/Code/RL6449_Series_TMDSRx2.c:4491	TMDS Format Changed	0
-f4ba	Audio	Kernel/Scaler/ScalerFunction/Code/ScalerAudio_SeptPhy.c:1556	False : D4 AVMute	0
 f4e9	Rx1	Kernel/Scaler/ScalerFunction/Code/ScalerDPRx1_SeptPhy.c:5121	7. VBIOS Check !!!!!!!	0
 f54b	Analog	Kernel/Scaler/ScalerFunction/Code/ScalerPLL.c:3262	5. Measure Sum I Fail	0
 f588	Scaler	Kernel/System/Code/SysMode.c:707	DRR Get IVF from EDID analysis	0
-f5ca	Audio	Kernel/Scaler/RL6449_Series_Scaler/Code/RL6449_Series_Audio.c:439	Audio D3: WatchDog	0
+f5ca	Audio	Kernel/Scaler/RL6449_Series_Scaler/Code/RL6449_Series_Audio.c:429	Audio D3: WatchDog	0
 f5ea	Mst	Kernel/Scaler/ScalerCommonFunction/Code/ScalerCommonSync.c:1617	MST Switch Long Plug : 2	0
 f6d1	Rx1	Kernel/Scaler/ScalerCommonFunction/Code/ScalerCommonDPRx1.c:1475	_COLORIMETRY_RGB_SCRGB	0
 f6ed	FS	Kernel/Scaler/ScalerFunction/Code/ScalerMDomain.c:1461	bChangeDVStartStatus	1
@@ -671,7 +638,7 @@ f97d	System	Kernel/System/Code/SysSource.c:2911	7. Bingo Next Port!!!!!!!	1
 fabd	Scaler	Kernel/System/Code/SysMode.c:721	DRR not Get IVF	0
 fafe	Rx1	Kernel/Scaler/ScalerCommonFunction/Code/ScalerCommonDPRx1.c:1755	Misc change: Color Depth	0
 fb52	Rx2	Kernel/Scaler/RL6449_Series_Scaler/Code/RL6449_Series_TMDSRx2.c:4078	Deep Color Mode Detected	0
-fb5c	Audio	Kernel/Scaler/ScalerFunction/Code/ScalerAudio_SeptPhy.c:1063	False : D3 HDMI Audio DB Retry	0
+fb5c	Audio	Kernel/Scaler/ScalerFunction/Code/ScalerAudio_SeptPhy.c:793	False : D3 HDMI Audio DB Retry	0
 fba4	Analog	Kernel/Scaler/ScalerFunction/Code/ScalerPLL.c:3348	Fast Pll N Code =	0
 fbcd	Rx1	Kernel/Scaler/ScalerFunction/Code/ScalerDPRx1_SeptPhy.c:5450	7. DP Display Format Fail	0
 fbdb	System	Kernel/System/Code/SysSource.c:2220	7. wuzanee test : Search Times	1
@@ -686,5 +653,5 @@ fe15	System	Kernel/System/Code/SysJudge.c:796	Input Timing VStart	1
 fe16	Rx1	Kernel/Scaler/ScalerCommonFunction/Code/ScalerCommonDPRx1.c:1381	_COLOR_SPACE_YCBCR444	0
 feca	System	Kernel/System/Code/SysSource.c:394	bH_Select == 0,bP_Select ==0	1
 ff1a	System	Kernel/System/Code/SysSource.c:2570	7. Search Finish2 !!!!!!!!!!!!!!!!!!!	1
-ff82	Audio	Kernel/Scaler/RL6449_Series_Scaler/Code/RL6449_Series_Audio.c:1093	D0 Audio Tracking Disable	0
-ff82	Audio	Kernel/Scaler/RL6449_Series_Scaler/Code/RL6449_Series_Audio.c:1170	D0 Audio Tracking Disable	0
+ff82	Audio	Kernel/Scaler/RL6449_Series_Scaler/Code/RL6449_Series_Audio.c:813	D0 Audio Tracking Disable	0
+ff82	Audio	Kernel/Scaler/RL6449_Series_Scaler/Code/RL6449_Series_Audio.c:890	D0 Audio Tracking Disable	0

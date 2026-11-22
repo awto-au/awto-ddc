@@ -1,4 +1,5 @@
 # module	hole	offset	slot   (scripts/xdata_layout.py; one fixed XDATA slot per module, fw/xdata_layout.tsv)
+ScalerAudio_SeptPhy	0xd700	0	5
 keytest	0xd700	169	154
 awto_settings_menu	0xd700	323	135
 ScalerMDomain	0xd700	458	132
@@ -83,7 +84,6 @@ keyinject	0xe380	36	5
 OsdSramAddressCount	0xe380	41	4
 RL6449_Series_DPRx1_INT	0xe380	45	4
 RL6449_Series_OsdPositionOffsetCorrection	0xe380	49	4
-ScalerAudio_SeptPhy	0xe380	53	4
 ScalerTMDSRx2_SeptPhy	0xe380	57	4
 ScalerVGIP	0xe380	61	4
 flash_clk	0xe380	65	4
