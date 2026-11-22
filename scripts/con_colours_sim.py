@@ -15,7 +15,7 @@ import re
 import sys
 from pathlib import Path
 
-import isostamp
+from _log import log_line as _log_line
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import con_wrap_sim as W
@@ -52,11 +52,7 @@ PAL = {"AWTO_T_STYLE_TEXT": "AWTO_PAL_DIAG_TEXT", "AWTO_T_STYLE_ALERT": "AWTO_PA
 
 
 def say(s: str):
-    LOG.parent.mkdir(parents=True, exist_ok=True)
-    line = f"{isostamp.now()} {s}"
-    print(line, flush=True)
-    with LOG.open("a") as f:
-        f.write(line + "\n")
+    _log_line(s, LOG)
 
 
 def run(binp: Path, name: str):

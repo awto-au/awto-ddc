@@ -14,7 +14,7 @@ import subprocess
 import sys
 from pathlib import Path
 
-import isostamp
+from _log import log_line as _log_line
 
 TREE = Path(os.environ.get("AWTO_DDC_REPO") or Path(__file__).resolve().parents[1])
 MAIN = Path(os.environ.get("AWTO_DDC_MAIN", "/mnt/2tb/git/awto-ddc"))
@@ -23,11 +23,7 @@ LOG = TREE / "tmp/logs/diag_build.log"
 
 
 def say(s):
-    LOG.parent.mkdir(parents=True, exist_ok=True)
-    line = f"{isostamp.now()} {s}"
-    print(line, flush=True)
-    with LOG.open("a") as f:
-        f.write(line + "\n")
+    _log_line(s, LOG)
 
 
 def build(tag) -> int:

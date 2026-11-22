@@ -21,7 +21,7 @@ import statistics
 import sys
 from pathlib import Path
 
-import isostamp
+from _log import log_line as _log_line
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import delay_cal_check as D
@@ -43,10 +43,7 @@ DDC_DEBOUNCE_US = 263.6           # ScalerSyncDdcDetectDebounce_EXINT1 at the st
 
 
 def say(s):
-    LOG.parent.mkdir(parents=True, exist_ok=True)
-    with LOG.open("a") as f:
-        f.write(isostamp.now() + " " + s + "\n")
-    print(s, flush=True)
+    _log_line(s, LOG, stamp_stdout=False)
 
 
 class Probe:

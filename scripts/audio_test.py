@@ -38,7 +38,7 @@ import time
 import wave
 from pathlib import Path
 
-import isostamp
+from _log import log_line as _log_line
 
 
 def repo_root() -> Path:
@@ -134,11 +134,7 @@ FREQ = {0: "none", 1: "32k", 2: "44.1k", 3: "48k", 4: "64k", 5: "88.2k", 6: "96k
 
 
 def say(s: str) -> None:
-    LOG.parent.mkdir(parents=True, exist_ok=True)
-    line = isostamp.now() + " " + s
-    with LOG.open("a") as f:
-        f.write(line + "\n")
-    print(line, flush=True)
+    _log_line(s, LOG)
 
 
 def reg_names() -> dict[int, str]:

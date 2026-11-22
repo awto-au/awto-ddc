@@ -23,7 +23,7 @@ import re
 import sys
 from pathlib import Path
 
-import isostamp
+from _log import log_line as _log_line
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 ROOT = Path(__file__).resolve().parents[1]
@@ -83,10 +83,7 @@ PARAM_E = re.compile(r"AWTO|OSD_TIMEOUT|DDCCI_TIMEOUT|SEARCH_TIME|WAIT_TIME_TO_A
 
 
 def say(s):
-    LOG.parent.mkdir(parents=True, exist_ok=True)
-    with LOG.open("a") as f:
-        f.write(isostamp.now() + " " + s + "\n")
-    print(s, flush=True)
+    _log_line(s, LOG, stamp_stdout=False)
 
 
 # ---------------------------------------------------------------- the loop-count formula (python twin of AWTO_DELAY_CNT, tied to the header text)

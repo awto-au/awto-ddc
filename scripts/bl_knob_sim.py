@@ -13,7 +13,7 @@ import sys
 from argparse import Namespace
 from pathlib import Path
 
-import isostamp
+from _log import log_line as _log_line
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import panel_sim as P
@@ -26,10 +26,7 @@ EDGE_SLACK_MS = 12      # sim t2 origin is ~11 ms before the fw ms origin (const
 
 
 def say(s: str) -> None:
-    LOG.parent.mkdir(parents=True, exist_ok=True)
-    with LOG.open("a") as f:
-        f.write(isostamp.now() + " " + s + "\n")
-    print(s, flush=True)
+    _log_line(s, LOG, stamp_stdout=False)
 
 
 def knob_bytes(ms: int, ref: int = 0) -> bytes:

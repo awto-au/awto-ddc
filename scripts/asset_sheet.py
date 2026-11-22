@@ -19,7 +19,7 @@ import shutil
 import sys
 from pathlib import Path
 
-import isostamp
+from _log import log_line as _log_line
 from PIL import Image, ImageDraw, ImageFont
 
 HERE = Path(__file__).resolve().parent
@@ -45,11 +45,7 @@ FONT = ImageFont.load_default(size=22)
 
 
 def log(s):
-    LOG.parent.mkdir(parents=True, exist_ok=True)
-    line = f"{isostamp.now()} {s}"
-    print(line, flush=True)
-    with LOG.open("a") as f:
-        f.write(line + "\n")
+    _log_line(s, LOG)
 
 
 def parse_blobs():

@@ -23,6 +23,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import i2cbus
 import isostamp
+from _log import log_line as _log_line
 from dbg_xdata import BEHIND_PAGES, DEV8, read_bytes, read_chunk
 from rtd_i2c_bridge import Real
 
@@ -46,11 +47,7 @@ _t0 = time.monotonic()
 
 
 def log(s: str) -> None:
-    line = f"{isostamp.now()} +{(time.monotonic() - _t0) * 1000:9.1f}ms {s}"
-    print(line)
-    LOG.parent.mkdir(parents=True, exist_ok=True)
-    with LOG.open("a") as f:
-        f.write(line + "\n")
+    _log_line(s, LOG)
 
 
 class Dbg:

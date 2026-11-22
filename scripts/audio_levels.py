@@ -11,7 +11,7 @@ import sys
 import time
 from pathlib import Path
 
-import isostamp
+from _log import log_line as _log_line
 
 
 def _repo() -> Path:
@@ -32,11 +32,7 @@ HZ_FLAG = 0x8000     # VCP 0x63 high bit = tone announce (fw/audio/audio.c AWTO_
 
 
 def log(msg: str) -> None:
-    line = f"{isostamp.now()} {msg}"
-    LOG.parent.mkdir(parents=True, exist_ok=True)
-    with LOG.open("a") as f:
-        f.write(line + "\n")
-    print(line, flush=True)
+    _log_line(msg, LOG)
 
 
 def ddc(bus: int, *args: str) -> str:

@@ -21,7 +21,7 @@ import sys
 import time
 from pathlib import Path
 
-import isostamp
+from _log import log_line as _log_line
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import i2cbus
@@ -45,11 +45,7 @@ DEFAULT_MIN = 10                        # firmware falls back to DDC/CI by itsel
 
 
 def log(s: str) -> None:
-    line = f"{isostamp.now()} {s}"
-    print(line, flush=True)
-    LOG.parent.mkdir(parents=True, exist_ok=True)
-    with LOG.open("a") as f:
-        f.write(line + "\n")
+    _log_line(s, LOG)
 
 
 def dbg_ok(bus: int) -> bool:

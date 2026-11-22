@@ -21,6 +21,8 @@ import sys
 from datetime import datetime
 from pathlib import Path
 
+from _log import log_line as _log_line
+
 REPO = Path(os.environ.get("AWTO_DDC_REPO") or Path(__file__).resolve().parent.parent)
 GH = "/mnt/2tb/git/awto-dan/scripts/gh_claudia.py"
 LOG = REPO / "tmp/logs/branch_prune.log"
@@ -29,10 +31,7 @@ BIN = Path("/mnt/2tb/wastebasket")
 
 
 def log(msg: str) -> None:
-    print(msg)
-    LOG.parent.mkdir(parents=True, exist_ok=True)
-    with LOG.open("a") as f:
-        f.write(f"{datetime.now().astimezone().isoformat(timespec='seconds')} {msg}\n")
+    _log_line(msg, LOG, stamp_stdout=False)
 
 
 def git(*a: str, check: bool = False) -> subprocess.CompletedProcess:

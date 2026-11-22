@@ -18,7 +18,7 @@ import re
 import sys
 from pathlib import Path
 
-import isostamp
+from _log import log_line as _log_line
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import osd_render as R
@@ -38,10 +38,7 @@ WORKLOAD = ((0x20, 2.0), (0x27, 1.0), (0x01, 1.5), (0x04, 1.0), (0x05, 1.5), (0x
 
 
 def say(s):
-    LOG.parent.mkdir(parents=True, exist_ok=True)
-    with LOG.open("a") as f:
-        f.write(isostamp.now() + " " + s + "\n")
-    print(s, flush=True)
+    _log_line(s, LOG, stamp_stdout=False)
 
 
 def limits(header: Path) -> dict:

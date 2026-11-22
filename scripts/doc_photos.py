@@ -10,7 +10,7 @@ import subprocess
 import sys
 from pathlib import Path
 
-import isostamp
+from _log import log_line as _log_line
 
 
 def _repo() -> Path:
@@ -29,11 +29,7 @@ LOG = REPO / "tmp/logs/doc_photos.log"
 
 
 def log(msg: str) -> None:
-    line = f"{isostamp.now()} {msg}"
-    LOG.parent.mkdir(parents=True, exist_ok=True)
-    with LOG.open("a") as f:
-        f.write(line + "\n")
-    print(line)
+    _log_line(msg, LOG)
 
 
 def main() -> int:

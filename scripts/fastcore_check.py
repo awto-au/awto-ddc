@@ -29,7 +29,7 @@ import sys
 import time
 from pathlib import Path
 
-import isostamp
+from _log import log_line as _log_line
 
 HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE))
@@ -43,11 +43,7 @@ UCSIM_ANSWER_S = 120            # one ucsim command: a 1 M-instruction step is ~
 
 
 def say(s: str):
-    LOG.parent.mkdir(parents=True, exist_ok=True)
-    line = isostamp.now() + " " + s
-    with LOG.open("a") as f:
-        f.write(line + "\n")
-    print(s, flush=True)
+    _log_line(s, LOG, stamp_stdout=False)
 
 
 # ---- ucsim side: exact instruction counts from `state` (Inst=) ----

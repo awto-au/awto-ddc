@@ -36,7 +36,7 @@ import sys
 import time
 from pathlib import Path
 
-import isostamp
+from _log import log_line as _log_line
 
 
 def _repo() -> Path:
@@ -59,11 +59,7 @@ SET_S = 15
 
 
 def log(s: str) -> None:
-    line = f"{isostamp.now()} {s}"
-    print(line, flush=True)
-    LOG.parent.mkdir(parents=True, exist_ok=True)
-    with LOG.open("a") as f:
-        f.write(line + "\n")
+    _log_line(s, LOG)
 
 
 def live() -> tuple[list[str], dict[str, tuple[int, int]], str | None]:
