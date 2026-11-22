@@ -22,8 +22,8 @@ import numpy as np
 import osd_gfx as G
 import osd_model as M
 from _log import log_line as _log_line
+from _repo import ROOT
 
-ROOT = Path(__file__).resolve().parent.parent
 LOG = ROOT / "tmp/logs/osd_demo.log"
 DW, DH = 640, 360                                  # demo canvas (model coordinates are absolute px, so a small canvas renders the same pixels)
 PAL16 = [(0, 0, 0), (255, 255, 255), (224, 32, 32), (32, 192, 32), (48, 80, 255), (255, 224, 0), (0, 200, 200), (224, 0, 224),

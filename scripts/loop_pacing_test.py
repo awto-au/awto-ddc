@@ -17,8 +17,8 @@ import sys
 from pathlib import Path
 
 from _log import log_line as _log_line
+from _repo import ROOT
 
-ROOT = Path(os.environ.get("AWTO_DDC_REPO") or Path(__file__).resolve().parents[1])
 sys.path.insert(0, str(ROOT / "scripts"))
 os.environ.setdefault("AWTO_SIM_CORE", "fast")
 import fw_sim as S

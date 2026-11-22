@@ -9,16 +9,14 @@ Table: tmp/logs/irq_masks_hw.tsv; log: tmp/logs/irq_masks_hw.log. Take the unit 
 """
 import argparse
 import json
-import os
 import re
 import subprocess
 import sys
-from pathlib import Path
 
 import isostamp
 from _log import log_line as _log_line
+from _repo import ROOT
 
-ROOT = Path(os.environ.get("AWTO_DDC_REPO") or Path(__file__).resolve().parents[1])
 LOG = ROOT / "tmp/logs/irq_masks_hw.log"
 TSV = ROOT / "tmp/logs/irq_masks_hw.tsv"
 POLLS = 12          # ring reads per step, each ~0.5 s; a lock + display set-up takes ~1.5 s (docs/sync-log-design.md)

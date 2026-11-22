@@ -31,7 +31,8 @@ import isostamp
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
-ROOT = Path(__file__).resolve().parents[1]
+from _repo import ROOT
+
 LOG = ROOT / "tmp/logs/nv_test.log"
 GATE_S = 12.5           # AWTO_NV_STABLE_MS 10 s (worst: ACTIVE just reached; SAVE 2 s overlaps) x 1.25
 FORCE_S = 75.0          # AWTO_NV_FORCE_MS 60 s x 1.25

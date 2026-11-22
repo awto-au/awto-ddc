@@ -22,8 +22,8 @@ from PIL import Image, ImageDraw, ImageFont
 HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE))
 import asset_sheet as AS
+from _repo import ROOT
 
-ROOT = HERE.parent
 LOG = ROOT / "tmp/logs/icon_raster.log"
 SVG_DIR = Path("/vendors/google/material-symbols/svg-400-outlined")
 SIZES = [(12, 18), (16, 16), (8, 16), (24, 24), (6, 12), (5, 8)]

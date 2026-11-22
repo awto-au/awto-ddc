@@ -5,14 +5,13 @@ usage: nv_items.py PAGE.bin [PAGE.bin ...]     (dump: rtd_flash_sector.py <bus> 
 Item = 16 B (_DATA_ITEM_LENGTH): id, 14 data, checksum. Per page: item count per id, newest copy (highest address) of each.
 Log: ./tmp/logs/nv_items.log
 """
-import os
 import sys
 from collections import Counter
 from pathlib import Path
 
 from _log import log_line as _log_line
+from _repo import ROOT
 
-ROOT = Path(os.environ.get("AWTO_DDC_REPO") or Path(__file__).resolve().parents[1])
 LOG = ROOT / "tmp/logs/nv_items.log"
 ITEM = 16                     # _DATA_ITEM_LENGTH (RTD2014UserInclude.h)
 AUX = range(0x40, 0x44)       # AWTO_NV_AUX_ID .. + AWTO_NV_AUX_ITEMS (RL6449_Project.h)

@@ -7,7 +7,6 @@ usage: kvm_demo.py [--unit 2] [--rounds 3] [--hold-s 4]
 Log: ./tmp/logs/kvm_demo.log
 """
 import argparse
-import os
 import subprocess
 import sys
 import time
@@ -16,7 +15,8 @@ from pathlib import Path
 from _log import log_line as _log_line
 
 HERE = Path(__file__).resolve().parent
-ROOT = Path(os.environ.get("AWTO_DDC_REPO") or HERE.parent)
+from _repo import ROOT
+
 LOG = ROOT / "tmp" / "logs" / "kvm_demo.log"
 STEP_LIMIT_S = 15   # one kvm.py / osd call: worst seen ~0.7 s + bus scan; 15 s = backstop, expiry = demo stops with the step named
 

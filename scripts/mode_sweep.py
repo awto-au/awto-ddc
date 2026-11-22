@@ -39,7 +39,8 @@ GDCTL_SHOW_V_S = 5             # one D-Bus call ~0.1 s, verbose 49 modes; 50x; e
 # FRC (DDR frame buffer) = P5_27 bit 5: A2/P5_AC 41 in FRC modes, 82/05 in line-buffer modes (dp sweep 2026-11-07, #26).
 FRC_BIT = 0x20
 DDR_FLAGS = [0x04 + i for i in range(8)] + [0xF1 + i for i in range(7)]      # VALID_WIN_DET SLIC0/1, INT_STATUS1
-ROOT = Path(__file__).resolve().parent.parent
+from _repo import ROOT
+
 LOG = ROOT / "tmp/logs/mode_sweep.log"
 RES_NAMES = {3: "ACTIVE", 4: "NOSUPPORT", 5: "NOSIGNAL", 6: "POWERSAVE"}
 

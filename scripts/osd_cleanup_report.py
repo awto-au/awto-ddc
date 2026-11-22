@@ -13,8 +13,8 @@ import sys
 from pathlib import Path
 
 from _log import log_line as _log_line
+from _repo import ROOT
 
-ROOT = Path(__file__).resolve().parents[1]
 UI = Path("/mnt/2tb/git/awto-ddc-ui")
 LOG = ROOT / "tmp/logs/osd_cleanup_report.log"
 CARD_ICONS = r"tFONT1_ICON_(NO_SUPPORT|NO_CABLE|NO_SIGNAL|NO_SIGANL|POWER_SAVIN|AUTO_ADJUST_TEXT|AUTO_COLOR_TEXT|TURN_OFF_PANEL_UN)"

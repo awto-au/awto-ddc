@@ -19,11 +19,10 @@ import re
 import subprocess
 import sys
 import time
-from pathlib import Path
 
 import isostamp
+from _repo import ROOT
 
-ROOT = Path(__file__).resolve().parent.parent
 OUT = ROOT / "tmp/logs/ontime"
 # One synclog read ~1.5 s; the picture is back ~1.5-3 s after a trigger, DDC/CI wake ~3.5 s: 8 s = 2x the slowest path seen.
 EPISODE_LIMIT_S = 8.0

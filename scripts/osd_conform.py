@@ -24,8 +24,8 @@ import numpy as np
 import osd_demo as D
 import osd_model as M
 from _log import log_line as _log_line
+from _repo import ROOT
 
-ROOT = Path(__file__).resolve().parent.parent
 LOG = ROOT / "tmp/logs/osd_conform.log"
 MATCH = 0.97
 

@@ -8,12 +8,12 @@ Log: tmp/logs/kc_asmdiff.log
 """
 import argparse
 import difflib
-import os
 import re
 import sys
 from pathlib import Path
 
-ROOT = Path(os.environ.get("AWTO_DDC_REPO") or Path(__file__).resolve().parent.parent)
+from _repo import ROOT
+
 FN = re.compile(r"^(_\w+):$")
 LBL = re.compile(r"\b\d{5}\$")
 

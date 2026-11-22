@@ -9,15 +9,14 @@ usage: osd_sram_probe.py BUS --serial S --map MAP
 Log: ./tmp/logs/osd_sram_probe.log
 """
 import argparse
-import os
 import struct
 import sys
 import time
 from pathlib import Path
 
 from _log import log_line as _log_line
+from _repo import ROOT
 
-ROOT = Path(os.environ.get("AWTO_DDC_REPO") or Path(__file__).resolve().parent.parent)
 LOG = ROOT / "tmp/logs/osd_sram_probe.log"
 N = 13                       # AWTO_OSDP_N
 SIZE = 2 + 2 * N + 6 * N + 6 * N + N   # StAwtoOsdProbe

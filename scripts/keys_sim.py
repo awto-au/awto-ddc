@@ -27,8 +27,8 @@ sys.path.insert(0, str(MAIN))
 sys.path.insert(1, str(Path(__file__).resolve().parent))
 import osd_model as M
 import osd_render as R
+from _repo import ROOT
 
-ROOT = Path(os.environ.get("AWTO_DDC_REPO") or Path(__file__).resolve().parent.parent)
 LOG = ROOT / "tmp/logs/keys_sim.log"
 IDLE = (0xF8, 0xF8, 1)
 # raw (A0, A1) of one key down, as read on unit 2 (idle 0xF8): A0 = MENU AUTO UP, A1 = SOURCE DOWN. Keys are pressed by these

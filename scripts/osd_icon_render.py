@@ -9,10 +9,10 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import numpy as np
+from _repo import ROOT
 from glyph_decode import decode_blob, tile
 from PIL import Image
 
-ROOT = Path(__file__).resolve().parents[1]
 SRC = ROOT / "tmp/sdcc-port/src/User/RTD Series/RTD2014Osd/Code/RTD2014OsdFontDynamicIcon_1.c"
 
 

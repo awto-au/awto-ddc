@@ -9,7 +9,6 @@ Logs: ./tmp/logs/lib_review.log. Repo root: $AWTO_DDC_REPO -> file-relative.
 """
 import argparse
 import difflib
-import os
 import re
 import sys
 from pathlib import Path
@@ -21,7 +20,8 @@ import rtk_libsig as sig
 
 log = sig.log
 
-REPO = Path(os.environ.get("AWTO_DDC_REPO") or Path(__file__).resolve().parent.parent)
+from _repo import ROOT as REPO
+
 OUT = REPO / "re/lib-review"
 LIB = Path("/mnt/2tb/git_mirror/Kingdomwhisky/RTD-Scaler-TEST/Kernel/Scaler/RL6449_Series_Scaler/Lib/Output/RL6449_FunctionLib.LIB")
 BANKS = sig.ANALYSIS / "banks"

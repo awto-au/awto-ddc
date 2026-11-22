@@ -18,8 +18,8 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 import osd_render as R
 import osd_test as T
 import sync_log as S
+from _repo import ROOT
 
-ROOT = Path(__file__).resolve().parents[1]
 LOG = ROOT / "tmp/logs/mem_mode_sim.log"
 BOOT_S = 3.0      # boot to ACTIVE at 4K60 in the sim ~2 s firmware time (h2160 gate) x 1.25, rounded up
 STEP_S = 1.0      # one display-setting re-run: 217 ms on hardware (#26 meas4k), FineTune + IVS waits; x ~4 for the frame-buffer path

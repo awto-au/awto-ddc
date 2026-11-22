@@ -19,9 +19,9 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 import numpy as np
 import osd_model as M
 from _log import log_line as _log_line
+from _repo import ROOT
 from PIL import Image
 
-ROOT = Path(__file__).resolve().parent.parent
 IMG = ROOT / "docs/osd/img"
 LOG = ROOT / "tmp/logs/osd_manual.log"
 W, H, K = 192, 108, 3                      # demo canvas (panel px at 1x) and the PNG upscale

@@ -19,8 +19,8 @@ sys.path.insert(0, str(MAIN))
 import fw_sim
 import menu_cli
 import settings_cli as C
+from _repo import ROOT
 
-ROOT = Path(os.environ.get("AWTO_DDC_REPO") or Path(__file__).resolve().parent.parent)
 LOG = ROOT / "tmp/logs/menu_walk_timing.log"
 
 

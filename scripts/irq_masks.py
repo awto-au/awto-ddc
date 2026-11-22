@@ -22,7 +22,8 @@ from pathlib import Path
 from _log import log_line as _log_line
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-ROOT = Path(__file__).resolve().parents[1]
+from _repo import ROOT
+
 TSV = ROOT / "docs/irq-masks.tsv"
 LOG = ROOT / "tmp/logs/irq_masks.log"
 COLS = ["key", "id", "file", "line", "function", "bit", "sources", "kind", "restore", "static_us", "path", "waits", "loops", "escape", "nested", "context", "starves",

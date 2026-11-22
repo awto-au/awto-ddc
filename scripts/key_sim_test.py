@@ -27,8 +27,8 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 import audio_sim as A
 import osd_render as R
 import osd_test as T
+from _repo import ROOT
 
-ROOT = Path(__file__).resolve().parents[1]
 LOG = ROOT / "tmp/logs/key_sim_test.log"
 A0, A1, IDLE = 0xFF09, 0xFF0A, 0xF8
 KEY_ADC = {"MENU": (A0, 0xD0), "AUTO": (A0, 0x80), "UP": (A0, 0x38), "SOURCE": (A1, 0x80), "DOWN": (A1, 0x38)}   # band centres

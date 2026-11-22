@@ -24,15 +24,14 @@ Log: ./tmp/logs/osd_hw_test.log ; SRAM dumps: ./tmp/osd_hw/
 from __future__ import annotations
 
 import argparse
-import os
 import sys
 import time
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from _log import log_line as _log_line
+from _repo import ROOT
 
-ROOT = Path(os.environ.get("AWTO_DDC_REPO") or Path(__file__).resolve().parent.parent)
 LOG = ROOT / "tmp/logs/osd_hw_test.log"
 OUT = ROOT / "tmp/osd_hw"
 DEV8 = 0x6A

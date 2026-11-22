@@ -30,8 +30,8 @@ from _log import log_line as _log_line
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import settings_cli as C
 import settings_table as T
+from _repo import ROOT
 
-ROOT = Path(__file__).resolve().parents[1]
 LOG = ROOT / "tmp/logs/menu_cli.log"
 MAIN = 0xFE
 SELECT_PAGE = 0x100                                  # MO_SELECT_PAGE (fw/rtdfw/awto/include/menu.h): arg bit 8 = page entry; row ids reach 255

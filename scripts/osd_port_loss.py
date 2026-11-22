@@ -13,7 +13,6 @@ from __future__ import annotations
 
 import argparse
 import copy
-import os
 import sys
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -22,8 +21,8 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 import isostamp
 import osd_hw_test as H
 import osd_sweep as W
+from _repo import ROOT
 
-ROOT = Path(os.environ.get("AWTO_DDC_REPO") or Path(__file__).resolve().parent.parent)
 LOG = ROOT / "tmp/logs/osd_port_loss.log"
 TSV = ROOT / "tmp/logs/osd_port_loss.tsv"
 M_GAP = 7

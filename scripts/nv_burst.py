@@ -14,9 +14,9 @@ import subprocess
 import sys
 import threading
 import time
-from pathlib import Path
 
-ROOT = Path(__file__).resolve().parents[1]
+from _repo import ROOT
+
 LOG = ROOT / "tmp/logs/nv_burst.log"
 # Longest wait the gate can add: AWTO_NV_FORCE_MS 60 s x 1.25 (after the last change; the main-image gate needs < 3 s)
 WAIT_S = 75.0

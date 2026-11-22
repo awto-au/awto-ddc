@@ -20,8 +20,8 @@ from _log import log_line as _log_line
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import osd_render as R
 import sync_log as SL
+from _repo import ROOT
 
-ROOT = Path(__file__).resolve().parents[1]
 LOG = ROOT / "tmp/logs/mon_sim_test.log"
 ADC = 0xFF09                                    # A0..A3 = FF09..FF0C
 SET_ID_MONITOR = 124                            # registry id monitor (AwtoSetIds.h)

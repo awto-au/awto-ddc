@@ -8,13 +8,12 @@ Log: tmp/logs/kc_asm_classify.log
 """
 import argparse
 import difflib
-import os
 import sys
 from pathlib import Path
 
 import isostamp
+from _repo import ROOT
 
-ROOT = Path(os.environ.get("AWTO_DDC_REPO") or Path(__file__).resolve().parent.parent)
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import kc_asmdiff as K
 
