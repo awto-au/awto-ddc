@@ -1943,7 +1943,7 @@ fn	_AwtoSyncInitial	3	0xa6ac	392
 fn	_AwtoSyncPushQuiet	3	0xa8fc	316
 fn	_AwtoEdidPoll	3	0xaa38	344
 fn	_AwtoSyncEdidOn	3	0xab90	44
-fn	_AwtoBootConsole	3	0xabbc	132
+fn	_AwtoBootConsole	3	0xabbc	144
 fn	_AwtoSyncTail	3	0xac54	104
 fn	_AwtoTmdsIdleKhz	3	0xacbc	544
 fn	_ScalerTimerWDCancelTimerEvent	3	0xaedc	44

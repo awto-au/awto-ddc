@@ -746,6 +746,9 @@ void AwtoDiagConsole(BYTE ucOn)
 // Boot / wake open, one bounded step per main-loop pass (#311): the synchronous open is ~270 ms in one pass and held INITIAL -> SEARCH.
 // Main page only. AwtoDiagConsole / AwtoConStepAbort cancel it; nothing is shown before the last step.
 __xdata BYTE g_ucAwtoConStep;                   // 0 idle, else the next step (1 .. AWTO_CON_STEPS)
+#ifndef AWTO_CON_INIT_STEPS
+#define AWTO_CON_INIT_STEPS 0                   // steps run inside AwtoBootConsole (#311: 4 = console done ~0.6 s but ACTIVE +200 ms); 0 = one step per pass
+#endif
 static __xdata WORD s_usConStepMs;              // AwtoMs() at the start, for the 'console open done' line
 #define AWTO_CON_STEP_BEGIN()   { isr_g_stAwtoDiag.ucHold |= AWTO_HOLD_POPUP; s_usConStepMs = (WORD)AwtoMs(); g_ucAwtoConStep = 1; }   // from now nothing disables the OSD under the open
 
@@ -2271,6 +2274,10 @@ void AwtoBootConsole(void)
     AwtoSyncPush(AWTO_SYNC_EV_CONSOLE, 0, 0);
     s_ucConOpen = 0;                            // wake: power saving lost the OSD of a console left open; draw it anew
     AWTO_CON_STEP_BEGIN();
+    while(g_ucAwtoConStep <= AWTO_CON_INIT_STEPS)      // menu close .. font: each step < 10 ms, run in this INITIAL pass; windows follow, one per pass
+    {
+        AwtoConStepRun();
+    }
     g_ucAwtoConAuto = (g_stAwtoSync.ucOpenReq != AWTO_SYNC_OPEN_KEY);
 }
 #endif
