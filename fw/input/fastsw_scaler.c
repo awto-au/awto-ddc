@@ -111,6 +111,14 @@ BYTE AwtoFastScalerApply(BYTE __xdata *pucBuf, BYTE ucSourceType, BYTE ucPort)  
     SET_INPUT_PIXEL_CLK(pstS->usPixelClk);
     ScalerMeasureSetOfflineMeasure(ucSourceType, ucPort);
     ScalerMeasureInterlaceInitial(ucSourceType, ucPort);       // the judge's interlace double check reads this port's detector
+    if(((GET_MEMORY_SELECT() == _FRAME_SYNC_LINE_BUFFER) || (GET_MEMORY_SELECT() == _FRAME_SYNC_MEMORY)) && (GET_MEMORY_DVF_SELECT() == _1_IVF))
+    {                                           // re-lock the display timing to the returned IVS (as ScalerMDomainControlDBApply): free run, then frame sync after DEN stop (#313)
+        ScalerTimerWaitForEvent(_EVENT_DEN_START);
+        ScalerSetBit(P0_28_VIDEO_DISPLAY_CONTROL_REG, ~_BIT3, 0x00);
+        ScalerTimerWaitForEvent(_EVENT_IVS);
+        ScalerTimerWaitForEvent(_EVENT_DEN_STOP);
+        ScalerSetBit(P0_28_VIDEO_DISPLAY_CONTROL_REG, ~_BIT3, _BIT3);
+    }
 #if(_D2_TMDS_SUPPORT == _ON)
     if(ucPort == _D2_INPUT_PORT)
     {

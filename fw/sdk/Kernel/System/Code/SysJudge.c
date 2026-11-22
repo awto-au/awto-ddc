@@ -507,6 +507,7 @@ static BYTE SysMachineCheck(void)
         if((ScalerMDomainMemoryCheck() == _FALSE) || (ScalerMDomainDisplayTimingGenCheck() == _FALSE))
         {
             AwtoSwEvent(AWTO_SW_EV_PROBE, 23);
+            AwtoSyncPush(AWTO_SYNC_EV_FASTWAKE, 1, ((DWORD)AwtoFastScalerStatus() << 16) | 0x8000);      // reason 0x80 = the judge's check, try 0
             DebugMessageSystem("Memory Check Failed", GET_SOURCE_TYPE(g_ucSearchIndex));
             return AWTO_SYS_WHY_MEMORY;
         }

@@ -412,7 +412,7 @@ FC	01	pms	DP link trained:% after the loop first saw it training	timing
 93	04	ms	INITIAL:SDK other flag set until %	timing
 94	00	ms2	ACTIVE wait:timer %, panel ready %	timing
 95	*	portms	search dwell re-armed, % after reaching	warning
-99	01	x	fast wake failed, reason+try %	warning
+99	01	x	fast wake failed, status+reason+try %	warning
 99	02	n	fast wake hold start, tries %	timing
 96	*	pass	%	warning
 97	*	pass	%	timing

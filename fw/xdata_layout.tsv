@@ -1,5 +1,4 @@
 # module	hole	offset	slot   (scripts/xdata_layout.py; one fixed XDATA slot per module, fw/xdata_layout.tsv)
-fastsw	0xd700	0	169
 keytest	0xd700	169	154
 awto_settings_menu	0xd700	323	135
 ScalerMDomain	0xd700	458	132
@@ -127,6 +126,7 @@ SysAudio	0xe380	144	1
 SysCec	0xe380	145	1
 __ovl	0xe380	146	1
 flash_screen	0xe380	147	1
+fastsw	0xe580	0	170
 sync	0xe780	37	722
 asteroids	0xe780	759	515
 ScalerCommonDebug	0xe780	1274	363
