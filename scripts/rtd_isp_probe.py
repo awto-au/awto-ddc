@@ -10,7 +10,6 @@ usage: rtd_isp_probe.py <bus> [--enter-isp [--dump out.bin [--block N]]]   (dump
 Protocol + tags: docs/reversing/realtek-rtd/README.md
 Log: ./tmp/logs/rtd_isp_probe.log
 """
-import os
 import sys
 import time
 from pathlib import Path
@@ -28,10 +27,7 @@ ISP_ADDR = 0x4A
 POLL_MAX = 20
 
 
-def repo_root() -> Path:
-    env = os.environ.get("AWTO_DDC_REPO")
-    return Path(env) if env else Path(__file__).resolve().parent.parent
-
+from _repo import repo_root
 
 LOG = None
 

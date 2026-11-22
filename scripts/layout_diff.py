@@ -5,18 +5,10 @@ Use: layout_diff.py OLD.tsv NEW.tsv [--names a,b,...]   (old/new may be `git sho
 Log: tmp/logs/layout_diff.log
 """
 import argparse
-import os
-import subprocess
 import sys
 from pathlib import Path
 
-
-def repo_root():
-    env = os.environ.get("AWTO_DDC_REPO")
-    if env:
-        return Path(env)
-    r = subprocess.run(["git", "rev-parse", "--show-toplevel"], capture_output=True, text=True, cwd=Path(__file__).parent, check=False)
-    return Path(r.stdout.strip()) if r.returncode == 0 else Path(__file__).resolve().parents[1]
+from _repo import repo_root
 
 
 def load(path):

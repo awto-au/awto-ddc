@@ -10,7 +10,6 @@ usage: rtd_dbg_read.py <bus> <addr|symbol>[:len] ... [--map tmp/fw/AWT26110003/f
 Log: ./tmp/logs/rtd_dbg_read.log
 """
 import argparse
-import os
 import re
 import sys
 from pathlib import Path
@@ -24,8 +23,7 @@ from rtd_i2c_bridge import Real
 DBG = 0x35 << 1
 
 
-def repo_root() -> Path:
-    return Path(os.environ.get("AWTO_DDC_REPO") or Path(__file__).resolve().parent.parent)
+from _repo import repo_root
 
 
 def main() -> int:

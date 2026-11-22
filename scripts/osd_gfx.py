@@ -3,8 +3,6 @@
 Glyph stream: a 12 px wide tile, two rows per 24-bit word, pixel p of a word = bit 23 - p, bytes low first (the OSD data port order). Docs: docs/saver-library.md
 Fonts stay in their generators (the 5 x 7 glyph shapes differ per screen: '5', '6', '9', 'C', 'G').
 """
-import os
-import subprocess
 from pathlib import Path
 
 import isostamp
@@ -13,13 +11,6 @@ ROWS_PER_WORD = 2
 WORD_BYTES = 3
 
 
-def repo_root() -> Path:
-    """$AWTO_DDC_REPO, else git toplevel, else file-relative."""
-    env = os.environ.get("AWTO_DDC_REPO")
-    if env:
-        return Path(env)
-    r = subprocess.run(["git", "rev-parse", "--show-toplevel"], cwd=Path(__file__).resolve().parent, capture_output=True, text=True, check=False)
-    return Path(r.stdout.strip()) if r.returncode == 0 and r.stdout.strip() else Path(__file__).resolve().parents[1]
 
 
 def logger(path: Path):

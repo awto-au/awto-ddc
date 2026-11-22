@@ -18,7 +18,6 @@ import logging
 import os
 import re
 import struct
-import subprocess
 import sys
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))  # -I drops script dir
@@ -30,18 +29,7 @@ TAIL_LEN = 36
 ACCESS = {1: "R", 2: "W", 3: "RW", 4: "RW4"}  # 4 = RW, double-buffered? [guess]
 
 
-def repo_root():
-    """3-tier: $AWTO_DDC_REPO -> git toplevel -> file-relative."""
-    env = os.environ.get("AWTO_DDC_REPO")
-    if env:
-        return env
-    here = os.path.dirname(os.path.abspath(__file__))
-    try:
-        out = subprocess.run(["git", "-C", here, "rev-parse", "--show-toplevel"],
-                             capture_output=True, text=True, check=True)
-        return out.stdout.strip()
-    except (subprocess.CalledProcessError, OSError):
-        return os.path.dirname(here)
+from _repo import repo_root
 
 
 def setup_log():

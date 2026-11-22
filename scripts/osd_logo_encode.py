@@ -14,25 +14,15 @@ Formats (awto-ddc#46, confirmed by selftest; decoder = glyph_decode.py):
 - layout: LOGO0 = 80 tiles / 19x10 map at COL(0); LOGO1 = 71 tiles / 51x10 map at COL(19) (tile id = _Logo1_0xNN)
 Source of the SDK arrays: tmp/sdcc-port/src (after msg_tokenise.py port). Log: tmp/logs/osd_logo_encode.log
 """
-import os
 import re
-import subprocess
 import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import numpy as np
+from _repo import repo_root
 from glyph_decode import CODES, decode_blob, tile
 from PIL import Image
-
-
-def repo_root() -> Path:
-    if os.environ.get("AWTO_DDC_REPO"):
-        return Path(os.environ["AWTO_DDC_REPO"])
-    r = subprocess.run(["git", "rev-parse", "--show-toplevel"], capture_output=True, text=True,
-                       cwd=Path(__file__).resolve().parent, check=False)
-    return Path(r.stdout.strip()) if r.returncode == 0 else Path(__file__).resolve().parents[1]
-
 
 ROOT = repo_root()
 OSD = ROOT / "tmp/sdcc-port/src/User/RTD Series/RTD2014Osd/Code"

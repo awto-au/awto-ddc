@@ -73,9 +73,7 @@ EndOpt
 """
 
 
-def repo_root() -> Path:
-    env = os.environ.get("AWTO_DDC_REPO")
-    return Path(env) if env else Path(__file__).resolve().parent.parent
+from _repo import repo_root
 
 
 def decode(root: Path, tree: Path, c51fl: int, group, log) -> str:

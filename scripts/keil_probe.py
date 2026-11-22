@@ -9,12 +9,7 @@ import subprocess
 import sys
 from pathlib import Path
 
-
-def repo_root() -> Path:
-    env = os.environ.get("AWTO_DDC_REPO")
-    if env:
-        return Path(env)
-    return Path(__file__).resolve().parent.parent
+from _repo import repo_root
 
 
 def main() -> int:

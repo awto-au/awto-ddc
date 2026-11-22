@@ -7,24 +7,13 @@ Use: loop_rate.py --unit 3 [--runs 3] [--boots 1] [--label TEXT]
 - Log: tmp/logs/loop_rate.log; one TSV row per call in tmp/logs/loop_rate.tsv.
 """
 import argparse
-import os
 import re
 import statistics
 import subprocess
 import sys
-from pathlib import Path
 
 import isostamp
-
-
-def repo_root() -> Path:
-    env = os.environ.get("AWTO_DDC_REPO")
-    if env:
-        return Path(env)
-    r = subprocess.run(["git", "rev-parse", "--show-toplevel"], capture_output=True, text=True,
-                       cwd=Path(__file__).parent, check=False)
-    return Path(r.stdout.strip()) if r.returncode == 0 else Path(__file__).resolve().parents[1]
-
+from _repo import repo_root
 
 ROOT = repo_root()
 SETTLE_TRIES = 5    # boot to ACTIVE ~1.2 s (#63 cold-boot table); 5 health runs (~20 s) then measure anyway

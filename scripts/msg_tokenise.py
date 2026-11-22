@@ -15,21 +15,9 @@ import shutil
 import subprocess
 import sys
 from collections import Counter
-from pathlib import Path
 
 import isostamp
-
-
-def repo_root():
-    env = os.environ.get("AWTO_DDC_REPO")
-    if env:
-        return Path(env)
-    try:
-        return Path(subprocess.check_output(["git", "rev-parse", "--show-toplevel"],
-                                            cwd=Path(__file__).parent, text=True).strip())
-    except (subprocess.CalledProcessError, FileNotFoundError):
-        return Path(__file__).resolve().parent.parent
-
+from _repo import repo_root
 
 ROOT = repo_root()
 FWSDK = ROOT / "fw" / "sdk"

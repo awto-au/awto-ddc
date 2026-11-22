@@ -18,7 +18,6 @@ from __future__ import annotations
 
 import argparse
 import os
-import subprocess
 import sys
 from pathlib import Path
 
@@ -34,14 +33,7 @@ LABEL_MAX = 22                      # menu: label column width (menu.c LABEL_W)
 OPTION_MAX = 14                     # menu: value column width (menu.c VALUE_W)
 
 
-def repo_root() -> Path:
-    env = os.environ.get("AWTO_DDC_REPO")
-    if env:
-        return Path(env)
-    r = subprocess.run(["git", "rev-parse", "--show-toplevel"], capture_output=True, text=True,
-                       cwd=Path(__file__).parent, check=False)
-    return Path(r.stdout.strip()) if r.returncode == 0 else Path(__file__).resolve().parents[1]
-
+from _repo import repo_root
 
 ROOT = repo_root()
 LOG = ROOT / "tmp/logs/settings_gen.log"

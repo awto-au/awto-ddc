@@ -10,9 +10,7 @@ Log: ./tmp/logs/pacman_sound.log
 """
 import argparse
 import math
-import os
 import struct
-import subprocess
 import sys
 import wave
 from pathlib import Path
@@ -214,12 +212,7 @@ def inc_text(k_hz: float) -> str:
     return "\n".join(lines) + "\n"
 
 
-def repo_root() -> Path:
-    env = os.environ.get("AWTO_DDC_REPO")
-    if env:
-        return Path(env)
-    r = subprocess.run(["git", "rev-parse", "--show-toplevel"], cwd=Path(__file__).resolve().parent, capture_output=True, text=True, check=False)
-    return Path(r.stdout.strip()) if r.returncode == 0 and r.stdout.strip() else Path(__file__).resolve().parents[1]
+from _repo import repo_root
 
 
 def main():

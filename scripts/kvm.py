@@ -14,7 +14,6 @@ from __future__ import annotations
 
 import argparse
 import json
-import os
 import re
 import subprocess
 import sys
@@ -26,12 +25,7 @@ from _log import log_line as _log_line
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import i2cbus
-
-
-def _repo() -> Path:
-    env = os.environ.get("AWTO_DDC_REPO")
-    return Path(env) if env else Path(__file__).resolve().parents[1]
-
+from _repo import repo_root as _repo
 
 REPO = _repo()
 LOG = REPO / "tmp/logs/kvm.log"

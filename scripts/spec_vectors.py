@@ -10,9 +10,7 @@ Log: tmp/logs/spec_vectors.log
 from __future__ import annotations
 
 import argparse
-import os
 import random
-import subprocess
 import sys
 from pathlib import Path
 
@@ -21,15 +19,7 @@ import isostamp
 M32 = 0xFFFFFFFF
 
 
-def repo_root() -> Path:
-    env = os.environ.get("AWTO_DDC_REPO")
-    if env:
-        return Path(env)
-    try:
-        return Path(subprocess.check_output(["git", "rev-parse", "--show-toplevel"], cwd=Path(__file__).parent,
-                                            text=True, stderr=subprocess.DEVNULL).strip())
-    except (subprocess.CalledProcessError, FileNotFoundError):
-        return Path(__file__).resolve().parent.parent
+from _repo import repo_root
 
 
 def shldiv(a: int, k: int, c: int) -> int:

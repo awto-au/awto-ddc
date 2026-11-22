@@ -24,7 +24,6 @@ import logging
 import os
 import re
 import struct
-import subprocess
 import sys
 
 MAGIC = 0x07020509
@@ -35,18 +34,7 @@ SWREN_NONE = 0xFFFF
 DIFF_IGNORE = {"index", "raw", "pad", "swren_offset"}
 
 
-def repo_root():
-    """3-tier: $AWTO_DDC_REPO -> git toplevel -> file-relative."""
-    env = os.environ.get("AWTO_DDC_REPO")
-    if env:
-        return env
-    here = os.path.dirname(os.path.abspath(__file__))
-    try:
-        out = subprocess.run(["git", "-C", here, "rev-parse", "--show-toplevel"],
-                             capture_output=True, text=True, check=True)
-        return out.stdout.strip()
-    except (subprocess.CalledProcessError, OSError):
-        return os.path.dirname(here)
+from _repo import repo_root
 
 
 def setup_log():

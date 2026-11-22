@@ -7,25 +7,11 @@ Model assumptions are listed in ASSUMPTIONS and printed in the log.
 """
 import json
 import logging
-import os
 import re
-import subprocess
 import sys
 from collections import defaultdict
-from pathlib import Path
 
-
-def repo_root():
-    env = os.environ.get("AWTO_DDC_REPO")
-    if env:
-        return Path(env)
-    try:
-        out = subprocess.run(["git", "rev-parse", "--show-toplevel"], capture_output=True, text=True,
-                             cwd=Path(__file__).resolve().parent, check=True)
-        return Path(out.stdout.strip())
-    except (subprocess.CalledProcessError, OSError):
-        return Path(__file__).resolve().parent.parent
-
+from _repo import repo_root
 
 ROOT = repo_root()
 ASM = ROOT / "tmp/sdcc-port/asm_bank"

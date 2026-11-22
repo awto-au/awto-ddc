@@ -9,18 +9,12 @@ usage: saver_hw_budget.py [--dclk-khz N ...] [--raster WxH ...] [--cw PX ...] [-
 No hardware, no sim. Log: ./tmp/logs/saver_hw_budget.log
 """
 import argparse
-import os
 import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import isostamp
-
-
-def repo_root() -> Path:
-    env = os.environ.get("AWTO_DDC_REPO")
-    return Path(env) if env else Path(__file__).resolve().parents[1]
-
+from _repo import repo_root
 
 ROOT = repo_root()
 LOG = ROOT / "tmp/logs/saver_hw_budget.log"

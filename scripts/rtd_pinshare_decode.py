@@ -11,24 +11,11 @@ Paired regs (value 8 = dedicated function): DDC pairs select DDC with bit7=0, II
 (Kernel RL6449_Series_Pinshare.c ScalerPinshareInitial). Log: ./tmp/logs/rtd_pinshare_decode.log
 """
 import argparse
-import os
 import re
-import subprocess
 import sys
 from pathlib import Path
 
-
-def repo_root() -> Path:
-    env = os.environ.get("AWTO_DDC_REPO")
-    if env:
-        return Path(env)
-    here = Path(__file__).resolve().parent
-    try:
-        out = subprocess.run(["git", "-C", str(here), "rev-parse", "--show-toplevel"],
-                             capture_output=True, text=True, check=True)
-        return Path(out.stdout.strip())
-    except (OSError, subprocess.CalledProcessError):
-        return here.parent
+from _repo import repo_root
 
 
 def parse_log(path: Path) -> dict:
