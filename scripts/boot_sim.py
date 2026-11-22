@@ -174,8 +174,8 @@ def main():
         r.check(h.get("lost", 0) == 0, "ring holds every power-on line (none overwritten)", f"{len(lines)} lines in {h['n']} slots, lost {h.get('lost', 0)}")
         if a.console == "always":
             r.check(first_con is not None, "console shown during power-on", f"first at {first_con:.0f} ms" if first_con else "never")
-            r.check(con_at_ds is not None and con_at_ds[:2] == (CON_COLS, CON_MAP_ROWS) and con_at_ds[2] != 0,
-                    f"console ({CON_COLS} x {CON_MAP_ROWS} map) open when display setting starts", str(con_at_ds))
+            r.check(con_at_ds is not None and con_at_ds[:2] == (CON_COLS, CON_MAP_ROWS),
+                    f"console ({CON_COLS} x {CON_MAP_ROWS} map) under way when display setting starts (stepped open, #311)", str(con_at_ds))
         else:                                       # #216: the picture first; the settled-episode open draws the console from the ring
             r.check(con_at_ds is not None and con_at_ds[2] == 0, "Until signal: no console when display setting starts", str(con_at_ds))
             r.check(first_con is None, "Until signal: no console before the picture (ACTIVE)", f"first at {first_con:.0f} ms" if first_con else "never")

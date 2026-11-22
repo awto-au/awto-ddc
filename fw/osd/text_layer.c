@@ -71,10 +71,9 @@ void AwtoOsdRoll(BYTE ucOn)
 
 // Map + palette + font: blank cells get the font's width (a part-written row keeps blanks; at Rotate 180, map mirrored, they
 // come before its text, and blanks of another width shifted it sideways, Dan's photo 2026-11-13).
-void osd_tc_open(BYTE ucChars, BYTE ucLines, BYTE ucFont)
+// Three parts, one per main-loop pass in the stepped console open (#311): map, palette, font.
+static void osd_tc_open_map(BYTE ucChars, BYTE ucLines, BYTE ucFont)
 {
-    BYTE ucI;
-
     ScalerTimerCancelTimerEvent(_USER_TIMER_EVENT_OSD_DISABLE);
     OsdFuncDisableOsd();
     OsdFuncCloseWindow(_OSD_WINDOW_ALL);
@@ -87,14 +86,46 @@ void osd_tc_open(BYTE ucChars, BYTE ucLines, BYTE ucFont)
     s_ucVpFirst = 0;
     s_ucVpEnd = ucLines;
     AwtoOsdBlend();
+}
+
+static void osd_tc_open_pal(void)
+{
+    BYTE ucI;
+
     OsdPaletteSelectPalette(_PALETTE_MAIN_MENU);
     for(ucI = 0; ucI < AWTO_PAL_N; ucI++)
     {
         ScalerOsdSetColorPalette(ucI + AWTO_PAL_FIRST, tAwtoPal[ucI][0], tAwtoPal[ucI][1], tAwtoPal[ucI][2]);
     }
     AWTO_PSTG(AWTO_PSTG_CON_PAL);
+}
+
+static void osd_tc_open_font(BYTE ucFont)
+{
     osd_font_load(ucFont);
     AWTO_PSTG(AWTO_PSTG_CON_FONT);
+}
+
+// ucPart 0 map, 1 palette, 2 font; 0xFF all three
+void osd_tc_open_part(BYTE ucPart, BYTE ucChars, BYTE ucLines, BYTE ucFont)
+{
+    if((ucPart == 0) || (ucPart == 0xFF))
+    {
+        osd_tc_open_map(ucChars, ucLines, ucFont);
+    }
+    if((ucPart == 1) || (ucPart == 0xFF))
+    {
+        osd_tc_open_pal();
+    }
+    if((ucPart == 2) || (ucPart == 0xFF))
+    {
+        osd_tc_open_font(ucFont);
+    }
+}
+
+void osd_tc_open(BYTE ucChars, BYTE ucLines, BYTE ucFont)
+{
+    osd_tc_open_part(0xFF, ucChars, ucLines, ucFont);
 }
 
 extern BYTE __xdata osd_cw;

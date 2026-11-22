@@ -1757,8 +1757,12 @@ extern __xdata unsigned char g_ucAwtoSyncCon;  // 0 = no console auto-open (sim 
 #define AWTO_SYNC_OPEN_KEY                                      2       // ucOpenReq: UP+DOWN in power saving (#132): opens once awake, whatever the setting
 extern void AwtoOsdSyncPoll(void);
 extern void AwtoConLogSync(void);
+extern __xdata unsigned char g_ucAwtoConStep;   // stepped boot console open (fw/osd/console.c): 0 idle, else the next step
+// power saving / off: the OSD is gone anyway, the wake opens it anew
+#define AwtoConStepAbort()                                      { if(g_ucAwtoConStep != 0) { g_ucAwtoConStep = 0; isr_g_stAwtoDiag.ucHold &= ~AWTO_HOLD_POPUP; } }
+#define AWTO_CON_STEPS                                          10      // steps of the stepped console open: one per main-loop pass
 // per pass: call only with work to do (console open, auto-open pending, selector open); a call every pass costs loop rate (#139)
-#define AWTO_OSD_SYNC_POLL()                                    { if((g_stAwtoSync.ucOpenReq != 0) || AWTO_KEY_TEST_ON() || \
+#define AWTO_OSD_SYNC_POLL()                                    { if((g_stAwtoSync.ucOpenReq != 0) || (g_ucAwtoConStep != 0) || AWTO_KEY_TEST_ON() || \
                                                                      (GET_OSD_STATE() == _MENU_HOTKEY_SOURCE)) { AwtoOsdSyncPoll(); } }
 // #144 power-on: mode INITIAL opens the console with the live power-on log (fw/osd/console.c AwtoBootConsole), then
 // panel + backlight on so it shows while the input syncs. _OFF: the panel comes on at display setting (no boot console).

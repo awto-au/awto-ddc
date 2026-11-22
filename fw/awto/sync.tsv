@@ -152,6 +152,7 @@ C4	*	port	signal lost	error
 C5	*	portres	timing %	timing
 C7	*	porthz3	refresh %	timing
 C8	*	portmhz3	pixel clock %	timing
+CA	01	ms	console open done after % ({AWTO_CON_STEPS} passes)	boot
 CA	*	-	console opened (sync log)	boot
 CB	*	port	cable plugged in:wake
 CC	*	port	EDID read while asleep:wake

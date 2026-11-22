@@ -37,6 +37,7 @@ void    osd_tc_viewport(uint8_t rows);               /* show only this many map 
 uint8_t osd_tc_scroll(uint8_t first_row);            /* hardware scroll: first map row shown; returns the row actually shown */
 void    osd_tc_rowh(uint8_t rh);                      /* row height px of every map row (5-bit field) */
 void    osd_tc_open(uint8_t chars, uint8_t lines, uint8_t font);   /* grid (blanks of the font's width) + palette + font, all windows off; OSD off until osd_tc_show */
+void    osd_tc_open_part(uint8_t part, uint8_t chars, uint8_t lines, uint8_t font);   /* osd_tc_open in parts (0 map, 1 palette, 2 font), one per main-loop pass in the stepped console open */
 void    osd_tc_cells(uint8_t maprow, uint8_t cell, const uint8_t __xdata *tiles, uint8_t n, uint8_t style);
 void    osd_tc_bar(uint8_t win, uint16_t x0, uint16_t y0, uint16_t x1, uint16_t y1, uint8_t colour);   /* px, inclusive */
 void    osd_tc_bar_off(uint8_t win);
