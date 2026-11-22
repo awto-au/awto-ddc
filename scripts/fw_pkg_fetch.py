@@ -16,9 +16,7 @@ Timeouts: connect/read 30 s per socket op (stall guard; downloads are < 50 MB on
 import hashlib
 import http.client
 import json
-import os
 import shutil
-import subprocess
 import sys
 import time
 import urllib.request
@@ -42,15 +40,7 @@ UA = "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 Chrome/124 Safari/537.3
 MAGIC = {".zip": b"PK", ".exe": b"MZ", ".7z": b"7z\xbc\xaf", ".rar": b"Rar!", ".cab": b"MSCF"}
 
 
-def repo_root():
-    env = os.environ.get("AWTO_DDC_REPO")
-    if env:
-        return Path(env)
-    try:
-        return Path(subprocess.check_output(["git", "rev-parse", "--show-toplevel"],
-                                            cwd=Path(__file__).parent, text=True).strip())
-    except (subprocess.CalledProcessError, FileNotFoundError):
-        return Path(__file__).resolve().parent.parent
+from _repo import repo_root
 
 
 def main():

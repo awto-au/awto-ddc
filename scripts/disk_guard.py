@@ -10,7 +10,6 @@ CLI: disk_guard.py [--prune] -> prints free MB (and pruned bytes). Log: ./tmp/lo
 from __future__ import annotations
 
 import json
-import os
 import re
 import shutil
 import sys
@@ -22,9 +21,7 @@ BUILD_FREE_MB = 600     # build: sdcc-port intermediates are ~260 MB (2026-11-08
 KEEP_TAGS = 12
 
 
-def _repo() -> Path:
-    env = os.environ.get("AWTO_DDC_REPO")
-    return Path(env) if env else Path(__file__).resolve().parents[1]
+from _repo import repo_root as _repo
 
 
 def _log(msg: str) -> None:

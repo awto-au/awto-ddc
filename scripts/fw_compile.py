@@ -30,18 +30,7 @@ import place_rules as PR
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import sdcc_tools as T
-
-
-def repo_root():
-    env = os.environ.get("AWTO_DDC_REPO")
-    if env:
-        return Path(env)
-    try:
-        return Path(subprocess.check_output(["git", "rev-parse", "--show-toplevel"],
-                                            cwd=Path(__file__).parent, text=True).strip())
-    except (subprocess.CalledProcessError, FileNotFoundError):
-        return Path(__file__).resolve().parent.parent
-
+from _repo import repo_root
 
 ROOT = repo_root()
 WORK = ROOT / "tmp" / "sdcc-port"

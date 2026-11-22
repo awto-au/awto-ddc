@@ -28,18 +28,7 @@ from pathlib import Path
 
 import isostamp
 import numpy as np
-
-
-def repo_root() -> Path:
-    env = os.environ.get("AWTO_DDC_REPO")
-    if env:
-        return Path(env)
-    try:
-        return Path(subprocess.check_output(["git", "rev-parse", "--show-toplevel"], cwd=Path(__file__).parent,
-                                            text=True, stderr=subprocess.DEVNULL).strip())
-    except (subprocess.CalledProcessError, FileNotFoundError):
-        return Path(__file__).resolve().parent.parent
-
+from _repo import repo_root
 
 ROOT = repo_root()
 SDK = Path(os.environ.get("RTD_SDK", "/mnt/2tb/git_mirror/Kingdomwhisky/RTD-Scaler-TEST"))

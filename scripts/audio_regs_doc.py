@@ -7,23 +7,12 @@ a Dahua-firmware register dump and a dump of ours (tmp/regs/*.json, `pages` form
 import argparse
 import gzip
 import json
-import os
 import re
 import subprocess
 import sys
 from pathlib import Path
 
-
-def _repo() -> Path:
-    env = os.environ.get("AWTO_DDC_REPO")
-    if env:
-        return Path(env)
-    try:
-        return Path(subprocess.check_output(["git", "rev-parse", "--show-toplevel"], text=True,
-                                            cwd=Path(__file__).parent).strip())
-    except (OSError, subprocess.CalledProcessError):
-        return Path(__file__).resolve().parent.parent
-
+from _repo import repo_root as _repo
 
 REPO = _repo()
 LOG = REPO / "tmp/logs/audio_regs_doc.log"

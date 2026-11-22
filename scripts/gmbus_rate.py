@@ -13,16 +13,7 @@ import sys
 from pathlib import Path
 
 from _log import log_line as _log_line
-
-
-def repo_root():
-    e = os.environ.get("AWTO_DDC_REPO")
-    if e:
-        return Path(e)
-    r = subprocess.run(["git", "rev-parse", "--show-toplevel"], capture_output=True, text=True,
-                       cwd=Path(__file__).resolve().parent, check=False)
-    return Path(r.stdout.strip()) if r.returncode == 0 else Path(__file__).resolve().parent.parent
-
+from _repo import repo_root
 
 ROOT = repo_root()
 SRC = ROOT / "tools" / "gmbus_rate"

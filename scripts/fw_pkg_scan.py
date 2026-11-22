@@ -25,7 +25,6 @@ import math
 import os
 import re
 import shutil
-import subprocess
 import sys
 from pathlib import Path
 
@@ -49,16 +48,7 @@ ADDR_RES = {  # (label, regex on ASCII strings)
     "debug-0x35": re.compile(rb"\b(?:0x)?35\b[^\n]{0,20}(?:debug|slave)", re.IGNORECASE)}
 
 
-def repo_root():
-    env = os.environ.get("AWTO_DDC_REPO")
-    if env:
-        return Path(env)
-    try:
-        return Path(subprocess.check_output(["git", "rev-parse", "--show-toplevel"], cwd=Path(__file__).parent,
-                                            text=True).strip())
-    except (subprocess.CalledProcessError, FileNotFoundError):
-        return Path(__file__).resolve().parent.parent
-
+from _repo import repo_root
 
 ROOT = repo_root()
 

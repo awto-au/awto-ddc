@@ -7,23 +7,11 @@ usage: hdcp_key_scan.py diff DUMP...         4 KiB sectors that differ between d
 Log: tmp/logs/hdcp_key_scan.log, offsets and lengths only; key hashes go to stdout only (awto-ddc#44).
 """
 import hashlib
-import os
 import subprocess
 import sys
 from pathlib import Path
 
-
-def repo_root() -> Path:
-    env = os.environ.get("AWTO_DDC_REPO")
-    if env:
-        return Path(env)
-    try:
-        out = subprocess.run(["git", "rev-parse", "--show-toplevel"], cwd=Path(__file__).parent,
-                             capture_output=True, text=True, check=True).stdout.strip()
-        return Path(out)
-    except (subprocess.CalledProcessError, FileNotFoundError):
-        return Path(__file__).resolve().parent.parent
-
+from _repo import repo_root
 
 LOG = repo_root() / "tmp" / "logs" / "hdcp_key_scan.log"
 SECTOR = 4096

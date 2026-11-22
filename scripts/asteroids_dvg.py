@@ -10,7 +10,6 @@ import hashlib
 import json
 import logging
 import os
-import subprocess
 import sys
 import zipfile
 from pathlib import Path
@@ -21,16 +20,7 @@ ROM_BASE_WORD = 0x800  # vector ROM at 6502 0x5000 -> DVG word address 0x800
 OP_CUR, OP_HALT, OP_JSR, OP_RTS, OP_JMP, OP_SVEC = 0xA, 0xB, 0xC, 0xD, 0xE, 0xF
 
 
-def repo_root():
-    env = os.environ.get("AWTO_DDC_REPO")
-    if env:
-        return Path(env)
-    try:
-        out = subprocess.run(["git", "rev-parse", "--show-toplevel"], capture_output=True,
-                             text=True, check=True, cwd=Path(__file__).resolve().parent)
-        return Path(out.stdout.strip())
-    except (subprocess.CalledProcessError, FileNotFoundError):
-        return Path(__file__).resolve().parent.parent
+from _repo import repo_root
 
 
 def setup_log(root):

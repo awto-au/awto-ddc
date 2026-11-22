@@ -29,7 +29,6 @@ from __future__ import annotations
 import argparse
 import gzip
 import math
-import os
 import re
 import struct
 import subprocess
@@ -39,14 +38,7 @@ import wave
 from pathlib import Path
 
 from _log import log_line as _log_line
-
-
-def repo_root() -> Path:
-    env = os.environ.get("AWTO_DDC_REPO")
-    if env:
-        return Path(env)
-    return Path(__file__).resolve().parents[1]
-
+from _repo import repo_root
 
 ROOT = repo_root()
 sys.path.insert(0, str(ROOT / "scripts"))

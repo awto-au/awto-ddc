@@ -4,26 +4,13 @@
 Each tone is announced on the diagnostics console (VCP 0x63 Hz announce). Log: tmp/logs/audio_levels.log.
 """
 import argparse
-import os
 import re
 import subprocess
 import sys
 import time
-from pathlib import Path
 
 from _log import log_line as _log_line
-
-
-def _repo() -> Path:
-    env = os.environ.get("AWTO_DDC_REPO")
-    if env:
-        return Path(env)
-    try:
-        return Path(subprocess.check_output(["git", "rev-parse", "--show-toplevel"], text=True,
-                                            cwd=Path(__file__).parent).strip())
-    except (OSError, subprocess.CalledProcessError):
-        return Path(__file__).resolve().parent.parent
-
+from _repo import repo_root as _repo
 
 REPO = _repo()
 LOG = REPO / "tmp/logs/audio_levels.log"

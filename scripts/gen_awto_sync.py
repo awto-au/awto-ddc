@@ -15,23 +15,13 @@ usage: gen_awto_sync.py [--check]
 Log: tmp/logs/gen_awto_sync.log
 """
 import argparse
-import os
 import re
-import subprocess
 import sys
 from pathlib import Path
 
 import sync_classes
 from _log import log_line as _log_line
-
-
-def repo_root() -> Path:
-    env = os.environ.get("AWTO_DDC_REPO")
-    if env:
-        return Path(env)
-    r = subprocess.run(["git", "rev-parse", "--show-toplevel"], cwd=Path(__file__).resolve().parent, capture_output=True, text=True, check=False)
-    return Path(r.stdout.strip()) if r.returncode == 0 and r.stdout.strip() else Path(__file__).resolve().parents[1]
-
+from _repo import repo_root
 
 ROOT = repo_root()
 TSV = ROOT / "fw/awto/sync.tsv"

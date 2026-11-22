@@ -8,8 +8,6 @@ usage: hdmi_scdc.py <bus>
 Log: ./tmp/logs/hdmi_scdc.log. Repo root: $AWTO_DDC_REPO -> git -> file-relative.
 """
 import argparse
-import os
-import subprocess
 import sys
 from pathlib import Path
 
@@ -21,14 +19,7 @@ import i2cbus
 SCDC = 0x54
 
 
-def repo_root() -> Path:
-    if os.environ.get("AWTO_DDC_REPO"):
-        return Path(os.environ["AWTO_DDC_REPO"])
-    try:
-        return Path(subprocess.check_output(["git", "rev-parse", "--show-toplevel"], text=True,
-                                            cwd=Path(__file__).parent).strip())
-    except (subprocess.CalledProcessError, OSError):
-        return Path(__file__).resolve().parent.parent
+from _repo import repo_root
 
 
 def read(bus: i2cbus.Bus, off: int, n: int) -> bytes:

@@ -11,9 +11,7 @@ from __future__ import annotations
 
 import argparse
 import json
-import os
 import re
-import subprocess
 import sys
 from pathlib import Path
 
@@ -26,15 +24,7 @@ FORBIDDEN_TOOLS = re.compile(r"^(WebFetch|WebSearch|Agent|mcp__playwrong.*|mcp__
 FORBIDDEN_CMD = re.compile(r"(^|[\s;&|(])(gh|curl|wget)\s")
 
 
-def repo_root() -> Path:
-    env = os.environ.get("AWTO_DDC_REPO")
-    if env:
-        return Path(env)
-    try:
-        return Path(subprocess.check_output(["git", "rev-parse", "--show-toplevel"], cwd=Path(__file__).parent,
-                                            text=True, stderr=subprocess.DEVNULL).strip())
-    except (subprocess.CalledProcessError, FileNotFoundError):
-        return Path(__file__).resolve().parent.parent
+from _repo import repo_root
 
 
 def walk(obj):

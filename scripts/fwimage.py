@@ -29,13 +29,7 @@ SDCC_SRC = str(SDCC_INSTALL / "share/sdcc/awto-src")   # ISR lib clones (sdcc_is
 SDCCCALL = "3"
 
 
-def repo_root() -> Path:
-    env = os.environ.get("AWTO_DDC_REPO")
-    if env:
-        return Path(env)
-    r = subprocess.run(["git", "rev-parse", "--show-toplevel"], capture_output=True, text=True,
-                       cwd=Path(__file__).parent, check=False)
-    return Path(r.stdout.strip()) if r.returncode == 0 else Path(__file__).resolve().parents[1]
+from _repo import repo_root
 
 
 def stamp(bin_dir: Path) -> str:

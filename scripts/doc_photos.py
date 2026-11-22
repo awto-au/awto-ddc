@@ -4,25 +4,13 @@
 --full: copy all originals at full size, unchanged (GPS tags kept: Dan 2026-11-18 wants the full-resolution originals with GPS in the repo). Otherwise: reduced copies of the picks (EXIF stripped).
 """
 import argparse
-import os
 import shutil
 import subprocess
 import sys
 from pathlib import Path
 
 from _log import log_line as _log_line
-
-
-def _repo() -> Path:
-    env = os.environ.get("AWTO_DDC_REPO")
-    if env:
-        return Path(env)
-    try:
-        return Path(subprocess.check_output(["git", "rev-parse", "--show-toplevel"], text=True,
-                                            cwd=Path(__file__).parent).strip())
-    except (OSError, subprocess.CalledProcessError):
-        return Path(__file__).resolve().parent.parent
-
+from _repo import repo_root as _repo
 
 REPO = _repo()
 LOG = REPO / "tmp/logs/doc_photos.log"

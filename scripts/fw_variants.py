@@ -16,18 +16,9 @@ import shutil
 import subprocess
 import sys
 import time
-from pathlib import Path
 
 import isostamp
-
-
-def repo_root() -> Path:
-    env = os.environ.get("AWTO_DDC_REPO")
-    if env:
-        return Path(env)
-    r = subprocess.run(["git", "rev-parse", "--show-toplevel"], cwd=Path(__file__).resolve().parent, capture_output=True, text=True, check=False)
-    return Path(r.stdout.strip()) if r.returncode == 0 else Path(__file__).resolve().parents[1]
-
+from _repo import repo_root
 
 ROOT = repo_root()
 VARIANTS = {"meas4k": ["-D_AWTO_MEAS4K=_ON"], "net": ["-D_AWTO_NET=_ON"], "both": ["-D_AWTO_MEAS4K=_ON", "-D_AWTO_NET=_ON"]}

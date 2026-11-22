@@ -18,11 +18,7 @@ import urllib.request
 from datetime import datetime
 from pathlib import Path
 
-
-def _repo() -> Path:
-    env = os.environ.get("AWTO_DDC_REPO")
-    return Path(env) if env else Path(__file__).resolve().parent.parent
-
+from _repo import repo_root as _repo
 
 ROOT = _repo()
 LOG = ROOT / "tmp" / "logs" / "hass_power.log"

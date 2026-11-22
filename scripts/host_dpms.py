@@ -18,14 +18,7 @@ import time
 from pathlib import Path
 
 from _log import log_line as _log_line
-
-
-def _repo() -> Path:
-    env = os.environ.get("AWTO_DDC_REPO")
-    if env:
-        return Path(env)
-    return Path(__file__).resolve().parent.parent
-
+from _repo import repo_root as _repo
 
 ROOT = _repo()
 LOG = ROOT / "tmp" / "logs" / "host_dpms.log"

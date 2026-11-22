@@ -29,7 +29,6 @@ from __future__ import annotations
 
 import argparse
 import json
-import os
 import re
 import subprocess
 import sys
@@ -37,16 +36,7 @@ import time
 from pathlib import Path
 
 from _log import log_line as _log_line
-
-
-def _repo() -> Path:
-    env = os.environ.get("AWTO_DDC_REPO")
-    if env:
-        return Path(env)
-    r = subprocess.run(["git", "rev-parse", "--show-toplevel"], capture_output=True, text=True,
-                       cwd=Path(__file__).parent, check=False)
-    return Path(r.stdout.strip()) if r.returncode == 0 else Path(__file__).resolve().parents[1]
-
+from _repo import repo_root as _repo
 
 REPO = _repo()
 LOG = REPO / "tmp/logs/desk_layout.log"
