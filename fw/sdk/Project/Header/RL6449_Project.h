@@ -1598,6 +1598,7 @@ extern void AwtoSyncFreq(void);
 #define AWTO_SYNC_EV_DWELL                                      0x95    // arg = port: predetect re-armed the search dwell (SDK reactive time); value = ms since the search reached the port
 #define AWTO_SYNC_EV_PASSSLOW                                   0x96    // arg = stage AWTO_PS_*; value = state << 24 | per-boot count << 16 | ms: one main-loop segment >= AWTO_PS_SLOW_MS (#311)
 #define AWTO_SYNC_EV_PASSBOOT                                   0x97    // arg = stage that owned the longest pass of a state; value = state << 24 | ms (count byte 0), once per boot after ACTIVE (#311)
+#define AWTO_SYNC_EV_FASTWAKE                                   0x99    // #313 fast wake: arg 1 = try failed (value = reason << 8 | try; reason bits as AWTO_SW_EV_FAST_WHY, 6 = FIFO), 2 = hold started (value = try counter found)
 #define AWTO_SYNC_EV_LOGLOST                                    0x98    // DRAM log: value = lines dropped before this one (tail full of pending lines in a path that cannot write the DDR)
 // #311 main-loop stage timing: AWTO_PSTG(id) after each stage; Timer2 ms (usT2Isr). Names: sync.tsv table 19 args 0x20 + id.
 #ifndef AWTO_PSTG_SLOW_MS

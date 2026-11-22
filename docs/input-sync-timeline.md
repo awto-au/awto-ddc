@@ -153,7 +153,7 @@ Conditions: warm reset (ISP), n = 5 per image, median, console_mode Always, 4K60
   - Write: `AwtoTmdsMemNote` (RL6449_Series_TMDS.c) after each successful scan; `set_put` only when the mode differs from the row, flushed by the NVRAM gate (#151: quiet moment, never alone for a no-change). A cable change clears the RAM bit, not the row.
   - Warm reset: no separate no-init byte; the row is current 10 s after the last mode change (gate window), a reset inside that window starts from the previous mode and the lock check corrects it.
   - Lock check still decides: a remembered 1:40 that fails drops the bit, the SDK falls back to 1:10, the successful scan rewrites the row.
-  - Log: F2 02 `tried the remembered mode 1:40 first, learned since the reset`, F2 03 `... from NVRAM`; no line = no memory (1:10 first).
+  - Log: F2 02 `tried the remembered mode 1:40 first` (learned since the reset), F2 03 `tried 1:40 first, from NVRAM`; no line = no memory (1:10 first).
 - SCDC 0x20 read again in the scan (instead of memory) was tried and dropped: the sources (Intel on unit 3) leave TMDS_Bit_Clock_Ratio 0 (`./dev.py scdc`: cfg 0x00, scrambler status 1), the SDK's own SCDC test fails the same way, so no failed try was avoided (5 of 5 unchanged).
 
 | unit 3 HDMI D2, switch D1 -> D2, ms from the switch | before | after |

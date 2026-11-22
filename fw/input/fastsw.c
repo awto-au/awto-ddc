@@ -143,6 +143,7 @@ bit AwtoWakeHold(void)                          // judge check failed in ACTIVE:
     s_ucAwtoHoldLevel = 1;
     s_usAwtoHoldSec = 0;
     s_usAwtoHoldMs = ((WORD)AwtoMs());
+    AwtoSyncPush(AWTO_SYNC_EV_FASTWAKE, 2, s_ucAwtoHoldTries);     // the counter as the last hold left it
     s_ucAwtoHoldTries = 0;
     AwtoSwEvent(AWTO_SW_EV_HOLD, 1);
     return _TRUE;
@@ -329,6 +330,7 @@ void AwtoSwFastPoll(void)                       // once per main-loop pass: fini
             g_ucAwtoHold = SysSourceGetInputPort();
             s_ucAwtoHoldLevel = 0;              // backlight / panel already back on
             g_ucAwtoWakePending = 0;
+            AwtoSyncPush(AWTO_SYNC_EV_FASTWAKE, 1, ((WORD)ucWhy << 8) | s_ucAwtoHoldTries);
             ScalerGlobalWatchDog(_DISABLE);
             ScalerDDomainBackgroundEnable(_ENABLE);
             AwtoSwEvent(AWTO_SW_EV_FAST_WHY, ucWhy);

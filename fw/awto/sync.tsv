@@ -324,8 +324,8 @@ F1	02	ms	stage:display setting took % (M-domain, DCLK, scaling)	timing
 F1	03	ms	stage:colour set-up took %	timing
 F1	04	ms	stage:first-active work took %	timing
 F2	01	pms	scan ok:%	timing
-F2	02	pms	scan:tried the remembered mode 1:40 first, learned since the reset (%)	timing
-F2	03	pms	scan:tried the remembered mode 1:40 first, from NVRAM (%)	timing
+F2	02	pms	scan:tried the remembered mode 1:40 first (%)	timing
+F2	03	pms	scan:tried 1:40 first, from NVRAM (%)	timing
 F2	10	pms	scan wait:HPD event running (%)	warning
 F2	11	pms	scan wait:PHY not set, freq detect not stable yet (%)	warning
 F2	12	pms	scan fail:CDR not locked at 1:10, retry 1:40 (%)	error
@@ -412,6 +412,8 @@ FC	01	pms	DP link trained:% after the loop first saw it training	timing
 93	04	ms	INITIAL:SDK other flag set until %	timing
 94	00	ms2	ACTIVE wait:timer %, panel ready %	timing
 95	*	portms	search dwell re-armed, % after reaching	warning
+99	01	x	fast wake failed, reason+try %	warning
+99	02	n	fast wake hold start, tries %	timing
 96	*	pass	%	warning
 97	*	pass	%	timing
 98	*	n	log overflow: % lines lost (DDR busy)	error
