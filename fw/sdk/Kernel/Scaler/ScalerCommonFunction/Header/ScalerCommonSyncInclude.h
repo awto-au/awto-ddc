@@ -969,61 +969,61 @@
 #endif
 
 #if((_D2_HDMI_SUPPORT == _ON) && (_TMDS_COMBO_EXIST == _OFF))
-#define GET_TMDS_RX2_COLOR_SPACE_PREVALUE()                 (g_stTMDSRx2ColorInfo.ucDigitalColorSpacePreValue)
-#define SET_TMDS_RX2_COLOR_SPACE_PREVALUE(X)                (g_stTMDSRx2ColorInfo.ucDigitalColorSpacePreValue = (X))
+#define GET_TMDS_RX2_COLOR_SPACE_PREVALUE()                 (g_stTMDSRxColorInfo[0].ucDigitalColorSpacePreValue)
+#define SET_TMDS_RX2_COLOR_SPACE_PREVALUE(X)                (g_stTMDSRxColorInfo[0].ucDigitalColorSpacePreValue = (X))
 
-#define GET_TMDS_RX2_COLOR_DEPTH_PREVALUE()                 (g_stTMDSRx2ColorInfo.b3DigitalColorDepthPreValue)
-#define SET_TMDS_RX2_COLOR_DEPTH_PREVALUE(X)                (g_stTMDSRx2ColorInfo.b3DigitalColorDepthPreValue = (X))
+#define GET_TMDS_RX2_COLOR_DEPTH_PREVALUE()                 (g_stTMDSRxColorInfo[0].b3DigitalColorDepthPreValue)
+#define SET_TMDS_RX2_COLOR_DEPTH_PREVALUE(X)                (g_stTMDSRxColorInfo[0].b3DigitalColorDepthPreValue = (X))
 
-#define GET_TMDS_RX2_COLORIMETRY_PREVALUE()                 (g_stTMDSRx2ColorInfo.b4DigitalColorimetryPreValue)
-#define SET_TMDS_RX2_COLORIMETRY_PREVALUE(X)                (g_stTMDSRx2ColorInfo.b4DigitalColorimetryPreValue = (X))
+#define GET_TMDS_RX2_COLORIMETRY_PREVALUE()                 (g_stTMDSRxColorInfo[0].b4DigitalColorimetryPreValue)
+#define SET_TMDS_RX2_COLORIMETRY_PREVALUE(X)                (g_stTMDSRxColorInfo[0].b4DigitalColorimetryPreValue = (X))
 
-#define GET_TMDS_RX2_COLORIMETRY_EXT_PREVALUE()             (g_stTMDSRx2ColorInfo.b4DigitalColorimetryExtPreValue)
-#define SET_TMDS_RX2_COLORIMETRY_EXT_PREVALUE(X)            (g_stTMDSRx2ColorInfo.b4DigitalColorimetryExtPreValue = (X))
+#define GET_TMDS_RX2_COLORIMETRY_EXT_PREVALUE()             (g_stTMDSRxColorInfo[0].b4DigitalColorimetryExtPreValue)
+#define SET_TMDS_RX2_COLORIMETRY_EXT_PREVALUE(X)            (g_stTMDSRxColorInfo[0].b4DigitalColorimetryExtPreValue = (X))
 
-#define GET_TMDS_RX2_QUANTIZATION_PREVALUE()                (g_stTMDSRx2ColorInfo.b2DigitalQuantizationPreValue)
-#define SET_TMDS_RX2_QUANTIZATION_PREVALUE(X)               (g_stTMDSRx2ColorInfo.b2DigitalQuantizationPreValue = (X))
+#define GET_TMDS_RX2_QUANTIZATION_PREVALUE()                (g_stTMDSRxColorInfo[0].b2DigitalQuantizationPreValue)
+#define SET_TMDS_RX2_QUANTIZATION_PREVALUE(X)               (g_stTMDSRxColorInfo[0].b2DigitalQuantizationPreValue = (X))
 
-#define GET_TMDS_RX2_COLORIMETRY_CHANGED()                  (g_stTMDSRx2ColorInfoChanged.b1DigitalColorimetryChanged)
-#define SET_TMDS_RX2_COLORIMETRY_CHANGED()                  (g_stTMDSRx2ColorInfoChanged.b1DigitalColorimetryChanged = _TRUE)
-#define CLR_TMDS_RX2_COLORIMETRY_CHANGED()                  (g_stTMDSRx2ColorInfoChanged.b1DigitalColorimetryChanged = _FALSE)
+#define GET_TMDS_RX2_COLORIMETRY_CHANGED()                  (g_stTMDSRxColorInfoChanged[0].b1DigitalColorimetryChanged)
+#define SET_TMDS_RX2_COLORIMETRY_CHANGED()                  (g_stTMDSRxColorInfoChanged[0].b1DigitalColorimetryChanged = _TRUE)
+#define CLR_TMDS_RX2_COLORIMETRY_CHANGED()                  (g_stTMDSRxColorInfoChanged[0].b1DigitalColorimetryChanged = _FALSE)
 
-#define GET_TMDS_RX2_COLORIMETRY_EXT_CHANGED()              (g_stTMDSRx2ColorInfoChanged.b1DigitalColorimetryExtChanged)
-#define SET_TMDS_RX2_COLORIMETRY_EXT_CHANGED()              (g_stTMDSRx2ColorInfoChanged.b1DigitalColorimetryExtChanged = _TRUE)
-#define CLR_TMDS_RX2_COLORIMETRY_EXT_CHANGED()              (g_stTMDSRx2ColorInfoChanged.b1DigitalColorimetryExtChanged = _FALSE)
+#define GET_TMDS_RX2_COLORIMETRY_EXT_CHANGED()              (g_stTMDSRxColorInfoChanged[0].b1DigitalColorimetryExtChanged)
+#define SET_TMDS_RX2_COLORIMETRY_EXT_CHANGED()              (g_stTMDSRxColorInfoChanged[0].b1DigitalColorimetryExtChanged = _TRUE)
+#define CLR_TMDS_RX2_COLORIMETRY_EXT_CHANGED()              (g_stTMDSRxColorInfoChanged[0].b1DigitalColorimetryExtChanged = _FALSE)
 
-#define GET_TMDS_RX2_QUANTIZATION_CHANGED()                 (g_stTMDSRx2ColorInfoChanged.b1DigitalQuantizationChanged)
-#define SET_TMDS_RX2_QUANTIZATION_CHANGED()                 (g_stTMDSRx2ColorInfoChanged.b1DigitalQuantizationChanged = _TRUE)
-#define CLR_TMDS_RX2_QUANTIZATION_CHANGED()                 (g_stTMDSRx2ColorInfoChanged.b1DigitalQuantizationChanged = _FALSE)
+#define GET_TMDS_RX2_QUANTIZATION_CHANGED()                 (g_stTMDSRxColorInfoChanged[0].b1DigitalQuantizationChanged)
+#define SET_TMDS_RX2_QUANTIZATION_CHANGED()                 (g_stTMDSRxColorInfoChanged[0].b1DigitalQuantizationChanged = _TRUE)
+#define CLR_TMDS_RX2_QUANTIZATION_CHANGED()                 (g_stTMDSRxColorInfoChanged[0].b1DigitalQuantizationChanged = _FALSE)
 #endif
 
 #if((_D3_HDMI_SUPPORT == _ON) && (_TMDS_COMBO_EXIST == _OFF))
-#define GET_TMDS_RX3_COLOR_SPACE_PREVALUE()                 (g_stTMDSRx3ColorInfo.ucDigitalColorSpacePreValue)
-#define SET_TMDS_RX3_COLOR_SPACE_PREVALUE(X)                (g_stTMDSRx3ColorInfo.ucDigitalColorSpacePreValue = (X))
+#define GET_TMDS_RX3_COLOR_SPACE_PREVALUE()                 (g_stTMDSRxColorInfo[1].ucDigitalColorSpacePreValue)
+#define SET_TMDS_RX3_COLOR_SPACE_PREVALUE(X)                (g_stTMDSRxColorInfo[1].ucDigitalColorSpacePreValue = (X))
 
-#define GET_TMDS_RX3_COLOR_DEPTH_PREVALUE()                 (g_stTMDSRx3ColorInfo.b3DigitalColorDepthPreValue)
-#define SET_TMDS_RX3_COLOR_DEPTH_PREVALUE(X)                (g_stTMDSRx3ColorInfo.b3DigitalColorDepthPreValue = (X))
+#define GET_TMDS_RX3_COLOR_DEPTH_PREVALUE()                 (g_stTMDSRxColorInfo[1].b3DigitalColorDepthPreValue)
+#define SET_TMDS_RX3_COLOR_DEPTH_PREVALUE(X)                (g_stTMDSRxColorInfo[1].b3DigitalColorDepthPreValue = (X))
 
-#define GET_TMDS_RX3_COLORIMETRY_PREVALUE()                 (g_stTMDSRx3ColorInfo.b4DigitalColorimetryPreValue)
-#define SET_TMDS_RX3_COLORIMETRY_PREVALUE(X)                (g_stTMDSRx3ColorInfo.b4DigitalColorimetryPreValue = (X))
+#define GET_TMDS_RX3_COLORIMETRY_PREVALUE()                 (g_stTMDSRxColorInfo[1].b4DigitalColorimetryPreValue)
+#define SET_TMDS_RX3_COLORIMETRY_PREVALUE(X)                (g_stTMDSRxColorInfo[1].b4DigitalColorimetryPreValue = (X))
 
-#define GET_TMDS_RX3_COLORIMETRY_EXT_PREVALUE()             (g_stTMDSRx3ColorInfo.b4DigitalColorimetryExtPreValue)
-#define SET_TMDS_RX3_COLORIMETRY_EXT_PREVALUE(X)            (g_stTMDSRx3ColorInfo.b4DigitalColorimetryExtPreValue = (X))
+#define GET_TMDS_RX3_COLORIMETRY_EXT_PREVALUE()             (g_stTMDSRxColorInfo[1].b4DigitalColorimetryExtPreValue)
+#define SET_TMDS_RX3_COLORIMETRY_EXT_PREVALUE(X)            (g_stTMDSRxColorInfo[1].b4DigitalColorimetryExtPreValue = (X))
 
-#define GET_TMDS_RX3_QUANTIZATION_PREVALUE()                (g_stTMDSRx3ColorInfo.b2DigitalQuantizationPreValue)
-#define SET_TMDS_RX3_QUANTIZATION_PREVALUE(X)               (g_stTMDSRx3ColorInfo.b2DigitalQuantizationPreValue = (X))
+#define GET_TMDS_RX3_QUANTIZATION_PREVALUE()                (g_stTMDSRxColorInfo[1].b2DigitalQuantizationPreValue)
+#define SET_TMDS_RX3_QUANTIZATION_PREVALUE(X)               (g_stTMDSRxColorInfo[1].b2DigitalQuantizationPreValue = (X))
 
-#define GET_TMDS_RX3_COLORIMETRY_CHANGED()                  (g_stTMDSRx3ColorInfoChanged.b1DigitalColorimetryChanged)
-#define SET_TMDS_RX3_COLORIMETRY_CHANGED()                  (g_stTMDSRx3ColorInfoChanged.b1DigitalColorimetryChanged = _TRUE)
-#define CLR_TMDS_RX3_COLORIMETRY_CHANGED()                  (g_stTMDSRx3ColorInfoChanged.b1DigitalColorimetryChanged = _FALSE)
+#define GET_TMDS_RX3_COLORIMETRY_CHANGED()                  (g_stTMDSRxColorInfoChanged[1].b1DigitalColorimetryChanged)
+#define SET_TMDS_RX3_COLORIMETRY_CHANGED()                  (g_stTMDSRxColorInfoChanged[1].b1DigitalColorimetryChanged = _TRUE)
+#define CLR_TMDS_RX3_COLORIMETRY_CHANGED()                  (g_stTMDSRxColorInfoChanged[1].b1DigitalColorimetryChanged = _FALSE)
 
-#define GET_TMDS_RX3_COLORIMETRY_EXT_CHANGED()              (g_stTMDSRx3ColorInfoChanged.b1DigitalColorimetryExtChanged)
-#define SET_TMDS_RX3_COLORIMETRY_EXT_CHANGED()              (g_stTMDSRx3ColorInfoChanged.b1DigitalColorimetryExtChanged = _TRUE)
-#define CLR_TMDS_RX3_COLORIMETRY_EXT_CHANGED()              (g_stTMDSRx3ColorInfoChanged.b1DigitalColorimetryExtChanged = _FALSE)
+#define GET_TMDS_RX3_COLORIMETRY_EXT_CHANGED()              (g_stTMDSRxColorInfoChanged[1].b1DigitalColorimetryExtChanged)
+#define SET_TMDS_RX3_COLORIMETRY_EXT_CHANGED()              (g_stTMDSRxColorInfoChanged[1].b1DigitalColorimetryExtChanged = _TRUE)
+#define CLR_TMDS_RX3_COLORIMETRY_EXT_CHANGED()              (g_stTMDSRxColorInfoChanged[1].b1DigitalColorimetryExtChanged = _FALSE)
 
-#define GET_TMDS_RX3_QUANTIZATION_CHANGED()                 (g_stTMDSRx3ColorInfoChanged.b1DigitalQuantizationChanged)
-#define SET_TMDS_RX3_QUANTIZATION_CHANGED()                 (g_stTMDSRx3ColorInfoChanged.b1DigitalQuantizationChanged = _TRUE)
-#define CLR_TMDS_RX3_QUANTIZATION_CHANGED()                 (g_stTMDSRx3ColorInfoChanged.b1DigitalQuantizationChanged = _FALSE)
+#define GET_TMDS_RX3_QUANTIZATION_CHANGED()                 (g_stTMDSRxColorInfoChanged[1].b1DigitalQuantizationChanged)
+#define SET_TMDS_RX3_QUANTIZATION_CHANGED()                 (g_stTMDSRxColorInfoChanged[1].b1DigitalQuantizationChanged = _TRUE)
+#define CLR_TMDS_RX3_QUANTIZATION_CHANGED()                 (g_stTMDSRxColorInfoChanged[1].b1DigitalQuantizationChanged = _FALSE)
 #endif
 
 #if((_D4_HDMI_SUPPORT == _ON) && (_TMDS_COMBO_EXIST == _OFF))
@@ -1899,14 +1899,21 @@ extern StructDigitalColorInfo g_stTMDSRx1ColorInfo;
 extern StructDigitalColorInfoChanged g_stTMDSRx1ColorInfoChanged;
 #endif
 
-#if((_D2_HDMI_SUPPORT == _ON) && (_TMDS_COMBO_EXIST == _OFF))
-extern StructDigitalColorInfo g_stTMDSRx2ColorInfo;
-extern StructDigitalColorInfoChanged g_stTMDSRx2ColorInfoChanged;
-#endif
+#if((_D2_HDMI_SUPPORT == _ON) && (_D3_HDMI_SUPPORT == _ON) && (_TMDS_COMBO_EXIST == _OFF))
+extern StructDigitalColorInfo g_stTMDSRxColorInfo[2];
+extern StructDigitalColorInfoChanged g_stTMDSRxColorInfoChanged[2];
 
-#if((_D3_HDMI_SUPPORT == _ON) && (_TMDS_COMBO_EXIST == _OFF))
-extern StructDigitalColorInfo g_stTMDSRx3ColorInfo;
-extern StructDigitalColorInfoChanged g_stTMDSRx3ColorInfoChanged;
+#define GET_TMDS_RXN_COLORIMETRY_PREVALUE()                 (g_stTMDSRxColorInfo[RX_CUR].b4DigitalColorimetryPreValue)
+#define SET_TMDS_RXN_COLORIMETRY_PREVALUE(X)                (g_stTMDSRxColorInfo[RX_CUR].b4DigitalColorimetryPreValue = (X))
+#define GET_TMDS_RXN_COLORIMETRY_EXT_PREVALUE()             (g_stTMDSRxColorInfo[RX_CUR].b4DigitalColorimetryExtPreValue)
+#define SET_TMDS_RXN_COLORIMETRY_EXT_PREVALUE(X)            (g_stTMDSRxColorInfo[RX_CUR].b4DigitalColorimetryExtPreValue = (X))
+#define GET_TMDS_RXN_QUANTIZATION_PREVALUE()                (g_stTMDSRxColorInfo[RX_CUR].b2DigitalQuantizationPreValue)
+#define SET_TMDS_RXN_QUANTIZATION_PREVALUE(X)               (g_stTMDSRxColorInfo[RX_CUR].b2DigitalQuantizationPreValue = (X))
+#define SET_TMDS_RXN_COLORIMETRY_CHANGED()                  (g_stTMDSRxColorInfoChanged[RX_CUR].b1DigitalColorimetryChanged = _TRUE)
+#define SET_TMDS_RXN_COLORIMETRY_EXT_CHANGED()              (g_stTMDSRxColorInfoChanged[RX_CUR].b1DigitalColorimetryExtChanged = _TRUE)
+#define SET_TMDS_RXN_QUANTIZATION_CHANGED()                 (g_stTMDSRxColorInfoChanged[RX_CUR].b1DigitalQuantizationChanged = _TRUE)
+#define GET_TMDS_RXN_AVI_PIXEL_REPETITION()                 (g_pucTMDSRxAviInfo[2 + RX_CUR])
+#define SET_TMDS_RXN_AVI_PIXEL_REPETITION(x)                (g_pucTMDSRxAviInfo[2 + RX_CUR] = (x))
 #endif
 
 #if((_D4_HDMI_SUPPORT == _ON) && (_TMDS_COMBO_EXIST == _OFF))
@@ -2113,38 +2120,9 @@ extern bit ScalerSyncMHLVBusPowerExist(void);
 
 extern void ScalerSyncResetProc(BYTE ucInputPort);
 
-#if(((_D0_HDMI_SUPPORT == _ON) && (_TMDS_COMBO_EXIST == _OFF)) || ((_HDMI_SUPPORT == _ON) && (_TMDS_PAGE2_COMBO_EXIST == _ON)))
-extern void ScalerSyncTMDSRx0HdmiVideoSetting(void);
-extern bit ScalerSyncTMDSRx0HdmiColorInfoChanged(void);
-#endif
-
-#if((_D1_HDMI_SUPPORT == _ON) && (_TMDS_COMBO_EXIST == _OFF))
-extern void ScalerSyncTMDSRx1HdmiVideoSetting(void);
-extern bit ScalerSyncTMDSRx1HdmiColorInfoChanged(void);
-#endif
-
-#if((_D2_HDMI_SUPPORT == _ON) && (_TMDS_COMBO_EXIST == _OFF))
+#if((_D2_HDMI_SUPPORT == _ON) && (_D3_HDMI_SUPPORT == _ON) && (_TMDS_COMBO_EXIST == _OFF))
 #if(_D2_INPUT_PORT_TYPE != _D2_DUAL_DVI_PORT)
-extern void ScalerSyncTMDSRx2HdmiVideoSetting(void);
+extern void ScalerSyncTMDSRxHdmiVideoSetting(void);
 #endif
-extern bit ScalerSyncTMDSRx2HdmiColorInfoChanged(void);
-#endif
-
-#if((_D3_HDMI_SUPPORT == _ON) && (_TMDS_COMBO_EXIST == _OFF))
-#if(_D3_INPUT_PORT_TYPE != _D3_DUAL_DVI_PORT)
-void ScalerSyncTMDSRx3HdmiVideoSetting(void);
-#endif
-extern bit ScalerSyncTMDSRx3HdmiColorInfoChanged(void);
-#endif
-
-#if((_D4_HDMI_SUPPORT == _ON) && (_TMDS_COMBO_EXIST == _OFF))
-#if(_D4_INPUT_PORT_TYPE != _D4_DUAL_DVI_PORT)
-void ScalerSyncTMDSRx4HdmiVideoSetting(void);
-#endif
-extern bit ScalerSyncTMDSRx4HdmiColorInfoChanged(void);
-#endif
-
-#if((_D5_HDMI_SUPPORT == _ON) && (_TMDS_COMBO_EXIST == _OFF))
-extern void ScalerSyncTMDSRx5HdmiVideoSetting(void);
-extern bit ScalerSyncTMDSRx5HdmiColorInfoChanged(void);
+extern bit ScalerSyncTMDSRxHdmiColorInfoChanged(void);
 #endif

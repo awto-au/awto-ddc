@@ -895,12 +895,7 @@ stub	_ScalerSyncHdcpCheckEnabled	C	0x2acc	8
 stub	_ScalerSyncInterfaceSwitch	C	0x2ad4	8
 stub	_ScalerSyncPowerProc	C	0x2adc	8
 stub	_ScalerSyncTMDSHPDToggleProc	C	0x2ae4	8
-stub	_ScalerSyncTMDSRx2HdmiColorInfoChanged	C	0x2aec	8
-stub	_ScalerSyncTMDSRx2HdmiVideoSetting	C	0x2af4	8
-stub	_ScalerSyncTMDSRx3HdmiColorInfoChanged	C	0x2afc	8
-stub	_ScalerSyncTMDSRx3HdmiColorimetrySetting	C	0x2b04	8
-stub	_ScalerSyncTMDSRx3HdmiQuantizationSetting	C	0x2b0c	8
-stub	_ScalerSyncTMDSRx3HdmiVideoSetting	C	0x2b14	8
+stub	_ScalerSyncTMDSRxHdmiVideoSetting	C	0x2aec	8
 stub	_ScalerTMDSFirstActiveProc	C	0x2b1c	8
 stub	_ScalerTMDSHotPlugEvent	C	0x2b24	8
 stub	_ScalerTMDSIntHandler_EXINT0	C	0x2b2c	8
@@ -913,7 +908,7 @@ stub	_ScalerTMDSRx2HdmiPacketDetectEvent	C	0x2b5c	8
 stub	_ScalerTMDSRx2HdmiWatchDog	C	0x2b64	8
 stub	_ScalerTMDSRx2PhySetDeferred	C	0x2b6c	8
 stub	_ScalerTMDSRx2TMDSVideoDetectEvent	C	0x2b74	8
-stub	_ScalerTMDSRx3HdmiGetAVIInfo	C	0x2b7c	8
+stub	_ScalerSyncTMDSRxHdmiColorInfoChanged	C	0x2b7c	8
 stub	_ScalerTMDSRx3HdmiWatchDog	C	0x2b84	8
 stub	_ScalerTMDSRx3PhySetDeferred	C	0x2b8c	8
 stub	_ScalerTMDSRx3TMDSScanInputPort	C	0x2b94	8
@@ -1594,7 +1589,6 @@ fn	_ScalerTMDSPhySetDeferred	2	0x395c	32
 fn	_ScalerTMDSScanInputPort	2	0x397c	108
 fn	_ScalerTMDSStableDetect	2	0x39e8	44
 fn	_ScalerTMDSRx2HdmiWatchDog	2	0x3a14	264
-fn	_ScalerTMDSRx2SetPorchColor	2	0x3b1c	88
 fn	_ScalerTMDSRx2TMDSScanInputPort	2	0x3b74	1412
 fn	_ScalerTMDSRx2TMDSStableDetect	2	0x40f8	612
 fn	_ScalerTMDSRxHdmiWatchDog	2	0x435c	372
@@ -1618,15 +1612,6 @@ fn	_ScalerDebug	2	0x51ac	796
 fn	_ScalerDebugGetRegisters	2	0x54c8	376
 fn	_ScalerDebugSendData	2	0x5640	188
 fn	_ScalerDebugSetRegisters	2	0x56fc	300
-fn	_ScalerSyncTMDSRx2HdmiColorInfoChanged	2	0x5828	588
-fn	_ScalerSyncTMDSRx2HdmiColorimetryExtSetting	2	0x5a74	252
-fn	_ScalerSyncTMDSRx2HdmiColorimetrySetting	2	0x5b70	220
-fn	_ScalerSyncTMDSRx2HdmiQuantizationSetting	2	0x5c4c	232
-fn	_ScalerSyncTMDSRx2HdmiVideoSetting	2	0x5d34	316
-fn	_ScalerSyncTMDSRx3HdmiColorInfoChanged	2	0x5e70	588
-fn	_ScalerSyncTMDSRx3HdmiColorimetryExtSetting	2	0x60bc	252
-fn	_ScalerSyncTMDSRx3HdmiColorimetrySetting	2	0x61b8	220
-fn	_ScalerSyncTMDSRx3HdmiQuantizationSetting	2	0x6294	232
 fn	_AwtoDpRx1LtBusy	2	0x637c	16
 fn	_ScalerDpRx1AdjustLaneFLDBand	2	0x638c	520
 fn	_ScalerDpRx1AlignCheck	2	0x6594	80
@@ -1646,9 +1631,7 @@ fn	_ScalerDpRx1SetDFEInitial	2	0x7678	648
 fn	_ScalerDpRx1SetDpcdBitValue	2	0x7900	56
 fn	_ScalerDpRx1SetDpcdValue	2	0x7938	48
 fn	_ScalerDpRx1StableDetect	2	0x7968	168
-fn	_ScalerTMDSRx2HdmiGetAVIInfo	2	0x7a10	228
 fn	_ScalerTMDSRx2TMDSNormalPreDetect	2	0x7af4	108
-fn	_ScalerTMDSRx3HdmiGetAVIInfo	2	0x7b60	228
 fn	_ScalerTMDSRx3TMDSNormalPreDetect	2	0x7c44	108
 fn	_SysDpSourceKeepDetectingCheck	2	0x7cb0	8
 fn	_SysModeGetModeStateChange	2	0x7cb8	16
@@ -2021,7 +2004,6 @@ fn	_ScalerTMDSRx3HdmiAVMuteProc	4	0x5750	96
 fn	_ScalerTMDSRx3HdmiWatchDog	4	0x57b0	264
 fn	_ScalerTMDSRx3HotPlugEvent	4	0x58b8	148
 fn	_ScalerTMDSRx3Initial	4	0x594c	440
-fn	_ScalerTMDSRx3SetPorchColor	4	0x5b04	88
 fn	_ScalerTMDSRx3TMDSScanInputPort	4	0x5b5c	1412
 fn	_UserAdjustAudioVolume	4	0x60e0	12
 fn	_UserAdjustAudioVolumeMapping	4	0x60ec	8
@@ -2076,7 +2058,6 @@ fn	_ScalerAudioGetAudioInputPortChanged	4	0x7348	32
 fn	_ScalerIOSCTrimming	4	0x7368	600
 fn	_ScalerSyncActiveProc	4	0x75c0	16
 fn	_ScalerSyncTMDSHPDToggleProc	4	0x75d0	1340
-fn	_ScalerSyncTMDSRx3HdmiVideoSetting	4	0x7b0c	316
 fn	_ScalerSyncTMDSScanInitial	4	0x7c48	36
 fn	_ScalerDpRx1ChangeHdcpDpcdCapability	4	0x7c6c	64
 fn	_ScalerDpRx1PhyInitial	4	0x7cac	128
@@ -3040,6 +3021,7 @@ fn	_ScalerVgipSetCaptureHDelay	9	0x8820	112
 fn	_ScalerVgipSetCaptureHStartPosition	9	0x8890	92
 fn	_ScalerVgipVsBypassEnable	9	0x88ec	48
 fn	_SysJudgeCheckStatus	9	0x891c	16
+fn	_ScalerSyncTMDSRxHdmiColorimetrySetting	9	0x892c	340
 fn	_SysMachineHandler	9	0x8ae4	92
 fn	_SysMachinePower	9	0x8b40	28
 fn	_SysModeGetDisplaySettingReady	9	0x8b5c	16
@@ -3053,6 +3035,7 @@ fn	_UserCommonInterfaceCheckResolutionNoSupport	9	0x8e08	164
 fn	_UserCommonInterfaceDpAuxSet	9	0x8eac	8
 fn	_UserCommonInterfaceLoadEmbeddedEdidData	9	0x8eb4	44
 fn	_UserCommonInterfaceLoadEmbeddedEdidDataByPort	9	0x8ee0	172
+fn	_ScalerSyncTMDSRxHdmiColorimetryExtSetting	9	0x8f8c	348
 fn	_AwtoFastScalerMeasureOk	9	0x911c	44
 fn	_set_ap_rotate	9	0x9148	236
 fn	_AwtoTmdsHpd	9	0x9234	204
@@ -3072,6 +3055,9 @@ fn	_ScalerTMDSRx2InterruptInitial	9	0x9f0c	704
 fn	_ScalerTMDSRx3InterruptInitial	9	0xa1cc	704
 fn	_SysMachineCheck	9	0xa48c	464
 fn	_AwtoFastScalerApply	9	0xa65c	472
+fn	_ScalerSyncTMDSRxHdmiColorInfoChanged	9	0xa834	756
+fn	_ScalerSyncTMDSRxHdmiQuantizationSetting	9	0xab28	372
+fn	_ScalerSyncTMDSRxHdmiVideoSetting	9	0xac9c	560
 const	_font_blob_spleen	10	0x0000	1300
 const	_font_blob_spleen5	10	0x0514	916
 const	_font_blob_spleen6	10	0x08a8	1000

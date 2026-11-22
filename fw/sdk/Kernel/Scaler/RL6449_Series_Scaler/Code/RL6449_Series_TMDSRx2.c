@@ -4069,7 +4069,7 @@ BYTE ScalerTMDSRxTMDSScanInputPort(BYTE ucInputType)
             // HDMI packet detect --> AVI infoframe & GCP packet
             ScalerTMDSRxHdmiPacketDetect(_WAIT);
 
-            RXSEL((ScalerSyncTMDSRx2HdmiVideoSetting()), (ScalerSyncTMDSRx3HdmiVideoSetting()));
+            ScalerSyncTMDSRxHdmiVideoSetting();
 
             SET_COLOR_DEPTH(ScalerTMDSRxHdmiGetColorDepth());
 
@@ -4552,7 +4552,7 @@ bit ScalerTMDSRxTMDSStableDetect(BYTE ucSourceType)
 
             if(RXSEL((GET_HDMI_RX2_AVI_INFO_FRAME_RECEIVED()), (GET_HDMI_RX3_AVI_INFO_FRAME_RECEIVED())) == _TRUE)
             {
-                if(RXSEL((ScalerSyncTMDSRx2HdmiColorInfoChanged()), (ScalerSyncTMDSRx3HdmiColorInfoChanged())) == _TRUE)
+                if(ScalerSyncTMDSRxHdmiColorInfoChanged() == _TRUE)
                 {
                     DebugMessageRx2("Color Info Changed", ucSourceType);
                     return _FALSE;

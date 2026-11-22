@@ -179,14 +179,9 @@ StructDigitalColorInfo g_stTMDSRx1ColorInfo;
 StructDigitalColorInfoChanged g_stTMDSRx1ColorInfoChanged;
 #endif
 
-#if((_D2_HDMI_SUPPORT == _ON) && (_TMDS_COMBO_EXIST == _OFF))
-StructDigitalColorInfo g_stTMDSRx2ColorInfo;
-StructDigitalColorInfoChanged g_stTMDSRx2ColorInfoChanged;
-#endif
-
-#if((_D3_HDMI_SUPPORT == _ON) && (_TMDS_COMBO_EXIST == _OFF))
-StructDigitalColorInfo g_stTMDSRx3ColorInfo;
-StructDigitalColorInfoChanged g_stTMDSRx3ColorInfoChanged;
+#if((_D2_HDMI_SUPPORT == _ON) && (_D3_HDMI_SUPPORT == _ON) && (_TMDS_COMBO_EXIST == _OFF))
+StructDigitalColorInfo g_stTMDSRxColorInfo[2];
+StructDigitalColorInfoChanged g_stTMDSRxColorInfoChanged[2];
 #endif
 
 #if((_D4_HDMI_SUPPORT == _ON) && (_TMDS_COMBO_EXIST == _OFF))
@@ -380,74 +375,17 @@ void ScalerSyncBgInterfaceSwitch(BYTE ucInputPort, BYTE ucInputPortType, BYTE uc
 #endif
 void ScalerSyncSetDdcForceNack(BYTE ucInputPort, bit bSelect);
 
-#if(((_D0_HDMI_SUPPORT == _ON) && (_TMDS_COMBO_EXIST == _OFF)) || ((_HDMI_SUPPORT == _ON) && (_TMDS_PAGE2_COMBO_EXIST == _ON)))
-void ScalerSyncTMDSRx0HdmiVideoSetting(void);
-void ScalerSyncTMDSRx0HdmiColorimetrySetting(void);
-void ScalerSyncTMDSRx0HdmiColorimetryExtSetting(void);
-#if((_RGB_QUANTIZATION_RANGE_SUPPORT == _ON) || (_YCC_QUANTIZATION_RANGE_SUPPORT == _ON))
-void ScalerSyncTMDSRx0HdmiQuantizationSetting(void);
-#endif
-
-bit ScalerSyncTMDSRx0HdmiColorInfoChanged(void);
-#endif
-
-#if((_D1_HDMI_SUPPORT == _ON) && (_TMDS_COMBO_EXIST == _OFF))
-void ScalerSyncTMDSRx1HdmiVideoSetting(void);
-void ScalerSyncTMDSRx1HdmiColorimetrySetting(void);
-void ScalerSyncTMDSRx1HdmiColorimetryExtSetting(void);
-#if((_RGB_QUANTIZATION_RANGE_SUPPORT == _ON) || (_YCC_QUANTIZATION_RANGE_SUPPORT == _ON))
-void ScalerSyncTMDSRx1HdmiQuantizationSetting(void);
-#endif
-bit ScalerSyncTMDSRx1HdmiColorInfoChanged(void);
-#endif
-
-#if((_D2_HDMI_SUPPORT == _ON) && (_TMDS_COMBO_EXIST == _OFF))
+#if((_D2_HDMI_SUPPORT == _ON) && (_D3_HDMI_SUPPORT == _ON) && (_TMDS_COMBO_EXIST == _OFF))
 #if(_D2_INPUT_PORT_TYPE != _D2_DUAL_DVI_PORT)
-void ScalerSyncTMDSRx2HdmiVideoSetting(void);
+void ScalerSyncTMDSRxHdmiVideoSetting(void);
 #endif
 
-void ScalerSyncTMDSRx2HdmiColorimetrySetting(void);
-void ScalerSyncTMDSRx2HdmiColorimetryExtSetting(void);
+void ScalerSyncTMDSRxHdmiColorimetrySetting(void);
+void ScalerSyncTMDSRxHdmiColorimetryExtSetting(void);
 #if((_RGB_QUANTIZATION_RANGE_SUPPORT == _ON) || (_YCC_QUANTIZATION_RANGE_SUPPORT == _ON))
-void ScalerSyncTMDSRx2HdmiQuantizationSetting(void);
+void ScalerSyncTMDSRxHdmiQuantizationSetting(void);
 #endif
-bit ScalerSyncTMDSRx2HdmiColorInfoChanged(void);
-#endif
-
-#if((_D3_HDMI_SUPPORT == _ON) && (_TMDS_COMBO_EXIST == _OFF))
-#if(_D3_INPUT_PORT_TYPE != _D3_DUAL_DVI_PORT)
-void ScalerSyncTMDSRx3HdmiVideoSetting(void);
-#endif
-
-void ScalerSyncTMDSRx3HdmiColorimetrySetting(void);
-void ScalerSyncTMDSRx3HdmiColorimetryExtSetting(void);
-#if((_RGB_QUANTIZATION_RANGE_SUPPORT == _ON) || (_YCC_QUANTIZATION_RANGE_SUPPORT == _ON))
-void ScalerSyncTMDSRx3HdmiQuantizationSetting(void);
-#endif
-bit ScalerSyncTMDSRx3HdmiColorInfoChanged(void);
-#endif
-
-#if((_D4_HDMI_SUPPORT == _ON) && (_TMDS_COMBO_EXIST == _OFF))
-#if(_D4_INPUT_PORT_TYPE != _D4_DUAL_DVI_PORT)
-void ScalerSyncTMDSRx4HdmiVideoSetting(void);
-#endif
-
-void ScalerSyncTMDSRx4HdmiColorimetrySetting(void);
-void ScalerSyncTMDSRx4HdmiColorimetryExtSetting(void);
-#if((_RGB_QUANTIZATION_RANGE_SUPPORT == _ON) || (_YCC_QUANTIZATION_RANGE_SUPPORT == _ON))
-void ScalerSyncTMDSRx4HdmiQuantizationSetting(void);
-#endif
-bit ScalerSyncTMDSRx4HdmiColorInfoChanged(void);
-#endif
-
-#if((_D5_HDMI_SUPPORT == _ON) && (_TMDS_COMBO_EXIST == _OFF))
-void ScalerSyncTMDSRx5HdmiVideoSetting(void);
-void ScalerSyncTMDSRx5HdmiColorimetrySetting(void);
-void ScalerSyncTMDSRx5HdmiColorimetryExtSetting(void);
-#if((_RGB_QUANTIZATION_RANGE_SUPPORT == _ON) || (_YCC_QUANTIZATION_RANGE_SUPPORT == _ON))
-void ScalerSyncTMDSRx5HdmiQuantizationSetting(void);
-#endif
-bit ScalerSyncTMDSRx5HdmiColorInfoChanged(void);
+bit ScalerSyncTMDSRxHdmiColorInfoChanged(void);
 #endif
 
 #if(_DIGITAL_PORT_SUPPORT == _ON)
@@ -6486,1249 +6424,21 @@ void ScalerSyncSetDdcForceNack(BYTE ucInputPort, bit bSelect)
 }
 
 
-#if(((_D0_HDMI_SUPPORT == _ON) && (_TMDS_COMBO_EXIST == _OFF)) || ((_HDMI_SUPPORT == _ON) && (_TMDS_PAGE2_COMBO_EXIST == _ON)))
-//--------------------------------------------------
-// Description  : TMDS Rx0 Video Setting
-// Input Value  : None
-// Output Value : None
-//--------------------------------------------------
-void ScalerSyncTMDSRx0HdmiVideoSetting(void)
-{
-    if(GET_HDMI_RX0_AVI_INFO_FRAME_RECEIVED() == _TRUE)
-    {
-        // Color Space Auto/ Pixel Repetition auto mode
-        ScalerSetDataPortBit(P2_C9_HDMI_AP, _P2_CA_PT_51_PORT_PAGE2_HDMI_ACRCR, ~(_BIT6 | _BIT2), (_BIT6 | _BIT2));
-
-        pData[0] = ScalerTMDSRx0HdmiGetAVIInfo(_AVI_INFO_COLOR_SPACE);
-
-        // Get Color Space
-        if(pData[0] == _AVI_COLOR_SPACE_00)
-        {
-            // Color Space RGB
-            DebugMessageRx0("Get Color Space RGB", pData[0]);
-            SET_COLOR_SPACE(_COLOR_SPACE_RGB);
-        }
-        else if(pData[0] == _AVI_COLOR_SPACE_01)
-        {
-            // YCC422
-            DebugMessageRx0("Get Color Space YUV422", pData[0]);
-            SET_COLOR_SPACE(_COLOR_SPACE_YCBCR422);
-        }
-        else if(pData[0] == _AVI_COLOR_SPACE_11)
-        {
-            // YCC420
-            DebugMessageRx0("Get Color Space YUV420", pData[0]);
-            SET_COLOR_SPACE(_COLOR_SPACE_YCBCR420);
-        }
-        else
-        {
-            // YCC444
-            DebugMessageRx0("Get Color Space YUV444", pData[0]);
-            SET_COLOR_SPACE(_COLOR_SPACE_YCBCR444);
-        }
-
-        // Set Pixel Repetition
-        switch(ScalerTMDSRx0HdmiGetAVIInfo(_AVI_INFO_PIXEL_REPETITION))
-        {
-            case _AVI_PIXEL_REPETITION_0:
-
-                DebugMessageRx0("Get Pixel Repetition 0", 0x00);
-                SET_TMDS_RX0_AVI_PIXEL_REPETITION(_AVI_PIXEL_REPETITION_0);
-
-                break;
-
-            case _AVI_PIXEL_REPETITION_1:
-
-                DebugMessageRx0("Get Pixel Repetition 1", 0x00);
-                SET_TMDS_RX0_AVI_PIXEL_REPETITION(_AVI_PIXEL_REPETITION_1);
-
-                break;
-
-            case _AVI_PIXEL_REPETITION_2:
-
-                DebugMessageRx0("Get Pixel Repetition 2", 0x00);
-                SET_TMDS_RX0_AVI_PIXEL_REPETITION(_AVI_PIXEL_REPETITION_2);
-
-                break;
-
-            case _AVI_PIXEL_REPETITION_3:
-
-                DebugMessageRx0("Get Pixel Repetition 3", 0x00);
-                SET_TMDS_RX0_AVI_PIXEL_REPETITION(_AVI_PIXEL_REPETITION_3);
-
-                break;
-
-            case _AVI_PIXEL_REPETITION_4:
-
-                DebugMessageRx0("Get Pixel Repetition 4", 0x00);
-                SET_TMDS_RX0_AVI_PIXEL_REPETITION(_AVI_PIXEL_REPETITION_4);
-
-                break;
-
-            case _AVI_PIXEL_REPETITION_5:
-
-                DebugMessageRx0("Get Pixel Repetition 5", 0x00);
-                SET_TMDS_RX0_AVI_PIXEL_REPETITION(_AVI_PIXEL_REPETITION_5);
-
-                break;
-
-            case _AVI_PIXEL_REPETITION_6:
-
-                DebugMessageRx0("Get Pixel Repetition 6", 0x00);
-                SET_TMDS_RX0_AVI_PIXEL_REPETITION(_AVI_PIXEL_REPETITION_6);
-
-                break;
-
-            case _AVI_PIXEL_REPETITION_7:
-
-                DebugMessageRx0("Get Pixel Repetition 7", 0x00);
-                SET_TMDS_RX0_AVI_PIXEL_REPETITION(_AVI_PIXEL_REPETITION_7);
-
-                break;
-
-            case _AVI_PIXEL_REPETITION_8:
-
-                DebugMessageRx0("Get Pixel Repetition 8", 0x00);
-                SET_TMDS_RX0_AVI_PIXEL_REPETITION(_AVI_PIXEL_REPETITION_8);
-
-                break;
-
-            case _AVI_PIXEL_REPETITION_9:
-
-                DebugMessageRx0("Get Pixel Repetition 9", 0x00);
-                SET_TMDS_RX0_AVI_PIXEL_REPETITION(_AVI_PIXEL_REPETITION_9);
-
-                break;
-
-            default:
-
-                DebugMessageRx0("Get Pixel Repetition Error", 0x00);
-                SET_TMDS_RX0_AVI_PIXEL_REPETITION(_AVI_PIXEL_REPETITION_0);
-
-                break;
-        }
-
-        // Set Colorimetry
-        ScalerSyncTMDSRx0HdmiColorimetrySetting();
-
-        // Set Quantization
-#if((_RGB_QUANTIZATION_RANGE_SUPPORT == _ON) || (_YCC_QUANTIZATION_RANGE_SUPPORT == _ON))
-        ScalerSyncTMDSRx0HdmiQuantizationSetting();
-#endif
-    }
-    else    // No Info Frame Received
-    {
-#if(_D0_INPUT_PORT_TYPE == _D0_MHL_PORT)
-        if(GET_TMDS_RX0_CLK_MODE() == _TMDS_MHL_PPMODE_PHY_SETTING)
-        {
-            SET_COLOR_SPACE(_COLOR_SPACE_YCBCR422);
-            SET_COLOR_YCC_QUANTIZATION_RANGE(_YCC_QUANTIZATION_LIMIT_RANGE);
-
-            // Manual Set Color Space to YCbCr422 and disable pixel repetition
-            ScalerSetDataPortBit(P2_C9_HDMI_AP, _P2_CA_PT_51_PORT_PAGE2_HDMI_ACRCR, ~(_BIT6 | _BIT5 | _BIT4 | _BIT3 | _BIT2), _BIT3);
-        }
-        else
-#endif
-
-        {
-            SET_COLOR_SPACE(_COLOR_SPACE_RGB);
-            SET_COLOR_RGB_QUANTIZATION_RANGE(_RGB_QUANTIZATION_RESERVED);
-
-            // Manual Set Color Space to RGB and disable pixel repetition
-            ScalerSetDataPortBit(P2_C9_HDMI_AP, _P2_CA_PT_51_PORT_PAGE2_HDMI_ACRCR, ~(_BIT6 | _BIT5 | _BIT4 | _BIT3 | _BIT2), 0x00);
-        }
-
-        // Disable down sampling
-        ScalerSetDataPortBit(P2_C9_HDMI_AP, _P2_CA_PT_50_PORT_PAGE2_HDMI_VCR, ~(_BIT3 | _BIT2 | _BIT1 | _BIT0), 0x00);
-
-        SET_TMDS_RX0_AVI_PIXEL_REPETITION(_AVI_PIXEL_REPETITION_0);
-
-        // Waiting for down sampling  effect
-        ScalerTimerDelayXms(20);
-    }
-
-    ScalerTMDSRx0SetPorchColor(GET_COLOR_SPACE());
-}
-
-//--------------------------------------------------
-// Description  : TMDS Rx0 HDMI Colorimetry Setting
-// Input Value  : None
-// Output Value : None
-//--------------------------------------------------
-void ScalerSyncTMDSRx0HdmiColorimetrySetting(void)
-{
-    if((GET_COLOR_SPACE() == _COLOR_SPACE_YCBCR420) || (GET_COLOR_SPACE() == _COLOR_SPACE_YCBCR422) || (GET_COLOR_SPACE() == _COLOR_SPACE_YCBCR444))
-    {
-        switch(ScalerTMDSRx0HdmiGetAVIInfo(_AVI_INFO_COLORIMETRY))
-        {
-            case _AVI_COLORIMETRY_00:
-
-                DebugMessageRx0("Get Colorimetry YCC_SMPTE_170M", 0x00);
-
-                SET_TMDS_RX0_COLORIMETRY_PREVALUE(_AVI_COLORIMETRY_00);
-
-                SET_COLORIMETRY(_COLORIMETRY_YCC_SMPTE_170M);
-
-                break;
-
-            case _AVI_COLORIMETRY_01:
-
-                DebugMessageRx0("Get Colorimetry YCC_SMPTE_170M", 0x00);
-
-                SET_TMDS_RX0_COLORIMETRY_PREVALUE(_AVI_COLORIMETRY_01);
-
-                SET_COLORIMETRY(_COLORIMETRY_YCC_SMPTE_170M);
-
-                break;
-
-            case _AVI_COLORIMETRY_10:
-
-                DebugMessageRx0("Get Colorimetry YCC_ITUR_BT709", 0x00);
-
-                SET_TMDS_RX0_COLORIMETRY_PREVALUE(_AVI_COLORIMETRY_10);
-
-                SET_COLORIMETRY(_COLORIMETRY_YCC_ITUR_BT709);
-
-                break;
-
-            case _AVI_COLORIMETRY_11:
-
-                DebugMessageRx0("Get Colorimetry Extended", 0x00);
-
-                SET_TMDS_RX0_COLORIMETRY_PREVALUE(_AVI_COLORIMETRY_11);
-
-                SET_COLORIMETRY(_COLORIMETRY_EXT);
-
-                ScalerSyncTMDSRx0HdmiColorimetryExtSetting();
-
-                break;
-
-            default:
-
-                DebugMessageRx0("Get Colorimetry INTO_DEFAULT", 0x00);
-
-                break;
-        }
-    }
-    else if(GET_COLOR_SPACE() == _COLOR_SPACE_RGB)
-    {
-        SET_TMDS_RX0_COLORIMETRY_PREVALUE(ScalerTMDSRx0HdmiGetAVIInfo(_AVI_INFO_COLORIMETRY));
-
-        switch(GET_TMDS_RX0_COLORIMETRY_PREVALUE())
-        {
-            case _AVI_COLORIMETRY_00:
-
-                DebugMessageRx0("Get Colorimetry RGB_SRGB", 0x00);
-
-                SET_COLORIMETRY(_COLORIMETRY_RGB_SRGB);
-
-                break;
-
-            case _AVI_COLORIMETRY_11:
-
-                DebugMessageRx0("Get Colorimetry Extended", 0x00);
-
-                SET_COLORIMETRY(_COLORIMETRY_EXT);
-
-                ScalerSyncTMDSRx0HdmiColorimetryExtSetting();
-
-                break;
-
-            default:
-
-                DebugMessageRx0("Get Colorimetry INTO_DEFAULT", 0x00);
-
-                SET_COLORIMETRY(_COLORIMETRY_RGB_SRGB);
-
-                break;
-        }
-    }
-}
-
-//--------------------------------------------------
-// Description  : TMDS Rx0 Colorimetry Extended Setting
-// Input Value  : None
-// Output Value : None
-//--------------------------------------------------
-void ScalerSyncTMDSRx0HdmiColorimetryExtSetting(void)
-{
-    if((GET_COLOR_SPACE() == _COLOR_SPACE_YCBCR420) || (GET_COLOR_SPACE() == _COLOR_SPACE_YCBCR422) || (GET_COLOR_SPACE() == _COLOR_SPACE_YCBCR444))
-    {
-        // Get extended colorimetry
-        SET_TMDS_RX0_COLORIMETRY_EXT_PREVALUE(ScalerTMDSRx0HdmiGetAVIInfo(_AVI_INFO_EXTENDED_COLORIMETRY));
-
-        // Get extended colorimetry
-        switch(GET_TMDS_RX0_COLORIMETRY_EXT_PREVALUE())
-        {
-            case _AVI_COLORIMETRY_EXT_000:
-
-                DebugMessageRx0("Get Colorimetry EXT_YCC_XVYCC601", 0x00);
-
-                SET_EXT_COLORIMETRY(_COLORIMETRY_EXT_YCC_XVYCC601);
-
-                break;
-
-            case _AVI_COLORIMETRY_EXT_001:
-
-                DebugMessageRx0("Get Colorimetry EXT_YCC_XVYCC709", 0x00);
-
-                SET_EXT_COLORIMETRY(_COLORIMETRY_EXT_YCC_XVYCC709);
-
-                break;
-
-            case _AVI_COLORIMETRY_EXT_010:
-
-                DebugMessageRx0("Get Colorimetry EXT_YCC_SYCC601", 0x00);
-
-                SET_EXT_COLORIMETRY(_COLORIMETRY_EXT_YCC_SYCC601);
-
-                break;
-
-            case _AVI_COLORIMETRY_EXT_011:
-
-                DebugMessageRx0("Get Colorimetry EXT_YCC_ADOBEYCC601", 0x00);
-
-                SET_EXT_COLORIMETRY(_COLORIMETRY_EXT_YCC_ADOBEYCC601);
-
-                break;
-
-            case _AVI_COLORIMETRY_EXT_101:
-
-                DebugMessageRx0("Get Colorimetry EXT_YCC_ITUR_BT2020_CL", 0x00);
-
-                SET_EXT_COLORIMETRY(_COLORIMETRY_EXT_YCC_ITUR_BT2020_CL);
-
-                break;
-
-            case _AVI_COLORIMETRY_EXT_110:
-
-                DebugMessageRx0("Get Colorimetry EXT_YCC_ITUR_BT2020_NCL", 0x00);
-
-                SET_EXT_COLORIMETRY(_COLORIMETRY_EXT_YCC_ITUR_BT2020_NCL);
-
-                break;
-
-            default:
-
-                DebugMessageRx0("Get Colorimetry INTO_DEFAULT", 0x00);
-
-                SET_EXT_COLORIMETRY(_COLORIMETRY_EXT_RESERVED);
-
-                break;
-        }
-    }
-    else if(GET_COLOR_SPACE() == _COLOR_SPACE_RGB)
-    {
-        SET_TMDS_RX0_COLORIMETRY_EXT_PREVALUE(ScalerTMDSRx0HdmiGetAVIInfo(_AVI_INFO_EXTENDED_COLORIMETRY));
-
-        switch(GET_TMDS_RX0_COLORIMETRY_EXT_PREVALUE())
-        {
-            case _AVI_COLORIMETRY_EXT_100:
-
-                DebugMessageRx0("Get Colorimetry EXT_RGB_ADOBERGB", 0x00);
-
-                SET_EXT_COLORIMETRY(_COLORIMETRY_EXT_RGB_ADOBERGB);
-
-                break;
-
-            case _AVI_COLORIMETRY_EXT_110:
-
-                DebugMessageRx0("Get Colorimetry EXT_RGB_ITUR_BT2020", 0x00);
-
-                SET_EXT_COLORIMETRY(_COLORIMETRY_EXT_RGB_ITUR_BT2020);
-
-                break;
-
-            default:
-
-                DebugMessageRx0("Get Colorimetry INTO_DEFAULT", 0x00);
-
-                SET_EXT_COLORIMETRY(_COLORIMETRY_EXT_RESERVED);
-
-                break;
-        }
-    }
-}
-
-#if((_RGB_QUANTIZATION_RANGE_SUPPORT == _ON) || (_YCC_QUANTIZATION_RANGE_SUPPORT == _ON))
-//--------------------------------------------------
-// Description  : TMDS Rx0 Quantization Setting
-// Input Value  : None
-// Output Value : None
-//--------------------------------------------------
-void ScalerSyncTMDSRx0HdmiQuantizationSetting(void)
-{
-    if((GET_COLOR_SPACE() == _COLOR_SPACE_YCBCR420) || (GET_COLOR_SPACE() == _COLOR_SPACE_YCBCR422) || (GET_COLOR_SPACE() == _COLOR_SPACE_YCBCR444))
-    {
-        SET_TMDS_RX0_QUANTIZATION_PREVALUE(ScalerTMDSRx0HdmiGetAVIInfo(_AVI_INFO_YCC_QUANTIZATION));
-
-        switch(GET_TMDS_RX0_QUANTIZATION_PREVALUE())
-        {
-            case _AVI_YCC_QUANTIZATION_FULL:
-
-                DebugMessageRx0("Get YCC FULL RANGE", 0x00);
-
-                SET_COLOR_YCC_QUANTIZATION_RANGE(_YCC_QUANTIZATION_FULL_RANGE);
-
-                break;
-
-            case _AVI_YCC_QUANTIZATION_LIMITED:
-
-                DebugMessageRx0("Get YCC LIMIT RANGE", 0x00);
-
-                SET_COLOR_YCC_QUANTIZATION_RANGE(_YCC_QUANTIZATION_LIMIT_RANGE);
-
-                break;
-
-            default:
-
-                DebugMessageRx0("Get YCC RANGE Error", 0x00);
-
-                SET_COLOR_YCC_QUANTIZATION_RANGE(_YCC_QUANTIZATION_RESERVED);
-
-                break;
-        }
-    }
-    else if(GET_COLOR_SPACE() == _COLOR_SPACE_RGB)
-    {
-        switch(ScalerTMDSRx0HdmiGetAVIInfo(_AVI_INFO_RGB_QUANTIZATION))
-        {
-            case _AVI_RGB_QUANTIZATION_LIMITED:
-
-                DebugMessageRx0("Get RGB LIMIT RANGE", 0x00);
-
-                SET_TMDS_RX0_QUANTIZATION_PREVALUE(_AVI_RGB_QUANTIZATION_LIMITED);
-
-                SET_COLOR_RGB_QUANTIZATION_RANGE(_RGB_QUANTIZATION_LIMIT_RANGE);
-
-                break;
-
-            case _AVI_RGB_QUANTIZATION_FULL:
-
-                DebugMessageRx0("Get RGB FULL RANGE", 0x00);
-
-                SET_TMDS_RX0_QUANTIZATION_PREVALUE(_AVI_RGB_QUANTIZATION_FULL);
-
-                SET_COLOR_RGB_QUANTIZATION_RANGE(_RGB_QUANTIZATION_FULL_RANGE);
-
-                break;
-
-            case _AVI_RGB_QUANTIZATION_DEFAULT:
-
-                DebugMessageRx0("Get RGB DEFAULT RANGE", 0x00);
-
-                SET_TMDS_RX0_QUANTIZATION_PREVALUE(_AVI_RGB_QUANTIZATION_DEFAULT);
-
-                SET_COLOR_RGB_QUANTIZATION_RANGE(_RGB_QUANTIZATION_DEFAULT_RANGE);
-
-                break;
-
-            case _AVI_RGB_QUANTIZATION_RESERVED:
-
-                DebugMessageRx0("Get RGB RESERVED RANGE", 0x00);
-
-                SET_TMDS_RX0_QUANTIZATION_PREVALUE(_AVI_RGB_QUANTIZATION_RESERVED);
-
-                SET_COLOR_RGB_QUANTIZATION_RANGE(_RGB_QUANTIZATION_RESERVED);
-
-                break;
-
-            default:
-
-                DebugMessageRx0("Get RGB RANGE Error", 0x00);
-
-                SET_TMDS_RX0_QUANTIZATION_PREVALUE(_AVI_RGB_QUANTIZATION_FULL);
-
-                SET_COLOR_RGB_QUANTIZATION_RANGE(_RGB_QUANTIZATION_FULL_RANGE);
-
-                break;
-        }
-    }
-}
-#endif
-
-//--------------------------------------------------
-// Description  : TMDS Rx0 HDMI ColorInfo Changed Detect
-// Input Value  : None
-// Output Value : Changed ==> _TRUE; No Changed ==> _FALSE;
-//--------------------------------------------------
-bit ScalerSyncTMDSRx0HdmiColorInfoChanged(void)
-{
-    // Check Color Space
-    if(ScalerTMDSRx0HdmiGetAVIInfo(_AVI_INFO_COLOR_SPACE) != GET_COLOR_SPACE())
-    {
-        DebugMessageRx0("Color Space Changed", 0x00);
-        return _TRUE;
-    }
-
-    // Check Colorimetry
-    if(ScalerTMDSRx0HdmiGetAVIInfo(_AVI_INFO_COLORIMETRY) != GET_TMDS_RX0_COLORIMETRY_PREVALUE())
-    {
-        DebugMessageRx0("Colorimetry Changed", 0x00);
-
-        if(GET_DIGITAL_COLOR_INFO_CHANGE_RESET() == _FALSE)
-        {
-            BYTE pucTemp[2];
-
-            pucTemp[0] = ScalerTMDSRx0HdmiGetAVIInfo(_AVI_INFO_COLORIMETRY);
-
-            pucTemp[1] = GET_TMDS_RX0_COLORIMETRY_PREVALUE();
-
-            ScalerSyncTMDSRx0HdmiColorimetrySetting();
-
-            if((GET_COLOR_SPACE() == _COLOR_SPACE_YCBCR420) || (GET_COLOR_SPACE() == _COLOR_SPACE_YCBCR422) || (GET_COLOR_SPACE() == _COLOR_SPACE_YCBCR444))
-            {
-                if(!(((pucTemp[0] == _AVI_COLORIMETRY_00) && (pucTemp[1] == _AVI_COLORIMETRY_01)) || ((pucTemp[0] == _AVI_COLORIMETRY_01) && (pucTemp[1] == _AVI_COLORIMETRY_00))))
-                {
-                    SET_TMDS_RX0_COLORIMETRY_CHANGED();
-                }
-            }
-            else if(GET_COLOR_SPACE() == _COLOR_SPACE_RGB)
-            {
-                if((pucTemp[0] == _AVI_COLORIMETRY_11) || (pucTemp[1] == _AVI_COLORIMETRY_11))
-                {
-                    SET_TMDS_RX0_COLORIMETRY_CHANGED();
-                }
-            }
-        }
-        else
-        {
-            return _TRUE;
-        }
-    }
-    else
-    {
-        if(GET_COLORIMETRY() == _COLORIMETRY_EXT)
-        {
-            if(ScalerTMDSRx0HdmiGetAVIInfo(_AVI_INFO_EXTENDED_COLORIMETRY) != GET_TMDS_RX0_COLORIMETRY_EXT_PREVALUE())
-            {
-                DebugMessageRx0("Ext Colorimetry Changed", 0x00);
-
-                if(GET_DIGITAL_COLOR_INFO_CHANGE_RESET() == _FALSE)
-                {
-                    BYTE pucTemp[2];
-
-                    pucTemp[0] = ScalerTMDSRx0HdmiGetAVIInfo(_AVI_INFO_EXTENDED_COLORIMETRY);
-
-                    pucTemp[1] = GET_TMDS_RX0_COLORIMETRY_EXT_PREVALUE();
-
-                    ScalerSyncTMDSRx0HdmiColorimetryExtSetting();
-
-                    if((GET_COLOR_SPACE() == _COLOR_SPACE_YCBCR420) || (GET_COLOR_SPACE() == _COLOR_SPACE_YCBCR422) || (GET_COLOR_SPACE() == _COLOR_SPACE_YCBCR444))
-                    {
-                        if(!(((pucTemp[0] == _AVI_COLORIMETRY_EXT_100) && (pucTemp[1] == _AVI_COLORIMETRY_EXT_111)) || ((pucTemp[1] == _AVI_COLORIMETRY_EXT_100) && (pucTemp[0] == _AVI_COLORIMETRY_EXT_111))))
-                        {
-                            SET_TMDS_RX0_COLORIMETRY_EXT_CHANGED();
-                        }
-                    }
-                    else if(GET_COLOR_SPACE() == _COLOR_SPACE_RGB)
-                    {
-                        if(!(((pucTemp[0] != _AVI_COLORIMETRY_EXT_100) && (pucTemp[0] != _AVI_COLORIMETRY_EXT_110)) && ((pucTemp[1] != _AVI_COLORIMETRY_EXT_100) && (pucTemp[1] != _AVI_COLORIMETRY_EXT_110))))
-                        {
-                            SET_TMDS_RX0_COLORIMETRY_EXT_CHANGED();
-                        }
-                    }
-                }
-                else
-                {
-                    return _TRUE;
-                }
-            }
-        }
-    }
-
-#if(_YCC_QUANTIZATION_RANGE_SUPPORT == _ON)
-    if((GET_COLOR_SPACE() == _COLOR_SPACE_YCBCR420) || (GET_COLOR_SPACE() == _COLOR_SPACE_YCBCR422) || (GET_COLOR_SPACE() == _COLOR_SPACE_YCBCR444))
-    {
-        if(ScalerTMDSRx0HdmiGetAVIInfo(_AVI_INFO_YCC_QUANTIZATION) != GET_TMDS_RX0_QUANTIZATION_PREVALUE())
-        {
-            DebugMessageRx0("YCC Quantization Range Changed", 0x00);
-
-            if(GET_DIGITAL_COLOR_INFO_CHANGE_RESET() == _FALSE)
-            {
-                BYTE pucTemp[2];
-
-                pucTemp[0] = ScalerTMDSRx0HdmiGetAVIInfo(_AVI_INFO_YCC_QUANTIZATION);
-
-                pucTemp[1] = GET_TMDS_RX0_QUANTIZATION_PREVALUE();
-
-                ScalerSyncTMDSRx0HdmiQuantizationSetting();
-
-                if((pucTemp[0] == _AVI_YCC_QUANTIZATION_LIMITED) || (pucTemp[1] == _AVI_YCC_QUANTIZATION_LIMITED))
-                {
-                    SET_TMDS_RX0_QUANTIZATION_CHANGED();
-                }
-            }
-            else
-            {
-                return _TRUE;
-            }
-        }
-    }
-#endif
-
-#if(_RGB_QUANTIZATION_RANGE_SUPPORT == _ON)
-    if(GET_COLOR_SPACE() == _COLOR_SPACE_RGB)
-    {
-        if(ScalerTMDSRx0HdmiGetAVIInfo(_AVI_INFO_RGB_QUANTIZATION) != GET_TMDS_RX0_QUANTIZATION_PREVALUE())
-        {
-            DebugMessageRx0("RGB Quantization Range Changed", 0x00);
-
-            if(GET_DIGITAL_COLOR_INFO_CHANGE_RESET() == _FALSE)
-            {
-                ScalerSyncTMDSRx0HdmiQuantizationSetting();
-
-                SET_TMDS_RX0_QUANTIZATION_CHANGED();
-            }
-            else
-            {
-                return _TRUE;
-            }
-        }
-    }
-#endif
-
-    return _FALSE;
-}
-#endif
-
-#if((_D1_HDMI_SUPPORT == _ON) && (_TMDS_COMBO_EXIST == _OFF))
-//--------------------------------------------------
-// Description  : TMDS Rx1 Video Setting
-// Input Value  : None
-// Output Value : None
-//--------------------------------------------------
-void ScalerSyncTMDSRx1HdmiVideoSetting(void)
-{
-    if(GET_HDMI_RX1_AVI_INFO_FRAME_RECEIVED() == _TRUE)
-    {
-        // Color Space Auto/ Pixel Repetition auto mode
-#if(_D1_INPUT_PORT_TMDS_MAC_PAGE == _PAGE70)
-        ScalerSetDataPortBit(P70_C9_HDMI_AP, _P70_CA_PT_51_PORT_PAGE70_HDMI_ACRCR, ~(_BIT6 | _BIT2), (_BIT6 | _BIT2));
-#else
-        ScalerSetDataPortBit(P71_C9_HDMI_AP, _P71_CA_PT_51_PORT_PAGE71_HDMI_ACRCR, ~(_BIT6 | _BIT2), (_BIT6 | _BIT2));
-#endif
-
-        pData[0] = ScalerTMDSRx1HdmiGetAVIInfo(_AVI_INFO_COLOR_SPACE);
-
-        // Get Color Space
-        if(pData[0] == _AVI_COLOR_SPACE_00)
-        {
-            // Color Space RGB
-            DebugMessageRx1("Get Color Space RGB", pData[0]);
-            SET_COLOR_SPACE(_COLOR_SPACE_RGB);
-        }
-        else if(pData[0] == _AVI_COLOR_SPACE_01)
-        {
-            // YCC422
-            DebugMessageRx1("Get Color Space YUV422", pData[0]);
-            SET_COLOR_SPACE(_COLOR_SPACE_YCBCR422);
-        }
-        else if(pData[0] == _AVI_COLOR_SPACE_11)
-        {
-            // YCC420
-            DebugMessageRx1("Get Color Space YUV420", pData[0]);
-            SET_COLOR_SPACE(_COLOR_SPACE_YCBCR420);
-        }
-        else
-        {
-            // YCC444
-            DebugMessageRx1("Get Color Space YUV444", pData[0]);
-            SET_COLOR_SPACE(_COLOR_SPACE_YCBCR444);
-        }
-
-        // Set Pixel Repetition
-        switch(ScalerTMDSRx1HdmiGetAVIInfo(_AVI_INFO_PIXEL_REPETITION))
-        {
-            case _AVI_PIXEL_REPETITION_0:
-
-                DebugMessageRx1("Get Pixel Repetition 0", 0x00);
-                SET_TMDS_RX1_AVI_PIXEL_REPETITION(_AVI_PIXEL_REPETITION_0);
-
-                break;
-
-            case _AVI_PIXEL_REPETITION_1:
-
-                DebugMessageRx1("Get Pixel Repetition 1", 0x00);
-                SET_TMDS_RX1_AVI_PIXEL_REPETITION(_AVI_PIXEL_REPETITION_1);
-
-                break;
-
-            case _AVI_PIXEL_REPETITION_2:
-
-                DebugMessageRx1("Get Pixel Repetition 2", 0x00);
-                SET_TMDS_RX1_AVI_PIXEL_REPETITION(_AVI_PIXEL_REPETITION_2);
-
-                break;
-
-            case _AVI_PIXEL_REPETITION_3:
-
-                DebugMessageRx1("Get Pixel Repetition 3", 0x00);
-                SET_TMDS_RX1_AVI_PIXEL_REPETITION(_AVI_PIXEL_REPETITION_3);
-
-                break;
-
-            case _AVI_PIXEL_REPETITION_4:
-
-                DebugMessageRx1("Get Pixel Repetition 4", 0x00);
-                SET_TMDS_RX1_AVI_PIXEL_REPETITION(_AVI_PIXEL_REPETITION_4);
-
-                break;
-
-            case _AVI_PIXEL_REPETITION_5:
-
-                DebugMessageRx1("Get Pixel Repetition 5", 0x00);
-                SET_TMDS_RX1_AVI_PIXEL_REPETITION(_AVI_PIXEL_REPETITION_5);
-
-                break;
-
-            case _AVI_PIXEL_REPETITION_6:
-
-                DebugMessageRx1("Get Pixel Repetition 6", 0x00);
-                SET_TMDS_RX1_AVI_PIXEL_REPETITION(_AVI_PIXEL_REPETITION_6);
-
-                break;
-
-            case _AVI_PIXEL_REPETITION_7:
-
-                DebugMessageRx1("Get Pixel Repetition 7", 0x00);
-                SET_TMDS_RX1_AVI_PIXEL_REPETITION(_AVI_PIXEL_REPETITION_7);
-
-                break;
-
-            case _AVI_PIXEL_REPETITION_8:
-
-                DebugMessageRx1("Get Pixel Repetition 8", 0x00);
-                SET_TMDS_RX1_AVI_PIXEL_REPETITION(_AVI_PIXEL_REPETITION_8);
-
-                break;
-
-            case _AVI_PIXEL_REPETITION_9:
-
-                DebugMessageRx1("Get Pixel Repetition 9", 0x00);
-                SET_TMDS_RX1_AVI_PIXEL_REPETITION(_AVI_PIXEL_REPETITION_9);
-
-                break;
-
-            default:
-
-                DebugMessageRx1("Get Pixel Repetition Error", 0x00);
-                SET_TMDS_RX1_AVI_PIXEL_REPETITION(_AVI_PIXEL_REPETITION_0);
-
-                break;
-        }
-
-        // Set Colorimetry
-        ScalerSyncTMDSRx1HdmiColorimetrySetting();
-
-        // Set Quantization
-#if((_RGB_QUANTIZATION_RANGE_SUPPORT == _ON) || (_YCC_QUANTIZATION_RANGE_SUPPORT == _ON))
-        ScalerSyncTMDSRx1HdmiQuantizationSetting();
-#endif
-    }
-    else    // No Info Frame Received
-    {
-#if(_D1_INPUT_PORT_TYPE == _D1_MHL_PORT)
-        if(GET_TMDS_RX1_CLK_MODE() == _TMDS_MHL_PPMODE_PHY_SETTING)
-        {
-            SET_COLOR_SPACE(_COLOR_SPACE_YCBCR422);
-            SET_COLOR_YCC_QUANTIZATION_RANGE(_YCC_QUANTIZATION_LIMIT_RANGE);
-
-            // Manual Set Color Space to YCbCr422 and disable pixel repetition
-#if(_D1_INPUT_PORT_TMDS_MAC_PAGE == _PAGE70)
-            ScalerSetDataPortBit(P70_C9_HDMI_AP, _P70_CA_PT_51_PORT_PAGE70_HDMI_ACRCR, ~(_BIT6 | _BIT5 | _BIT4 | _BIT3 | _BIT2), _BIT3);
-#else
-            ScalerSetDataPortBit(P71_C9_HDMI_AP, _P71_CA_PT_51_PORT_PAGE71_HDMI_ACRCR, ~(_BIT6 | _BIT5 | _BIT4 | _BIT3 | _BIT2), _BIT3);
-#endif
-        }
-        else
-#endif
-
-        {
-            SET_COLOR_SPACE(_COLOR_SPACE_RGB);
-            SET_COLOR_RGB_QUANTIZATION_RANGE(_RGB_QUANTIZATION_RESERVED);
-
-            // Manual Set Color Space to RGB and disable pixel repetition
-#if(_D1_INPUT_PORT_TMDS_MAC_PAGE == _PAGE70)
-            ScalerSetDataPortBit(P70_C9_HDMI_AP, _P70_CA_PT_51_PORT_PAGE70_HDMI_ACRCR, ~(_BIT6 | _BIT5 | _BIT4 | _BIT3 | _BIT2), 0x00);
-#else
-            ScalerSetDataPortBit(P71_C9_HDMI_AP, _P71_CA_PT_51_PORT_PAGE71_HDMI_ACRCR, ~(_BIT6 | _BIT5 | _BIT4 | _BIT3 | _BIT2), 0x00);
-#endif
-        }
-
-        // Disable down sampling
-#if(_D1_INPUT_PORT_TMDS_MAC_PAGE == _PAGE70)
-        ScalerSetDataPortBit(P70_C9_HDMI_AP, _P70_CA_PT_50_PORT_PAGE70_HDMI_VCR, ~(_BIT3 | _BIT2 | _BIT1 | _BIT0), 0x00);
-#else
-        ScalerSetDataPortBit(P71_C9_HDMI_AP, _P71_CA_PT_50_PORT_PAGE71_HDMI_VCR, ~(_BIT3 | _BIT2 | _BIT1 | _BIT0), 0x00);
-#endif
-
-        SET_TMDS_RX1_AVI_PIXEL_REPETITION(_AVI_PIXEL_REPETITION_0);
-
-        // Waiting for down sampling  effect
-        ScalerTimerDelayXms(20);
-    }
-
-    ScalerTMDSRx1SetPorchColor(GET_COLOR_SPACE());
-}
-
-//--------------------------------------------------
-// Description  : TMDS Rx1 HDMI Colorimetry Setting
-// Input Value  : None
-// Output Value : None
-//--------------------------------------------------
-void ScalerSyncTMDSRx1HdmiColorimetrySetting(void)
-{
-    if((GET_COLOR_SPACE() == _COLOR_SPACE_YCBCR420) || (GET_COLOR_SPACE() == _COLOR_SPACE_YCBCR422) || (GET_COLOR_SPACE() == _COLOR_SPACE_YCBCR444))
-    {
-        switch(ScalerTMDSRx1HdmiGetAVIInfo(_AVI_INFO_COLORIMETRY))
-        {
-            case _AVI_COLORIMETRY_00:
-
-                DebugMessageRx1("Get Colorimetry YCC_SMPTE_170M", 0x00);
-
-                SET_TMDS_RX1_COLORIMETRY_PREVALUE(_AVI_COLORIMETRY_00);
-
-                SET_COLORIMETRY(_COLORIMETRY_YCC_SMPTE_170M);
-
-                break;
-
-            case _AVI_COLORIMETRY_01:
-
-                DebugMessageRx1("Get Colorimetry YCC_SMPTE_170M", 0x00);
-
-                SET_TMDS_RX1_COLORIMETRY_PREVALUE(_AVI_COLORIMETRY_01);
-
-                SET_COLORIMETRY(_COLORIMETRY_YCC_SMPTE_170M);
-
-                break;
-
-            case _AVI_COLORIMETRY_10:
-
-                DebugMessageRx1("Get Colorimetry 709", 0x00);
-
-                SET_TMDS_RX1_COLORIMETRY_PREVALUE(_AVI_COLORIMETRY_10);
-
-                SET_COLORIMETRY(_COLORIMETRY_YCC_ITUR_BT709);
-
-                break;
-
-            case _AVI_COLORIMETRY_11:
-
-                DebugMessageRx1("Get Colorimetry Extended", 0x00);
-
-                SET_TMDS_RX1_COLORIMETRY_PREVALUE(_AVI_COLORIMETRY_11);
-
-                SET_COLORIMETRY(_COLORIMETRY_EXT);
-
-                ScalerSyncTMDSRx1HdmiColorimetryExtSetting();
-
-                break;
-
-            default:
-
-                DebugMessageRx1("Get Colorimetry INTO_DEFAULT", 0x00);
-
-                break;
-        }
-    }
-    else if(GET_COLOR_SPACE() == _COLOR_SPACE_RGB)
-    {
-        SET_TMDS_RX1_COLORIMETRY_PREVALUE(ScalerTMDSRx1HdmiGetAVIInfo(_AVI_INFO_COLORIMETRY));
-
-        switch(GET_TMDS_RX1_COLORIMETRY_PREVALUE())
-        {
-            case _AVI_COLORIMETRY_00:
-
-                DebugMessageRx1("Get Colorimetry RGB_SRGB", 0x00);
-
-                SET_COLORIMETRY(_COLORIMETRY_RGB_SRGB);
-
-                break;
-
-            case _AVI_COLORIMETRY_11:
-
-                DebugMessageRx1("Get Colorimetry Extended", 0x00);
-
-                SET_COLORIMETRY(_COLORIMETRY_EXT);
-
-                ScalerSyncTMDSRx1HdmiColorimetryExtSetting();
-
-                break;
-
-            default:
-
-                DebugMessageRx1("Get Colorimetry INTO_DEFAULT", 0x00);
-
-                SET_COLORIMETRY(_COLORIMETRY_RGB_SRGB);
-
-                break;
-        }
-    }
-}
-
-//--------------------------------------------------
-// Description  : TMDS Rx1 Colorimetry Extended Setting
-// Input Value  : None
-// Output Value : None
-//--------------------------------------------------
-void ScalerSyncTMDSRx1HdmiColorimetryExtSetting(void)
-{
-    if((GET_COLOR_SPACE() == _COLOR_SPACE_YCBCR420) || (GET_COLOR_SPACE() == _COLOR_SPACE_YCBCR422) || (GET_COLOR_SPACE() == _COLOR_SPACE_YCBCR444))
-    {
-        // Get extended colorimetry
-        SET_TMDS_RX1_COLORIMETRY_EXT_PREVALUE(ScalerTMDSRx1HdmiGetAVIInfo(_AVI_INFO_EXTENDED_COLORIMETRY));
-
-        // Get extended colorimetry
-        switch(GET_TMDS_RX1_COLORIMETRY_EXT_PREVALUE())
-        {
-            case _AVI_COLORIMETRY_EXT_000:
-
-                DebugMessageRx1("Get Colorimetry EXT_YCC_XVYCC601", 0x00);
-
-                SET_EXT_COLORIMETRY(_COLORIMETRY_EXT_YCC_XVYCC601);
-
-                break;
-
-            case _AVI_COLORIMETRY_EXT_001:
-
-                DebugMessageRx1("Get Colorimetry EXT_YCC_XVYCC709", 0x00);
-
-                SET_EXT_COLORIMETRY(_COLORIMETRY_EXT_YCC_XVYCC709);
-
-                break;
-
-            case _AVI_COLORIMETRY_EXT_010:
-
-                DebugMessageRx1("Get Colorimetry EXT_YCC_SYCC601", 0x00);
-
-                SET_EXT_COLORIMETRY(_COLORIMETRY_EXT_YCC_SYCC601);
-
-                break;
-
-            case _AVI_COLORIMETRY_EXT_011:
-
-                DebugMessageRx1("Get Colorimetry EXT_YCC_ADOBEYCC601", 0x00);
-
-                SET_EXT_COLORIMETRY(_COLORIMETRY_EXT_YCC_ADOBEYCC601);
-
-                break;
-
-            case _AVI_COLORIMETRY_EXT_101:
-
-                DebugMessageRx1("Get Colorimetry EXT_YCC_ITUR_BT2020_CL", 0x00);
-
-                SET_EXT_COLORIMETRY(_COLORIMETRY_EXT_YCC_ITUR_BT2020_CL);
-
-                break;
-
-            case _AVI_COLORIMETRY_EXT_110:
-
-                DebugMessageRx1("Get Colorimetry EXT_YCC_ITUR_BT2020_NCL", 0x00);
-
-                SET_EXT_COLORIMETRY(_COLORIMETRY_EXT_YCC_ITUR_BT2020_NCL);
-
-                break;
-
-            default:
-
-                DebugMessageRx1("Get Colorimetry INTO_DEFAULT", 0x00);
-
-                SET_EXT_COLORIMETRY(_COLORIMETRY_EXT_RESERVED);
-
-                break;
-        }
-    }
-    else if(GET_COLOR_SPACE() == _COLOR_SPACE_RGB)
-    {
-        SET_TMDS_RX1_COLORIMETRY_EXT_PREVALUE(ScalerTMDSRx1HdmiGetAVIInfo(_AVI_INFO_EXTENDED_COLORIMETRY));
-
-        switch(GET_TMDS_RX1_COLORIMETRY_EXT_PREVALUE())
-        {
-            case _AVI_COLORIMETRY_EXT_100:
-
-                DebugMessageRx1("Get Colorimetry EXT_RGB_ADOBERGB", 0x00);
-
-                SET_EXT_COLORIMETRY(_COLORIMETRY_EXT_RGB_ADOBERGB);
-
-                break;
-
-            case _AVI_COLORIMETRY_EXT_110:
-
-                DebugMessageRx1("Get Colorimetry EXT_RGB_ITUR_BT2020", 0x00);
-
-                SET_EXT_COLORIMETRY(_COLORIMETRY_EXT_RGB_ITUR_BT2020);
-
-                break;
-
-            default:
-
-                DebugMessageRx1("Get Colorimetry INTO_DEFAULT", 0x00);
-
-                SET_EXT_COLORIMETRY(_COLORIMETRY_EXT_RESERVED);
-
-                break;
-        }
-    }
-}
-
-#if((_RGB_QUANTIZATION_RANGE_SUPPORT == _ON) || (_YCC_QUANTIZATION_RANGE_SUPPORT == _ON))
-//--------------------------------------------------
-// Description  : TMDS Rx1 Quantization Setting
-// Input Value  : None
-// Output Value : None
-//--------------------------------------------------
-void ScalerSyncTMDSRx1HdmiQuantizationSetting(void)
-{
-    if((GET_COLOR_SPACE() == _COLOR_SPACE_YCBCR420) || (GET_COLOR_SPACE() == _COLOR_SPACE_YCBCR422) || (GET_COLOR_SPACE() == _COLOR_SPACE_YCBCR444))
-    {
-        SET_TMDS_RX1_QUANTIZATION_PREVALUE(ScalerTMDSRx1HdmiGetAVIInfo(_AVI_INFO_YCC_QUANTIZATION));
-
-        switch(GET_TMDS_RX1_QUANTIZATION_PREVALUE())
-        {
-            case _AVI_YCC_QUANTIZATION_FULL:
-
-                DebugMessageRx1("Get YCC FULL RANGE", 0x00);
-
-                SET_COLOR_YCC_QUANTIZATION_RANGE(_YCC_QUANTIZATION_FULL_RANGE);
-
-                break;
-
-            case _AVI_YCC_QUANTIZATION_LIMITED:
-
-                DebugMessageRx1("Get YCC LIMIT RANGE", 0x00);
-
-                SET_COLOR_YCC_QUANTIZATION_RANGE(_YCC_QUANTIZATION_LIMIT_RANGE);
-
-                break;
-
-            default:
-
-                DebugMessageRx1("Get YCC RANGE Error", 0x00);
-
-                SET_COLOR_YCC_QUANTIZATION_RANGE(_YCC_QUANTIZATION_RESERVED);
-
-                break;
-        }
-    }
-    else if(GET_COLOR_SPACE() == _COLOR_SPACE_RGB)
-    {
-        switch(ScalerTMDSRx1HdmiGetAVIInfo(_AVI_INFO_RGB_QUANTIZATION))
-        {
-            case _AVI_RGB_QUANTIZATION_LIMITED:
-
-                DebugMessageRx1("Get RGB LIMIT RANGE", 0x00);
-
-                SET_TMDS_RX1_QUANTIZATION_PREVALUE(_AVI_RGB_QUANTIZATION_LIMITED);
-
-                SET_COLOR_RGB_QUANTIZATION_RANGE(_RGB_QUANTIZATION_LIMIT_RANGE);
-
-                break;
-
-            case _AVI_RGB_QUANTIZATION_FULL:
-
-                DebugMessageRx1("Get RGB FULL RANGE", 0x00);
-
-                SET_TMDS_RX1_QUANTIZATION_PREVALUE(_AVI_RGB_QUANTIZATION_FULL);
-
-                SET_COLOR_RGB_QUANTIZATION_RANGE(_RGB_QUANTIZATION_FULL_RANGE);
-
-                break;
-
-            case _AVI_RGB_QUANTIZATION_DEFAULT:
-
-                DebugMessageRx1("Get RGB DEFAULT RANGE", 0x00);
-
-                SET_TMDS_RX1_QUANTIZATION_PREVALUE(_AVI_RGB_QUANTIZATION_DEFAULT);
-
-                SET_COLOR_RGB_QUANTIZATION_RANGE(_RGB_QUANTIZATION_DEFAULT_RANGE);
-
-                break;
-
-            case _AVI_RGB_QUANTIZATION_RESERVED:
-
-                DebugMessageRx1("Get RGB RESERVED RANGE", 0x00);
-
-                SET_TMDS_RX1_QUANTIZATION_PREVALUE(_AVI_RGB_QUANTIZATION_RESERVED);
-
-                SET_COLOR_RGB_QUANTIZATION_RANGE(_RGB_QUANTIZATION_RESERVED);
-
-                break;
-
-            default:
-
-                DebugMessageRx1("Get RGB RANGE Error", 0x00);
-
-                SET_TMDS_RX1_QUANTIZATION_PREVALUE(_AVI_RGB_QUANTIZATION_FULL);
-
-                SET_COLOR_RGB_QUANTIZATION_RANGE(_RGB_QUANTIZATION_FULL_RANGE);
-
-                break;
-        }
-    }
-}
-#endif
-
-//--------------------------------------------------
-// Description  : TMDS Rx1 HDMI ColorInfo Changed Detect
-// Input Value  : None
-// Output Value : Changed ==> _TRUE; No Changed ==> _FALSE;
-//--------------------------------------------------
-bit ScalerSyncTMDSRx1HdmiColorInfoChanged(void)
-{
-    // Check Color Space
-    if(ScalerTMDSRx1HdmiGetAVIInfo(_AVI_INFO_COLOR_SPACE) != GET_COLOR_SPACE())
-    {
-        DebugMessageRx1("Color Space Changed", 0x00);
-        return _TRUE;
-    }
-
-    // Check Colorimetry
-    if(ScalerTMDSRx1HdmiGetAVIInfo(_AVI_INFO_COLORIMETRY) != GET_TMDS_RX1_COLORIMETRY_PREVALUE())
-    {
-        DebugMessageRx1("Colorimetry Changed", 0x00);
-
-        if(GET_DIGITAL_COLOR_INFO_CHANGE_RESET() == _FALSE)
-        {
-            BYTE pucTemp[2];
-
-            pucTemp[0] = ScalerTMDSRx1HdmiGetAVIInfo(_AVI_INFO_COLORIMETRY);
-
-            pucTemp[1] = GET_TMDS_RX1_COLORIMETRY_PREVALUE();
-
-            ScalerSyncTMDSRx1HdmiColorimetrySetting();
-
-            if((GET_COLOR_SPACE() == _COLOR_SPACE_YCBCR420) || (GET_COLOR_SPACE() == _COLOR_SPACE_YCBCR422) || (GET_COLOR_SPACE() == _COLOR_SPACE_YCBCR444))
-            {
-                if(!(((pucTemp[0] == _AVI_COLORIMETRY_00) && (pucTemp[1] == _AVI_COLORIMETRY_01)) || ((pucTemp[0] == _AVI_COLORIMETRY_01) && (pucTemp[1] == _AVI_COLORIMETRY_00))))
-                {
-                    SET_TMDS_RX1_COLORIMETRY_CHANGED();
-                }
-            }
-            else if(GET_COLOR_SPACE() == _COLOR_SPACE_RGB)
-            {
-                if((pucTemp[0] == _AVI_COLORIMETRY_11) || (pucTemp[1] == _AVI_COLORIMETRY_11))
-                {
-                    SET_TMDS_RX1_COLORIMETRY_CHANGED();
-                }
-            }
-        }
-        else
-        {
-            return _TRUE;
-        }
-    }
-    else
-    {
-        if(GET_COLORIMETRY() == _COLORIMETRY_EXT)
-        {
-            if(ScalerTMDSRx1HdmiGetAVIInfo(_AVI_INFO_EXTENDED_COLORIMETRY) != GET_TMDS_RX1_COLORIMETRY_EXT_PREVALUE())
-            {
-                DebugMessageRx1("Ext Colorimetry Changed", 0x00);
-
-                if(GET_DIGITAL_COLOR_INFO_CHANGE_RESET() == _FALSE)
-                {
-                    BYTE pucTemp[2];
-
-                    pucTemp[0] = ScalerTMDSRx1HdmiGetAVIInfo(_AVI_INFO_EXTENDED_COLORIMETRY);
-
-                    pucTemp[1] = GET_TMDS_RX1_COLORIMETRY_EXT_PREVALUE();
-
-                    ScalerSyncTMDSRx1HdmiColorimetryExtSetting();
-
-                    if((GET_COLOR_SPACE() == _COLOR_SPACE_YCBCR420) || (GET_COLOR_SPACE() == _COLOR_SPACE_YCBCR422) || (GET_COLOR_SPACE() == _COLOR_SPACE_YCBCR444))
-                    {
-                        if(!(((pucTemp[0] == _AVI_COLORIMETRY_EXT_100) && (pucTemp[1] == _AVI_COLORIMETRY_EXT_111)) || ((pucTemp[1] == _AVI_COLORIMETRY_EXT_100) && (pucTemp[0] == _AVI_COLORIMETRY_EXT_111))))
-                        {
-                            SET_TMDS_RX1_COLORIMETRY_EXT_CHANGED();
-                        }
-                    }
-                    else if(GET_COLOR_SPACE() == _COLOR_SPACE_RGB)
-                    {
-                        if(!(((pucTemp[0] != _AVI_COLORIMETRY_EXT_100) && (pucTemp[0] != _AVI_COLORIMETRY_EXT_110)) && ((pucTemp[1] != _AVI_COLORIMETRY_EXT_100) && (pucTemp[1] != _AVI_COLORIMETRY_EXT_110))))
-                        {
-                            SET_TMDS_RX1_COLORIMETRY_EXT_CHANGED();
-                        }
-                    }
-                }
-                else
-                {
-                    return _TRUE;
-                }
-            }
-        }
-    }
-
-#if(_YCC_QUANTIZATION_RANGE_SUPPORT == _ON)
-    if((GET_COLOR_SPACE() == _COLOR_SPACE_YCBCR420) || (GET_COLOR_SPACE() == _COLOR_SPACE_YCBCR422) || (GET_COLOR_SPACE() == _COLOR_SPACE_YCBCR444))
-    {
-        if(ScalerTMDSRx1HdmiGetAVIInfo(_AVI_INFO_YCC_QUANTIZATION) != GET_TMDS_RX1_QUANTIZATION_PREVALUE())
-        {
-            DebugMessageRx1("YCC Quantization Range Changed", 0x00);
-
-            if(GET_DIGITAL_COLOR_INFO_CHANGE_RESET() == _FALSE)
-            {
-                BYTE pucTemp[2];
-
-                pucTemp[0] = ScalerTMDSRx1HdmiGetAVIInfo(_AVI_INFO_YCC_QUANTIZATION);
-
-                pucTemp[1] = GET_TMDS_RX1_QUANTIZATION_PREVALUE();
-
-                ScalerSyncTMDSRx1HdmiQuantizationSetting();
-
-                if((pucTemp[0] == _AVI_YCC_QUANTIZATION_LIMITED) || (pucTemp[1] == _AVI_YCC_QUANTIZATION_LIMITED))
-                {
-                    SET_TMDS_RX1_QUANTIZATION_CHANGED();
-                }
-            }
-            else
-            {
-                return _TRUE;
-            }
-        }
-    }
-#endif
-
-#if(_RGB_QUANTIZATION_RANGE_SUPPORT == _ON)
-    if(GET_COLOR_SPACE() == _COLOR_SPACE_RGB)
-    {
-        if(ScalerTMDSRx1HdmiGetAVIInfo(_AVI_INFO_RGB_QUANTIZATION) != GET_TMDS_RX1_QUANTIZATION_PREVALUE())
-        {
-            DebugMessageRx1("RGB Quantization Range Changed", 0x00);
-
-            if(GET_DIGITAL_COLOR_INFO_CHANGE_RESET() == _FALSE)
-            {
-                ScalerSyncTMDSRx1HdmiQuantizationSetting();
-
-                SET_TMDS_RX1_QUANTIZATION_CHANGED();
-            }
-            else
-            {
-                return _TRUE;
-            }
-        }
-    }
-#endif
-
-    return _FALSE;
-}
-#endif
-
-#if((_D2_HDMI_SUPPORT == _ON) && (_TMDS_COMBO_EXIST == _OFF))
+#if((_D2_HDMI_SUPPORT == _ON) && (_D3_HDMI_SUPPORT == _ON) && (_TMDS_COMBO_EXIST == _OFF))
 #if(_D2_INPUT_PORT_TYPE != _D2_DUAL_DVI_PORT)
 //--------------------------------------------------
-// Description  : TMDS Rx0 Video Setting
+// Description  : TMDS Video Setting (Rx2 / Rx3: port = d_isr_g_ucTMDSRxPort)
 // Input Value  : None
 // Output Value : None
 //--------------------------------------------------
-void ScalerSyncTMDSRx2HdmiVideoSetting(void)
+void ScalerSyncTMDSRxHdmiVideoSetting(void)
 {
-    if(GET_HDMI_RX2_AVI_INFO_FRAME_RECEIVED() == _TRUE)
+    if(RXSEL((GET_HDMI_RX2_AVI_INFO_FRAME_RECEIVED()), (GET_HDMI_RX3_AVI_INFO_FRAME_RECEIVED())) == _TRUE)
     {
         // Color Space Auto/ Pixel Repetition auto mode
-        ScalerSetDataPortBit(P71_C9_HDMI_AP, _P71_CA_PT_51_PORT_PAGE71_HDMI_ACRCR, ~(_BIT6 | _BIT2), (_BIT6 | _BIT2));
+        ScalerSetDataPortBit(RXA(P71_C9_HDMI_AP), _P71_CA_PT_51_PORT_PAGE71_HDMI_ACRCR, ~(_BIT6 | _BIT2), (_BIT6 | _BIT2));
 
-        pData[0] = ScalerTMDSRx2HdmiGetAVIInfo(_AVI_INFO_COLOR_SPACE);
+        pData[0] = ScalerTMDSRxHdmiGetAVIInfo(_AVI_INFO_COLOR_SPACE);
 
         // Get Color Space
         if(pData[0] == _AVI_COLOR_SPACE_00)
@@ -7757,104 +6467,104 @@ void ScalerSyncTMDSRx2HdmiVideoSetting(void)
         }
 
         // Set Pixel Repetition
-        switch(ScalerTMDSRx2HdmiGetAVIInfo(_AVI_INFO_PIXEL_REPETITION))
+        switch(ScalerTMDSRxHdmiGetAVIInfo(_AVI_INFO_PIXEL_REPETITION))
         {
             case _AVI_PIXEL_REPETITION_0:
 
                 DebugMessageRx2("Get Pixel Repetition 0", 0x00);
-                SET_TMDS_RX2_AVI_PIXEL_REPETITION(_AVI_PIXEL_REPETITION_0);
+                SET_TMDS_RXN_AVI_PIXEL_REPETITION(_AVI_PIXEL_REPETITION_0);
 
                 break;
 
             case _AVI_PIXEL_REPETITION_1:
 
                 DebugMessageRx2("Get Pixel Repetition 1", 0x00);
-                SET_TMDS_RX2_AVI_PIXEL_REPETITION(_AVI_PIXEL_REPETITION_1);
+                SET_TMDS_RXN_AVI_PIXEL_REPETITION(_AVI_PIXEL_REPETITION_1);
 
                 break;
 
             case _AVI_PIXEL_REPETITION_2:
 
                 DebugMessageRx2("Get Pixel Repetition 2", 0x00);
-                SET_TMDS_RX2_AVI_PIXEL_REPETITION(_AVI_PIXEL_REPETITION_2);
+                SET_TMDS_RXN_AVI_PIXEL_REPETITION(_AVI_PIXEL_REPETITION_2);
 
                 break;
 
             case _AVI_PIXEL_REPETITION_3:
 
                 DebugMessageRx2("Get Pixel Repetition 3", 0x00);
-                SET_TMDS_RX2_AVI_PIXEL_REPETITION(_AVI_PIXEL_REPETITION_3);
+                SET_TMDS_RXN_AVI_PIXEL_REPETITION(_AVI_PIXEL_REPETITION_3);
 
                 break;
 
             case _AVI_PIXEL_REPETITION_4:
 
                 DebugMessageRx2("Get Pixel Repetition 4", 0x00);
-                SET_TMDS_RX2_AVI_PIXEL_REPETITION(_AVI_PIXEL_REPETITION_4);
+                SET_TMDS_RXN_AVI_PIXEL_REPETITION(_AVI_PIXEL_REPETITION_4);
 
                 break;
 
             case _AVI_PIXEL_REPETITION_5:
 
                 DebugMessageRx2("Get Pixel Repetition 5", 0x00);
-                SET_TMDS_RX2_AVI_PIXEL_REPETITION(_AVI_PIXEL_REPETITION_5);
+                SET_TMDS_RXN_AVI_PIXEL_REPETITION(_AVI_PIXEL_REPETITION_5);
 
                 break;
 
             case _AVI_PIXEL_REPETITION_6:
 
                 DebugMessageRx2("Get Pixel Repetition 6", 0x00);
-                SET_TMDS_RX2_AVI_PIXEL_REPETITION(_AVI_PIXEL_REPETITION_6);
+                SET_TMDS_RXN_AVI_PIXEL_REPETITION(_AVI_PIXEL_REPETITION_6);
 
                 break;
 
             case _AVI_PIXEL_REPETITION_7:
 
                 DebugMessageRx2("Get Pixel Repetition 7", 0x00);
-                SET_TMDS_RX2_AVI_PIXEL_REPETITION(_AVI_PIXEL_REPETITION_7);
+                SET_TMDS_RXN_AVI_PIXEL_REPETITION(_AVI_PIXEL_REPETITION_7);
 
                 break;
 
             case _AVI_PIXEL_REPETITION_8:
 
                 DebugMessageRx2("Get Pixel Repetition 8", 0x00);
-                SET_TMDS_RX2_AVI_PIXEL_REPETITION(_AVI_PIXEL_REPETITION_8);
+                SET_TMDS_RXN_AVI_PIXEL_REPETITION(_AVI_PIXEL_REPETITION_8);
 
                 break;
 
             case _AVI_PIXEL_REPETITION_9:
 
                 DebugMessageRx2("Get Pixel Repetition 9", 0x00);
-                SET_TMDS_RX2_AVI_PIXEL_REPETITION(_AVI_PIXEL_REPETITION_9);
+                SET_TMDS_RXN_AVI_PIXEL_REPETITION(_AVI_PIXEL_REPETITION_9);
 
                 break;
 
             default:
 
                 DebugMessageRx2("Get Pixel Repetition Error", 0x00);
-                SET_TMDS_RX2_AVI_PIXEL_REPETITION(_AVI_PIXEL_REPETITION_0);
+                SET_TMDS_RXN_AVI_PIXEL_REPETITION(_AVI_PIXEL_REPETITION_0);
 
                 break;
         }
 
         // Set Colorimetry
-        ScalerSyncTMDSRx2HdmiColorimetrySetting();
+        ScalerSyncTMDSRxHdmiColorimetrySetting();
 
         // Set Quantization
 #if((_RGB_QUANTIZATION_RANGE_SUPPORT == _ON) || (_YCC_QUANTIZATION_RANGE_SUPPORT == _ON))
-        ScalerSyncTMDSRx2HdmiQuantizationSetting();
+        ScalerSyncTMDSRxHdmiQuantizationSetting();
 #endif
     }
     else    // No Info Frame Received
     {
 #if(_D2_INPUT_PORT_TYPE == _D2_MHL_PORT)
-        if(GET_TMDS_RX2_CLK_MODE() == _TMDS_MHL_PPMODE_PHY_SETTING)
+        if(RXSEL((GET_TMDS_RX2_CLK_MODE()), (GET_TMDS_RX3_CLK_MODE())) == _TMDS_MHL_PPMODE_PHY_SETTING)
         {
             SET_COLOR_SPACE(_COLOR_SPACE_YCBCR422);
             SET_COLOR_YCC_QUANTIZATION_RANGE(_YCC_QUANTIZATION_LIMIT_RANGE);
 
             // Manual Set Color Space to YCbCr422 and disable pixel repetition
-            ScalerSetDataPortBit(P71_C9_HDMI_AP, _P71_CA_PT_51_PORT_PAGE71_HDMI_ACRCR, ~(_BIT6 | _BIT5 | _BIT4 | _BIT3 | _BIT2), _BIT3);
+            ScalerSetDataPortBit(RXA(P71_C9_HDMI_AP), _P71_CA_PT_51_PORT_PAGE71_HDMI_ACRCR, ~(_BIT6 | _BIT5 | _BIT4 | _BIT3 | _BIT2), _BIT3);
         }
         else
 #endif
@@ -7864,38 +6574,38 @@ void ScalerSyncTMDSRx2HdmiVideoSetting(void)
             SET_COLOR_RGB_QUANTIZATION_RANGE(_RGB_QUANTIZATION_RESERVED);
 
             // Manual Set Color Space to RGB and disable pixel repetition
-            ScalerSetDataPortBit(P71_C9_HDMI_AP, _P71_CA_PT_51_PORT_PAGE71_HDMI_ACRCR, ~(_BIT6 | _BIT5 | _BIT4 | _BIT3 | _BIT2), 0x00);
+            ScalerSetDataPortBit(RXA(P71_C9_HDMI_AP), _P71_CA_PT_51_PORT_PAGE71_HDMI_ACRCR, ~(_BIT6 | _BIT5 | _BIT4 | _BIT3 | _BIT2), 0x00);
         }
 
         // Disable down sampling
-        ScalerSetDataPortBit(P71_C9_HDMI_AP, _P71_CA_PT_50_PORT_PAGE71_HDMI_VCR, ~(_BIT3 | _BIT2 | _BIT1 | _BIT0), 0x00);
+        ScalerSetDataPortBit(RXA(P71_C9_HDMI_AP), _P71_CA_PT_50_PORT_PAGE71_HDMI_VCR, ~(_BIT3 | _BIT2 | _BIT1 | _BIT0), 0x00);
 
-        SET_TMDS_RX2_AVI_PIXEL_REPETITION(_AVI_PIXEL_REPETITION_0);
+        SET_TMDS_RXN_AVI_PIXEL_REPETITION(_AVI_PIXEL_REPETITION_0);
 
         // Waiting for down sampling  effect
         ScalerTimerDelayXms(20);
     }
 
-    ScalerTMDSRx2SetPorchColor(GET_COLOR_SPACE());
+    ScalerTMDSRxSetPorchColor(GET_COLOR_SPACE());
 }
 #endif
 
 //--------------------------------------------------
-// Description  : TMDS Rx2 HDMI Colorimetry Setting
+// Description  : TMDS Rx2 / Rx3 HDMI Colorimetry Setting
 // Input Value  : None
 // Output Value : None
 //--------------------------------------------------
-void ScalerSyncTMDSRx2HdmiColorimetrySetting(void)
+void ScalerSyncTMDSRxHdmiColorimetrySetting(void)
 {
     if((GET_COLOR_SPACE() == _COLOR_SPACE_YCBCR420) || (GET_COLOR_SPACE() == _COLOR_SPACE_YCBCR422) || (GET_COLOR_SPACE() == _COLOR_SPACE_YCBCR444))
     {
-        switch(ScalerTMDSRx2HdmiGetAVIInfo(_AVI_INFO_COLORIMETRY))
+        switch(ScalerTMDSRxHdmiGetAVIInfo(_AVI_INFO_COLORIMETRY))
         {
             case _AVI_COLORIMETRY_00:
 
                 DebugMessageRx2("Get Colorimetry YCC_SMPTE_170M", 0x00);
 
-                SET_TMDS_RX2_COLORIMETRY_PREVALUE(_AVI_COLORIMETRY_00);
+                SET_TMDS_RXN_COLORIMETRY_PREVALUE(_AVI_COLORIMETRY_00);
 
                 SET_COLORIMETRY(_COLORIMETRY_YCC_SMPTE_170M);
 
@@ -7905,7 +6615,7 @@ void ScalerSyncTMDSRx2HdmiColorimetrySetting(void)
 
                 DebugMessageRx2("Get Colorimetry YCC_SMPTE_170M", 0x00);
 
-                SET_TMDS_RX2_COLORIMETRY_PREVALUE(_AVI_COLORIMETRY_01);
+                SET_TMDS_RXN_COLORIMETRY_PREVALUE(_AVI_COLORIMETRY_01);
 
                 SET_COLORIMETRY(_COLORIMETRY_YCC_SMPTE_170M);
 
@@ -7915,7 +6625,7 @@ void ScalerSyncTMDSRx2HdmiColorimetrySetting(void)
 
                 DebugMessageRx2("Get Colorimetry 709", 0x00);
 
-                SET_TMDS_RX2_COLORIMETRY_PREVALUE(_AVI_COLORIMETRY_10);
+                SET_TMDS_RXN_COLORIMETRY_PREVALUE(_AVI_COLORIMETRY_10);
 
                 SET_COLORIMETRY(_COLORIMETRY_YCC_ITUR_BT709);
 
@@ -7925,11 +6635,11 @@ void ScalerSyncTMDSRx2HdmiColorimetrySetting(void)
 
                 DebugMessageRx2("Get Colorimetry Extended", 0x00);
 
-                SET_TMDS_RX2_COLORIMETRY_PREVALUE(_AVI_COLORIMETRY_11);
+                SET_TMDS_RXN_COLORIMETRY_PREVALUE(_AVI_COLORIMETRY_11);
 
                 SET_COLORIMETRY(_COLORIMETRY_EXT);
 
-                ScalerSyncTMDSRx2HdmiColorimetryExtSetting();
+                ScalerSyncTMDSRxHdmiColorimetryExtSetting();
 
                 break;
 
@@ -7942,9 +6652,9 @@ void ScalerSyncTMDSRx2HdmiColorimetrySetting(void)
     }
     else if(GET_COLOR_SPACE() == _COLOR_SPACE_RGB)
     {
-        SET_TMDS_RX2_COLORIMETRY_PREVALUE(ScalerTMDSRx2HdmiGetAVIInfo(_AVI_INFO_COLORIMETRY));
+        SET_TMDS_RXN_COLORIMETRY_PREVALUE(ScalerTMDSRxHdmiGetAVIInfo(_AVI_INFO_COLORIMETRY));
 
-        switch(GET_TMDS_RX2_COLORIMETRY_PREVALUE())
+        switch(GET_TMDS_RXN_COLORIMETRY_PREVALUE())
         {
             case _AVI_COLORIMETRY_00:
 
@@ -7960,7 +6670,7 @@ void ScalerSyncTMDSRx2HdmiColorimetrySetting(void)
 
                 SET_COLORIMETRY(_COLORIMETRY_EXT);
 
-                ScalerSyncTMDSRx2HdmiColorimetryExtSetting();
+                ScalerSyncTMDSRxHdmiColorimetryExtSetting();
 
                 break;
 
@@ -7976,19 +6686,19 @@ void ScalerSyncTMDSRx2HdmiColorimetrySetting(void)
 }
 
 //--------------------------------------------------
-// Description  : TMDS Rx2 Colorimetry Extended Setting
+// Description  : TMDS Rx2 / Rx3 Colorimetry Extended Setting
 // Input Value  : None
 // Output Value : None
 //--------------------------------------------------
-void ScalerSyncTMDSRx2HdmiColorimetryExtSetting(void)
+void ScalerSyncTMDSRxHdmiColorimetryExtSetting(void)
 {
     if((GET_COLOR_SPACE() == _COLOR_SPACE_YCBCR420) || (GET_COLOR_SPACE() == _COLOR_SPACE_YCBCR422) || (GET_COLOR_SPACE() == _COLOR_SPACE_YCBCR444))
     {
         // Get extended colorimetry
-        SET_TMDS_RX2_COLORIMETRY_EXT_PREVALUE(ScalerTMDSRx2HdmiGetAVIInfo(_AVI_INFO_EXTENDED_COLORIMETRY));
+        SET_TMDS_RXN_COLORIMETRY_EXT_PREVALUE(ScalerTMDSRxHdmiGetAVIInfo(_AVI_INFO_EXTENDED_COLORIMETRY));
 
         // Get extended colorimetry
-        switch(GET_TMDS_RX2_COLORIMETRY_EXT_PREVALUE())
+        switch(GET_TMDS_RXN_COLORIMETRY_EXT_PREVALUE())
         {
             case _AVI_COLORIMETRY_EXT_000:
 
@@ -8049,9 +6759,9 @@ void ScalerSyncTMDSRx2HdmiColorimetryExtSetting(void)
     }
     else if(GET_COLOR_SPACE() == _COLOR_SPACE_RGB)
     {
-        SET_TMDS_RX2_COLORIMETRY_EXT_PREVALUE(ScalerTMDSRx2HdmiGetAVIInfo(_AVI_INFO_EXTENDED_COLORIMETRY));
+        SET_TMDS_RXN_COLORIMETRY_EXT_PREVALUE(ScalerTMDSRxHdmiGetAVIInfo(_AVI_INFO_EXTENDED_COLORIMETRY));
 
-        switch(GET_TMDS_RX2_COLORIMETRY_EXT_PREVALUE())
+        switch(GET_TMDS_RXN_COLORIMETRY_EXT_PREVALUE())
         {
             case _AVI_COLORIMETRY_EXT_100:
 
@@ -8082,17 +6792,17 @@ void ScalerSyncTMDSRx2HdmiColorimetryExtSetting(void)
 
 #if((_RGB_QUANTIZATION_RANGE_SUPPORT == _ON) || (_YCC_QUANTIZATION_RANGE_SUPPORT == _ON))
 //--------------------------------------------------
-// Description  : TMDS Rx2 Quantization Setting
+// Description  : TMDS Rx2 / Rx3 Quantization Setting
 // Input Value  : None
 // Output Value : None
 //--------------------------------------------------
-void ScalerSyncTMDSRx2HdmiQuantizationSetting(void)
+void ScalerSyncTMDSRxHdmiQuantizationSetting(void)
 {
     if((GET_COLOR_SPACE() == _COLOR_SPACE_YCBCR420) || (GET_COLOR_SPACE() == _COLOR_SPACE_YCBCR422) || (GET_COLOR_SPACE() == _COLOR_SPACE_YCBCR444))
     {
-        SET_TMDS_RX2_QUANTIZATION_PREVALUE(ScalerTMDSRx2HdmiGetAVIInfo(_AVI_INFO_YCC_QUANTIZATION));
+        SET_TMDS_RXN_QUANTIZATION_PREVALUE(ScalerTMDSRxHdmiGetAVIInfo(_AVI_INFO_YCC_QUANTIZATION));
 
-        switch(GET_TMDS_RX2_QUANTIZATION_PREVALUE())
+        switch(GET_TMDS_RXN_QUANTIZATION_PREVALUE())
         {
             case _AVI_YCC_QUANTIZATION_FULL:
 
@@ -8121,13 +6831,13 @@ void ScalerSyncTMDSRx2HdmiQuantizationSetting(void)
     }
     else if(GET_COLOR_SPACE() == _COLOR_SPACE_RGB)
     {
-        switch(ScalerTMDSRx2HdmiGetAVIInfo(_AVI_INFO_RGB_QUANTIZATION))
+        switch(ScalerTMDSRxHdmiGetAVIInfo(_AVI_INFO_RGB_QUANTIZATION))
         {
             case _AVI_RGB_QUANTIZATION_LIMITED:
 
                 DebugMessageRx2("Get RGB LIMIT RANGE", 0x00);
 
-                SET_TMDS_RX2_QUANTIZATION_PREVALUE(_AVI_RGB_QUANTIZATION_LIMITED);
+                SET_TMDS_RXN_QUANTIZATION_PREVALUE(_AVI_RGB_QUANTIZATION_LIMITED);
 
                 SET_COLOR_RGB_QUANTIZATION_RANGE(_RGB_QUANTIZATION_LIMIT_RANGE);
 
@@ -8137,7 +6847,7 @@ void ScalerSyncTMDSRx2HdmiQuantizationSetting(void)
 
                 DebugMessageRx2("Get RGB FULL RANGE", 0x00);
 
-                SET_TMDS_RX2_QUANTIZATION_PREVALUE(_AVI_RGB_QUANTIZATION_FULL);
+                SET_TMDS_RXN_QUANTIZATION_PREVALUE(_AVI_RGB_QUANTIZATION_FULL);
 
                 SET_COLOR_RGB_QUANTIZATION_RANGE(_RGB_QUANTIZATION_FULL_RANGE);
 
@@ -8147,7 +6857,7 @@ void ScalerSyncTMDSRx2HdmiQuantizationSetting(void)
 
                 DebugMessageRx2("Get RGB DEFAULT RANGE", 0x00);
 
-                SET_TMDS_RX2_QUANTIZATION_PREVALUE(_AVI_RGB_QUANTIZATION_DEFAULT);
+                SET_TMDS_RXN_QUANTIZATION_PREVALUE(_AVI_RGB_QUANTIZATION_DEFAULT);
 
                 SET_COLOR_RGB_QUANTIZATION_RANGE(_RGB_QUANTIZATION_DEFAULT_RANGE);
 
@@ -8157,7 +6867,7 @@ void ScalerSyncTMDSRx2HdmiQuantizationSetting(void)
 
                 DebugMessageRx2("Get RGB RESERVED RANGE", 0x00);
 
-                SET_TMDS_RX2_QUANTIZATION_PREVALUE(_AVI_RGB_QUANTIZATION_RESERVED);
+                SET_TMDS_RXN_QUANTIZATION_PREVALUE(_AVI_RGB_QUANTIZATION_RESERVED);
 
                 SET_COLOR_RGB_QUANTIZATION_RANGE(_RGB_QUANTIZATION_RESERVED);
 
@@ -8167,7 +6877,7 @@ void ScalerSyncTMDSRx2HdmiQuantizationSetting(void)
 
                 DebugMessageRx2("Get RGB RANGE Error", 0x00);
 
-                SET_TMDS_RX2_QUANTIZATION_PREVALUE(_AVI_RGB_QUANTIZATION_FULL);
+                SET_TMDS_RXN_QUANTIZATION_PREVALUE(_AVI_RGB_QUANTIZATION_FULL);
 
                 SET_COLOR_RGB_QUANTIZATION_RANGE(_RGB_QUANTIZATION_FULL_RANGE);
 
@@ -8178,21 +6888,21 @@ void ScalerSyncTMDSRx2HdmiQuantizationSetting(void)
 #endif
 
 //--------------------------------------------------
-// Description  : TMDS Rx2 HDMI ColorInfo Changed Detect
+// Description  : TMDS Rx2 / Rx3 HDMI ColorInfo Changed Detect
 // Input Value  : None
 // Output Value : Changed ==> _TRUE; No Changed ==> _FALSE;
 //--------------------------------------------------
-bit ScalerSyncTMDSRx2HdmiColorInfoChanged(void)
+bit ScalerSyncTMDSRxHdmiColorInfoChanged(void)
 {
     // Check Color Space
-    if(ScalerTMDSRx2HdmiGetAVIInfo(_AVI_INFO_COLOR_SPACE) != GET_COLOR_SPACE())
+    if(ScalerTMDSRxHdmiGetAVIInfo(_AVI_INFO_COLOR_SPACE) != GET_COLOR_SPACE())
     {
         DebugMessageRx2("Color Space Changed", 0x00);
         return _TRUE;
     }
 
     // Check Colorimetry
-    if(ScalerTMDSRx2HdmiGetAVIInfo(_AVI_INFO_COLORIMETRY) != GET_TMDS_RX2_COLORIMETRY_PREVALUE())
+    if(ScalerTMDSRxHdmiGetAVIInfo(_AVI_INFO_COLORIMETRY) != GET_TMDS_RXN_COLORIMETRY_PREVALUE())
     {
         DebugMessageRx2("Colorimetry Changed", 0x00);
 
@@ -8200,24 +6910,24 @@ bit ScalerSyncTMDSRx2HdmiColorInfoChanged(void)
         {
             BYTE pucTemp[2];
 
-            pucTemp[0] = ScalerTMDSRx2HdmiGetAVIInfo(_AVI_INFO_COLORIMETRY);
+            pucTemp[0] = ScalerTMDSRxHdmiGetAVIInfo(_AVI_INFO_COLORIMETRY);
 
-            pucTemp[1] = GET_TMDS_RX2_COLORIMETRY_PREVALUE();
+            pucTemp[1] = GET_TMDS_RXN_COLORIMETRY_PREVALUE();
 
-            ScalerSyncTMDSRx2HdmiColorimetrySetting();
+            ScalerSyncTMDSRxHdmiColorimetrySetting();
 
             if((GET_COLOR_SPACE() == _COLOR_SPACE_YCBCR420) || (GET_COLOR_SPACE() == _COLOR_SPACE_YCBCR422) || (GET_COLOR_SPACE() == _COLOR_SPACE_YCBCR444))
             {
                 if(!(((pucTemp[0] == _AVI_COLORIMETRY_00) && (pucTemp[1] == _AVI_COLORIMETRY_01)) || ((pucTemp[0] == _AVI_COLORIMETRY_01) && (pucTemp[1] == _AVI_COLORIMETRY_00))))
                 {
-                    SET_TMDS_RX2_COLORIMETRY_CHANGED();
+                    SET_TMDS_RXN_COLORIMETRY_CHANGED();
                 }
             }
             else if(GET_COLOR_SPACE() == _COLOR_SPACE_RGB)
             {
                 if((pucTemp[0] == _AVI_COLORIMETRY_11) || (pucTemp[1] == _AVI_COLORIMETRY_11))
                 {
-                    SET_TMDS_RX2_COLORIMETRY_CHANGED();
+                    SET_TMDS_RXN_COLORIMETRY_CHANGED();
                 }
             }
         }
@@ -8230,7 +6940,7 @@ bit ScalerSyncTMDSRx2HdmiColorInfoChanged(void)
     {
         if(GET_COLORIMETRY() == _COLORIMETRY_EXT)
         {
-            if(ScalerTMDSRx2HdmiGetAVIInfo(_AVI_INFO_EXTENDED_COLORIMETRY) != GET_TMDS_RX2_COLORIMETRY_EXT_PREVALUE())
+            if(ScalerTMDSRxHdmiGetAVIInfo(_AVI_INFO_EXTENDED_COLORIMETRY) != GET_TMDS_RXN_COLORIMETRY_EXT_PREVALUE())
             {
                 DebugMessageRx2("Ext Colorimetry Changed", 0x00);
 
@@ -8238,24 +6948,24 @@ bit ScalerSyncTMDSRx2HdmiColorInfoChanged(void)
                 {
                     BYTE pucTemp[2];
 
-                    pucTemp[0] = ScalerTMDSRx2HdmiGetAVIInfo(_AVI_INFO_EXTENDED_COLORIMETRY);
+                    pucTemp[0] = ScalerTMDSRxHdmiGetAVIInfo(_AVI_INFO_EXTENDED_COLORIMETRY);
 
-                    pucTemp[1] = GET_TMDS_RX2_COLORIMETRY_EXT_PREVALUE();
+                    pucTemp[1] = GET_TMDS_RXN_COLORIMETRY_EXT_PREVALUE();
 
-                    ScalerSyncTMDSRx2HdmiColorimetryExtSetting();
+                    ScalerSyncTMDSRxHdmiColorimetryExtSetting();
 
                     if((GET_COLOR_SPACE() == _COLOR_SPACE_YCBCR420) || (GET_COLOR_SPACE() == _COLOR_SPACE_YCBCR422) || (GET_COLOR_SPACE() == _COLOR_SPACE_YCBCR444))
                     {
                         if(!(((pucTemp[0] == _AVI_COLORIMETRY_EXT_100) && (pucTemp[1] == _AVI_COLORIMETRY_EXT_111)) || ((pucTemp[1] == _AVI_COLORIMETRY_EXT_100) && (pucTemp[0] == _AVI_COLORIMETRY_EXT_111))))
                         {
-                            SET_TMDS_RX2_COLORIMETRY_EXT_CHANGED();
+                            SET_TMDS_RXN_COLORIMETRY_EXT_CHANGED();
                         }
                     }
                     else if(GET_COLOR_SPACE() == _COLOR_SPACE_RGB)
                     {
                         if(!(((pucTemp[0] != _AVI_COLORIMETRY_EXT_100) && (pucTemp[0] != _AVI_COLORIMETRY_EXT_110)) && ((pucTemp[1] != _AVI_COLORIMETRY_EXT_100) && (pucTemp[1] != _AVI_COLORIMETRY_EXT_110))))
                         {
-                            SET_TMDS_RX2_COLORIMETRY_EXT_CHANGED();
+                            SET_TMDS_RXN_COLORIMETRY_EXT_CHANGED();
                         }
                     }
                 }
@@ -8270,7 +6980,7 @@ bit ScalerSyncTMDSRx2HdmiColorInfoChanged(void)
 #if(_YCC_QUANTIZATION_RANGE_SUPPORT == _ON)
     if((GET_COLOR_SPACE() == _COLOR_SPACE_YCBCR420) || (GET_COLOR_SPACE() == _COLOR_SPACE_YCBCR422) || (GET_COLOR_SPACE() == _COLOR_SPACE_YCBCR444))
     {
-        if(ScalerTMDSRx2HdmiGetAVIInfo(_AVI_INFO_YCC_QUANTIZATION) != GET_TMDS_RX2_QUANTIZATION_PREVALUE())
+        if(ScalerTMDSRxHdmiGetAVIInfo(_AVI_INFO_YCC_QUANTIZATION) != GET_TMDS_RXN_QUANTIZATION_PREVALUE())
         {
             DebugMessageRx2("YCC Quantization Range Changed", 0x00);
 
@@ -8278,15 +6988,15 @@ bit ScalerSyncTMDSRx2HdmiColorInfoChanged(void)
             {
                 BYTE pucTemp[2];
 
-                pucTemp[0] = ScalerTMDSRx2HdmiGetAVIInfo(_AVI_INFO_YCC_QUANTIZATION);
+                pucTemp[0] = ScalerTMDSRxHdmiGetAVIInfo(_AVI_INFO_YCC_QUANTIZATION);
 
-                pucTemp[1] = GET_TMDS_RX2_QUANTIZATION_PREVALUE();
+                pucTemp[1] = GET_TMDS_RXN_QUANTIZATION_PREVALUE();
 
-                ScalerSyncTMDSRx2HdmiQuantizationSetting();
+                ScalerSyncTMDSRxHdmiQuantizationSetting();
 
                 if((pucTemp[0] == _AVI_YCC_QUANTIZATION_LIMITED) || (pucTemp[1] == _AVI_YCC_QUANTIZATION_LIMITED))
                 {
-                    SET_TMDS_RX2_QUANTIZATION_CHANGED();
+                    SET_TMDS_RXN_QUANTIZATION_CHANGED();
                 }
             }
             else
@@ -8300,1837 +7010,15 @@ bit ScalerSyncTMDSRx2HdmiColorInfoChanged(void)
 #if(_RGB_QUANTIZATION_RANGE_SUPPORT == _ON)
     if(GET_COLOR_SPACE() == _COLOR_SPACE_RGB)
     {
-        if(ScalerTMDSRx2HdmiGetAVIInfo(_AVI_INFO_RGB_QUANTIZATION) != GET_TMDS_RX2_QUANTIZATION_PREVALUE())
+        if(ScalerTMDSRxHdmiGetAVIInfo(_AVI_INFO_RGB_QUANTIZATION) != GET_TMDS_RXN_QUANTIZATION_PREVALUE())
         {
             DebugMessageRx2("RGB Quantization Range Changed", 0x00);
 
             if(GET_DIGITAL_COLOR_INFO_CHANGE_RESET() == _FALSE)
             {
-                ScalerSyncTMDSRx2HdmiQuantizationSetting();
+                ScalerSyncTMDSRxHdmiQuantizationSetting();
 
-                SET_TMDS_RX2_QUANTIZATION_CHANGED();
-            }
-            else
-            {
-                return _TRUE;
-            }
-        }
-    }
-#endif
-
-    return _FALSE;
-}
-#endif
-
-#if((_D3_HDMI_SUPPORT == _ON) && (_TMDS_COMBO_EXIST == _OFF))
-#if(_D3_INPUT_PORT_TYPE != _D3_DUAL_DVI_PORT)
-//--------------------------------------------------
-// Description  : TMDS Rx0 Video Setting
-// Input Value  : None
-// Output Value : None
-//--------------------------------------------------
-void ScalerSyncTMDSRx3HdmiVideoSetting(void)
-{
-    if(GET_HDMI_RX3_AVI_INFO_FRAME_RECEIVED() == _TRUE)
-    {
-        // Color Space Auto/ Pixel Repetition auto mode
-        ScalerSetDataPortBit(P72_C9_HDMI_AP, _P72_CA_PT_51_PORT_PAGE72_HDMI_ACRCR, ~(_BIT6 | _BIT2), (_BIT6 | _BIT2));
-
-        pData[0] = ScalerTMDSRx3HdmiGetAVIInfo(_AVI_INFO_COLOR_SPACE);
-
-        // Get Color Space
-        if(pData[0] == _AVI_COLOR_SPACE_00)
-        {
-            // Color Space RGB
-            DebugMessageRx3("Get Color Space RGB", pData[0]);
-            SET_COLOR_SPACE(_COLOR_SPACE_RGB);
-        }
-        else if(pData[0] == _AVI_COLOR_SPACE_01)
-        {
-            // YCC422
-            DebugMessageRx3("Get Color Space YUV422", pData[0]);
-            SET_COLOR_SPACE(_COLOR_SPACE_YCBCR422);
-        }
-        else if(pData[0] == _AVI_COLOR_SPACE_11)
-        {
-            // YCC420
-            DebugMessageRx3("Get Color Space YUV420", pData[0]);
-            SET_COLOR_SPACE(_COLOR_SPACE_YCBCR420);
-        }
-        else
-        {
-            // YCC444
-            DebugMessageRx3("Get Color Space YUV444", pData[0]);
-            SET_COLOR_SPACE(_COLOR_SPACE_YCBCR444);
-        }
-
-        // Set Pixel Repetition
-        switch(ScalerTMDSRx3HdmiGetAVIInfo(_AVI_INFO_PIXEL_REPETITION))
-        {
-            case _AVI_PIXEL_REPETITION_0:
-
-                DebugMessageRx3("Get Pixel Repetition 0", 0x00);
-                SET_TMDS_RX3_AVI_PIXEL_REPETITION(_AVI_PIXEL_REPETITION_0);
-
-                break;
-
-            case _AVI_PIXEL_REPETITION_1:
-
-                DebugMessageRx3("Get Pixel Repetition 1", 0x00);
-                SET_TMDS_RX3_AVI_PIXEL_REPETITION(_AVI_PIXEL_REPETITION_1);
-
-                break;
-
-            case _AVI_PIXEL_REPETITION_2:
-
-                DebugMessageRx3("Get Pixel Repetition 2", 0x00);
-                SET_TMDS_RX3_AVI_PIXEL_REPETITION(_AVI_PIXEL_REPETITION_2);
-
-                break;
-
-            case _AVI_PIXEL_REPETITION_3:
-
-                DebugMessageRx3("Get Pixel Repetition 3", 0x00);
-                SET_TMDS_RX3_AVI_PIXEL_REPETITION(_AVI_PIXEL_REPETITION_3);
-
-                break;
-
-            case _AVI_PIXEL_REPETITION_4:
-
-                DebugMessageRx3("Get Pixel Repetition 4", 0x00);
-                SET_TMDS_RX3_AVI_PIXEL_REPETITION(_AVI_PIXEL_REPETITION_4);
-
-                break;
-
-            case _AVI_PIXEL_REPETITION_5:
-
-                DebugMessageRx3("Get Pixel Repetition 5", 0x00);
-                SET_TMDS_RX3_AVI_PIXEL_REPETITION(_AVI_PIXEL_REPETITION_5);
-
-                break;
-
-            case _AVI_PIXEL_REPETITION_6:
-
-                DebugMessageRx3("Get Pixel Repetition 6", 0x00);
-                SET_TMDS_RX3_AVI_PIXEL_REPETITION(_AVI_PIXEL_REPETITION_6);
-
-                break;
-
-            case _AVI_PIXEL_REPETITION_7:
-
-                DebugMessageRx3("Get Pixel Repetition 7", 0x00);
-                SET_TMDS_RX3_AVI_PIXEL_REPETITION(_AVI_PIXEL_REPETITION_7);
-
-                break;
-
-            case _AVI_PIXEL_REPETITION_8:
-
-                DebugMessageRx3("Get Pixel Repetition 8", 0x00);
-                SET_TMDS_RX3_AVI_PIXEL_REPETITION(_AVI_PIXEL_REPETITION_8);
-
-                break;
-
-            case _AVI_PIXEL_REPETITION_9:
-
-                DebugMessageRx3("Get Pixel Repetition 9", 0x00);
-                SET_TMDS_RX3_AVI_PIXEL_REPETITION(_AVI_PIXEL_REPETITION_9);
-
-                break;
-
-            default:
-
-                DebugMessageRx3("Get Pixel Repetition Error", 0x00);
-                SET_TMDS_RX3_AVI_PIXEL_REPETITION(_AVI_PIXEL_REPETITION_0);
-
-                break;
-        }
-
-        // Set Colorimetry
-        ScalerSyncTMDSRx3HdmiColorimetrySetting();
-
-        // Set Quantization
-#if((_RGB_QUANTIZATION_RANGE_SUPPORT == _ON) || (_YCC_QUANTIZATION_RANGE_SUPPORT == _ON))
-        ScalerSyncTMDSRx3HdmiQuantizationSetting();
-#endif
-    }
-    else    // No Info Frame Received
-    {
-#if(_D3_INPUT_PORT_TYPE == _D3_MHL_PORT)
-        if(GET_TMDS_RX3_CLK_MODE() == _TMDS_MHL_PPMODE_PHY_SETTING)
-        {
-            SET_COLOR_SPACE(_COLOR_SPACE_YCBCR422);
-            SET_COLOR_YCC_QUANTIZATION_RANGE(_YCC_QUANTIZATION_LIMIT_RANGE);
-
-            // Manual Set Color Space to YCbCr422 and disable pixel repetition
-            ScalerSetDataPortBit(P72_C9_HDMI_AP, _P72_CA_PT_51_PORT_PAGE72_HDMI_ACRCR, ~(_BIT6 | _BIT5 | _BIT4 | _BIT3 | _BIT2), _BIT3);
-        }
-        else
-#endif
-
-        {
-            SET_COLOR_SPACE(_COLOR_SPACE_RGB);
-            SET_COLOR_RGB_QUANTIZATION_RANGE(_RGB_QUANTIZATION_RESERVED);
-
-            // Manual Set Color Space to RGB and disable pixel repetition
-            ScalerSetDataPortBit(P72_C9_HDMI_AP, _P72_CA_PT_51_PORT_PAGE72_HDMI_ACRCR, ~(_BIT6 | _BIT5 | _BIT4 | _BIT3 | _BIT2), 0x00);
-        }
-
-        // Disable down sampling
-        ScalerSetDataPortBit(P72_C9_HDMI_AP, _P72_CA_PT_50_PORT_PAGE72_HDMI_VCR, ~(_BIT3 | _BIT2 | _BIT1 | _BIT0), 0x00);
-
-        SET_TMDS_RX3_AVI_PIXEL_REPETITION(_AVI_PIXEL_REPETITION_0);
-
-        // Waiting for down sampling  effect
-        ScalerTimerDelayXms(20);
-    }
-
-    ScalerTMDSRx3SetPorchColor(GET_COLOR_SPACE());
-}
-#endif
-
-//--------------------------------------------------
-// Description  : TMDS Rx3 HDMI Colorimetry Setting
-// Input Value  : None
-// Output Value : None
-//--------------------------------------------------
-void ScalerSyncTMDSRx3HdmiColorimetrySetting(void)
-{
-    if((GET_COLOR_SPACE() == _COLOR_SPACE_YCBCR420) || (GET_COLOR_SPACE() == _COLOR_SPACE_YCBCR422) || (GET_COLOR_SPACE() == _COLOR_SPACE_YCBCR444))
-    {
-        switch(ScalerTMDSRx3HdmiGetAVIInfo(_AVI_INFO_COLORIMETRY))
-        {
-            case _AVI_COLORIMETRY_00:
-
-                DebugMessageRx3("Get Colorimetry YCC_SMPTE_170M", 0x00);
-
-                SET_TMDS_RX3_COLORIMETRY_PREVALUE(_AVI_COLORIMETRY_00);
-
-                SET_COLORIMETRY(_COLORIMETRY_YCC_SMPTE_170M);
-
-                break;
-
-            case _AVI_COLORIMETRY_01:
-
-                DebugMessageRx3("Get Colorimetry YCC_SMPTE_170M", 0x00);
-
-                SET_TMDS_RX3_COLORIMETRY_PREVALUE(_AVI_COLORIMETRY_01);
-
-                SET_COLORIMETRY(_COLORIMETRY_YCC_SMPTE_170M);
-
-                break;
-
-            case _AVI_COLORIMETRY_10:
-
-                DebugMessageRx3("Get Colorimetry 709", 0x00);
-
-                SET_TMDS_RX3_COLORIMETRY_PREVALUE(_AVI_COLORIMETRY_10);
-
-                SET_COLORIMETRY(_COLORIMETRY_YCC_ITUR_BT709);
-
-                break;
-
-            case _AVI_COLORIMETRY_11:
-
-                DebugMessageRx3("Get Colorimetry Extended", 0x00);
-
-                SET_TMDS_RX3_COLORIMETRY_PREVALUE(_AVI_COLORIMETRY_11);
-
-                SET_COLORIMETRY(_COLORIMETRY_EXT);
-
-                ScalerSyncTMDSRx3HdmiColorimetryExtSetting();
-
-                break;
-
-            default:
-
-                DebugMessageRx3("Get Colorimetry INTO_DEFAULT", 0x00);
-
-                break;
-        }
-    }
-    else if(GET_COLOR_SPACE() == _COLOR_SPACE_RGB)
-    {
-        SET_TMDS_RX3_COLORIMETRY_PREVALUE(ScalerTMDSRx3HdmiGetAVIInfo(_AVI_INFO_COLORIMETRY));
-
-        switch(GET_TMDS_RX3_COLORIMETRY_PREVALUE())
-        {
-            case _AVI_COLORIMETRY_00:
-
-                DebugMessageRx3("Get Colorimetry RGB_SRGB", 0x00);
-
-                SET_COLORIMETRY(_COLORIMETRY_RGB_SRGB);
-
-                break;
-
-            case _AVI_COLORIMETRY_11:
-
-                DebugMessageRx3("Get Colorimetry Extended", 0x00);
-
-                SET_COLORIMETRY(_COLORIMETRY_EXT);
-
-                ScalerSyncTMDSRx3HdmiColorimetryExtSetting();
-
-                break;
-
-            default:
-
-                DebugMessageRx3("Get Colorimetry INTO_DEFAULT", 0x00);
-
-                SET_COLORIMETRY(_COLORIMETRY_RGB_SRGB);
-
-                break;
-        }
-    }
-}
-
-//--------------------------------------------------
-// Description  : TMDS Rx3 Colorimetry Extended Setting
-// Input Value  : None
-// Output Value : None
-//--------------------------------------------------
-void ScalerSyncTMDSRx3HdmiColorimetryExtSetting(void)
-{
-    if((GET_COLOR_SPACE() == _COLOR_SPACE_YCBCR420) || (GET_COLOR_SPACE() == _COLOR_SPACE_YCBCR422) || (GET_COLOR_SPACE() == _COLOR_SPACE_YCBCR444))
-    {
-        // Get extended colorimetry
-        SET_TMDS_RX3_COLORIMETRY_EXT_PREVALUE(ScalerTMDSRx3HdmiGetAVIInfo(_AVI_INFO_EXTENDED_COLORIMETRY));
-
-        // Get extended colorimetry
-        switch(GET_TMDS_RX3_COLORIMETRY_EXT_PREVALUE())
-        {
-            case _AVI_COLORIMETRY_EXT_000:
-
-                DebugMessageRx3("Get Colorimetry EXT_YCC_XVYCC601", 0x00);
-
-                SET_EXT_COLORIMETRY(_COLORIMETRY_EXT_YCC_XVYCC601);
-
-                break;
-
-            case _AVI_COLORIMETRY_EXT_001:
-
-                DebugMessageRx3("Get Colorimetry EXT_YCC_XVYCC709", 0x00);
-
-                SET_EXT_COLORIMETRY(_COLORIMETRY_EXT_YCC_XVYCC709);
-
-                break;
-
-            case _AVI_COLORIMETRY_EXT_010:
-
-                DebugMessageRx3("Get Colorimetry EXT_YCC_SYCC601", 0x00);
-
-                SET_EXT_COLORIMETRY(_COLORIMETRY_EXT_YCC_SYCC601);
-
-                break;
-
-            case _AVI_COLORIMETRY_EXT_011:
-
-                DebugMessageRx3("Get Colorimetry EXT_YCC_ADOBEYCC601", 0x00);
-
-                SET_EXT_COLORIMETRY(_COLORIMETRY_EXT_YCC_ADOBEYCC601);
-
-                break;
-
-            case _AVI_COLORIMETRY_EXT_101:
-
-                DebugMessageRx3("Get Colorimetry EXT_YCC_ITUR_BT2020_CL", 0x00);
-
-                SET_EXT_COLORIMETRY(_COLORIMETRY_EXT_YCC_ITUR_BT2020_CL);
-
-                break;
-
-            case _AVI_COLORIMETRY_EXT_110:
-
-                DebugMessageRx3("Get Colorimetry EXT_YCC_ITUR_BT2020_NCL", 0x00);
-
-                SET_EXT_COLORIMETRY(_COLORIMETRY_EXT_YCC_ITUR_BT2020_NCL);
-
-                break;
-
-            default:
-
-                DebugMessageRx3("Get Colorimetry INTO_DEFAULT", 0x00);
-
-                SET_EXT_COLORIMETRY(_COLORIMETRY_EXT_RESERVED);
-
-                break;
-        }
-    }
-    else if(GET_COLOR_SPACE() == _COLOR_SPACE_RGB)
-    {
-        SET_TMDS_RX3_COLORIMETRY_EXT_PREVALUE(ScalerTMDSRx3HdmiGetAVIInfo(_AVI_INFO_EXTENDED_COLORIMETRY));
-
-        switch(GET_TMDS_RX3_COLORIMETRY_EXT_PREVALUE())
-        {
-            case _AVI_COLORIMETRY_EXT_100:
-
-                DebugMessageRx3("Get Colorimetry EXT_RGB_ADOBERGB", 0x00);
-
-                SET_EXT_COLORIMETRY(_COLORIMETRY_EXT_RGB_ADOBERGB);
-
-                break;
-
-            case _AVI_COLORIMETRY_EXT_110:
-
-                DebugMessageRx3("Get Colorimetry EXT_RGB_ITUR_BT2020", 0x00);
-
-                SET_EXT_COLORIMETRY(_COLORIMETRY_EXT_RGB_ITUR_BT2020);
-
-                break;
-
-            default:
-
-                DebugMessageRx3("Get Colorimetry INTO_DEFAULT", 0x00);
-
-                SET_EXT_COLORIMETRY(_COLORIMETRY_EXT_RESERVED);
-
-                break;
-        }
-    }
-}
-
-#if((_RGB_QUANTIZATION_RANGE_SUPPORT == _ON) || (_YCC_QUANTIZATION_RANGE_SUPPORT == _ON))
-//--------------------------------------------------
-// Description  : TMDS Rx3 Quantization Setting
-// Input Value  : None
-// Output Value : None
-//--------------------------------------------------
-void ScalerSyncTMDSRx3HdmiQuantizationSetting(void)
-{
-    if((GET_COLOR_SPACE() == _COLOR_SPACE_YCBCR420) || (GET_COLOR_SPACE() == _COLOR_SPACE_YCBCR422) || (GET_COLOR_SPACE() == _COLOR_SPACE_YCBCR444))
-    {
-        SET_TMDS_RX3_QUANTIZATION_PREVALUE(ScalerTMDSRx3HdmiGetAVIInfo(_AVI_INFO_YCC_QUANTIZATION));
-
-        switch(GET_TMDS_RX3_QUANTIZATION_PREVALUE())
-        {
-            case _AVI_YCC_QUANTIZATION_FULL:
-
-                DebugMessageRx3("Get YCC FULL RANGE", 0x00);
-
-                SET_COLOR_YCC_QUANTIZATION_RANGE(_YCC_QUANTIZATION_FULL_RANGE);
-
-                break;
-
-            case _AVI_YCC_QUANTIZATION_LIMITED:
-
-                DebugMessageRx3("Get YCC LIMIT RANGE", 0x00);
-
-                SET_COLOR_YCC_QUANTIZATION_RANGE(_YCC_QUANTIZATION_LIMIT_RANGE);
-
-                break;
-
-            default:
-
-                DebugMessageRx3("Get YCC RANGE Error", 0x00);
-
-                SET_COLOR_YCC_QUANTIZATION_RANGE(_YCC_QUANTIZATION_RESERVED);
-
-                break;
-        }
-    }
-    else if(GET_COLOR_SPACE() == _COLOR_SPACE_RGB)
-    {
-        switch(ScalerTMDSRx3HdmiGetAVIInfo(_AVI_INFO_RGB_QUANTIZATION))
-        {
-            case _AVI_RGB_QUANTIZATION_LIMITED:
-
-                DebugMessageRx3("Get RGB LIMIT RANGE", 0x00);
-
-                SET_TMDS_RX3_QUANTIZATION_PREVALUE(_AVI_RGB_QUANTIZATION_LIMITED);
-
-                SET_COLOR_RGB_QUANTIZATION_RANGE(_RGB_QUANTIZATION_LIMIT_RANGE);
-
-                break;
-
-            case _AVI_RGB_QUANTIZATION_FULL:
-
-                DebugMessageRx3("Get RGB FULL RANGE", 0x00);
-
-                SET_TMDS_RX3_QUANTIZATION_PREVALUE(_AVI_RGB_QUANTIZATION_FULL);
-
-                SET_COLOR_RGB_QUANTIZATION_RANGE(_RGB_QUANTIZATION_FULL_RANGE);
-
-                break;
-
-            case _AVI_RGB_QUANTIZATION_DEFAULT:
-
-                DebugMessageRx3("Get RGB DEFAULT RANGE", 0x00);
-
-                SET_TMDS_RX3_QUANTIZATION_PREVALUE(_AVI_RGB_QUANTIZATION_DEFAULT);
-
-                SET_COLOR_RGB_QUANTIZATION_RANGE(_RGB_QUANTIZATION_DEFAULT_RANGE);
-
-                break;
-
-            case _AVI_RGB_QUANTIZATION_RESERVED:
-
-                DebugMessageRx3("Get RGB RESERVED RANGE", 0x00);
-
-                SET_TMDS_RX3_QUANTIZATION_PREVALUE(_AVI_RGB_QUANTIZATION_RESERVED);
-
-                SET_COLOR_RGB_QUANTIZATION_RANGE(_RGB_QUANTIZATION_RESERVED);
-
-                break;
-
-            default:
-
-                DebugMessageRx3("Get RGB RANGE Error", 0x00);
-
-                SET_TMDS_RX3_QUANTIZATION_PREVALUE(_AVI_RGB_QUANTIZATION_FULL);
-
-                SET_COLOR_RGB_QUANTIZATION_RANGE(_RGB_QUANTIZATION_FULL_RANGE);
-
-                break;
-        }
-    }
-}
-#endif
-
-//--------------------------------------------------
-// Description  : TMDS Rx3 HDMI ColorInfo Changed Detect
-// Input Value  : None
-// Output Value : Changed ==> _TRUE; No Changed ==> _FALSE;
-//--------------------------------------------------
-bit ScalerSyncTMDSRx3HdmiColorInfoChanged(void)
-{
-    // Check Color Space
-    if(ScalerTMDSRx3HdmiGetAVIInfo(_AVI_INFO_COLOR_SPACE) != GET_COLOR_SPACE())
-    {
-        DebugMessageRx3("Color Space Changed", 0x00);
-        return _TRUE;
-    }
-
-    // Check Colorimetry
-    if(ScalerTMDSRx3HdmiGetAVIInfo(_AVI_INFO_COLORIMETRY) != GET_TMDS_RX3_COLORIMETRY_PREVALUE())
-    {
-        DebugMessageRx3("Colorimetry Changed", 0x00);
-
-        if(GET_DIGITAL_COLOR_INFO_CHANGE_RESET() == _FALSE)
-        {
-            BYTE pucTemp[2];
-
-            pucTemp[0] = ScalerTMDSRx3HdmiGetAVIInfo(_AVI_INFO_COLORIMETRY);
-
-            pucTemp[1] = GET_TMDS_RX3_COLORIMETRY_PREVALUE();
-
-            ScalerSyncTMDSRx3HdmiColorimetrySetting();
-
-            if((GET_COLOR_SPACE() == _COLOR_SPACE_YCBCR420) || (GET_COLOR_SPACE() == _COLOR_SPACE_YCBCR422) || (GET_COLOR_SPACE() == _COLOR_SPACE_YCBCR444))
-            {
-                if(!(((pucTemp[0] == _AVI_COLORIMETRY_00) && (pucTemp[1] == _AVI_COLORIMETRY_01)) || ((pucTemp[0] == _AVI_COLORIMETRY_01) && (pucTemp[1] == _AVI_COLORIMETRY_00))))
-                {
-                    SET_TMDS_RX3_COLORIMETRY_CHANGED();
-                }
-            }
-            else if(GET_COLOR_SPACE() == _COLOR_SPACE_RGB)
-            {
-                if((pucTemp[0] == _AVI_COLORIMETRY_11) || (pucTemp[1] == _AVI_COLORIMETRY_11))
-                {
-                    SET_TMDS_RX3_COLORIMETRY_CHANGED();
-                }
-            }
-        }
-        else
-        {
-            return _TRUE;
-        }
-    }
-    else
-    {
-        if(GET_COLORIMETRY() == _COLORIMETRY_EXT)
-        {
-            if(ScalerTMDSRx3HdmiGetAVIInfo(_AVI_INFO_EXTENDED_COLORIMETRY) != GET_TMDS_RX3_COLORIMETRY_EXT_PREVALUE())
-            {
-                DebugMessageRx3("Ext Colorimetry Changed", 0x00);
-
-                if(GET_DIGITAL_COLOR_INFO_CHANGE_RESET() == _FALSE)
-                {
-                    BYTE pucTemp[2];
-
-                    pucTemp[0] = ScalerTMDSRx3HdmiGetAVIInfo(_AVI_INFO_EXTENDED_COLORIMETRY);
-
-                    pucTemp[1] = GET_TMDS_RX3_COLORIMETRY_EXT_PREVALUE();
-
-                    ScalerSyncTMDSRx3HdmiColorimetryExtSetting();
-
-                    if((GET_COLOR_SPACE() == _COLOR_SPACE_YCBCR420) || (GET_COLOR_SPACE() == _COLOR_SPACE_YCBCR422) || (GET_COLOR_SPACE() == _COLOR_SPACE_YCBCR444))
-                    {
-                        if(!(((pucTemp[0] == _AVI_COLORIMETRY_EXT_100) && (pucTemp[1] == _AVI_COLORIMETRY_EXT_111)) || ((pucTemp[1] == _AVI_COLORIMETRY_EXT_100) && (pucTemp[0] == _AVI_COLORIMETRY_EXT_111))))
-                        {
-                            SET_TMDS_RX3_COLORIMETRY_EXT_CHANGED();
-                        }
-                    }
-                    else if(GET_COLOR_SPACE() == _COLOR_SPACE_RGB)
-                    {
-                        if(!(((pucTemp[0] != _AVI_COLORIMETRY_EXT_100) && (pucTemp[0] != _AVI_COLORIMETRY_EXT_110)) && ((pucTemp[1] != _AVI_COLORIMETRY_EXT_100) && (pucTemp[1] != _AVI_COLORIMETRY_EXT_110))))
-                        {
-                            SET_TMDS_RX3_COLORIMETRY_EXT_CHANGED();
-                        }
-                    }
-                }
-                else
-                {
-                    return _TRUE;
-                }
-            }
-        }
-    }
-
-#if(_YCC_QUANTIZATION_RANGE_SUPPORT == _ON)
-    if((GET_COLOR_SPACE() == _COLOR_SPACE_YCBCR420) || (GET_COLOR_SPACE() == _COLOR_SPACE_YCBCR422) || (GET_COLOR_SPACE() == _COLOR_SPACE_YCBCR444))
-    {
-        if(ScalerTMDSRx3HdmiGetAVIInfo(_AVI_INFO_YCC_QUANTIZATION) != GET_TMDS_RX3_QUANTIZATION_PREVALUE())
-        {
-            DebugMessageRx3("YCC Quantization Range Changed", 0x00);
-
-            if(GET_DIGITAL_COLOR_INFO_CHANGE_RESET() == _FALSE)
-            {
-                BYTE pucTemp[2];
-
-                pucTemp[0] = ScalerTMDSRx3HdmiGetAVIInfo(_AVI_INFO_YCC_QUANTIZATION);
-
-                pucTemp[1] = GET_TMDS_RX3_QUANTIZATION_PREVALUE();
-
-                ScalerSyncTMDSRx3HdmiQuantizationSetting();
-
-                if((pucTemp[0] == _AVI_YCC_QUANTIZATION_LIMITED) || (pucTemp[1] == _AVI_YCC_QUANTIZATION_LIMITED))
-                {
-                    SET_TMDS_RX3_QUANTIZATION_CHANGED();
-                }
-            }
-            else
-            {
-                return _TRUE;
-            }
-        }
-    }
-#endif
-
-#if(_RGB_QUANTIZATION_RANGE_SUPPORT == _ON)
-    if(GET_COLOR_SPACE() == _COLOR_SPACE_RGB)
-    {
-        if(ScalerTMDSRx3HdmiGetAVIInfo(_AVI_INFO_RGB_QUANTIZATION) != GET_TMDS_RX3_QUANTIZATION_PREVALUE())
-        {
-            DebugMessageRx3("RGB Quantization Range Changed", 0x00);
-
-            if(GET_DIGITAL_COLOR_INFO_CHANGE_RESET() == _FALSE)
-            {
-                ScalerSyncTMDSRx3HdmiQuantizationSetting();
-
-                SET_TMDS_RX3_QUANTIZATION_CHANGED();
-            }
-            else
-            {
-                return _TRUE;
-            }
-        }
-    }
-#endif
-
-    return _FALSE;
-}
-#endif
-
-#if((_D4_HDMI_SUPPORT == _ON) && (_TMDS_COMBO_EXIST == _OFF))
-#if(_D4_INPUT_PORT_TYPE != _D4_DUAL_DVI_PORT)
-//--------------------------------------------------
-// Description  : TMDS Rx0 Video Setting
-// Input Value  : None
-// Output Value : None
-//--------------------------------------------------
-void ScalerSyncTMDSRx4HdmiVideoSetting(void)
-{
-    if(GET_HDMI_RX4_AVI_INFO_FRAME_RECEIVED() == _TRUE)
-    {
-        // Color Space Auto/ Pixel Repetition auto mode
-        ScalerSetDataPortBit(P73_C9_HDMI_AP, _P73_CA_PT_51_PORT_PAGE73_HDMI_ACRCR, ~(_BIT6 | _BIT2), (_BIT6 | _BIT2));
-
-        pData[0] = ScalerTMDSRx4HdmiGetAVIInfo(_AVI_INFO_COLOR_SPACE);
-
-        // Get Color Space
-        if(pData[0] == _AVI_COLOR_SPACE_00)
-        {
-            // Color Space RGB
-            DebugMessageRx4("Get Color Space RGB", pData[0]);
-            SET_COLOR_SPACE(_COLOR_SPACE_RGB);
-        }
-        else if(pData[0] == _AVI_COLOR_SPACE_01)
-        {
-            // YCC422
-            DebugMessageRx4("Get Color Space YUV422", pData[0]);
-            SET_COLOR_SPACE(_COLOR_SPACE_YCBCR422);
-        }
-        else if(pData[0] == _AVI_COLOR_SPACE_11)
-        {
-            // YCC420
-            DebugMessageRx4("Get Color Space YUV420", pData[0]);
-            SET_COLOR_SPACE(_COLOR_SPACE_YCBCR420);
-        }
-        else
-        {
-            // YCC444
-            DebugMessageRx4("Get Color Space YUV444", pData[0]);
-            SET_COLOR_SPACE(_COLOR_SPACE_YCBCR444);
-        }
-
-        // Set Pixel Repetition
-        switch(ScalerTMDSRx4HdmiGetAVIInfo(_AVI_INFO_PIXEL_REPETITION))
-        {
-            case _AVI_PIXEL_REPETITION_0:
-
-                DebugMessageRx4("Get Pixel Repetition 0", 0x00);
-                SET_TMDS_RX4_AVI_PIXEL_REPETITION(_AVI_PIXEL_REPETITION_0);
-
-                break;
-
-            case _AVI_PIXEL_REPETITION_1:
-
-                DebugMessageRx4("Get Pixel Repetition 1", 0x00);
-                SET_TMDS_RX4_AVI_PIXEL_REPETITION(_AVI_PIXEL_REPETITION_1);
-
-                break;
-
-            case _AVI_PIXEL_REPETITION_2:
-
-                DebugMessageRx4("Get Pixel Repetition 2", 0x00);
-                SET_TMDS_RX4_AVI_PIXEL_REPETITION(_AVI_PIXEL_REPETITION_2);
-
-                break;
-
-            case _AVI_PIXEL_REPETITION_3:
-
-                DebugMessageRx4("Get Pixel Repetition 3", 0x00);
-                SET_TMDS_RX4_AVI_PIXEL_REPETITION(_AVI_PIXEL_REPETITION_3);
-
-                break;
-
-            case _AVI_PIXEL_REPETITION_4:
-
-                DebugMessageRx4("Get Pixel Repetition 4", 0x00);
-                SET_TMDS_RX4_AVI_PIXEL_REPETITION(_AVI_PIXEL_REPETITION_4);
-
-                break;
-
-            case _AVI_PIXEL_REPETITION_5:
-
-                DebugMessageRx4("Get Pixel Repetition 5", 0x00);
-                SET_TMDS_RX4_AVI_PIXEL_REPETITION(_AVI_PIXEL_REPETITION_5);
-
-                break;
-
-            case _AVI_PIXEL_REPETITION_6:
-
-                DebugMessageRx4("Get Pixel Repetition 6", 0x00);
-                SET_TMDS_RX4_AVI_PIXEL_REPETITION(_AVI_PIXEL_REPETITION_6);
-
-                break;
-
-            case _AVI_PIXEL_REPETITION_7:
-
-                DebugMessageRx4("Get Pixel Repetition 7", 0x00);
-                SET_TMDS_RX4_AVI_PIXEL_REPETITION(_AVI_PIXEL_REPETITION_7);
-
-                break;
-
-            case _AVI_PIXEL_REPETITION_8:
-
-                DebugMessageRx4("Get Pixel Repetition 8", 0x00);
-                SET_TMDS_RX4_AVI_PIXEL_REPETITION(_AVI_PIXEL_REPETITION_8);
-
-                break;
-
-            case _AVI_PIXEL_REPETITION_9:
-
-                DebugMessageRx4("Get Pixel Repetition 9", 0x00);
-                SET_TMDS_RX4_AVI_PIXEL_REPETITION(_AVI_PIXEL_REPETITION_9);
-
-                break;
-
-            default:
-
-                DebugMessageRx4("Get Pixel Repetition Error", 0x00);
-                SET_TMDS_RX4_AVI_PIXEL_REPETITION(_AVI_PIXEL_REPETITION_0);
-
-                break;
-        }
-
-        // Set Colorimetry
-        ScalerSyncTMDSRx4HdmiColorimetrySetting();
-
-        // Set Quantization
-#if((_RGB_QUANTIZATION_RANGE_SUPPORT == _ON) || (_YCC_QUANTIZATION_RANGE_SUPPORT == _ON))
-        ScalerSyncTMDSRx4HdmiQuantizationSetting();
-#endif
-    }
-    else    // No Info Frame Received
-    {
-#if(_D4_INPUT_PORT_TYPE == _D4_MHL_PORT)
-        if(GET_TMDS_RX4_CLK_MODE() == _TMDS_MHL_PPMODE_PHY_SETTING)
-        {
-            SET_COLOR_SPACE(_COLOR_SPACE_YCBCR422);
-            SET_COLOR_YCC_QUANTIZATION_RANGE(_YCC_QUANTIZATION_LIMIT_RANGE);
-
-            // Manual Set Color Space to YCbCr422 and disable pixel repetition
-            ScalerSetDataPortBit(P73_C9_HDMI_AP, _P73_CA_PT_51_PORT_PAGE73_HDMI_ACRCR, ~(_BIT6 | _BIT5 | _BIT4 | _BIT3 | _BIT2), _BIT3);
-        }
-        else
-#endif
-
-        {
-            SET_COLOR_SPACE(_COLOR_SPACE_RGB);
-            SET_COLOR_RGB_QUANTIZATION_RANGE(_RGB_QUANTIZATION_RESERVED);
-
-            // Manual Set Color Space to RGB and disable pixel repetition
-            ScalerSetDataPortBit(P73_C9_HDMI_AP, _P73_CA_PT_51_PORT_PAGE73_HDMI_ACRCR, ~(_BIT6 | _BIT5 | _BIT4 | _BIT3 | _BIT2), 0x00);
-        }
-
-        // Disable down sampling
-        ScalerSetDataPortBit(P73_C9_HDMI_AP, _P73_CA_PT_50_PORT_PAGE73_HDMI_VCR, ~(_BIT3 | _BIT2 | _BIT1 | _BIT0), 0x00);
-
-        SET_TMDS_RX4_AVI_PIXEL_REPETITION(_AVI_PIXEL_REPETITION_0);
-
-        // Waiting for down sampling  effect
-        ScalerTimerDelayXms(20);
-    }
-
-    ScalerTMDSRx4SetPorchColor(GET_COLOR_SPACE());
-}
-#endif
-
-//--------------------------------------------------
-// Description  : TMDS Rx4 HDMI Colorimetry Setting
-// Input Value  : None
-// Output Value : None
-//--------------------------------------------------
-void ScalerSyncTMDSRx4HdmiColorimetrySetting(void)
-{
-    if((GET_COLOR_SPACE() == _COLOR_SPACE_YCBCR420) || (GET_COLOR_SPACE() == _COLOR_SPACE_YCBCR422) || (GET_COLOR_SPACE() == _COLOR_SPACE_YCBCR444))
-    {
-        switch(ScalerTMDSRx4HdmiGetAVIInfo(_AVI_INFO_COLORIMETRY))
-        {
-            case _AVI_COLORIMETRY_00:
-
-                DebugMessageRx4("Get Colorimetry YCC_SMPTE_170M", 0x00);
-
-                SET_TMDS_RX4_COLORIMETRY_PREVALUE(_AVI_COLORIMETRY_00);
-
-                SET_COLORIMETRY(_COLORIMETRY_YCC_SMPTE_170M);
-
-                break;
-
-            case _AVI_COLORIMETRY_01:
-
-                DebugMessageRx4("Get Colorimetry YCC_SMPTE_170M", 0x00);
-
-                SET_TMDS_RX4_COLORIMETRY_PREVALUE(_AVI_COLORIMETRY_01);
-
-                SET_COLORIMETRY(_COLORIMETRY_YCC_SMPTE_170M);
-
-                break;
-
-            case _AVI_COLORIMETRY_10:
-
-                DebugMessageRx4("Get Colorimetry 709", 0x00);
-
-                SET_TMDS_RX4_COLORIMETRY_PREVALUE(_AVI_COLORIMETRY_10);
-
-                SET_COLORIMETRY(_COLORIMETRY_YCC_ITUR_BT709);
-
-                break;
-
-            case _AVI_COLORIMETRY_11:
-
-                DebugMessageRx4("Get Colorimetry Extended", 0x00);
-
-                SET_TMDS_RX4_COLORIMETRY_PREVALUE(_AVI_COLORIMETRY_11);
-
-                SET_COLORIMETRY(_COLORIMETRY_EXT);
-
-                ScalerSyncTMDSRx4HdmiColorimetryExtSetting();
-
-                break;
-
-            default:
-
-                DebugMessageRx4("Get Colorimetry INTO_DEFAULT", 0x00);
-
-                break;
-        }
-    }
-    else if(GET_COLOR_SPACE() == _COLOR_SPACE_RGB)
-    {
-        SET_TMDS_RX4_COLORIMETRY_PREVALUE(ScalerTMDSRx4HdmiGetAVIInfo(_AVI_INFO_COLORIMETRY));
-
-        switch(GET_TMDS_RX4_COLORIMETRY_PREVALUE())
-        {
-            case _AVI_COLORIMETRY_00:
-
-                DebugMessageRx4("Get Colorimetry RGB_SRGB", 0x00);
-
-                SET_COLORIMETRY(_COLORIMETRY_RGB_SRGB);
-
-                break;
-
-            case _AVI_COLORIMETRY_11:
-
-                DebugMessageRx4("Get Colorimetry Extended", 0x00);
-
-                SET_COLORIMETRY(_COLORIMETRY_EXT);
-
-                ScalerSyncTMDSRx4HdmiColorimetryExtSetting();
-
-                break;
-
-            default:
-
-                DebugMessageRx4("Get Colorimetry INTO_DEFAULT", 0x00);
-
-                SET_COLORIMETRY(_COLORIMETRY_RGB_SRGB);
-
-                break;
-        }
-    }
-}
-
-//--------------------------------------------------
-// Description  : TMDS Rx4 Colorimetry Extended Setting
-// Input Value  : None
-// Output Value : None
-//--------------------------------------------------
-void ScalerSyncTMDSRx4HdmiColorimetryExtSetting(void)
-{
-    if((GET_COLOR_SPACE() == _COLOR_SPACE_YCBCR420) || (GET_COLOR_SPACE() == _COLOR_SPACE_YCBCR422) || (GET_COLOR_SPACE() == _COLOR_SPACE_YCBCR444))
-    {
-        // Get extended colorimetry
-        SET_TMDS_RX4_COLORIMETRY_EXT_PREVALUE(ScalerTMDSRx4HdmiGetAVIInfo(_AVI_INFO_EXTENDED_COLORIMETRY));
-
-        // Get extended colorimetry
-        switch(GET_TMDS_RX4_COLORIMETRY_EXT_PREVALUE())
-        {
-            case _AVI_COLORIMETRY_EXT_000:
-
-                DebugMessageRx4("Get Colorimetry EXT_YCC_XVYCC601", 0x00);
-
-                SET_EXT_COLORIMETRY(_COLORIMETRY_EXT_YCC_XVYCC601);
-
-                break;
-
-            case _AVI_COLORIMETRY_EXT_001:
-
-                DebugMessageRx4("Get Colorimetry EXT_YCC_XVYCC709", 0x00);
-
-                SET_EXT_COLORIMETRY(_COLORIMETRY_EXT_YCC_XVYCC709);
-
-                break;
-
-            case _AVI_COLORIMETRY_EXT_010:
-
-                DebugMessageRx4("Get Colorimetry EXT_YCC_SYCC601", 0x00);
-
-                SET_EXT_COLORIMETRY(_COLORIMETRY_EXT_YCC_SYCC601);
-
-                break;
-
-            case _AVI_COLORIMETRY_EXT_011:
-
-                DebugMessageRx4("Get Colorimetry EXT_YCC_ADOBEYCC601", 0x00);
-
-                SET_EXT_COLORIMETRY(_COLORIMETRY_EXT_YCC_ADOBEYCC601);
-
-                break;
-
-            case _AVI_COLORIMETRY_EXT_101:
-
-                DebugMessageRx4("Get Colorimetry EXT_YCC_ITUR_BT2020_CL", 0x00);
-
-                SET_EXT_COLORIMETRY(_COLORIMETRY_EXT_YCC_ITUR_BT2020_CL);
-
-                break;
-
-            case _AVI_COLORIMETRY_EXT_110:
-
-                DebugMessageRx4("Get Colorimetry EXT_YCC_ITUR_BT2020_NCL", 0x00);
-
-                SET_EXT_COLORIMETRY(_COLORIMETRY_EXT_YCC_ITUR_BT2020_NCL);
-
-                break;
-
-            default:
-
-                DebugMessageRx4("Get Colorimetry INTO_DEFAULT", 0x00);
-
-                SET_EXT_COLORIMETRY(_COLORIMETRY_EXT_RESERVED);
-
-                break;
-        }
-    }
-    else if(GET_COLOR_SPACE() == _COLOR_SPACE_RGB)
-    {
-        SET_TMDS_RX4_COLORIMETRY_EXT_PREVALUE(ScalerTMDSRx4HdmiGetAVIInfo(_AVI_INFO_EXTENDED_COLORIMETRY));
-
-        switch(GET_TMDS_RX4_COLORIMETRY_EXT_PREVALUE())
-        {
-            case _AVI_COLORIMETRY_EXT_100:
-
-                DebugMessageRx4("Get Colorimetry EXT_RGB_ADOBERGB", 0x00);
-
-                SET_EXT_COLORIMETRY(_COLORIMETRY_EXT_RGB_ADOBERGB);
-
-                break;
-
-            case _AVI_COLORIMETRY_EXT_110:
-
-                DebugMessageRx4("Get Colorimetry EXT_RGB_ITUR_BT2020", 0x00);
-
-                SET_EXT_COLORIMETRY(_COLORIMETRY_EXT_RGB_ITUR_BT2020);
-
-                break;
-
-            default:
-
-                DebugMessageRx4("Get Colorimetry INTO_DEFAULT", 0x00);
-
-                SET_EXT_COLORIMETRY(_COLORIMETRY_EXT_RESERVED);
-
-                break;
-        }
-    }
-}
-
-#if((_RGB_QUANTIZATION_RANGE_SUPPORT == _ON) || (_YCC_QUANTIZATION_RANGE_SUPPORT == _ON))
-//--------------------------------------------------
-// Description  : TMDS Rx4 Quantization Setting
-// Input Value  : None
-// Output Value : None
-//--------------------------------------------------
-void ScalerSyncTMDSRx4HdmiQuantizationSetting(void)
-{
-    if((GET_COLOR_SPACE() == _COLOR_SPACE_YCBCR420) || (GET_COLOR_SPACE() == _COLOR_SPACE_YCBCR422) || (GET_COLOR_SPACE() == _COLOR_SPACE_YCBCR444))
-    {
-        SET_TMDS_RX4_QUANTIZATION_PREVALUE(ScalerTMDSRx4HdmiGetAVIInfo(_AVI_INFO_YCC_QUANTIZATION));
-
-        switch(GET_TMDS_RX4_QUANTIZATION_PREVALUE())
-        {
-            case _AVI_YCC_QUANTIZATION_FULL:
-
-                DebugMessageRx4("Get YCC FULL RANGE", 0x00);
-
-                SET_COLOR_YCC_QUANTIZATION_RANGE(_YCC_QUANTIZATION_FULL_RANGE);
-
-                break;
-
-            case _AVI_YCC_QUANTIZATION_LIMITED:
-
-                DebugMessageRx4("Get YCC LIMIT RANGE", 0x00);
-
-                SET_COLOR_YCC_QUANTIZATION_RANGE(_YCC_QUANTIZATION_LIMIT_RANGE);
-
-                break;
-
-            default:
-
-                DebugMessageRx4("Get YCC RANGE Error", 0x00);
-
-                SET_COLOR_YCC_QUANTIZATION_RANGE(_YCC_QUANTIZATION_RESERVED);
-
-                break;
-        }
-    }
-    else if(GET_COLOR_SPACE() == _COLOR_SPACE_RGB)
-    {
-        switch(ScalerTMDSRx4HdmiGetAVIInfo(_AVI_INFO_RGB_QUANTIZATION))
-        {
-            case _AVI_RGB_QUANTIZATION_LIMITED:
-
-                DebugMessageRx4("Get RGB LIMIT RANGE", 0x00);
-
-                SET_TMDS_RX4_QUANTIZATION_PREVALUE(_AVI_RGB_QUANTIZATION_LIMITED);
-
-                SET_COLOR_RGB_QUANTIZATION_RANGE(_RGB_QUANTIZATION_LIMIT_RANGE);
-
-                break;
-
-            case _AVI_RGB_QUANTIZATION_FULL:
-
-                DebugMessageRx4("Get RGB FULL RANGE", 0x00);
-
-                SET_TMDS_RX4_QUANTIZATION_PREVALUE(_AVI_RGB_QUANTIZATION_FULL);
-
-                SET_COLOR_RGB_QUANTIZATION_RANGE(_RGB_QUANTIZATION_FULL_RANGE);
-
-                break;
-
-            case _AVI_RGB_QUANTIZATION_DEFAULT:
-
-                DebugMessageRx4("Get RGB DEFAULT RANGE", 0x00);
-
-                SET_TMDS_RX4_QUANTIZATION_PREVALUE(_AVI_RGB_QUANTIZATION_DEFAULT);
-
-                SET_COLOR_RGB_QUANTIZATION_RANGE(_RGB_QUANTIZATION_DEFAULT_RANGE);
-
-                break;
-
-            case _AVI_RGB_QUANTIZATION_RESERVED:
-
-                DebugMessageRx4("Get RGB RESERVED RANGE", 0x00);
-
-                SET_TMDS_RX4_QUANTIZATION_PREVALUE(_AVI_RGB_QUANTIZATION_RESERVED);
-
-                SET_COLOR_RGB_QUANTIZATION_RANGE(_RGB_QUANTIZATION_RESERVED);
-
-                break;
-
-            default:
-
-                DebugMessageRx4("Get RGB RANGE Error", 0x00);
-
-                SET_TMDS_RX4_QUANTIZATION_PREVALUE(_AVI_RGB_QUANTIZATION_FULL);
-
-                SET_COLOR_RGB_QUANTIZATION_RANGE(_RGB_QUANTIZATION_FULL_RANGE);
-
-                break;
-        }
-    }
-}
-#endif
-
-//--------------------------------------------------
-// Description  : TMDS Rx4 HDMI ColorInfo Changed Detect
-// Input Value  : None
-// Output Value : Changed ==> _TRUE; No Changed ==> _FALSE;
-//--------------------------------------------------
-bit ScalerSyncTMDSRx4HdmiColorInfoChanged(void)
-{
-    // Check Color Space
-    if(ScalerTMDSRx4HdmiGetAVIInfo(_AVI_INFO_COLOR_SPACE) != GET_COLOR_SPACE())
-    {
-        DebugMessageRx4("Color Space Changed", 0x00);
-        return _TRUE;
-    }
-
-    // Check Colorimetry
-    if(ScalerTMDSRx4HdmiGetAVIInfo(_AVI_INFO_COLORIMETRY) != GET_TMDS_RX4_COLORIMETRY_PREVALUE())
-    {
-        DebugMessageRx4("Colorimetry Changed", 0x00);
-
-        if(GET_DIGITAL_COLOR_INFO_CHANGE_RESET() == _FALSE)
-        {
-            BYTE pucTemp[2];
-
-            pucTemp[0] = ScalerTMDSRx4HdmiGetAVIInfo(_AVI_INFO_COLORIMETRY);
-
-            pucTemp[1] = GET_TMDS_RX4_COLORIMETRY_PREVALUE();
-
-            ScalerSyncTMDSRx4HdmiColorimetrySetting();
-
-            if((GET_COLOR_SPACE() == _COLOR_SPACE_YCBCR420) || (GET_COLOR_SPACE() == _COLOR_SPACE_YCBCR422) || (GET_COLOR_SPACE() == _COLOR_SPACE_YCBCR444))
-            {
-                if(!(((pucTemp[0] == _AVI_COLORIMETRY_00) && (pucTemp[1] == _AVI_COLORIMETRY_01)) || ((pucTemp[0] == _AVI_COLORIMETRY_01) && (pucTemp[1] == _AVI_COLORIMETRY_00))))
-                {
-                    SET_TMDS_RX4_COLORIMETRY_CHANGED();
-                }
-            }
-            else if(GET_COLOR_SPACE() == _COLOR_SPACE_RGB)
-            {
-                if((pucTemp[0] == _AVI_COLORIMETRY_11) || (pucTemp[1] == _AVI_COLORIMETRY_11))
-                {
-                    SET_TMDS_RX4_COLORIMETRY_CHANGED();
-                }
-            }
-        }
-        else
-        {
-            return _TRUE;
-        }
-    }
-    else
-    {
-        if(GET_COLORIMETRY() == _COLORIMETRY_EXT)
-        {
-            if(ScalerTMDSRx4HdmiGetAVIInfo(_AVI_INFO_EXTENDED_COLORIMETRY) != GET_TMDS_RX4_COLORIMETRY_EXT_PREVALUE())
-            {
-                DebugMessageRx4("Ext Colorimetry Changed", 0x00);
-
-                if(GET_DIGITAL_COLOR_INFO_CHANGE_RESET() == _FALSE)
-                {
-                    BYTE pucTemp[2];
-
-                    pucTemp[0] = ScalerTMDSRx4HdmiGetAVIInfo(_AVI_INFO_EXTENDED_COLORIMETRY);
-
-                    pucTemp[1] = GET_TMDS_RX4_COLORIMETRY_EXT_PREVALUE();
-
-                    ScalerSyncTMDSRx4HdmiColorimetryExtSetting();
-
-                    if((GET_COLOR_SPACE() == _COLOR_SPACE_YCBCR420) || (GET_COLOR_SPACE() == _COLOR_SPACE_YCBCR422) || (GET_COLOR_SPACE() == _COLOR_SPACE_YCBCR444))
-                    {
-                        if(!(((pucTemp[0] == _AVI_COLORIMETRY_EXT_100) && (pucTemp[1] == _AVI_COLORIMETRY_EXT_111)) || ((pucTemp[1] == _AVI_COLORIMETRY_EXT_100) && (pucTemp[0] == _AVI_COLORIMETRY_EXT_111))))
-                        {
-                            SET_TMDS_RX4_COLORIMETRY_EXT_CHANGED();
-                        }
-                    }
-                    else if(GET_COLOR_SPACE() == _COLOR_SPACE_RGB)
-                    {
-                        if(!(((pucTemp[0] != _AVI_COLORIMETRY_EXT_100) && (pucTemp[0] != _AVI_COLORIMETRY_EXT_110)) && ((pucTemp[1] != _AVI_COLORIMETRY_EXT_100) && (pucTemp[1] != _AVI_COLORIMETRY_EXT_110))))
-                        {
-                            SET_TMDS_RX4_COLORIMETRY_EXT_CHANGED();
-                        }
-                    }
-                }
-                else
-                {
-                    return _TRUE;
-                }
-            }
-        }
-    }
-
-#if(_YCC_QUANTIZATION_RANGE_SUPPORT == _ON)
-    if((GET_COLOR_SPACE() == _COLOR_SPACE_YCBCR420) || (GET_COLOR_SPACE() == _COLOR_SPACE_YCBCR422) || (GET_COLOR_SPACE() == _COLOR_SPACE_YCBCR444))
-    {
-        if(ScalerTMDSRx4HdmiGetAVIInfo(_AVI_INFO_YCC_QUANTIZATION) != GET_TMDS_RX4_QUANTIZATION_PREVALUE())
-        {
-            DebugMessageRx4("YCC Quantization Range Changed", 0x00);
-
-            if(GET_DIGITAL_COLOR_INFO_CHANGE_RESET() == _FALSE)
-            {
-                BYTE pucTemp[2];
-
-                pucTemp[0] = ScalerTMDSRx4HdmiGetAVIInfo(_AVI_INFO_YCC_QUANTIZATION);
-
-                pucTemp[1] = GET_TMDS_RX4_QUANTIZATION_PREVALUE();
-
-                ScalerSyncTMDSRx4HdmiQuantizationSetting();
-
-                if((pucTemp[0] == _AVI_YCC_QUANTIZATION_LIMITED) || (pucTemp[1] == _AVI_YCC_QUANTIZATION_LIMITED))
-                {
-                    SET_TMDS_RX4_QUANTIZATION_CHANGED();
-                }
-            }
-            else
-            {
-                return _TRUE;
-            }
-        }
-    }
-#endif
-
-#if(_RGB_QUANTIZATION_RANGE_SUPPORT == _ON)
-    if(GET_COLOR_SPACE() == _COLOR_SPACE_RGB)
-    {
-        if(ScalerTMDSRx4HdmiGetAVIInfo(_AVI_INFO_RGB_QUANTIZATION) != GET_TMDS_RX4_QUANTIZATION_PREVALUE())
-        {
-            DebugMessageRx4("RGB Quantization Range Changed", 0x00);
-
-            if(GET_DIGITAL_COLOR_INFO_CHANGE_RESET() == _FALSE)
-            {
-                ScalerSyncTMDSRx4HdmiQuantizationSetting();
-
-                SET_TMDS_RX4_QUANTIZATION_CHANGED();
-            }
-            else
-            {
-                return _TRUE;
-            }
-        }
-    }
-#endif
-
-    return _FALSE;
-}
-#endif
-
-#if((_D5_HDMI_SUPPORT == _ON) && (_TMDS_COMBO_EXIST == _OFF))
-//--------------------------------------------------
-// Description  : TMDS Rx0 Video Setting
-// Input Value  : None
-// Output Value : None
-//--------------------------------------------------
-void ScalerSyncTMDSRx5HdmiVideoSetting(void)
-{
-    if(GET_HDMI_RX5_AVI_INFO_FRAME_RECEIVED() == _TRUE)
-    {
-        // Color Space Auto/ Pixel Repetition auto mode
-        ScalerSetDataPortBit(P74_C9_HDMI_AP, _P74_CA_PT_51_PORT_PAGE74_HDMI_ACRCR, ~(_BIT6 | _BIT2), (_BIT6 | _BIT2));
-
-        pData[0] = ScalerTMDSRx5HdmiGetAVIInfo(_AVI_INFO_COLOR_SPACE);
-
-        // Get Color Space
-        if(pData[0] == _AVI_COLOR_SPACE_00)
-        {
-            // Color Space RGB
-            DebugMessageRx5("Get Color Space RGB", pData[0]);
-            SET_COLOR_SPACE(_COLOR_SPACE_RGB);
-        }
-        else if(pData[0] == _AVI_COLOR_SPACE_01)
-        {
-            // YCC422
-            DebugMessageRx5("Get Color Space YUV422", pData[0]);
-            SET_COLOR_SPACE(_COLOR_SPACE_YCBCR422);
-        }
-        else if(pData[0] == _AVI_COLOR_SPACE_11)
-        {
-            // YCC420
-            DebugMessageRx5("Get Color Space YUV420", pData[0]);
-            SET_COLOR_SPACE(_COLOR_SPACE_YCBCR420);
-        }
-        else
-        {
-            // YCC444
-            DebugMessageRx5("Get Color Space YUV444", pData[0]);
-            SET_COLOR_SPACE(_COLOR_SPACE_YCBCR444);
-        }
-
-        // Set Pixel Repetition
-        switch(ScalerTMDSRx5HdmiGetAVIInfo(_AVI_INFO_PIXEL_REPETITION))
-        {
-            case _AVI_PIXEL_REPETITION_0:
-
-                DebugMessageRx5("Get Pixel Repetition 0", 0x00);
-                SET_TMDS_RX5_AVI_PIXEL_REPETITION(_AVI_PIXEL_REPETITION_0);
-
-                break;
-
-            case _AVI_PIXEL_REPETITION_1:
-
-                DebugMessageRx5("Get Pixel Repetition 1", 0x00);
-                SET_TMDS_RX5_AVI_PIXEL_REPETITION(_AVI_PIXEL_REPETITION_1);
-
-                break;
-
-            case _AVI_PIXEL_REPETITION_2:
-
-                DebugMessageRx5("Get Pixel Repetition 2", 0x00);
-                SET_TMDS_RX5_AVI_PIXEL_REPETITION(_AVI_PIXEL_REPETITION_2);
-
-                break;
-
-            case _AVI_PIXEL_REPETITION_3:
-
-                DebugMessageRx5("Get Pixel Repetition 3", 0x00);
-                SET_TMDS_RX5_AVI_PIXEL_REPETITION(_AVI_PIXEL_REPETITION_3);
-
-                break;
-
-            case _AVI_PIXEL_REPETITION_4:
-
-                DebugMessageRx5("Get Pixel Repetition 4", 0x00);
-                SET_TMDS_RX5_AVI_PIXEL_REPETITION(_AVI_PIXEL_REPETITION_4);
-
-                break;
-
-            case _AVI_PIXEL_REPETITION_5:
-
-                DebugMessageRx5("Get Pixel Repetition 5", 0x00);
-                SET_TMDS_RX5_AVI_PIXEL_REPETITION(_AVI_PIXEL_REPETITION_5);
-
-                break;
-
-            case _AVI_PIXEL_REPETITION_6:
-
-                DebugMessageRx5("Get Pixel Repetition 6", 0x00);
-                SET_TMDS_RX5_AVI_PIXEL_REPETITION(_AVI_PIXEL_REPETITION_6);
-
-                break;
-
-            case _AVI_PIXEL_REPETITION_7:
-
-                DebugMessageRx5("Get Pixel Repetition 7", 0x00);
-                SET_TMDS_RX5_AVI_PIXEL_REPETITION(_AVI_PIXEL_REPETITION_7);
-
-                break;
-
-            case _AVI_PIXEL_REPETITION_8:
-
-                DebugMessageRx5("Get Pixel Repetition 8", 0x00);
-                SET_TMDS_RX5_AVI_PIXEL_REPETITION(_AVI_PIXEL_REPETITION_8);
-
-                break;
-
-            case _AVI_PIXEL_REPETITION_9:
-
-                DebugMessageRx5("Get Pixel Repetition 9", 0x00);
-                SET_TMDS_RX5_AVI_PIXEL_REPETITION(_AVI_PIXEL_REPETITION_9);
-
-                break;
-
-            default:
-
-                DebugMessageRx5("Get Pixel Repetition Error", 0x00);
-                SET_TMDS_RX5_AVI_PIXEL_REPETITION(_AVI_PIXEL_REPETITION_0);
-
-                break;
-        }
-
-        // Set Colorimetry
-        ScalerSyncTMDSRx5HdmiColorimetrySetting();
-
-        // Set Quantization
-#if((_RGB_QUANTIZATION_RANGE_SUPPORT == _ON) || (_YCC_QUANTIZATION_RANGE_SUPPORT == _ON))
-        ScalerSyncTMDSRx5HdmiQuantizationSetting();
-#endif
-    }
-    else    // No Info Frame Received
-    {
-#if(_D5_INPUT_PORT_TYPE == _D5_MHL_PORT)
-        if(GET_TMDS_RX5_CLK_MODE() == _TMDS_MHL_PPMODE_PHY_SETTING)
-        {
-            SET_COLOR_SPACE(_COLOR_SPACE_YCBCR422);
-            SET_COLOR_YCC_QUANTIZATION_RANGE(_YCC_QUANTIZATION_LIMIT_RANGE);
-
-            // Manual Set Color Space to YCbCr422 and disable pixel repetition
-            ScalerSetDataPortBit(P74_C9_HDMI_AP, _P74_CA_PT_51_PORT_PAGE74_HDMI_ACRCR, ~(_BIT6 | _BIT5 | _BIT4 | _BIT3 | _BIT2), _BIT3);
-        }
-        else
-#endif
-
-        {
-            SET_COLOR_SPACE(_COLOR_SPACE_RGB);
-            SET_COLOR_RGB_QUANTIZATION_RANGE(_RGB_QUANTIZATION_RESERVED);
-
-            // Manual Set Color Space to RGB and disable pixel repetition
-            ScalerSetDataPortBit(P74_C9_HDMI_AP, _P74_CA_PT_51_PORT_PAGE74_HDMI_ACRCR, ~(_BIT6 | _BIT5 | _BIT4 | _BIT3 | _BIT2), 0x00);
-        }
-
-        // Disable down sampling
-        ScalerSetDataPortBit(P74_C9_HDMI_AP, _P74_CA_PT_50_PORT_PAGE74_HDMI_VCR, ~(_BIT3 | _BIT2 | _BIT1 | _BIT0), 0x00);
-
-        SET_TMDS_RX5_AVI_PIXEL_REPETITION(_AVI_PIXEL_REPETITION_0);
-
-        // Waiting for down sampling  effect
-        ScalerTimerDelayXms(20);
-    }
-
-    ScalerTMDSRx5SetPorchColor(GET_COLOR_SPACE());
-}
-
-//--------------------------------------------------
-// Description  : TMDS Rx5 HDMI Colorimetry Setting
-// Input Value  : None
-// Output Value : None
-//--------------------------------------------------
-void ScalerSyncTMDSRx5HdmiColorimetrySetting(void)
-{
-    if((GET_COLOR_SPACE() == _COLOR_SPACE_YCBCR420) || (GET_COLOR_SPACE() == _COLOR_SPACE_YCBCR422) || (GET_COLOR_SPACE() == _COLOR_SPACE_YCBCR444))
-    {
-        switch(ScalerTMDSRx5HdmiGetAVIInfo(_AVI_INFO_COLORIMETRY))
-        {
-            case _AVI_COLORIMETRY_00:
-
-                DebugMessageRx5("Get Colorimetry YCC_SMPTE_170M", 0x00);
-
-                SET_TMDS_RX5_COLORIMETRY_PREVALUE(_AVI_COLORIMETRY_00);
-
-                SET_COLORIMETRY(_COLORIMETRY_YCC_SMPTE_170M);
-
-                break;
-
-            case _AVI_COLORIMETRY_01:
-
-                DebugMessageRx5("Get Colorimetry YCC_SMPTE_170M", 0x00);
-
-                SET_TMDS_RX5_COLORIMETRY_PREVALUE(_AVI_COLORIMETRY_01);
-
-                SET_COLORIMETRY(_COLORIMETRY_YCC_SMPTE_170M);
-
-                break;
-
-            case _AVI_COLORIMETRY_10:
-
-                DebugMessageRx5("Get Colorimetry 709", 0x00);
-
-                SET_TMDS_RX5_COLORIMETRY_PREVALUE(_AVI_COLORIMETRY_10);
-
-                SET_COLORIMETRY(_COLORIMETRY_YCC_ITUR_BT709);
-
-                break;
-
-            case _AVI_COLORIMETRY_11:
-
-                DebugMessageRx5("Get Colorimetry Extended", 0x00);
-
-                SET_TMDS_RX5_COLORIMETRY_PREVALUE(_AVI_COLORIMETRY_11);
-
-                SET_COLORIMETRY(_COLORIMETRY_EXT);
-
-                ScalerSyncTMDSRx5HdmiColorimetryExtSetting();
-
-                break;
-
-            default:
-
-                DebugMessageRx5("Get Colorimetry INTO_DEFAULT", 0x00);
-
-                break;
-        }
-    }
-    else if(GET_COLOR_SPACE() == _COLOR_SPACE_RGB)
-    {
-        SET_TMDS_RX5_COLORIMETRY_PREVALUE(ScalerTMDSRx5HdmiGetAVIInfo(_AVI_INFO_COLORIMETRY));
-
-        switch(GET_TMDS_RX5_COLORIMETRY_PREVALUE())
-        {
-            case _AVI_COLORIMETRY_00:
-
-                DebugMessageRx5("Get Colorimetry RGB_SRGB", 0x00);
-
-                SET_COLORIMETRY(_COLORIMETRY_RGB_SRGB);
-
-                break;
-
-            case _AVI_COLORIMETRY_11:
-
-                DebugMessageRx5("Get Colorimetry RGB_SRGB", 0x00);
-
-                SET_COLORIMETRY(_COLORIMETRY_EXT);
-
-                ScalerSyncTMDSRx5HdmiColorimetryExtSetting();
-
-                break;
-
-            default:
-
-                DebugMessageRx5("Get Colorimetry INTO_DEFAULT", 0x00);
-
-                SET_COLORIMETRY(_COLORIMETRY_RGB_SRGB);
-
-                break;
-        }
-    }
-}
-
-//--------------------------------------------------
-// Description  : TMDS Rx5 Colorimetry Extended Setting
-// Input Value  : None
-// Output Value : None
-//--------------------------------------------------
-void ScalerSyncTMDSRx5HdmiColorimetryExtSetting(void)
-{
-    if((GET_COLOR_SPACE() == _COLOR_SPACE_YCBCR420) || (GET_COLOR_SPACE() == _COLOR_SPACE_YCBCR422) || (GET_COLOR_SPACE() == _COLOR_SPACE_YCBCR444))
-    {
-        // Get extended colorimetry
-        SET_TMDS_RX5_COLORIMETRY_EXT_PREVALUE(ScalerTMDSRx5HdmiGetAVIInfo(_AVI_INFO_EXTENDED_COLORIMETRY));
-
-        // Get extended colorimetry
-        switch(GET_TMDS_RX5_COLORIMETRY_EXT_PREVALUE())
-        {
-            case _AVI_COLORIMETRY_EXT_000:
-
-                DebugMessageRx5("Get Colorimetry EXT_YCC_XVYCC601", 0x00);
-
-                SET_EXT_COLORIMETRY(_COLORIMETRY_EXT_YCC_XVYCC601);
-
-                break;
-
-            case _AVI_COLORIMETRY_EXT_001:
-
-                DebugMessageRx5("Get Colorimetry EXT_YCC_XVYCC709", 0x00);
-
-                SET_EXT_COLORIMETRY(_COLORIMETRY_EXT_YCC_XVYCC709);
-
-                break;
-
-            case _AVI_COLORIMETRY_EXT_010:
-
-                DebugMessageRx5("Get Colorimetry EXT_YCC_SYCC601", 0x00);
-
-                SET_EXT_COLORIMETRY(_COLORIMETRY_EXT_YCC_SYCC601);
-
-                break;
-
-            case _AVI_COLORIMETRY_EXT_011:
-
-                DebugMessageRx5("Get Colorimetry EXT_YCC_ADOBEYCC601", 0x00);
-
-                SET_EXT_COLORIMETRY(_COLORIMETRY_EXT_YCC_ADOBEYCC601);
-
-                break;
-
-            case _AVI_COLORIMETRY_EXT_101:
-
-                DebugMessageRx5("Get Colorimetry EXT_YCC_ITUR_BT2020_CL", 0x00);
-
-                SET_EXT_COLORIMETRY(_COLORIMETRY_EXT_YCC_ITUR_BT2020_CL);
-
-                break;
-
-            case _AVI_COLORIMETRY_EXT_110:
-
-                DebugMessageRx5("Get Colorimetry EXT_YCC_ITUR_BT2020_NCL", 0x00);
-
-                SET_EXT_COLORIMETRY(_COLORIMETRY_EXT_YCC_ITUR_BT2020_NCL);
-
-                break;
-
-            default:
-
-                DebugMessageRx5("Get Colorimetry INTO_DEFAULT", 0x00);
-
-                SET_EXT_COLORIMETRY(_COLORIMETRY_EXT_RESERVED);
-
-                break;
-        }
-    }
-    else if(GET_COLOR_SPACE() == _COLOR_SPACE_RGB)
-    {
-        SET_TMDS_RX5_COLORIMETRY_EXT_PREVALUE(ScalerTMDSRx5HdmiGetAVIInfo(_AVI_INFO_EXTENDED_COLORIMETRY));
-
-        switch(GET_TMDS_RX5_COLORIMETRY_EXT_PREVALUE())
-        {
-            case _AVI_COLORIMETRY_EXT_100:
-
-                DebugMessageRx5("Get Colorimetry EXT_RGB_ADOBERGB", 0x00);
-
-                SET_EXT_COLORIMETRY(_COLORIMETRY_EXT_RGB_ADOBERGB);
-
-                break;
-
-            case _AVI_COLORIMETRY_EXT_110:
-
-                DebugMessageRx5("Get Colorimetry EXT_RGB_ITUR_BT2020", 0x00);
-
-                SET_EXT_COLORIMETRY(_COLORIMETRY_EXT_RGB_ITUR_BT2020);
-
-                break;
-
-            default:
-
-                DebugMessageRx5("Get Colorimetry INTO_DEFAULT", 0x00);
-
-                SET_EXT_COLORIMETRY(_COLORIMETRY_EXT_RESERVED);
-
-                break;
-        }
-    }
-}
-
-#if((_RGB_QUANTIZATION_RANGE_SUPPORT == _ON) || (_YCC_QUANTIZATION_RANGE_SUPPORT == _ON))
-//--------------------------------------------------
-// Description  : TMDS Rx5 Quantization Setting
-// Input Value  : None
-// Output Value : None
-//--------------------------------------------------
-void ScalerSyncTMDSRx5HdmiQuantizationSetting(void)
-{
-    if((GET_COLOR_SPACE() == _COLOR_SPACE_YCBCR420) || (GET_COLOR_SPACE() == _COLOR_SPACE_YCBCR422) || (GET_COLOR_SPACE() == _COLOR_SPACE_YCBCR444))
-    {
-        SET_TMDS_RX5_QUANTIZATION_PREVALUE(ScalerTMDSRx5HdmiGetAVIInfo(_AVI_INFO_YCC_QUANTIZATION));
-
-        switch(GET_TMDS_RX5_QUANTIZATION_PREVALUE())
-        {
-            case _AVI_YCC_QUANTIZATION_FULL:
-
-                DebugMessageRx5("Get YCC FULL RANGE", 0x00);
-
-                SET_COLOR_YCC_QUANTIZATION_RANGE(_YCC_QUANTIZATION_FULL_RANGE);
-
-                break;
-
-            case _AVI_YCC_QUANTIZATION_LIMITED:
-
-                DebugMessageRx5("Get YCC LIMIT RANGE", 0x00);
-
-                SET_COLOR_YCC_QUANTIZATION_RANGE(_YCC_QUANTIZATION_LIMIT_RANGE);
-
-                break;
-
-            default:
-
-                DebugMessageRx5("Get YCC RANGE Error", 0x00);
-
-                SET_COLOR_YCC_QUANTIZATION_RANGE(_YCC_QUANTIZATION_RESERVED);
-
-                break;
-        }
-    }
-    else if(GET_COLOR_SPACE() == _COLOR_SPACE_RGB)
-    {
-        switch(ScalerTMDSRx5HdmiGetAVIInfo(_AVI_INFO_RGB_QUANTIZATION))
-        {
-            case _AVI_RGB_QUANTIZATION_LIMITED:
-
-                DebugMessageRx5("Get RGB LIMIT RANGE", 0x00);
-
-                SET_TMDS_RX5_QUANTIZATION_PREVALUE(_AVI_RGB_QUANTIZATION_LIMITED);
-
-                SET_COLOR_RGB_QUANTIZATION_RANGE(_RGB_QUANTIZATION_LIMIT_RANGE);
-
-                break;
-
-            case _AVI_RGB_QUANTIZATION_FULL:
-
-                DebugMessageRx5("Get RGB FULL RANGE", 0x00);
-
-                SET_TMDS_RX5_QUANTIZATION_PREVALUE(_AVI_RGB_QUANTIZATION_FULL);
-
-                SET_COLOR_RGB_QUANTIZATION_RANGE(_RGB_QUANTIZATION_FULL_RANGE);
-
-                break;
-
-            case _AVI_RGB_QUANTIZATION_DEFAULT:
-
-                DebugMessageRx5("Get RGB DEFAULT RANGE", 0x00);
-
-                SET_TMDS_RX5_QUANTIZATION_PREVALUE(_AVI_RGB_QUANTIZATION_DEFAULT);
-
-                SET_COLOR_RGB_QUANTIZATION_RANGE(_RGB_QUANTIZATION_DEFAULT_RANGE);
-
-                break;
-
-            case _AVI_RGB_QUANTIZATION_RESERVED:
-
-                DebugMessageRx5("Get RGB RESERVED RANGE", 0x00);
-
-                SET_TMDS_RX5_QUANTIZATION_PREVALUE(_AVI_RGB_QUANTIZATION_RESERVED);
-
-                SET_COLOR_RGB_QUANTIZATION_RANGE(_RGB_QUANTIZATION_RESERVED);
-
-                break;
-
-            default:
-
-                DebugMessageRx5("Get RGB RANGE Error", 0x00);
-
-                SET_TMDS_RX5_QUANTIZATION_PREVALUE(_AVI_RGB_QUANTIZATION_FULL);
-
-                SET_COLOR_RGB_QUANTIZATION_RANGE(_RGB_QUANTIZATION_FULL_RANGE);
-
-                break;
-        }
-    }
-}
-#endif
-
-//--------------------------------------------------
-// Description  : TMDS Rx5 HDMI ColorInfo Changed Detect
-// Input Value  : None
-// Output Value : Changed ==> _TRUE; No Changed ==> _FALSE;
-//--------------------------------------------------
-bit ScalerSyncTMDSRx5HdmiColorInfoChanged(void)
-{
-    // Check Color Space
-    if(ScalerTMDSRx5HdmiGetAVIInfo(_AVI_INFO_COLOR_SPACE) != GET_COLOR_SPACE())
-    {
-        DebugMessageRx5("Color Space Changed", 0x00);
-        return _TRUE;
-    }
-
-    // Check Colorimetry
-    if(ScalerTMDSRx5HdmiGetAVIInfo(_AVI_INFO_COLORIMETRY) != GET_TMDS_RX5_COLORIMETRY_PREVALUE())
-    {
-        DebugMessageRx5("Colorimetry Changed", 0x00);
-
-        if(GET_DIGITAL_COLOR_INFO_CHANGE_RESET() == _FALSE)
-        {
-            BYTE pucTemp[2];
-
-            pucTemp[0] = ScalerTMDSRx5HdmiGetAVIInfo(_AVI_INFO_COLORIMETRY);
-
-            pucTemp[1] = GET_TMDS_RX5_COLORIMETRY_PREVALUE();
-
-            ScalerSyncTMDSRx5HdmiColorimetrySetting();
-
-            if((GET_COLOR_SPACE() == _COLOR_SPACE_YCBCR420) || (GET_COLOR_SPACE() == _COLOR_SPACE_YCBCR422) || (GET_COLOR_SPACE() == _COLOR_SPACE_YCBCR444))
-            {
-                if(!(((pucTemp[0] == _AVI_COLORIMETRY_00) && (pucTemp[1] == _AVI_COLORIMETRY_01)) || ((pucTemp[0] == _AVI_COLORIMETRY_01) && (pucTemp[1] == _AVI_COLORIMETRY_00))))
-                {
-                    SET_TMDS_RX5_COLORIMETRY_CHANGED();
-                }
-            }
-            else if(GET_COLOR_SPACE() == _COLOR_SPACE_RGB)
-            {
-                if((pucTemp[0] == _AVI_COLORIMETRY_11) || (pucTemp[1] == _AVI_COLORIMETRY_11))
-                {
-                    SET_TMDS_RX5_COLORIMETRY_CHANGED();
-                }
-            }
-        }
-        else
-        {
-            return _TRUE;
-        }
-    }
-    else
-    {
-        if(GET_COLORIMETRY() == _COLORIMETRY_EXT)
-        {
-            if(ScalerTMDSRx5HdmiGetAVIInfo(_AVI_INFO_EXTENDED_COLORIMETRY) != GET_TMDS_RX5_COLORIMETRY_EXT_PREVALUE())
-            {
-                DebugMessageRx5("Ext Colorimetry Changed", 0x00);
-
-                if(GET_DIGITAL_COLOR_INFO_CHANGE_RESET() == _FALSE)
-                {
-                    BYTE pucTemp[2];
-
-                    pucTemp[0] = ScalerTMDSRx5HdmiGetAVIInfo(_AVI_INFO_EXTENDED_COLORIMETRY);
-
-                    pucTemp[1] = GET_TMDS_RX5_COLORIMETRY_EXT_PREVALUE();
-
-                    ScalerSyncTMDSRx5HdmiColorimetryExtSetting();
-
-                    if((GET_COLOR_SPACE() == _COLOR_SPACE_YCBCR420) || (GET_COLOR_SPACE() == _COLOR_SPACE_YCBCR422) || (GET_COLOR_SPACE() == _COLOR_SPACE_YCBCR444))
-                    {
-                        if(!(((pucTemp[0] == _AVI_COLORIMETRY_EXT_100) && (pucTemp[1] == _AVI_COLORIMETRY_EXT_111)) || ((pucTemp[1] == _AVI_COLORIMETRY_EXT_100) && (pucTemp[0] == _AVI_COLORIMETRY_EXT_111))))
-                        {
-                            SET_TMDS_RX5_COLORIMETRY_EXT_CHANGED();
-                        }
-                    }
-                    else if(GET_COLOR_SPACE() == _COLOR_SPACE_RGB)
-                    {
-                        if(!(((pucTemp[0] != _AVI_COLORIMETRY_EXT_100) && (pucTemp[0] != _AVI_COLORIMETRY_EXT_110)) && ((pucTemp[1] != _AVI_COLORIMETRY_EXT_100) && (pucTemp[1] != _AVI_COLORIMETRY_EXT_110))))
-                        {
-                            SET_TMDS_RX5_COLORIMETRY_EXT_CHANGED();
-                        }
-                    }
-                }
-                else
-                {
-                    return _TRUE;
-                }
-            }
-        }
-    }
-
-#if(_YCC_QUANTIZATION_RANGE_SUPPORT == _ON)
-    if((GET_COLOR_SPACE() == _COLOR_SPACE_YCBCR420) || (GET_COLOR_SPACE() == _COLOR_SPACE_YCBCR422) || (GET_COLOR_SPACE() == _COLOR_SPACE_YCBCR444))
-    {
-        if(ScalerTMDSRx5HdmiGetAVIInfo(_AVI_INFO_YCC_QUANTIZATION) != GET_TMDS_RX5_QUANTIZATION_PREVALUE())
-        {
-            DebugMessageRx5("YCC Quantization Range Changed", 0x00);
-
-            if(GET_DIGITAL_COLOR_INFO_CHANGE_RESET() == _FALSE)
-            {
-                BYTE pucTemp[2];
-
-                pucTemp[0] = ScalerTMDSRx5HdmiGetAVIInfo(_AVI_INFO_YCC_QUANTIZATION);
-
-                pucTemp[1] = GET_TMDS_RX5_QUANTIZATION_PREVALUE();
-
-                ScalerSyncTMDSRx5HdmiQuantizationSetting();
-
-                if((pucTemp[0] == _AVI_YCC_QUANTIZATION_LIMITED) || (pucTemp[1] == _AVI_YCC_QUANTIZATION_LIMITED))
-                {
-                    SET_TMDS_RX5_QUANTIZATION_CHANGED();
-                }
-            }
-            else
-            {
-                return _TRUE;
-            }
-        }
-    }
-#endif
-
-#if(_RGB_QUANTIZATION_RANGE_SUPPORT == _ON)
-    if(GET_COLOR_SPACE() == _COLOR_SPACE_RGB)
-    {
-        if(ScalerTMDSRx5HdmiGetAVIInfo(_AVI_INFO_RGB_QUANTIZATION) != GET_TMDS_RX5_QUANTIZATION_PREVALUE())
-        {
-            DebugMessageRx5("RGB Quantization Range Changed", 0x00);
-
-            if(GET_DIGITAL_COLOR_INFO_CHANGE_RESET() == _FALSE)
-            {
-                ScalerSyncTMDSRx5HdmiQuantizationSetting();
-
-                SET_TMDS_RX5_QUANTIZATION_CHANGED();
+                SET_TMDS_RXN_QUANTIZATION_CHANGED();
             }
             else
             {
