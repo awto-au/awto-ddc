@@ -15,7 +15,7 @@ import re
 import sys
 from pathlib import Path
 
-import isostamp
+from _log import log_line as _log_line
 
 ROOT = Path(os.environ.get("AWTO_DDC_REPO") or Path(__file__).resolve().parent.parent)
 LOG = ROOT / "tmp/logs/wait_log.log"
@@ -27,11 +27,7 @@ EVENTS = {0x01: "IVS", 0x02: "IEN_START", 0x04: "IEN_STOP", 0x08: "DVS", 0x10: "
 
 
 def say(s: str) -> None:
-    LOG.parent.mkdir(parents=True, exist_ok=True)
-    line = f"{isostamp.now()} {s}"
-    print(line, flush=True)
-    with LOG.open("a") as f:
-        f.write(line + "\n")
+    _log_line(s, LOG)
 
 
 COMMON_END = 0x5000      # fw/rl6449_memory.toml common_end: below it an address is the same in every bank

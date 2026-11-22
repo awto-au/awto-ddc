@@ -22,7 +22,7 @@ import subprocess
 import sys
 from pathlib import Path
 
-import isostamp
+from _log import log_line as _log_line
 
 TYPES = {"bool": 0, "enum": 1, "int": 2, "action": 3}
 UNITS = {"none": 0, "percent": 1, "ms": 2, "s": 3, "step": 4, "hz": 5, "dhz": 6}
@@ -48,10 +48,7 @@ LOG = ROOT / "tmp/logs/settings_gen.log"
 
 
 def say(s: str):
-    LOG.parent.mkdir(parents=True, exist_ok=True)
-    with LOG.open("a") as f:
-        f.write(isostamp.now() + " " + s + "\n")
-    print(s, flush=True)
+    _log_line(s, LOG, stamp_stdout=False)
 
 
 def crc16(data: bytes) -> int:

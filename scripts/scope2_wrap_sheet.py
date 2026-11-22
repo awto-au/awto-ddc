@@ -16,7 +16,7 @@ from PIL import Image, ImageDraw, ImageFont
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import gen_scope2 as G
-import isostamp
+from _log import log_line as _log_line
 
 ROOT = G.ROOT
 LOG = ROOT / "tmp/logs/scope2_wrap_sheet.log"
@@ -25,11 +25,7 @@ GREEN, RED, CURSOR = (60, 255, 80), (150, 30, 30), (255, 220, 60)
 
 
 def say(s: str) -> None:
-    LOG.parent.mkdir(parents=True, exist_ok=True)
-    line = f"{isostamp.now()} {s}"
-    with LOG.open("a") as f:
-        f.write(line + "\n")
-    print(line, flush=True)
+    _log_line(s, LOG)
 
 
 def states(geo, fixed):

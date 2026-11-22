@@ -19,7 +19,7 @@ import sys
 import time
 from pathlib import Path
 
-import isostamp
+from _log import log_line as _log_line
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import settings_table as T
@@ -35,10 +35,7 @@ MAILBOX_S = 0.47
 
 
 def say(s: str):
-    LOG.parent.mkdir(parents=True, exist_ok=True)
-    with LOG.open("a") as f:
-        f.write(isostamp.now() + " " + s + "\n")
-    print(s, flush=True)
+    _log_line(s, LOG, stamp_stdout=False)
 
 
 def xaddr(map_text: str, name: str) -> int:

@@ -18,6 +18,7 @@ import time
 from pathlib import Path
 
 import isostamp
+from _log import log_line as _log_line
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
@@ -30,11 +31,7 @@ POLL_S = 0.5            # one mailbox probe (debug link on + schema read) per po
 
 
 def say(s: str):
-    LOG.parent.mkdir(parents=True, exist_ok=True)
-    line = f"{isostamp.now()} {s}"
-    with LOG.open("a") as f:
-        f.write(line + "\n")
-    print(line, flush=True)
+    _log_line(s, LOG)
 
 
 def stored_rows(C):

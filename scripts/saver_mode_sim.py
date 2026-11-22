@@ -13,7 +13,7 @@ import os
 import sys
 from pathlib import Path
 
-import isostamp
+from _log import log_line as _log_line
 
 os.environ.setdefault("AWTO_SIM_CORE", "fast")
 sys.path.insert(0, str(Path(__file__).resolve().parent))
@@ -42,11 +42,7 @@ RUN_NAMES = {0: "off", 1: "pacman", 3: "scope2", 5: "flash", 6: "splash"}
 
 
 def say(s: str) -> None:
-    LOG.parent.mkdir(parents=True, exist_ok=True)
-    line = f"{isostamp.now()} {s}"
-    with LOG.open("a") as f:
-        f.write(line + "\n")
-    print(line, flush=True)
+    _log_line(s, LOG)
 
 
 class Probe:

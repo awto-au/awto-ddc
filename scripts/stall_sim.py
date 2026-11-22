@@ -15,7 +15,7 @@ import sys
 import types
 from pathlib import Path
 
-import isostamp
+from _log import log_line as _log_line
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import fw_link_check as L
@@ -32,10 +32,7 @@ MASK_OPS = {CLR_EX0: ("EX0", 1), SET_EX0: ("EX0", 0), CLR_EA: ("EA", 1), SET_EA:
 
 
 def say(s):
-    LOG.parent.mkdir(parents=True, exist_ok=True)
-    with LOG.open("a") as f:
-        f.write(isostamp.now() + " " + s + "\n")
-    print(s, flush=True)
+    _log_line(s, LOG, stamp_stdout=False)
 
 
 def attach(run, im, worst):

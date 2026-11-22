@@ -18,7 +18,7 @@ import sys
 import time
 from pathlib import Path
 
-import isostamp
+from _log import log_line as _log_line
 
 ROOT = Path(__file__).resolve().parent.parent
 LOG = ROOT / "tmp/logs/sync_bench.log"
@@ -28,10 +28,7 @@ COLS = ["first", "edid", "scan", "scan_start", "measure", "display", "colour", "
 
 
 def say(s: str) -> None:
-    LOG.parent.mkdir(parents=True, exist_ok=True)
-    with LOG.open("a") as f:
-        f.write(f"{isostamp.now()} {s}\n")
-    print(s, flush=True)
+    _log_line(s, LOG, stamp_stdout=False)
 
 
 def parse(text: str) -> dict:

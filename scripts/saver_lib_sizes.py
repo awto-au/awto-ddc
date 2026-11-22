@@ -14,7 +14,7 @@ import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-import isostamp
+from _log import log_line as _log_line
 from sdcc_overlay import repo_root
 
 ROOT = repo_root()
@@ -32,11 +32,7 @@ BANK_WINDOW = 0x10000 - 0x5000                                      # banked cod
 
 
 def say(s: str) -> None:
-    LOG.parent.mkdir(parents=True, exist_ok=True)
-    line = f"{isostamp.now()} {s}"
-    with LOG.open("a") as f:
-        f.write(line + "\n")
-    print(line, flush=True)
+    _log_line(s, LOG)
 
 
 def names(path: Path):

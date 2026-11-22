@@ -18,7 +18,7 @@ import time
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
-import isostamp
+from _log import log_line as _log_line
 
 HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE))
@@ -30,10 +30,7 @@ RUN_TMO_S = 300     # one image: longest regression image runs ~15 s on ucsim (a
 
 
 def say(s: str):
-    LOG.parent.mkdir(parents=True, exist_ok=True)
-    with LOG.open("a") as f:
-        f.write(isostamp.now() + " " + s + "\n")
-    print(s, flush=True)
+    _log_line(s, LOG, stamp_stdout=False)
 
 
 def run(runner: Path, repo: Path, ihx: Path) -> tuple[bytes, float]:

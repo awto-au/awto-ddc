@@ -18,6 +18,7 @@ import time
 from pathlib import Path
 
 import isostamp
+from _log import log_line as _log_line
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import dbg_link
@@ -37,11 +38,7 @@ LINK_AFTER_S = 1.2      # 0x35 link set before ~1 s fw time is lost (DDC slave r
 
 
 def say(s: str) -> None:
-    line = f"{isostamp.now()} {s}"
-    print(line, flush=True)
-    LOG.parent.mkdir(parents=True, exist_ok=True)
-    with LOG.open("a") as f:
-        f.write(line + "\n")
+    _log_line(s, LOG)
 
 
 def one_run(bus: int, base: int, mapp: Path, serial: str) -> dict:

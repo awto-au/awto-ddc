@@ -13,7 +13,7 @@ import subprocess
 import sys
 from pathlib import Path
 
-import isostamp
+from _log import log_line as _log_line
 
 ROOT = Path(__file__).resolve().parents[1]
 LOG = ROOT / "tmp/logs/xdata_churn_probe.log"
@@ -21,11 +21,7 @@ BUILD_LIMIT = 300         # s: build ~40 s warm, ~90 s cold (2026-11-19); 3x col
 
 
 def say(s):
-    line = f"{isostamp.now()} {s}"
-    print(line)
-    LOG.parent.mkdir(parents=True, exist_ok=True)
-    with LOG.open("a") as f:
-        f.write(line + "\n")
+    _log_line(s, LOG)
 
 
 def build(unit, tag) -> Path:

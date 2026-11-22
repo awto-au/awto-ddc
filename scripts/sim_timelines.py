@@ -15,7 +15,7 @@ import subprocess
 import sys
 from pathlib import Path
 
-import isostamp
+from _log import log_line as _log_line
 
 ROOT = Path(__file__).resolve().parents[1]
 LOG = ROOT / "tmp/logs/sim_timelines.log"
@@ -35,10 +35,7 @@ PIN_EDGE = re.compile(r"^backlight (on|off)$|backlight pin (on|off)|backlight on
 
 
 def say(s):
-    LOG.parent.mkdir(parents=True, exist_ok=True)
-    with LOG.open("a") as f:
-        f.write(isostamp.now() + " " + s + "\n")
-    print(s, flush=True)
+    _log_line(s, LOG, stamp_stdout=False)
 
 
 def lines(sim, binp: Path):

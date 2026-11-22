@@ -12,8 +12,8 @@ import sys
 import threading
 from pathlib import Path
 
-import isostamp
 import saver_names
+from _log import log_line as _log_line
 
 ROOT = Path(__file__).resolve().parent.parent
 LOG = ROOT / "tmp/logs/saver_tour.log"
@@ -26,11 +26,7 @@ TRIES = 3  # per DDC call, a failed set is retried; each try is logged
 
 
 def say(msg):
-    LOG.parent.mkdir(parents=True, exist_ok=True)
-    line = f"{isostamp.now()} {msg}"
-    with LOG.open("a") as f:
-        f.write(line + "\n")
-    print(line, flush=True)
+    _log_line(msg, LOG)
 
 
 def dev(*args):

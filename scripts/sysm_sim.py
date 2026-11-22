@@ -23,7 +23,7 @@ import sys
 from pathlib import Path
 from typing import ClassVar
 
-import isostamp
+from _log import log_line as _log_line
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import fw_sim as S
@@ -54,10 +54,7 @@ ACTION_FILES = ("Kernel/System/Code/SysJudge.c", "Kernel/System/Code/SysPower.c"
 
 
 def say(s):
-    LOG.parent.mkdir(parents=True, exist_ok=True)
-    with LOG.open("a") as f:
-        f.write(isostamp.now() + " " + s + "\n")
-    print(s, flush=True)
+    _log_line(s, LOG, stamp_stdout=False)
 
 
 class StateWatch(S.Dev):

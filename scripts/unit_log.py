@@ -24,6 +24,8 @@ import sys
 import time
 from pathlib import Path
 
+from _log import log_line as _log_line
+
 ROOT = Path(os.environ.get("AWTO_DDC_REPO") or Path(__file__).resolve().parents[1])
 LOGDIR = ROOT / "tmp/logs/units"
 LOG = ROOT / "tmp/logs/unit_log.log"
@@ -34,12 +36,7 @@ DRAM_FIRST = 64                            # first poll of a unit with the DRAM 
 
 
 def say(s: str) -> None:
-    import isostamp
-    LOG.parent.mkdir(parents=True, exist_ok=True)
-    line = f"{isostamp.now()} {s}"
-    print(line, flush=True)
-    with LOG.open("a") as f:
-        f.write(line + "\n")
+    _log_line(s, LOG)
 
 
 def now_iso() -> str:
