@@ -15,7 +15,7 @@ import sys
 import time
 from pathlib import Path
 
-import isostamp
+from _log import log_line as _log_line
 
 ROOT = Path(os.environ.get("AWTO_DDC_REPO") or Path(__file__).resolve().parent.parent)
 LOG = ROOT / "tmp/logs/osd_sram_probe.log"
@@ -28,11 +28,7 @@ MARK_B2 = 0xA5
 
 
 def say(s: str) -> None:
-    LOG.parent.mkdir(parents=True, exist_ok=True)
-    line = f"{isostamp.now()} {s}"
-    with LOG.open("a") as f:
-        f.write(line + "\n")
-    print(line, flush=True)
+    _log_line(s, LOG)
 
 
 def main() -> int:

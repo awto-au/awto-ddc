@@ -17,7 +17,7 @@ import sys
 import time
 from pathlib import Path
 
-import isostamp
+from _log import log_line as _log_line
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import dbg_link
@@ -33,11 +33,7 @@ WAIT_S = 40
 
 
 def log(s: str) -> None:
-    line = f"{isostamp.now()} {s}"
-    print(line, flush=True)
-    LOG.parent.mkdir(parents=True, exist_ok=True)
-    with LOG.open("a") as f:
-        f.write(line + "\n")
+    _log_line(s, LOG)
 
 
 def sym(mp: str, name: str) -> int:

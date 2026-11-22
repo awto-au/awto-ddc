@@ -17,7 +17,7 @@ import re
 import sys
 from pathlib import Path
 
-import isostamp
+from _log import log_line as _log_line
 
 ROOT = Path(os.environ.get("AWTO_DDC_REPO") or Path(__file__).resolve().parent.parent)
 LOG = ROOT / "tmp/logs/popup_fit.log"
@@ -27,10 +27,7 @@ GLYPH_MAX = 26                 # AwtoPutGlyph clamp (the buffer holds 28)
 
 
 def say(s):
-    LOG.parent.mkdir(parents=True, exist_ok=True)
-    print(s)
-    with LOG.open("a") as f:
-        f.write(isostamp.now() + " " + s + "\n")
+    _log_line(s, LOG, stamp_stdout=False)
 
 
 def widths(tree):

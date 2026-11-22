@@ -19,9 +19,9 @@ from pathlib import Path
 os.environ.setdefault("AWTO_SIM_CORE", "fast")
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import ddc_sim as D
-import isostamp
 import osd_render as R
 import saver_frames_md5 as F
+from _log import log_line as _log_line
 
 LOG = R.ROOT / "tmp/logs/saver_fps_probe.log"
 SETTLE_S = 3.0                  # fw time after the start: the hidden first frame is drawn (Scope 2, Asteroids ~2 s)
@@ -31,11 +31,7 @@ ROW_DISP_ROTATE = 32
 
 
 def say(s: str) -> None:
-    LOG.parent.mkdir(parents=True, exist_ok=True)
-    line = f"{isostamp.now()} {s}"
-    with LOG.open("a") as f:
-        f.write(line + "\n")
-    print(line, flush=True)
+    _log_line(s, LOG)
 
 
 def main() -> int:

@@ -15,7 +15,7 @@ import sys
 import time
 from pathlib import Path
 
-import isostamp
+from _log import log_line as _log_line
 
 HERE = Path(__file__).resolve().parent
 
@@ -58,10 +58,7 @@ def cpu_ticks(pid: int) -> int:
 
 
 def log(s: str):
-    line = f"{isostamp.now()} {s}"
-    print(line, flush=True)
-    with LOG.open("a") as f:
-        f.write(line + "\n")
+    _log_line(s, LOG)
 
 
 ALT_PAGES = ("main", "picture", "colour")

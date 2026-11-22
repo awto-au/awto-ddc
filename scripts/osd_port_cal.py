@@ -16,8 +16,8 @@ from pathlib import Path
 
 os.environ.setdefault("AWTO_SIM_CORE", "fast")
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-import isostamp
 import osd_hw_test as H
+from _log import log_line as _log_line
 
 LOG = H.ROOT / "tmp/logs/osd_port_cal.log"
 CHUNK = H.BUF
@@ -27,11 +27,7 @@ HW_US_PER_B = {(H.M_SDK, 0): 4.12, (H.M_DIRECT, 0): 2.60, (H.M_DIRECT, 1): 2.39,
 
 
 def say(s: str) -> None:
-    LOG.parent.mkdir(parents=True, exist_ok=True)
-    line = f"{isostamp.now()} {s}"
-    with LOG.open("a") as f:
-        f.write(line + "\n")
-    print(line, flush=True)
+    _log_line(s, LOG)
 
 
 def main() -> int:

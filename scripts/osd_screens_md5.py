@@ -14,8 +14,8 @@ from pathlib import Path
 os.environ.setdefault("AWTO_SIM_CORE", "fast")
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import ddc_sim as D
-import isostamp
 import osd_render as R
+from _log import log_line as _log_line
 from saver_frames_md5 import ROTATE_SETTLE_S, ROW_DISP_ROTATE, VCP_SAVER, state_md5
 
 LOG = R.ROOT / "tmp/logs/osd_screens_md5.log"
@@ -25,11 +25,7 @@ FLASH_S = 8.0                            # preview draws in chunks per main pass
 
 
 def say(s: str) -> None:
-    LOG.parent.mkdir(parents=True, exist_ok=True)
-    line = f"{isostamp.now()} {s}"
-    with LOG.open("a") as f:
-        f.write(line + "\n")
-    print(line, flush=True)
+    _log_line(s, LOG)
 
 
 def run(a) -> int:

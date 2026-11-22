@@ -21,7 +21,7 @@ import subprocess
 import sys
 from pathlib import Path
 
-import isostamp
+from _log import log_line as _log_line
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import fw_sim as S
@@ -38,10 +38,7 @@ BGS = {"grey": (128, 128, 128), "black": (0, 0, 0), "white": (255, 255, 255)}
 
 
 def say(s: str):
-    LOG.parent.mkdir(parents=True, exist_ok=True)
-    with LOG.open("a") as f:
-        f.write(isostamp.now() + " " + s + "\n")
-    print(s, flush=True)
+    _log_line(s, LOG, stamp_stdout=False)
 
 
 def background(kind: str, W: int, H: int) -> np.ndarray:

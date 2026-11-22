@@ -21,6 +21,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 import numpy as np
 import osd_gfx as G
 import osd_model as M
+from _log import log_line as _log_line
 
 ROOT = Path(__file__).resolve().parent.parent
 LOG = ROOT / "tmp/logs/osd_demo.log"
@@ -363,11 +364,7 @@ def _():
 
 
 def say(s: str):
-    LOG.parent.mkdir(parents=True, exist_ok=True)
-    import isostamp
-    with LOG.open("a") as f:
-        f.write(isostamp.now() + " " + s + "\n")
-    print(s, flush=True)
+    _log_line(s, LOG, stamp_stdout=False)
 
 
 def main() -> int:

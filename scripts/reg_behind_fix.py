@@ -20,6 +20,7 @@ import dbg_xdata as X
 import isostamp
 import reg_behind_cause as C
 import reg_live_scan as S
+from _log import log_line as _log_line
 
 LOG = S.ROOT / "tmp/logs/reg_behind_fix.log"
 DIAG_LOOP = 0xF6D0 + 0x2A                 # u16 main-loop passes in the last ~1 s
@@ -27,11 +28,7 @@ BLK_N = 300                               # blocks per rate measurement
 
 
 def log(s: str) -> None:
-    line = f"{isostamp.now()} {s}"
-    print(line, flush=True)
-    LOG.parent.mkdir(parents=True, exist_ok=True)
-    with LOG.open("a") as f:
-        f.write(line + "\n")
+    _log_line(s, LOG)
 
 
 def wr(io, addr: int, val: int) -> bool:

@@ -16,9 +16,9 @@ import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-import isostamp
 import numpy as np
 import osd_model as M
+from _log import log_line as _log_line
 from PIL import Image
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -31,10 +31,7 @@ BG_DARK, BG_LIGHT = 70, 120                # checker background levels (so blend
 
 
 def say(s: str) -> None:
-    LOG.parent.mkdir(parents=True, exist_ok=True)
-    with LOG.open("a") as f:
-        f.write(isostamp.now() + " " + s + "\n")
-    print(s, flush=True)
+    _log_line(s, LOG, stamp_stdout=False)
 
 
 # --- own text: Spleen 5x8 (BSD, committed in fw/rtdfw/awto/osd) ------------------------------------------------------

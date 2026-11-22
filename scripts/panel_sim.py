@@ -20,7 +20,7 @@ import re
 import sys
 from pathlib import Path
 
-import isostamp
+from _log import log_line as _log_line
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import fw_sim as S
@@ -54,10 +54,7 @@ EDGE_LINES = {("VDD pin", 1): (0x01,), ("VDD pin", 0): (0x1B, 0x2B, 0xAB), ("BL 
 
 
 def say(s):
-    LOG.parent.mkdir(parents=True, exist_ok=True)
-    with LOG.open("a") as f:
-        f.write(isostamp.now() + " " + s + "\n")
-    print(s, flush=True)
+    _log_line(s, LOG, stamp_stdout=False)
 
 
 def panel_times(tree):
