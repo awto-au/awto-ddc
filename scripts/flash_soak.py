@@ -12,7 +12,6 @@ Logs: ./tmp/logs/flash_soak.log, ./tmp/logs/flash_soak.tsv
 from __future__ import annotations
 
 import argparse
-import os
 import re
 import subprocess
 import sys
@@ -22,8 +21,8 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import isostamp
 from _log import log_line as _log_line
+from _repo import ROOT
 
-ROOT = Path(os.environ.get("AWTO_DDC_REPO") or Path(__file__).resolve().parent.parent)
 LOG = ROOT / "tmp/logs/flash_soak.log"
 TSV = ROOT / "tmp/logs/flash_soak.tsv"
 PERIOD_S = 60            # one health run is ~4 s; a saver runs ~1 min each: 30 periods cover the savers 7 x

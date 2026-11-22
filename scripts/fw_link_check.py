@@ -41,17 +41,15 @@ Exit 1 if any finding. Logs: tmp/logs/fw_link_check.log
 """
 import argparse
 import bisect
-import os
 import re
 import sys
 from collections import defaultdict
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-import d8051
-
-REPO = Path(os.environ.get("AWTO_DDC_REPO") or Path(__file__).resolve().parent.parent)
 import chip_mem as CM
+import d8051
+from _repo import ROOT as REPO
 
 BANK = CM.BANK_SIZE
 TERM = ("RET", "RETI", "LJMP", "SJMP", "AJMP", "JMP @A+DPTR")

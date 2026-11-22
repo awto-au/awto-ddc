@@ -16,10 +16,10 @@ import isostamp
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import i2cbus
+from _repo import ROOT
 from p037_test import DBG, rd, wr
 from rtd_i2c_bridge import Real
 
-ROOT = Path(__file__).resolve().parent.parent
 f2 = lambda v: "--" if v is None else format(v, "02x")
 LS = [(0x03BF, 0x00), (0x03D1, 0x20), (0x03D4, 0x1D), (0x03D5, 0xA9), (0x03D9, 0x30), (0x03DB, 0x38), (0x03DC, 0x94),
       (0x43D1, 0x20), (0x43D4, 0x1D), (0x43D5, 0xA9), (0x43D9, 0x30), (0x43DB, 0x38), (0x43DC, 0x94)]

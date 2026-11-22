@@ -8,13 +8,13 @@ Named = merged `func` rows of the bank program (scripts/ghidra_names_merge.py: o
 Typed globals = unique EXTMEM addresses of ghidra_globals*.tsv plus `var:<Type>` rows of the merged names (same map in every bank).
 Verdicts = re/jxc-4k/phase2_verification.tsv (rows of the bank program).
 """
-import os
 import re
 import sys
 from collections import Counter
 from pathlib import Path
 
-ROOT = Path(os.environ.get("AWTO_DDC_REPO") or Path(__file__).resolve().parent.parent)
+from _repo import ROOT
+
 VEND = Path.home() / "vendors/realtek/analysis/jxc-4k"
 DATA = ROOT / "re" / "jxc-4k"
 

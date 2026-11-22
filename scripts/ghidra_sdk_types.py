@@ -25,7 +25,8 @@ from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
 HERE = Path(__file__).resolve().parent
-ROOT = Path(os.environ.get("AWTO_DDC_REPO") or HERE.parent)
+from _repo import ROOT
+
 sys.path.insert(0, str(HERE))
 import fw_compile as K
 

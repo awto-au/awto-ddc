@@ -14,13 +14,13 @@ Report: ./tmp/logs/ghidra_match_sdk.log (match rate per bank), candidates: ./tmp
 """
 import csv
 import math
-import os
 import re
 import sys
 from collections import Counter, defaultdict
 from pathlib import Path
 
-ROOT = Path(os.environ.get("AWTO_DDC_REPO") or Path(__file__).resolve().parent.parent)
+from _repo import ROOT
+
 VEND = Path.home() / "vendors/realtek/analysis/jxc-4k"
 SDK = ROOT / "tmp" / "sdcc-port"
 RAM = range(0xD700, 0xF700)

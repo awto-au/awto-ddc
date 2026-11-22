@@ -26,8 +26,8 @@ from ddcutil_run import ddc as _ddc
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import gen_flash_screen as L
+from _repo import ROOT
 
-ROOT = Path(os.environ.get("AWTO_DDC_REPO") or Path(__file__).resolve().parent.parent)
 LOG = ROOT / "tmp/logs/flash_screen.log"
 BUS = None                      # set by show() / the flasher: one marker per bus so flashes of several units can run in parallel
 # marker: written by show() (JSON: rot), read by tick / clear in the flasher process, removed by clear

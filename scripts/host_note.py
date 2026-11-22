@@ -16,7 +16,6 @@ Log: tmp/logs/host_note.log
 from __future__ import annotations
 
 import argparse
-import os
 import re
 import subprocess
 import sys
@@ -27,8 +26,8 @@ from _log import log_line as _log_line
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import sync_log as S
+from _repo import ROOT
 
-ROOT = Path(os.environ.get("AWTO_DDC_REPO") or Path(__file__).resolve().parents[1])
 LOG = ROOT / "tmp/logs/host_note.log"
 DEV8 = 0x6A                      # debug slave 0x35, 8-bit address
 TESTCMD_OFF = 0x28               # isr_g_stAwtoDiag.ucTestCmd

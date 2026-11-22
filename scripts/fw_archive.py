@@ -11,7 +11,6 @@ Log: ./tmp/logs/fw_archive.log
 """
 import argparse
 import hashlib
-import os
 import shutil
 import subprocess
 import sys
@@ -19,8 +18,8 @@ from datetime import datetime
 from pathlib import Path
 
 from _log import log_line as _log_line
+from _repo import ROOT as REPO
 
-REPO = Path(os.environ.get("AWTO_DDC_REPO") or Path(__file__).resolve().parent.parent)
 DEST = REPO / "build-debris/images"
 INDEX = DEST / "index.tsv"
 COMPANIONS = (".map", ".ids.tsv", "-trace_ids.tsv")

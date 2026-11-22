@@ -8,7 +8,8 @@ from __future__ import annotations
 import re
 from pathlib import Path
 
-ROOT = Path(__file__).resolve().parents[1]
+from _repo import ROOT
+
 SDK = ROOT / "tmp/sdcc-port/src/Kernel/Scaler"
 
 def _lens() -> list[int]:

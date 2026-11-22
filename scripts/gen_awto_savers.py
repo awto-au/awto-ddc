@@ -8,12 +8,11 @@ Log: ./tmp/logs/gen_awto_savers.log
 """
 import argparse
 import sys
-from pathlib import Path
 
 import saver_names
 from _log import log_line as _log_line
+from _repo import ROOT
 
-ROOT = Path(__file__).resolve().parents[1]
 TARGET = ROOT / "fw/test/saver.c"
 LOG = ROOT / "tmp/logs/gen_awto_savers.log"
 BEGIN, END = "// GENERATED-BEGIN awto_savers", "// GENERATED-END awto_savers"

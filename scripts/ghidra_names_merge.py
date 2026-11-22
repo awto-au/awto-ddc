@@ -14,11 +14,10 @@ Rules (append-only source files, newest row wins):
   its bank> (target and bank parsed from the row comment: `DPTR=0xXXXX ... bank N`), `bcall_b<N>_<hex>` when the target is unnamed.
 - Confidence goes into the comment prefix (`[high] `) so the 5-column format ApplyNames/ExportAll read stays unchanged.
 """
-import os
 import re
-from pathlib import Path
 
-ROOT = Path(os.environ.get("AWTO_DDC_REPO") or Path(__file__).resolve().parent.parent)
+from _repo import ROOT
+
 DATA = ROOT / "re" / "jxc-4k"
 COMMON_END = 0x28C6
 RANK = {"[fw]": 5, "[lib]": 5, "high": 4, "med": 3, "[guess]": 2, "low": 2, "[auto-sdk]": 1, "": 1, "[?]": 0}

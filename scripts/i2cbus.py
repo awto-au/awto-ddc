@@ -18,12 +18,12 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import rtd_proto
+from _repo import ROOT  # noqa: F401  (re-exported: i2cbus.ROOT)
 
 I2C_RETRIES, I2C_TIMEOUT, I2C_SLAVE, I2C_RDWR = 0x0701, 0x0702, 0x0703, 0x0707   # linux/i2c-dev.h
 I2C_SMBUS = 0x0720
 I2C_M_RD = 1
 I2C_RETRIES_DEFAULT = 1     # i915 gmbus sets adapter.retries = 1 (intel_gmbus.c); restored after a page
-ROOT = Path(os.environ.get("AWTO_DDC_REPO") or Path(__file__).resolve().parent.parent)
 
 
 class Msg(ctypes.Structure):

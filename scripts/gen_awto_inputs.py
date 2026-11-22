@@ -11,11 +11,10 @@ Log: tmp/logs/gen_awto_inputs.log
 """
 import argparse
 import sys
-from pathlib import Path
 
 from _log import log_line as _log_line
+from _repo import ROOT
 
-ROOT = Path(__file__).resolve().parents[1]
 TSV = ROOT / "fw/awto/inputs.tsv"
 LOG = ROOT / "tmp/logs/gen_awto_inputs.log"
 KINDS = {"bit": 0, "analog": 1, "byte": 2}

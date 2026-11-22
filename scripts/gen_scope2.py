@@ -10,14 +10,12 @@ usage: gen_scope2.py [--check] [--raster W] [--model]
 Log: ./tmp/logs/gen_scope2.log
 """
 import argparse
-import os
 import sys
-from pathlib import Path
 
 import numpy as np
 import osd_gfx as OG
+from _repo import ROOT
 
-ROOT = Path(os.environ.get("AWTO_DDC_REPO") or Path(__file__).resolve().parent.parent)
 OUT = ROOT / "fw/test/scope2_data.inc"
 LOG = ROOT / "tmp/logs/gen_scope2.log"
 

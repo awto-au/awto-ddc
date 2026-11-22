@@ -15,11 +15,10 @@ import select
 import subprocess
 import sys
 import time
-from pathlib import Path
 
 from _log import log_line as _log_line
+from _repo import ROOT
 
-ROOT = Path(__file__).resolve().parents[1]
 LOG = ROOT / "tmp/logs/i2c_trace.log"
 TR = "/sys/kernel/tracing"
 

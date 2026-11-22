@@ -18,7 +18,8 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
-ROOT = Path(__file__).resolve().parents[1]
+from _repo import ROOT
+
 HDRH = ROOT / "fw/sdk/Project/Header/RL6449_Project.h"
 LOG = ROOT / "tmp/logs/dram_log.log"
 CHECK = 0x5A                      # fw/log/hostnote.c AWTO_DLOG_CHECK

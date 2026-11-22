@@ -20,8 +20,8 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 import host_note as HN
 import host_time_sim as H
 import sync_log as SL
+from _repo import ROOT
 
-ROOT = Path(__file__).resolve().parents[1]
 LOG = ROOT / "tmp/logs/host_note_sim.log"
 NOTE_S = 1.0        # test cmd -> ring entry + console row: one main pass + one row draw (~0.3 s sim) x3
 

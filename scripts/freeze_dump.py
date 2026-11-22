@@ -17,10 +17,10 @@ import isostamp
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import i2cbus
+from _repo import ROOT
 from p037_test import DBG, rd
 from rtd_i2c_bridge import Real
 
-ROOT = Path(__file__).resolve().parent.parent
 VENDOR = ROOT / "tmp/regs/AWT26110003-20261105-180523.json"
 
 

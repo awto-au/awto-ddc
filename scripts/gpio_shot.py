@@ -12,8 +12,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import osd_render as R
 import osd_test as T
-
-ROOT = Path(__file__).resolve().parents[1]
+from _repo import ROOT
 
 
 def main():

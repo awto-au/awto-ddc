@@ -32,8 +32,8 @@ import osd_model as M
 import osd_render as R
 import osd_test as T
 import sync_log as SL
+from _repo import ROOT
 
-ROOT = Path(__file__).resolve().parents[1]
 LOG = ROOT / "tmp/logs/host_time_sim.log"
 VCP = 0xE9
 OFS = 44                                                    # +11:00 in 15 min units (AEDT)

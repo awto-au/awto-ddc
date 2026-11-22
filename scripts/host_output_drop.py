@@ -10,16 +10,14 @@ Log: ./tmp/logs/host_output_drop.log
 """
 import argparse
 import importlib.util
-import os
 import signal
 import subprocess
 import sys
 import time
-from pathlib import Path
 
 from _log import log_line as _log_line
+from _repo import ROOT
 
-ROOT = Path(os.environ.get("AWTO_DDC_REPO") or Path(__file__).resolve().parents[1])
 LOG = ROOT / "tmp/logs/host_output_drop.log"
 SHOW_S = 3          # `gdctl show` is one D-Bus call (~0.1 s); 30x margin, expiry = nothing changed (as dev.py GDCTL_SHOW_S)
 SET_S = 15          # a modeset of 4 outputs takes ~2-3 s (as dev.py GDCTL_SET_S); expiry = reported, layout left as mutter has it

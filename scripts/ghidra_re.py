@@ -29,7 +29,8 @@ import ghidra_names_merge
 import regdb_ghidra_labels
 
 HERE = Path(__file__).resolve().parent
-ROOT = Path(os.environ.get("AWTO_DDC_REPO") or HERE.parent)
+from _repo import ROOT
+
 A2000 = Path(os.environ.get("AWTO_2000", "/mnt/2tb/git/awto-2000")) / "tools" / "ghidra"
 VEND = Path.home() / "vendors" / "realtek" / "analysis"
 PROJ_DIR, PROJ = VEND / "ghidra", "jxc4k"

@@ -14,7 +14,8 @@ import threading
 import time
 from pathlib import Path
 
-ROOT = Path(os.environ.get("AWTO_DDC_REPO") or Path(__file__).resolve().parent.parent)
+from _repo import ROOT
+
 PROTOCOL = 1
 ROUTED = ("ddc", "settings", "synclog", "note", "kvm", "i2c", "flash")
 # Server side: one request waits for its chain of device calls (write + read back + save, each <= 5 s) plus queueing behind

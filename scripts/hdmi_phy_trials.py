@@ -17,10 +17,10 @@ import isostamp
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import i2cbus
+from _repo import ROOT
 from p037_test import DBG, rd, wr
 from rtd_i2c_bridge import Real
 
-ROOT = Path(__file__).resolve().parent.parent
 f2 = lambda v: "--" if v is None else format(v, "02x")
 LANES = [(0x7BAA, 0x7BA4, 0x7BA5), (0x7BBA, 0x7BB4, 0x7BB5), (0x7BCA, 0x7BC4, 0x7BC5)]
 # Vendor 4K60 ACTIVE values (tmp/regs/AWT26110003-20261105-180523.json) that differ from our frozen failed pass

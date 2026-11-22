@@ -13,7 +13,6 @@ Method (details: docs/re-full-reversal.md):
 Vendor side: ~/vendors/realtek/analysis/jxc-4k/bank<N>/disassembly.asm + names TSVs. Log: ./tmp/logs/ghidra_globals_map.log
 """
 import math
-import os
 import re
 import sys
 from collections import Counter, defaultdict
@@ -23,7 +22,8 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 import ghidra_names_merge as NM
 
 HERE = Path(__file__).resolve().parent
-ROOT = Path(os.environ.get("AWTO_DDC_REPO") or HERE.parent)
+from _repo import ROOT
+
 ASM = ROOT / "tmp" / "sdcc-port" / "asm"
 VEND = Path.home() / "vendors/realtek/analysis/jxc-4k"
 DATA = ROOT / "re" / "jxc-4k"

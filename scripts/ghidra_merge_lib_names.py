@@ -3,10 +3,10 @@
 Priority: hand names (any status except [auto-sdk]/[lib]) > [lib] > [auto-sdk]. A [lib] line replaces an [auto-sdk] line at the
 same address or with the same name; hand-named addresses/names are never touched. Idempotent. Log: ./tmp/logs/ghidra_merge_lib_names.log
 """
-import os
 from pathlib import Path
 
-ROOT = Path(os.environ.get("AWTO_DDC_REPO") or Path(__file__).resolve().parent.parent)
+from _repo import ROOT
+
 SRC = Path.home() / "vendors/realtek/analysis"
 log = []
 for b in range(7):

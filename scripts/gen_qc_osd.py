@@ -8,14 +8,13 @@ usage: gen_qc_osd.py [--qc FILE] [--out FILE] [--check]
 Log: ./tmp/logs/gen_qc_osd.log
 """
 import argparse
-import os
 import re
 import sys
 from pathlib import Path
 
 import isostamp
+from _repo import ROOT
 
-ROOT = Path(os.environ.get("AWTO_DDC_REPO") or Path(__file__).resolve().parent.parent)
 LOG = ROOT / "tmp/logs/gen_qc_osd.log"
 QC = Path("/mnt/2tb/git_mirror/Kingdomwhisky/RTD-Scaler-TEST/Kernel/Scaler/RL6449_Series_Scaler/Code/RL6449_Series_QC_OSD.c")
 OUT = ROOT / "fw/test/qc_osd_data.inc"

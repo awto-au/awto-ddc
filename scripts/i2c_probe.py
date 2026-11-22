@@ -9,7 +9,6 @@ Log ./tmp/logs/i2c_probe.log
 from __future__ import annotations
 
 import argparse
-import os
 import re
 import subprocess
 import sys
@@ -17,8 +16,8 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from _log import log_line as _log_line
+from _repo import ROOT
 
-ROOT = Path(os.environ.get("AWTO_DDC_REPO") or Path(__file__).resolve().parent.parent)
 LOG = ROOT / "tmp/logs/i2c_probe.log"
 I2C_S = 5.0                                # one i2cget / i2cdetect call: ms-scale transfers; expiry = logged as no answer
 

@@ -21,8 +21,8 @@ import fw_sim as FS
 import osd_render as R
 import sync_log as S
 from _log import log_line as _log_line
+from _repo import ROOT
 
-ROOT = Path(__file__).resolve().parents[1]
 LOG = ROOT / "tmp/logs/dram_log_sim.log"
 TC_FILL, TC_BITE = 0xB4, 0x4C                           # RL6449_Project.h AWTO_TC_DLOG_FILL; fw/test/testcmd.c watchdog bite
 FILL_LINES = 34000                                      # fw/test/testcmd.c AWTO_DLFILL_LINES

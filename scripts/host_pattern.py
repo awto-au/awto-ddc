@@ -16,9 +16,9 @@ import gi
 gi.require_version("Gtk", "4.0")
 gi.require_version("Gdk", "4.0")
 import cairo
+from _repo import ROOT
 from gi.repository import Gdk, GLib, Gtk
 
-ROOT = Path(__file__).resolve().parent.parent
 LOG = ROOT / "tmp/logs/host_pattern.log"
 state = {"cmd": ["solid", "0", "0", "0"]}
 

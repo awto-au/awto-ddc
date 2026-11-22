@@ -17,10 +17,10 @@ import isostamp
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import i2cbus
+from _repo import ROOT
 from p037_test import DBG, rd, wr
 from rtd_i2c_bridge import Real
 
-ROOT = Path(__file__).resolve().parent.parent
 LOGF = ROOT / "tmp/logs/dpll_hold.log"
 f2 = lambda v: "--" if v is None else format(v, "02x")
 

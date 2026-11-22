@@ -11,7 +11,6 @@ Log: ./tmp/logs/gen_flash_screen.log
 """
 import argparse
 import math
-import os
 import sys
 from pathlib import Path
 
@@ -19,8 +18,8 @@ import isostamp
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import gen_pacman_classic as G
+from _repo import ROOT
 
-ROOT = Path(os.environ.get("AWTO_DDC_REPO") or Path(__file__).resolve().parent.parent)
 OUT = ROOT / "fw/test/flash_screen_data.inc"
 LOG = ROOT / "tmp/logs/gen_flash_screen.log"
 

@@ -10,8 +10,8 @@ import sys
 from pathlib import Path
 
 import isostamp
+from _repo import ROOT as REPO
 
-REPO = Path(__file__).resolve().parents[1]
 GATES_LIMIT_S = 90          # boot+isr+link take ~6 s (2026-11-08); 15x margin is the backstop only, fw_gates has its own
 
 

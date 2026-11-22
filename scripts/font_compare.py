@@ -5,9 +5,9 @@ import importlib.util
 import re
 from pathlib import Path
 
+from _repo import ROOT
 from PIL import Image, ImageDraw, ImageFont
 
-ROOT = Path(__file__).resolve().parents[1]
 RTDFW = Path(__file__).resolve().parents[1] / "fw/rtdfw"
 GEN = RTDFW / "tools/gen_font.py"
 OUT = ROOT / "tmp/font-comparison.png"

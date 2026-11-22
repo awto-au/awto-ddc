@@ -11,13 +11,12 @@ Log: ./tmp/logs/gen_pacman_classic.log
 """
 import argparse
 import math
-import os
 import sys
 from pathlib import Path
 
 import osd_gfx as OG
+from _repo import ROOT
 
-ROOT = Path(os.environ.get("AWTO_DDC_REPO") or Path(__file__).resolve().parent.parent)
 OUT = ROOT / "fw/test/pacman_classic_data.inc"
 LOG = ROOT / "tmp/logs/gen_pacman_classic.log"
 COLS, ROWS = 28, 36

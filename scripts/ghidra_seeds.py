@@ -7,12 +7,12 @@ Seeds = the 7 interrupt vectors + LCALL targets (opcode 0x12) that land in the b
 false functions; they are harmless entries, not names. Existing seed files are never overwritten.
 Log: ./tmp/logs/ghidra_seeds.log
 """
-import os
 import sys
 from collections import Counter
 from pathlib import Path
 
-ROOT = Path(os.environ.get("AWTO_DDC_REPO") or Path(__file__).resolve().parent.parent)
+from _repo import ROOT
+
 BANKS = Path.home() / "vendors/realtek/analysis/banks"
 VECTORS = (0x00, 0x03, 0x0B, 0x13, 0x1B, 0x23, 0x2B)
 MIN_CALLS = 2
