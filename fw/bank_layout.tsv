@@ -271,6 +271,7 @@ stub	_AwtoSyncPoll	C	0x17c4	8
 stub	_AwtoSyncPush	C	0x17cc	8
 stub	_AwtoSyncPushQuiet	C	0x17d4	8
 stub	_AwtoSyncAt	C	0x17dc	8
+stub	_SysSourceSearchLastPort	C	0x17e4	8
 stub	_AwtoSyncRow	C	0x17ec	8
 stub	_AwtoDlFlush	C	0x17f4	8
 stub	_AwtoSyncScan	C	0x17fc	8
@@ -1620,6 +1621,7 @@ fn	_ScalerDpRx1GetDpcdBitInfo	2	0x6bdc	44
 fn	_ScalerDpRx1HdcpMeasureCheck	2	0x6c08	952
 fn	_ScalerDpRx1MarginLinkCheck	2	0x6fc0	20
 fn	_ScalerDpRx1NormalPreDetect	2	0x6fd4	868
+fn	_SysSourceSearchLastPort	2	0x7338	28
 fn	_ScalerDpRx1PhyCtsTp1Check	2	0x73bc	148
 fn	_ScalerDpRx1PhyCtsTp2Check	2	0x7450	256
 fn	_ScalerDpRx1ScrambleSetting	2	0x7550	296
@@ -1645,7 +1647,6 @@ fn	_SysSourceInitial	2	0x8594	328
 fn	_SysSourceJudge	2	0x86dc	216
 fn	_SysSourceKeepDetectingCheck	2	0x87b4	44
 fn	_SysSourcePowerOffProc	2	0x87e0	60
-fn	_SysSourceSearchTimeInitial	2	0x881c	188
 fn	_SysSourceSetDefaultSearchTime	2	0x88d8	40
 fn	_SysSourceSetNoCableSearchTime	2	0x8900	40
 fn	_SysSourceSetSearchGroup	2	0x8928	32
@@ -1673,6 +1674,7 @@ fn	_ScalerTMDSRxSetDFEInitial_EXINT0	2	0xa788	1240
 fn	_ScalerTMDSRxSetPorchColor	2	0xac60	200
 fn	_ScalerTMDSRxSwitchSlaveAddr	2	0xad28	24
 fn	_ScalerDpRx1PSPreDetect	2	0xad40	144
+fn	_SysSourceSearchTimeInitial	2	0xadd0	216
 const	_tSysLed	3	0x0000	20
 const	_tSysMode	3	0x0014	20
 const	_tSysPower	3	0x0028	20
