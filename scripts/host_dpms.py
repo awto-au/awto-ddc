@@ -15,8 +15,9 @@ import os
 import subprocess
 import sys
 import time
-from datetime import datetime
 from pathlib import Path
+
+from _log import log_line as _log_line
 
 
 def _repo() -> Path:
@@ -36,11 +37,7 @@ DPMS_FILES = sorted(Path("/sys/class/drm").glob("card*-*/dpms"))
 
 
 def log(msg: str) -> None:
-    line = f"{datetime.now().astimezone().isoformat(timespec='seconds')} {msg}"
-    print(line, flush=True)
-    LOG.parent.mkdir(parents=True, exist_ok=True)
-    with LOG.open("a", encoding="utf-8") as fh:
-        fh.write(line + "\n")
+    _log_line(msg, LOG)
 
 
 def set_mode(mode: int) -> bool:

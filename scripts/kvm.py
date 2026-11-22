@@ -22,7 +22,7 @@ import time
 from concurrent.futures import ProcessPoolExecutor
 from pathlib import Path
 
-import isostamp
+from _log import log_line as _log_line
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import i2cbus
@@ -49,11 +49,7 @@ DDCUTIL_LIMIT_S = 1.7
 
 
 def log(line: str) -> None:
-    s = f"{isostamp.now()} {line}"
-    print(s)
-    LOG.parent.mkdir(parents=True, exist_ok=True)
-    with LOG.open("a") as f:
-        f.write(s + "\n")
+    _log_line(line, LOG)
 
 
 def units() -> dict:

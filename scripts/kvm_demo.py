@@ -13,7 +13,7 @@ import sys
 import time
 from pathlib import Path
 
-import isostamp
+from _log import log_line as _log_line
 
 HERE = Path(__file__).resolve().parent
 ROOT = Path(os.environ.get("AWTO_DDC_REPO") or HERE.parent)
@@ -22,10 +22,7 @@ STEP_LIMIT_S = 15   # one kvm.py / osd call: worst seen ~0.7 s + bus scan; 15 s 
 
 
 def log(s: str):
-    line = f"{isostamp.now()} {s}"
-    print(line, flush=True)
-    with LOG.open("a") as f:
-        f.write(line + "\n")
+    _log_line(s, LOG)
 
 
 def run(cmd: list) -> tuple[int, float, str]:

@@ -10,8 +10,8 @@ import argparse
 import sys
 from pathlib import Path
 
-import isostamp
 import saver_names
+from _log import log_line as _log_line
 
 ROOT = Path(__file__).resolve().parents[1]
 TARGET = ROOT / "fw/test/saver.c"
@@ -21,11 +21,7 @@ PAD = 40  # column of the value, as the hand-written defines
 
 
 def log(s):
-    LOG.parent.mkdir(parents=True, exist_ok=True)
-    line = f"{isostamp.now()} {s}"
-    print(line, flush=True)
-    with LOG.open("a") as f:
-        f.write(line + "\n")
+    _log_line(s, LOG)
 
 
 def block():

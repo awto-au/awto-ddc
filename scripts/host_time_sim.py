@@ -22,7 +22,7 @@ import re
 import sys
 from pathlib import Path
 
-import isostamp
+from _log import log_line as _log_line
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import ddc_sim as D
@@ -47,11 +47,7 @@ TICK_S = 1.25       # title refresh AWTO_TITLE_MS 1 s x1.25
 
 
 def say(s: str):
-    LOG.parent.mkdir(parents=True, exist_ok=True)
-    line = f"{isostamp.now()} {s}"
-    print(line, flush=True)
-    with LOG.open("a") as f:
-        f.write(line + "\n")
+    _log_line(s, LOG)
 
 
 class Sim:

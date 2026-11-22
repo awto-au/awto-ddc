@@ -16,7 +16,7 @@ import os
 import sys
 from pathlib import Path
 
-import isostamp
+from _log import log_line as _log_line
 
 ROOT = Path(os.environ.get("AWTO_DDC_REPO") or Path(__file__).resolve().parents[1])
 sys.path.insert(0, str(ROOT / "scripts"))
@@ -33,11 +33,7 @@ fails = 0
 
 
 def say(s: str) -> None:
-    LOG.parent.mkdir(parents=True, exist_ok=True)
-    line = isostamp.now() + " " + s
-    with LOG.open("a") as f:
-        f.write(line + "\n")
-    print(line, flush=True)
+    _log_line(s, LOG)
 
 
 def check(name: str, ok: bool, detail: str) -> None:

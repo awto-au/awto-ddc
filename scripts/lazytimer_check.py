@@ -20,7 +20,7 @@ import sys
 import time
 from pathlib import Path
 
-import isostamp
+from _log import log_line as _log_line
 
 HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE))
@@ -38,10 +38,7 @@ VEC = [0x03, 0x0B, 0x13, 0x1B, 0x23, 0x2B, 0x43]
 
 
 def say(s: str):
-    LOG.parent.mkdir(parents=True, exist_ok=True)
-    with LOG.open("a") as f:
-        f.write(isostamp.now() + " " + s + "\n")
-    print(s, flush=True)
+    _log_line(s, LOG, stamp_stdout=False)
 
 
 def build(src: bytes, name: str) -> ctypes.CDLL:

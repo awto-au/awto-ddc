@@ -21,8 +21,8 @@ import subprocess
 import sys
 from pathlib import Path
 
-import isostamp
 import sync_classes
+from _log import log_line as _log_line
 
 
 def repo_root() -> Path:
@@ -41,11 +41,7 @@ PORT_FLAG = 0x80                                     # fmt bit7: "Dn " prefix fr
 
 
 def log(s):
-    LOG.parent.mkdir(parents=True, exist_ok=True)
-    line = f"{isostamp.now()} {s}"
-    print(line, flush=True)
-    with LOG.open("a") as f:
-        f.write(line + "\n")
+    _log_line(s, LOG)
 
 
 def parse_fmt(f: str) -> int:

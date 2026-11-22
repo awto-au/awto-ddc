@@ -20,7 +20,7 @@ import os
 import sys
 from pathlib import Path
 
-import isostamp
+from _log import log_line as _log_line
 
 MAIN = Path(os.environ.get("AWTO_DDC_MAIN", "/mnt/2tb/git/awto-ddc")) / "scripts"
 sys.path.insert(0, str(MAIN))
@@ -57,11 +57,7 @@ WORST, WHERE, CUR = {}, {}, ["boot"]      # CUR[0] = the check being run (worst-
 
 
 def say(s):
-    LOG.parent.mkdir(parents=True, exist_ok=True)
-    line = isostamp.now() + " " + s
-    print(line, flush=True)
-    with LOG.open("a") as f:
-        f.write(line + "\n")
+    _log_line(s, LOG)
 
 
 def model(a0, a1, p3):

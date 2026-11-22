@@ -10,8 +10,9 @@ import argparse
 import os
 import subprocess
 import sys
-from datetime import datetime
 from pathlib import Path
+
+from _log import log_line as _log_line
 
 
 def repo_root():
@@ -34,11 +35,7 @@ T_MAKE, T_SUDO = 60, 10
 
 
 def log(msg):
-    LOG.parent.mkdir(parents=True, exist_ok=True)
-    line = f"{datetime.now().astimezone().isoformat(timespec='seconds')} {msg}"
-    print(line)
-    with LOG.open("a") as f:
-        f.write(line + "\n")
+    _log_line(msg, LOG)
 
 
 def run(cmd, timeout):

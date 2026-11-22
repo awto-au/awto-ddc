@@ -15,7 +15,7 @@ import sys
 import threading
 from pathlib import Path
 
-import isostamp
+from _log import log_line as _log_line
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import fw_gates as G
@@ -27,11 +27,7 @@ BUILD_LIMIT_S = 300      # one build 40 s cold at load 15 (2026-11-19) x 7; stal
 
 
 def log(s: str) -> None:
-    LOG.parent.mkdir(parents=True, exist_ok=True)
-    line = f"{isostamp.now()} {s}"
-    print(line, flush=True)
-    with LOG.open("a") as f:
-        f.write(line + "\n")
+    _log_line(s, LOG)
 
 
 def sibling(base: Path, mhz: int) -> Path:

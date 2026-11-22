@@ -16,7 +16,7 @@ import os
 import sys
 from pathlib import Path
 
-import isostamp
+from _log import log_line as _log_line
 
 os.environ.setdefault("AWTO_SIM_CORE", "fast")
 sys.path.insert(0, str(Path(__file__).resolve().parent))
@@ -29,11 +29,7 @@ COUNTER_SHARE = 0.5          # a cell changing in more passes than this is a fre
 
 
 def say(s: str) -> None:
-    LOG.parent.mkdir(parents=True, exist_ok=True)
-    line = f"{isostamp.now()} {s}"
-    print(line, flush=True)
-    with LOG.open("a") as f:
-        f.write(line + "\n")
+    _log_line(s, LOG)
 
 
 def main() -> int:

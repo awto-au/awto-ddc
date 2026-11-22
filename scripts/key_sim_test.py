@@ -21,7 +21,7 @@ import argparse
 import sys
 from pathlib import Path
 
-import isostamp
+from _log import log_line as _log_line
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import audio_sim as A
@@ -46,10 +46,7 @@ REPEAT_MS, RATE_MS = 500, 100                    # RL6449_Project.h AWTO_KEY_REP
 
 
 def say(s):
-    LOG.parent.mkdir(parents=True, exist_ok=True)
-    with LOG.open("a") as f:
-        f.write(isostamp.now() + " " + s + "\n")
-    print(s, flush=True)
+    _log_line(s, LOG, stamp_stdout=False)
 
 
 class Keys:

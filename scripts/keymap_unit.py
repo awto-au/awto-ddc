@@ -15,7 +15,7 @@ import sys
 import time
 from pathlib import Path
 
-import isostamp
+from _log import log_line as _log_line
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "scripts"))
@@ -33,11 +33,7 @@ SEARCH_S = 5.0                                  # auto search -> ACTIVE: HDMI se
 
 
 def say(s):
-    LOG.parent.mkdir(parents=True, exist_ok=True)
-    line = isostamp.now() + " " + s
-    with LOG.open("a") as f:
-        f.write(line + "\n")
-    print(line, flush=True)
+    _log_line(s, LOG)
 
 
 def run(*a, limit=60):

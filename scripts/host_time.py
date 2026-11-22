@@ -25,6 +25,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import i2cbus
 import kvm
+from _log import log_line as _log_line
 
 ROOT = kvm.REPO
 LOG = ROOT / "tmp/logs/host_time.log"
@@ -38,11 +39,7 @@ WRITE_GAP_S = 0.050              # after the table write (no reply), before the 
 
 
 def log(s: str) -> None:
-    LOG.parent.mkdir(parents=True, exist_ok=True)
-    line = f"{dt.datetime.now().astimezone().isoformat(timespec='seconds')} {s}"
-    print(line, flush=True)
-    with LOG.open("a") as f:
-        f.write(line + "\n")
+    _log_line(s, LOG)
 
 
 def raw(kind: str, b: bytes) -> None:

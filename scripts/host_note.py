@@ -23,7 +23,7 @@ import sys
 import time
 from pathlib import Path
 
-import isostamp
+from _log import log_line as _log_line
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import sync_log as S
@@ -40,11 +40,7 @@ NOTE_POLL_S = 0.02               # counter re-read period (an I2C read of 2 byte
 
 
 def say(s: str) -> None:
-    LOG.parent.mkdir(parents=True, exist_ok=True)
-    line = f"{isostamp.now()} {s}"
-    print(line, flush=True)
-    with LOG.open("a") as f:
-        f.write(line + "\n")
+    _log_line(s, LOG)
 
 
 def prepare(text: str, chars: int) -> tuple[bytes, bool]:

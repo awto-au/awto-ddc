@@ -18,6 +18,8 @@ import sys
 from datetime import datetime
 from pathlib import Path
 
+from _log import log_line as _log_line
+
 REPO = Path(os.environ.get("AWTO_DDC_REPO") or Path(__file__).resolve().parent.parent)
 DEST = REPO / "build-debris/images"
 INDEX = DEST / "index.tsv"
@@ -26,11 +28,7 @@ LOG = REPO / "tmp/logs/fw_archive.log"
 
 
 def log(msg: str) -> None:
-    line = f"{datetime.now().astimezone().isoformat(timespec='seconds')} {msg}"
-    print(msg)
-    LOG.parent.mkdir(parents=True, exist_ok=True)
-    with LOG.open("a") as f:
-        f.write(line + "\n")
+    _log_line(msg, LOG, stamp_stdout=False)
 
 
 def git(*a: str, cwd: Path = REPO) -> str:

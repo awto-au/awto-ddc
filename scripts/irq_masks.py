@@ -19,7 +19,7 @@ import sys
 import types
 from pathlib import Path
 
-import isostamp
+from _log import log_line as _log_line
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 ROOT = Path(__file__).resolve().parents[1]
@@ -46,10 +46,7 @@ CALLS = re.compile(r"(lcall|acall)\s+([A-Za-z_]\w*)")
 
 
 def say(s):
-    LOG.parent.mkdir(parents=True, exist_ok=True)
-    with LOG.open("a") as f:
-        f.write(isostamp.now() + " " + s + "\n")
-    print(s, flush=True)
+    _log_line(s, LOG, stamp_stdout=False)
 
 
 def clocks(tree: Path) -> dict:
