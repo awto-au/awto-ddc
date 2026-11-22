@@ -2292,7 +2292,8 @@ fn	_ScalerFlashWRDis	5	0x6a60	904
 fn	_AwtoDdrNoteWrite	5	0x6de8	176
 fn	_AwtoDdrReadWait	5	0x6e98	112
 fn	_AwtoDlBurstR	5	0x6f08	132
-fn	_ScalerFlashWREN	5	0x6f90	6844
+const	_tFlashWrenRow	5	0x6f8c	2140
+fn	_ScalerFlashWREN	5	0x77e8	1828
 fn	_UserCommonInterfaceTimerEventProc	5	0x8a4c	8
 fn	_UserCommonFlashCalculateCheckSumData	5	0x8a54	440
 fn	_UserCommonFlashErasePage	5	0x8c0c	16
@@ -2335,6 +2336,8 @@ fn	_AwtoHostNote	5	0xa810	76
 fn	_AwtoDlRead	5	0xa85c	216
 fn	_AwtoDlScan	5	0xa934	128
 fn	_AwtoSyncAt	5	0xa9b4	516
+const	_tFlashWrenFirst	5	0xabb8	164
+const	_tFlashWrenKind	5	0xac5c	84
 const	_tSD_H_COEF_128_TAPS	6	0x0000	136
 const	_tSD_SU_COEF_128_TAPS	6	0x0088	136
 const	_tSD_V_COEF_64_TAPS	6	0x0110	72
