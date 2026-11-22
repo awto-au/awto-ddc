@@ -380,6 +380,10 @@ void AwtoOsdDebugLines(void)
     BYTE ucPort, ucMode, ucPwr;
     WORD usV;                                      // 0.1 Hz
 
+    if(g_ucAwtoConStep != 0)
+    {
+        return;                        // the stepped open draws this panel
+    }
     if(s_ucConOpen == 0)
     {
         AwtoDiagConsole(1);            // an SDK-triggered debug pop-up opens the console (which draws this panel)
