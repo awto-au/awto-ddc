@@ -235,6 +235,9 @@
 | 114 | ssc | Service | Spread spectrum - dot-clock spread range [sdk-value] | 0..15; def 0 | 0 |  |  | SDK field | SYS.ucSSC |
 | 115 | panel_hours | Service | Panel hours - backlight-on time; stored with the next other write, never alone (awto-ddc#151) | 0..32767; def 0 | 34 |  |  | SDK field | TIME.usHour |
 | 116 | panel_min | Service | Panel minutes | 0..59; def 0 | 29 |  |  | SDK field | TIME.ucMin |
+| 134 | hdmi_ratio_mem | Signal | HDMI ratio memory - scan starts at the last working ratio (awto-ddc#286) | 0..1; def 1 | on |  |  | AUX item 0x40-0x43 |  |
+| 135 | hdmi_ratio_d2 | Service | D2 at 1:40 - written by the firmware when the mode changed (awto-ddc#286) | 0..1; def 0 | off |  |  | AUX item 0x40-0x43 |  |
+| 136 | hdmi_ratio_d3 | Service | D3 at 1:40 - as D2 | 0..1; def 0 | off |  |  | AUX item 0x40-0x43 |  |
 
 ## Registry rows without nv (not stored)
 
