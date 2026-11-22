@@ -16,6 +16,8 @@ from pathlib import Path
 import isostamp
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
+import itertools
+
 import fw_sim as S
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -93,7 +95,7 @@ def main() -> int:
         used += 1_000_000
     xs = [i for i, (k, _) in enumerate(st["seq"]) if k == "X"]
     win, dly = [], []
-    for i, j in zip(xs, xs[1:]):
+    for i, j in itertools.pairwise(xs):
         t0, t1 = st["seq"][i][1], st["seq"][j][1]
         loops_between = sum(1 for k, _ in st["seq"][i + 1 : j] if k == "L")
         if loops_between == 25:
