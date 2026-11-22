@@ -20,10 +20,10 @@ import isostamp
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import i2cbus
+from _repo import ROOT
 from p037_test import rd, wr
 from rtd_i2c_bridge import Real
 
-ROOT = Path(__file__).resolve().parent.parent
 PG = {"A": (0x8E, 0x8F), "B": (0xCE, 0xCF)}
 SETTLE_S = 0.2
 RD_TAPS = [0xB8, 0xBC, 0xC8, 0xCC, 0xD8, 0xDC, 0xE8, 0xEC]  # slice0/1 SET0/1 base, 4 bytes each (rise/fall DQ[3:0]..)

@@ -24,8 +24,8 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 import dbg_xdata as X
 import i2cbus
 import rtd_i2c_bridge as B
+from _repo import ROOT
 
-ROOT = Path(__file__).resolve().parent.parent
 OFF_S = 8                    # power_cycle.py OFF_S: PSU hold-up ~6 s measured (#27) x1.25
 LIMIT_S = 15.0               # boot to ACTIVE was 5.7 s in the sim (docs/delays.md) + host modeset; x~2.5 (cold, HDMI retrain)
 POLL_S = 0.010

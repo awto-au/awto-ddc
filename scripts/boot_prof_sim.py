@@ -16,8 +16,8 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 import osd_render as R
 import sw_timeline as T
 import sync_log as S
+from _repo import ROOT
 
-ROOT = Path(__file__).resolve().parents[1]
 LOG = ROOT / "tmp/logs/boot_prof_sim.log"
 STEP = 100_000                  # instructions per poll
 BUDGET_INSTR = 400_000_000      # 4K boot with the fetch model ~150 M; expiry = FAIL

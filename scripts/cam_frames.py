@@ -53,7 +53,8 @@ SLEEP_HOLD_S = 3.0       # DDC/CI sleep held this long before wake: the panel ha
 START_TRIES = 4          # the camera sometimes answers a spurious RTSP 401: retry
 START_WAIT_S = 12.0       # first byte in the clip or the try is dropped (RTSP setup measured 1-5 s, 12 s when other clients load the camera)
 
-ROOT = Path(os.environ.get("AWTO_DDC_REPO") or Path(__file__).resolve().parent.parent)
+from _repo import ROOT
+
 LOG = ROOT / "tmp" / "logs" / "cam_frames.log"
 
 

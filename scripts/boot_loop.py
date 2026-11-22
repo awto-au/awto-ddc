@@ -9,7 +9,6 @@ usage: boot_loop.py [--unit 3] [--boots N] [--tag T]
 from __future__ import annotations
 
 import argparse
-import os
 import subprocess
 import sys
 import time
@@ -17,8 +16,8 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from _log import log_line as _log_line
+from _repo import ROOT
 
-ROOT = Path(os.environ.get("AWTO_DDC_REPO") or Path(__file__).resolve().parent.parent)
 LOG = ROOT / "tmp/logs/boot_loop.log"
 DIR = ROOT / "tmp/logs/boot_loop"
 # Verdict wait: the firmware reports ACTIVE ~1.3 s after the reset (sync log) and the no-signal verdict at 4.3 s (SEARCH timeout): 4.3 s x 1.25 + link up time ~ 7 s; expiry = UNKNOWN

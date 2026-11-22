@@ -8,7 +8,6 @@ usage: bank_test.py [--common 0x4000]      honours AWTO_SDCCCALL / AWTO_SDCC_BE 
   needs < 0.3M (uart polls), ucsim ~9M instr/s, so a hang costs < 1 s. Subprocess timeouts are backstops (30 s).
 Log: tmp/logs/bank_test.log; scratch tmp/banktest/
 """
-import os
 import re
 import shutil
 import subprocess
@@ -19,8 +18,8 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 import fw_build
 import sdcc_link
 import sdcc_tools as T
+from _repo import ROOT
 
-ROOT = Path(os.environ.get("AWTO_DDC_REPO") or Path(__file__).resolve().parent.parent)
 SRC = ROOT / "fw/simtests/banked"
 RT = ROOT / "fw/simtests/_rt"
 W = ROOT / "tmp/banktest"

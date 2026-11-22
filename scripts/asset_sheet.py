@@ -26,8 +26,8 @@ HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE))
 import font_compare as FC
 import glyph_decode as GD
+from _repo import ROOT
 
-ROOT = HERE.parent
 LOG = ROOT / "tmp/logs/asset_sheet.log"
 SDK = ROOT / "tmp/sdcc-port/src/User"
 BLOB_FILES = [

@@ -14,12 +14,11 @@ import os
 import re
 import sys
 import time
-from pathlib import Path
 
 from _log import log_line as _log_line
+from _repo import ROOT
 from ddcutil_run import ddc as _ddc
 
-ROOT = Path(os.environ.get("AWTO_DDC_REPO") or Path(__file__).resolve().parent.parent)
 LOG = ROOT / "tmp/logs/alert.log"
 VCP_SAVER = 0xEB
 VCP_ALERT = 6                   # screensaver_now option "Alert tone" (registry row 121)

@@ -26,7 +26,8 @@ from pathlib import Path
 from _log import log_line as _log_line
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-ROOT = Path(__file__).resolve().parents[1]
+from _repo import ROOT
+
 TSV = ROOT / "docs/delay-audit.tsv"
 VARIANT_TSV = {"hwtest": ROOT / "docs/delay-audit-hwtest.tsv"}   # sites only in that variant's image (-D _AWTO_OSD_HWTEST test ops); same columns + verdict rule
 LOG = ROOT / "tmp/logs/delay_audit.log"

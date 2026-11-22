@@ -20,8 +20,8 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import con_wrap_sim as C
 import sync_log as SL
+from _repo import ROOT
 
-ROOT = Path(__file__).resolve().parents[1]
 C.LOG = ROOT / "tmp/logs/con_keep_sim.log"
 MARK = 0x01
 BEGIN, K_SWITCH = 0xC0, 2

@@ -1,13 +1,12 @@
 #!/usr/bin/env python3
 """Sleep/wake the monitors on GNOME screen-lock/idle (org.gnome.ScreenSaver ActiveChanged)."""
 import logging
-import os
 import re
 import subprocess
 import sys
-from pathlib import Path
 
-REPO = Path(os.environ.get("AWTO_DDC_REPO") or Path(__file__).resolve().parent.parent)
+from _repo import ROOT as REPO
+
 CTL = REPO / "scripts" / "ddc_ctl.py"
 LOG = REPO / "tmp" / "logs" / "ddc_idle.log"
 

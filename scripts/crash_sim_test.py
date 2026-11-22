@@ -24,8 +24,8 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 import osd_render as R
 import osd_test as T
 import rtd_crash as C
+from _repo import ROOT
 
-ROOT = Path(__file__).resolve().parents[1]
 LOG = ROOT / "tmp/logs/crash_sim_test.log"
 HEADER = Path("/mnt/2tb/git/awto-ddc-wdt2/fw/overlay/Project/Header/RL6449_Project.h")
 TOL_MS = 5                 # reset time vs the counter arithmetic: model resolution 0.2 ms + one 4.6 ms latch unit

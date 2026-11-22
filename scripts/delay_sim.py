@@ -27,8 +27,8 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 import delay_cal_check as D
 import fw_link_check as L
 import panel_sim as P
+from _repo import ROOT
 
-ROOT = Path(__file__).resolve().parents[1]
 LOG = ROOT / "tmp/logs/delay_sim.log"
 # Timer2 reload is a compile-time integer count of f_cpu / 12 / 1000: rounding is <= 0.01 %; 0.5 % = the sweep's tick limit (clk_sweep.py)
 TICK_TOL = 0.005

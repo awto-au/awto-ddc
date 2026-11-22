@@ -2,7 +2,6 @@
 """DDC/CI control of the identical JXC monitors via ddcutil. See docs/ddc-control.md."""
 import argparse
 import logging
-import os
 import re
 import subprocess
 import sys
@@ -11,8 +10,8 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import i2cbus
+from _repo import ROOT as REPO
 
-REPO = Path(os.environ.get("AWTO_DDC_REPO") or Path(__file__).resolve().parent.parent)
 LOG = REPO / "tmp" / "logs" / "ddc_ctl.log"
 
 # Waits for one ddcutil call. Measured 2026-11-04: typical 0.1-0.4 s, worst 1.37 s (getvcp just after power change).

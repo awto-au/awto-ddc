@@ -10,12 +10,11 @@ Scaler registers are XDATA at (page<<8)|reg; names from re/regdb/RTD2795T-CG.tsv
 """
 import csv
 import gzip
-import os
 import sys
 from dataclasses import dataclass
 from pathlib import Path
 
-REPO = Path(os.environ.get("AWTO_DDC_REPO") or Path(__file__).resolve().parent.parent)
+from _repo import ROOT as REPO
 
 SFR = {0x80: "P0", 0x81: "SP", 0x82: "DPL", 0x83: "DPH", 0x87: "PCON", 0x88: "TCON", 0x89: "TMOD", 0x8A: "TL0",
        0x8B: "TL1", 0x8C: "TH0", 0x8D: "TH1", 0x90: "P1", 0x98: "SCON", 0x99: "SBUF", 0xA0: "P2", 0xA8: "IE",

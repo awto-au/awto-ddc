@@ -13,7 +13,8 @@ import sys
 import time
 from pathlib import Path
 
-ROOT = Path(os.environ.get("AWTO_DDC_REPO") or Path(__file__).resolve().parent.parent)
+from _repo import ROOT
+
 LOGD = ROOT / "tmp" / "logs"
 LOGD.mkdir(parents=True, exist_ok=True)
 LOG = (LOGD / "dp_aux_probe.log").open("a")

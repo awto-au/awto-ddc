@@ -21,9 +21,9 @@ import numpy as np
 import osd_model as M
 import osd_render as R
 import osd_test as T
+from _repo import ROOT
 from PIL import Image, ImageDraw
 
-ROOT = Path(__file__).resolve().parents[1]
 LOG = ROOT / "tmp/logs/card_shot.log"
 CLEAR, K_UP, K_DOWN, K_MENU, K_AUTO, K_SOURCE, CON_CLOSE = 0x27, 0x02, 0x03, 0x04, 0x01, 0x05, 0x44
 # name -> test command bytes; selector steps chain (no clear between them). 0x17 = OSD event 7, the no-signal way in: it also

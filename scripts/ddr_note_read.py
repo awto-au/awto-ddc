@@ -16,7 +16,8 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
-ROOT = Path(__file__).resolve().parents[1]
+from _repo import ROOT
+
 HDR = ROOT / "fw/sdk/Project/Header/RL6449_Project.h"
 POLL_S = 0.5                    # CMD idle / read flag: the burst takes ~64 us on the MCU, one I2C poll ~1 ms: 0.5 s = 500x, expiry = error
 

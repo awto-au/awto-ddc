@@ -9,15 +9,14 @@ usage: dead_code_maps.py [--serial AWT26110003] [--skip-build]
 Log: ./tmp/logs/dead_code_maps.log (each build: tmp/logs/dead_code_maps.<tag>.out)
 """
 import argparse
-import os
 import shutil
 import subprocess
 import sys
 from pathlib import Path
 
 from _log import log_line as _log_line
+from _repo import ROOT
 
-ROOT = Path(os.environ.get("AWTO_DDC_REPO") or Path(__file__).resolve().parents[1])
 LOG = ROOT / "tmp/logs/dead_code_maps.log"
 DC = ROOT / "tmp/dc"
 VARIANTS = {                                           # map name -> -D defines

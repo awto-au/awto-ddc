@@ -13,7 +13,6 @@ from __future__ import annotations
 
 import argparse
 import json
-import os
 import re
 import subprocess
 import sys
@@ -24,8 +23,8 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import isostamp
 import unit_lock
+from _repo import ROOT
 
-ROOT = Path(os.environ.get("AWTO_DDC_REPO") or Path(__file__).resolve().parent.parent)
 LOG = ROOT / "tmp/logs/bl_sweep.log"
 TSV = ROOT / "tmp/logs/bl_sweep.tsv"
 HEADER = ROOT / "fw/sdk/Project/Header/RL6449_Project.h"

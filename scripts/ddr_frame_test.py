@@ -24,10 +24,10 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 import i2cbus
 import isostamp
 from _log import log_line as _log_line
+from _repo import ROOT
 from dbg_xdata import BEHIND_PAGES, DEV8, read_bytes, read_chunk
 from rtd_i2c_bridge import Real
 
-ROOT = Path(__file__).resolve().parent.parent
 LOG = ROOT / "tmp/logs/ddr_frame_test.log"
 RAW = ROOT / "tmp/logs/ddr_frame_test.raw.log"
 SERIALS = {1: "AWT26110001", 2: "AWT26110002", 3: "AWT26110003"}   # units released for tests (2026-11-20)

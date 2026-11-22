@@ -22,8 +22,8 @@ from _log import log_line as _log_line
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import fw_sim as S
 import sync_log as SL
+from _repo import ROOT
 
-ROOT = Path(__file__).resolve().parents[1]
 LOG = ROOT / "tmp/logs/cec_sim.log"
 CR0, RXCR0_1, RXCR0_2, RTCR0_RSV_1 = 0x18A0, 0x18B0, 0x18B1, 0x18B2          # P18_A0 / B0 / B1 / B2
 TXCR0_1, TXCR0_2, TXDR0, TXDR1, RXDR1 = 0x18B4, 0x18B5, 0x18B9, 0x18C0, 0x18D3

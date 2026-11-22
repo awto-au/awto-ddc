@@ -26,9 +26,9 @@ import osd_model as M
 import osd_render as R
 import rtd_crash as C
 import sync_log as S
+from _repo import ROOT
 from PIL import Image
 
-ROOT = Path(__file__).resolve().parents[1]
 LOG = ROOT / "tmp/logs/boot_sim.log"
 def _con_int(name: str) -> int:
     m = re.search(rf"^#define {name}\s+(\d+)", (ROOT / "fw/osd/console.c").read_text(), re.MULTILINE)

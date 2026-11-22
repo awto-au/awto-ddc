@@ -14,7 +14,6 @@ usage: branch_prune.py [--apply] [--contained-only] [--worktrees] [--keep NAME .
 Log: ./tmp/logs/branch_prune.log
 """
 import argparse
-import os
 import shutil
 import subprocess
 import sys
@@ -22,8 +21,8 @@ from datetime import datetime
 from pathlib import Path
 
 from _log import log_line as _log_line
+from _repo import ROOT as REPO
 
-REPO = Path(os.environ.get("AWTO_DDC_REPO") or Path(__file__).resolve().parent.parent)
 GH = "/mnt/2tb/git/awto-dan/scripts/gh_claudia.py"
 LOG = REPO / "tmp/logs/branch_prune.log"
 ALWAYS = {"main", "wb-p14ui", "working-base"}

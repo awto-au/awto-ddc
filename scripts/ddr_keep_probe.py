@@ -17,8 +17,8 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import ddr_addr_test as A
+from _repo import ROOT
 
-ROOT = Path(__file__).resolve().parents[1]
 SEED_FILE = ROOT / "tmp/scratch/ddr_keep.seed"
 DDR_UNITS = 1 << 22                                   # address wrap: 2^22 units of 8 B = 32 MiB (docs/ddr-draw.md, #267)
 BLOCK_UNITS = A.BLOCK_BURSTS * A.BURST_UNITS

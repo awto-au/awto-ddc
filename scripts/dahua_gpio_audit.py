@@ -17,7 +17,8 @@ import sys
 from collections import defaultdict
 from pathlib import Path
 
-ROOT = Path(os.environ.get("AWTO_DDC_REPO") or Path(__file__).resolve().parent.parent)
+from _repo import ROOT
+
 SRC = Path("/mnt/2tb/vendors/realtek/analysis/jxc-4k")
 BANKS = SRC.parent / "banks"
 KEYS = Path(os.environ.get("AWTO_DDC_KEYS_REPO", "/mnt/2tb/git/awto-ddc-keys"))

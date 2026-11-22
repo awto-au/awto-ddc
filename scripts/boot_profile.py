@@ -21,8 +21,8 @@ import dbg_xdata as X
 import i2cbus
 import loop_prof as L
 import rtd_i2c_bridge as B
+from _repo import ROOT
 
-ROOT = Path(__file__).resolve().parents[1]
 LOG = ROOT / "tmp/logs/boot_profile.log"
 WAIT_S = 5.0
 POLL_S = 0.5

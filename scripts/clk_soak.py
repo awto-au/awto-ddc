@@ -12,7 +12,6 @@ from __future__ import annotations
 
 import argparse
 import copy
-import os
 import sys
 import time
 import zlib
@@ -22,8 +21,8 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 import clk_sweep as C
 import isostamp
 import osd_hw_test as H
+from _repo import ROOT
 
-ROOT = Path(os.environ.get("AWTO_DDC_REPO") or Path(__file__).resolve().parent.parent)
 LOG = ROOT / "tmp/logs/clk_soak.log"
 TSV = ROOT / "tmp/logs/clk_soak.tsv"
 SAVERS = (4, 8, 2)                         # Scope 2, Asteroids, Pac-Man (VCP 0xEB values)

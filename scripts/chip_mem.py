@@ -1,9 +1,8 @@
 """RL6449 memory map from fw/rl6449_memory.toml (#149 a): the one source for bank / XDATA / IRAM facts in the build scripts."""
-import os
 import tomllib
-from pathlib import Path
 
-ROOT = Path(os.environ.get("AWTO_DDC_REPO") or Path(__file__).resolve().parents[1])
+from _repo import ROOT
+
 FILE = ROOT / "fw/rl6449_memory.toml"
 _M = tomllib.loads(FILE.read_text())
 

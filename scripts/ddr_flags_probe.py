@@ -13,10 +13,10 @@ import isostamp
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import i2cbus
+from _repo import ROOT
 from p037_test import rd, wr
 from rtd_i2c_bridge import Real
 
-ROOT = Path(__file__).resolve().parent.parent
 f2 = lambda v: "--" if v is None else format(v, "02x")
 # page-relative: VALID_WIN_DET_0, SLIC0/1 (04..0B), INT_STATUS0_0, INT_STATUS1 SET0/1 (f1..f7), INT_STATUS3 (02/03/06/07 of page+1)
 FLAGS = [0x14, 0x88, 0x8a, 0x03] + list(range(0x04, 0x0C)) + [0xEF] + list(range(0xF1, 0xF8))

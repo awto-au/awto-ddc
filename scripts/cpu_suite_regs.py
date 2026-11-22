@@ -14,15 +14,14 @@ usage: cpu_suite_regs.py [--check]
 from __future__ import annotations
 
 import csv
-import os
 import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import dbg_xdata as X
 import reg_live_scan as L
+from _repo import ROOT
 
-ROOT = Path(os.environ.get("AWTO_DDC_REPO") or Path(__file__).resolve().parent.parent)
 OUT = ROOT / "fw/test/cpu_suite_regs.inc"
 MIN_OBS = 10                    # observations a constant must hold over (live reads on 3 units, several states)
 MIN_OBS_WR = 20

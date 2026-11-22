@@ -16,8 +16,8 @@ import time
 from pathlib import Path
 
 from _log import log_line as _log_line
+from _repo import ROOT
 
-ROOT = Path(__file__).resolve().parents[1]
 LOG = ROOT / "tmp/logs/boot_variance.log"
 BUS, SERIAL = 11, "AWT26110002"          # unit 2 (devices.json)
 BOOT_WAIT_S = 6.0

@@ -24,9 +24,9 @@ import osd_model as M
 import osd_render as R
 import sync_classes
 import sync_log as SL
+from _repo import ROOT
 from PIL import Image, ImageDraw
 
-ROOT = Path(__file__).resolve().parents[1]
 LOG = ROOT / "tmp/logs/con_colours_sim.log"
 # (id, arg, value): one or two rows of every class, from fw/awto/sync.tsv
 SAMPLES = (

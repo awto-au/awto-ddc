@@ -15,15 +15,14 @@ Output: re/jxc-4k/reg_audit.tsv, reg_audit_resolved.tsv (site, address, via), re
 import argparse
 import csv
 import gzip
-import os
 import sys
 from collections import Counter, defaultdict
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import dahua_dptr_flow as DF
+from _repo import ROOT
 
-ROOT = Path(os.environ.get("AWTO_DDC_REPO") or Path(__file__).resolve().parent.parent)
 SRC = Path("/mnt/2tb/vendors/realtek/analysis/jxc-4k")
 DBF = ROOT / "re" / "regdb" / "RTD2795T-CG.tsv.gz"
 LOG = ROOT / "tmp" / "logs" / "dahua_reg_audit.log"

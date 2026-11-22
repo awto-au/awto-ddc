@@ -20,8 +20,8 @@ from pathlib import Path
 os.environ.setdefault("AWTO_SIM_CORE", "fast")
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from _log import log_line as _log_line
+from _repo import ROOT
 
-ROOT = Path(os.environ.get("AWTO_DDC_REPO") or Path(__file__).resolve().parent.parent)
 LOG = ROOT / "tmp/logs/asteroids_res.log"
 TSV = ROOT / "tmp/logs/asteroids_res.tsv"
 OUT = ROOT / "tmp/asteroids_res"

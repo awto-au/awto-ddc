@@ -8,15 +8,14 @@ usage: ddc_probe.py BUS --serial S [--secs 3] [--vcp 0x10] [--cycle]
 Log: ./tmp/logs/ddc_probe.log
 """
 import argparse
-import os
 import subprocess
 import sys
 import time
 from pathlib import Path
 
 import isostamp
+from _repo import ROOT
 
-ROOT = Path(os.environ.get("AWTO_DDC_REPO") or Path(__file__).resolve().parent.parent)
 LOG = ROOT / "tmp/logs/ddc_probe.log"
 OFF_S = 4.0             # DPM off: panel off sequence + T6 + settle (boot_prof.py OFF_S)
 CALL_S = 2.0            # ddcutil with --noretry answers or fails inside ~0.1 s; 2 s = hung call, killed and counted as a failure

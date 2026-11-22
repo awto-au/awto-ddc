@@ -10,7 +10,6 @@ usage: cpu_suite.py --sim [--clocks 87,175,350] [--bin F --map F] [--cases NAME,
 from __future__ import annotations
 
 import argparse
-import os
 import sys
 import time
 from dataclasses import dataclass, field
@@ -19,8 +18,8 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import isostamp
 from _log import log_line as _log_line
+from _repo import ROOT
 
-ROOT = Path(os.environ.get("AWTO_DDC_REPO") or Path(__file__).resolve().parent.parent)
 LOG = ROOT / "tmp/logs/cpu_suite.log"
 TSV = ROOT / "tmp/logs/cpu_suite.tsv"
 

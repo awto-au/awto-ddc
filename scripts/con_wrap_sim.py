@@ -28,8 +28,8 @@ import osd_model as M
 import osd_render as R
 import osd_test as T
 import sync_log as SL
+from _repo import ROOT
 
-ROOT = Path(__file__).resolve().parents[1]
 LOG = ROOT / "tmp/logs/con_wrap_sim.log"
 LOG_COL = 1            # fw/osd/console.c AWTO_LOG_COL (main page)
 TXT0 = 11              # text column (fw/osd/console.c AWTO_LOG_TXT0): continuation rows start here; checked against the tree below

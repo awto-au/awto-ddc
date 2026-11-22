@@ -21,8 +21,8 @@ import dbg_link as L
 import dbg_xdata as X
 import i2cbus
 import rtd_i2c_bridge as B
+from _repo import ROOT
 
-ROOT = Path(__file__).resolve().parent.parent
 LOG = ROOT / "tmp" / "logs" / "con_blank_probe.log"
 SETTLE_S = 6.0        # power-up -> ACTIVE 1.8 s on m4 (sync log 2026-11-12) + console redraw; x3 margin; then dump
 AFTER_S = 1.0         # test cmd consumed in < 10 ms (health osd test cmd); 1 s covers the main-loop pass + redraw

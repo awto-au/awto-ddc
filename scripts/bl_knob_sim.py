@@ -17,8 +17,8 @@ from _log import log_line as _log_line
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import panel_sim as P
+from _repo import ROOT
 
-ROOT = Path(__file__).resolve().parents[1]
 LOG = ROOT / "tmp/logs/bl_knob_sim.log"
 KNOB_ADDR, MAGIC, SEED = 0xF697, 0x4C, 0xB5          # RL6449_Project.h AWTO_BLK_*
 SLACK_MS = 30           # main-loop pass (the machine steps once per pass) after the due time; sim worst ~25 ms

@@ -18,8 +18,8 @@ import time
 from pathlib import Path
 
 from _log import log_line as _log_line
+from _repo import ROOT
 
-ROOT = Path(os.environ.get("AWTO_DDC_REPO") or Path(__file__).resolve().parent.parent)
 LOG = ROOT / "tmp/logs/boot_prof.log"
 POWER_ACTIONS = ["OFF_TO_NORMAL", "OFF_TO_FAKE_OFF", "AC_ON_TO_NORMAL", "AC_ON_TO_OFF", "AC_ON_INITIAL", "PS_TO_NORMAL", "PS_TO_OFF",
                  "NORMAL_TO_PS", "NORMAL_TO_OFF", "NORMAL_TO_FAKE_OFF", "SWITCH_INTERFACE_TO_OFF", "NORMAL_TO_FAKE_PS",

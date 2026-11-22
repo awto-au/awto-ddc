@@ -17,9 +17,9 @@ import shutil
 import subprocess
 import sys
 import time
-from pathlib import Path
 
-ROOT = Path(__file__).resolve().parents[1]
+from _repo import ROOT
+
 LOGDIR = ROOT / "tmp/logs"
 # One cec-ctl call: waits up to 1 s for the reply (its default) after up to 5 transmit attempts of ~50 ms; slowest observed
 # case is a NACKed poll with retries, about 2 s. 5 s = 2.5x; on expiry the row fails and the raw log says which call.

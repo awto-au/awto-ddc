@@ -14,7 +14,6 @@ from __future__ import annotations
 
 import argparse
 import copy
-import os
 import subprocess
 import sys
 import time
@@ -24,8 +23,8 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 import isostamp
 import osd_hw_test as H
 from _log import log_line as _log_line
+from _repo import ROOT
 
-ROOT = Path(os.environ.get("AWTO_DDC_REPO") or Path(__file__).resolve().parent.parent)
 LOG = ROOT / "tmp/logs/ddr_clk_sweep.log"
 TSV = ROOT / "tmp/logs/ddr_clk_sweep.tsv"
 
