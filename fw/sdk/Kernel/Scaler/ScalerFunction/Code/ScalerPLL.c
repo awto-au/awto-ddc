@@ -1927,18 +1927,10 @@ void ScalerDPLLFineTuneFrameSyncLineBuffer(void)
     else
 #endif
     {
-        ScalerTimerWaitForEvent(_EVENT_IVS);
-
-        ulDisplayActiveRegion = ScalerMDomainGetDisplayActiveRegion();
-
-#if(_AIO_MODERN_STANDBY_SUPPORT == _ON)
-        SET_MDOMAIN_D_ACTIVE_REGIOM_BACKUP(ulDisplayActiveRegion);
-#endif
-
-        g_ulInputActiveRegionBackUp = ScalerMeasureGetInputRegionCountResult(_NOT_WAIT);
+        // The display count measured here was overwritten in the loop below: only the input count is popped (2 IVS).
+        g_ulInputActiveRegionBackUp = ScalerMeasureGetInputRegionCountResult(_WAIT);
 
         DebugMessageFS("InputRegionCount", g_ulInputActiveRegionBackUp);
-        DebugMessageFS("DisplayRegionCount", ulDisplayActiveRegion);
     }
 
     if(ScalerGetBit(P0_23_SCALE_DOWN_CTRL_M1, _BIT0) == _BIT0)
