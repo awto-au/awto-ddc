@@ -102,7 +102,9 @@ def parse(text: str) -> dict:
         if t.startswith("sync FAILED"):
             r["active"] = "FAILED"
         if t.startswith("sync link"):
-            r["link"] = "ok" if "errors 0/0/0" in t else "ERR"
+            r["link"] = (
+                "ok" if ("errors 0/0/0" in t or "symbol lock 4/4" in t) else "ERR"
+            )
         mm = re.match(r"slow pass stage (.*) took (\d+)ms in (\w[\w ]*?) \(#", t)
         if mm and int(mm.group(2)) >= 40:
             slow.append(f"{mm.group(3)}/{mm.group(1)}={mm.group(2)}")
