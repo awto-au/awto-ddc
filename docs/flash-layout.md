@@ -15,7 +15,7 @@ Goal: a small source edit rewrites few 4 KiB flash sectors (I2C flashing ~1.7-2.
   - fits its slot: same address, bytes only change if the code changed
   - grown: extends into free space after its slot; else best-fit hole in its bank; else another bank (re-home,
     logged "pass A"); a fragmented bank is compacted (only that bank)
-  - new: bank where its module already lives; stub: next free 9 B in common
+  - new: bank where its module already lives; stub: next free 8 B in common
   - gone: slot becomes a hole
 - Order within a region at creation: consts, then module, then name (not size).
 - Creation (no/empty file): legacy packing with a per-bank fill limit (start 0.80, +0.01 until it fits), then slots.
@@ -36,7 +36,8 @@ Goal: a small source edit rewrites few 4 KiB flash sectors (I2C flashing ~1.7-2.
   data bank; stability comes from fixed slots.
 - XDATA/IRAM layout is still linker order: an edit that adds/removes a global variable shifts later variables and
   rewrites every code sector that addresses them (not covered here).
-- Common holds ~1050 stubs x 9 B; common edits cost one sector write per bank.
+- Common holds ~1100 stubs x 8 B (`STUB_SIZE`: mov r0,#bank 2 + mov dptr,#fn 3 + ljmp 3); common edits cost one sector write per bank.
+- Bank 14 (0xE0000) is the 15th code bank (`fw/rl6449_memory.toml` code_banks 15): its own 0x5000 common copy + 44 KiB banked; image 240 sectors once it holds code.
 
 ## Measured (2026-11-06, base 9be09d6 + this change, unit-3 build, BE compiler)
 Image sectors (4 KiB) changed by one small edit vs its own unedited build (`flash_layout_measure.py`; legacy image
@@ -54,3 +55,23 @@ Image sectors (4 KiB) changed by one small edit vs its own unedited build (`flas
 - Creation fill: 0.89 per bank for banks 0-9; banks 10-13 hold the rest (4-30 KiB free each).
 - fw_stack total: 100 B sticky vs 104 B legacy (limit 128). Warning gate passes.
 - ucsim smoke (`fw_sim.py`): sticky and legacy images stall at the same place (boot stage 4).
+
+## Common region (metric, numbers only; `./dev.py stats`, `tmp/fw/<stem>.gates.json` "common", `scripts/common_metrics.py`)
+- Common = [0, 0x5000) = 20480 B, copied into every bank image. Code lives there because it is always mapped: ISRs, timer / wait primitives, anything called from many banks, and the 8-byte cross-bank stubs.
+- Measured 2026-11-23, main 97417f31, unit-3 image, linker map + `fw/bank_layout.tsv`:
+
+| item | bytes | count |
+|---|---|---|
+| areas used / free (plain sum of the linked areas) | 17585 / 2895 | |
+| slots used / free (what fails the link) | 20420 / 60 | |
+| stubs (area sum; slots identical, 8 B each) | 8856 | 1107 |
+| function + const chunks (area sum) | 6598 | 127 |
+| chunk slots (size + 4 + size/32) | 8208 | 127 |
+| residual areas (area sum) | 2131 | |
+| residual reserved (`#resid_end`) | 3356 | |
+| of which CSEG at 0x135 | 1786 | |
+
+- Free reconciliation: 2895 = chunk slot padding 1610 + residual reserve not linked 1225 + slot free 60.
+- CSEG = runtime library, not our code: `__gptrget/put` (+ `_isr` clones), `awto_bank` trampoline (`__bs_call`, `__bs_ret`, return table), `___sdcc_external_startup`, `__div/mod/mul` (int, long), `memcpy`, `memset`, `abs`. Rest of residual: GSINIT* 170, XINIT 96, HOME 56, vectors 20, SSEG 128 (IRAM, not code).
+- Top chunks: ScalerMDomainDHVtotalFinetune 645, ScalerMDomainDHtotalFinetune 520, AwtoDbgIsrCmd_EXINT1 471, AwtoWaitLog 361, ScalerTimerWaitForEvent 323, UserCommonNVRamGetSystemData 308, ScalerTimerPollingFlagProc 281, SysTimerIntProc2 233, AwtoWdtPoke 229, ScalerTimerDelayXms 213.
+- Stub = one per banked function called from another bank / common or address-taken (not per call site): moving a function between banks changes the stub count of its callers.
