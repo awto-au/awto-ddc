@@ -118,7 +118,7 @@ Inventory (`SysInt.c`, `SysTimer.c`, `fw/diag/dbgisr.c`; cycles [measured: `cloc
 | EXINT0 DP AUX judge (`DP_INT.c:61`) | manual-mode defer, flag clear | entry 5.5-10.7 us + ~3 line fills | yes: AUX reply deadline 300 us (spec), ~400 us source timeout | no |
 | EXINT0 DP training (`DPRx1_INT_SeptPhy.c:2030`, TP1/TP2 check, `Tp1SetPhy` 260 us, `Tp2SetPhy` 710 us, 85/150/300 us waits) | CR / EQ lock, lane status 0x202-0x204 | up to ~1 ms | yes: source reads lane status 100 us (CR) / 400 us (EQ) after the TP write | PHY tuning beyond the status write: no |
 | EXINT0 DP sink status, 0x600 power, HDCP KSV, MST auto switch, audio freq, VB-ID | state flags, DPCD copies | us-scale each | status write: yes | KSV fifo, MST switch, audio, hot-plug events: yes |
-| EXINT0 TMDS `SetPhy_EXINT0` / FLD | PHY / CDR set-up | **5545 us per call** (blind steps) | no hard us deadline [guess] | yes: biggest diet item; also causes Timer2 tick loss >= ~1 ms (#197) |
+| EXINT0 TMDS `SetPhy_EXINT0` / FLD | PHY / CDR set-up | **2645 us per call** (blind steps; was 5545 with the dropped RLE0638 block, #331) | no hard us deadline [guess] | yes: biggest diet item; also causes Timer2 tick loss >= ~1 ms (#197) |
 | EXINT0 CEC | RX frame into struct | ~300 instr / frame | yes (bit timing) | decode already in a pass |
 | EXINT1 DDC/CI + debug slave (`dbgisr.c`) | I2C slave byte, 2 x 30 us tail, SDK DDC detect 300 us debounce | tens of us per byte | byte handling: yes | DDC/CI command execution: already in a pass |
 | Timer2 | 1 ms counter, flag | 173 mc = 2.0 us at 350.8 | yes | no |

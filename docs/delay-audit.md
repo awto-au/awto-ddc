@@ -78,7 +78,7 @@
   - Design (not built): poll the AUX-done bit (`P9D_B1` bit 5) from the start of each try at 5 us steps and keep the 525 us bound (400 + 25 x 5, the DP AUX reply timeout of 400 us + margin); the blind 400 us goes away, a try ends when the sink replies (typically ~100..200 us). Retry count 7 unchanged (HW retry semantics). Worst case unchanged, typical call about 3x shorter.
   - Test plan: unit 2 DP-1 / unit 3 DP-4 link training + DPCD reads 20 x, eDP panel link up at boot (DPTx is the panel side: 10 boots), compare `AwtoWaitLog` durations.
 - Flash sector erase (`ScalerFlashErasePage`): the MCU halts until the flash finishes; capped at the flash datasheet worst case, not shortened by software.
-- Interrupt-masked sections: a function that clears EX0 or EA gets the ISR cap (100 us); PhySetDeferred (EX0 masked) is allowed 5545 us by row until the tmds-phy work shortens it.
+- Interrupt-masked sections: a function that clears EX0 or EA gets the ISR cap (100 us); PhySetDeferred (EX0 masked) is allowed 2645 us by row until the tmds-phy work shortens it.
 
 ## Run
 - Gate: `scripts/fw_gates.py <stem> --only delays` (about 55 s with both images): panel_sim scenario (cold boot, POWER off / on, signal loss, power saving = IOSC, wake) at the image's clock, class A wall time vs argument, Timer2 / wall, every executed loop site >= 99 % of nominal, image counts = formula, DDC debounce, `delay_audit.py --check`. A sibling image `<stem minus -be>-clk87-be` (`-D AWTO_CLOCK_MHZ=87`) is measured too and compared.

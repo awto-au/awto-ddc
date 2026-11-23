@@ -59,7 +59,6 @@ volatile WORD isr_g_usTMDSRxClkCount[2];
 volatile WORD isr_g_usTMDSRxPhyCount[2];
 volatile WORD isr_g_usTMDSRxPhyClk[2];
 volatile BYTE isr_g_ucTMDSRxPhyPend[2];
-BYTE g_ucTMDSPhyLong;
 
 volatile BYTE g_pucTMDSRxLEMax[2][3];
 volatile BYTE g_pucTMDSRxLEMin[2][3];
@@ -1666,15 +1665,7 @@ void ScalerTMDSRxSetPhy_EXINT0(void)
         AWTO_PHY_FLD_WAIT(360);
         AWTO_PHY_STAMP(0);
 
-#if(_INPUTCLOCK_RANG_DVI >= 3400)
-        // Delay 2.9ms due to RLE0638 is unscrambled source.
-        if(AWTO_PHY_LONG_BLOCK())
-        {
-            DELAY_XUS_EXINT(1000);
-            DELAY_XUS_EXINT(1000);
-            DELAY_XUS_EXINT(900);
-        }
-#endif
+        // RLE0638 2.9 ms unscrambled-source delay dropped: requirement not confirmed (#331)
         AWTO_PHY_STAMP(1);
 
         // Start to Record Tap0/Tap1 Max/Min
@@ -2167,15 +2158,6 @@ void ScalerTMDSRxPhySetDeferred(void)
         {
             BYTE ucCdr = ScalerTMDSRxCheckCDRStable_EXINT0(isr_g_usTMDSRxClkCount[RX_CUR]);
 
-            // 4K60 (> 340 MHz): the 2.9 ms unscrambled-source block runs only when the first CDR check fails
-            if((ucCdr == _FALSE) && (GET_INPUT_PIXEL_CLK() > 3400))
-            {
-                g_ucTMDSPhyLong = _TRUE;
-                ScalerTMDSRxSetPhy_EXINT0();
-                g_ucTMDSPhyLong = _FALSE;
-                AWTO_PHY_RETRY();
-                ucCdr = ScalerTMDSRxCheckCDRStable_EXINT0(isr_g_usTMDSRxClkCount[RX_CUR]);
-            }
             AWTO_PHY_END(ucCdr);
         }
 #endif

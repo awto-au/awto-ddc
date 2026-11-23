@@ -7,7 +7,7 @@ usage: phy_budget_sim.py BIN MAP [--tree DIR] [--label L]
   Register pages read back what firmware wrote (xram model); CheckCDRStable_EXINT0 / MeasureClk_EXINT0 / CheckDataDFE are HLE stubs
   (hardware waits, counted per call and costed from docs/delays.md static rows, not run).
   Cycles = clk of the sim at the image's running CPU clock; delay loops are real instructions, so the delay sum is in the number.
-  Paths: DCDR 1080p60 (1485), ACDR 2000-3400 (3000), ACDR > 3400 4K60 (5940), 4K60 retry = second SetPhy with the 2.9 ms long block.
+  Paths: DCDR 1080p60 (1485), ACDR 2000-3400 (3000), ACDR > 3400 4K60 (5940).
   Two set-ups back to back = the sum of two single calls: EX0 is restored at each return, so a pending AUX request is served in the gap.
 Log: ./tmp/logs/phy_budget_sim.log
 """
@@ -25,12 +25,11 @@ from _repo import ROOT
 
 LOG = ROOT / "tmp/logs/phy_budget_sim.log"
 RET_PAD = 0x0006  # never executed otherwise: the stub there stops the run
-# (name, pixel clock 0.1 MHz, CDR-stable results of the successive CheckCDRStable_EXINT0 calls: pre-check, after SetPhy, after the retry)
+# (name, pixel clock 0.1 MHz, CDR-stable results of the successive CheckCDRStable_EXINT0 calls: pre-check, after SetPhy)
 PATHS = (
     ("DCDR 1080p60", 1485, (0, 1, 1)),
     ("ACDR 2000-3400", 3000, (0, 1, 1)),
     ("ACDR 4K60 first try ok", 5940, (0, 1, 1)),
-    ("ACDR 4K60 first try fails, retry", 5940, (0, 0, 1)),
 )
 STUBS = (
     ("ScalerTMDSRxMeasureClk_EXINT0", {"val": 0x0A00}),

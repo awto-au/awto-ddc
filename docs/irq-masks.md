@@ -24,7 +24,7 @@
 ## Ranked sections (longest first)
 | id | site | masks | static | sim | hw | starves | action |
 |---|---|---|---|---|---|---|---|
-| M057 | `ScalerTMDSRxPhySetDeferred` RL6449_Series_TMDSRx2.c:2047 | EX0 | 8803 us (sum of all branches) | 140 us (PHY stubbed) | 3-4 ms | EXINT0 AUX reply | restructure |
+| M057 | `ScalerTMDSRxPhySetDeferred` RL6449_Series_TMDSRx2.c:2047 | EX0 | 1578 us (static under-reads; sim 3138 us at 4K60, #331) | 140 us (PHY stubbed) | 3-4 ms | EXINT0 AUX reply | restructure |
 | M043 | `ScalerDpRx1PhyCTS` RL6449_Series_DPRx1.c:3660 | EX0, open | 742 us | - | - | AUX reply | ok: PHY compliance mode only |
 | M056 | `ScalerMcuInitial` ScalerMcu.c:153 | IE = 0 | 391 us | - | - | nothing running | ok: boot |
 | M006 | `AwtoSdTick` sync.c:600 | EX0 | 30 us | 60 us | - | no | ok |
