@@ -1,8 +1,10 @@
+#pragma place bank(0)   // awto: bank with room (#44)
 BYTE __code tHDCP_KEY_BKSV[] =
 {
     0xB7, 0x28, 0xA9, 0x51, 0xD6,
 };
 
+#pragma place bank(0)   // awto: bank with room (#44)
 BYTE __code tHDCP_KEY_TABLE[] =
 {
     0x3a, 0x21, 0x17, 0x06, 0x72, 0x60, 0x3b, 0x6e,     // Key0

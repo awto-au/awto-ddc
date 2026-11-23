@@ -50,7 +50,7 @@
   - No idle-port bring-up is started while an erase is pending (an erase is the only halt long enough to matter; programs are not).
 
 ## 4. HDCP and PHY power of an unselected port
-- HDCP is parked in the shipped image: `_AWTO_HDCP = _OFF` (`RL6449_Project.h:2414`, #44): no key tables, no HDCP DDC slave, DPCD Bcaps not advertised; `_TMDS_HDCP_2_2_SUPPORT` and `_DP_HDCP_2_2_SUPPORT` are `_OFF`. No HDCP state exists on an idle port; sources see a non-HDCP sink on both.
+- HDCP 1.4 is on in the shipped image (`_AWTO_HDCP = _ON`, `RL6449_Project.h`, #44): keys from `HdcpRxKey.h`, HDCP DDC slave on D2 / D3, DPCD Bcaps on D1. `_TMDS_HDCP_2_2_SUPPORT` and `_DP_HDCP_2_2_SUPPORT` are `_OFF`. `-D _AWTO_HDCP=_OFF` builds a non-HDCP sink.
 - If HDCP returns: 1.4 is a per-port hardware block (pages 71 / 72, key ports 71C4 / 72C4; DP via DPCD, `ScalerDpRx1HDCPBlockReset`, `ScalerDpRx1CpIRQ` masks EX0 0.3-0.4 us). 2.2 is one shared handler (`ScalerHdcp2IntHandler_EXINT0`): needs a per-port context before parallel ports.
 - DP trained with no active stream: the SDK enables FIFO under/overflow IRQ and watchdog only in `ScalerDpFirstActiveProc` (selected port), so a trained idle link raises no stream IRQ. PHY stays powered: link-status IRQ and the AUX IRQ remain (0.3-0.4 us masks, `ScalerDpRx1LinkStatusIRQ`). Display path, measure block and I/M/D domains are single and selected-port only: an idle DP source streams into an unconsumed MAC. Whether the MAC / FIFO tolerates that for minutes is unproven (needs two sources, #330).
 - TMDS idle port: `ScalerTMDSRxPowerSavingProc` (freq-detect disable, auto output) is the SDK's low-power state; a port left in normal state keeps its freq-detect IRQ in EXINT0 (per port, pending flag only).

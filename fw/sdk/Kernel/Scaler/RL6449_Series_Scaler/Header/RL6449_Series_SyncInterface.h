@@ -31,5 +31,8 @@
 extern WORD ScalerSyncGetInputPixelClk(void);
 
 #if(_DIGITAL_PORT_SUPPORT == _ON)
+extern void ScalerSyncHdcpEnableDownLoadKey(bit bEnable);
+extern void ScalerSyncHdcpDownLoadBKsv(BYTE ucSubAddr, BYTE ucLength, BYTE *pucReadArray);
+extern void ScalerSyncHdcpDownLoadKey(WORD usLength, BYTE *pucReadArray);
 #endif
 
