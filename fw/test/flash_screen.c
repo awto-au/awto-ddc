@@ -45,13 +45,13 @@ extern void osd_tc_close(void);
 #define AWTO_FS_STEP_GLYPH0                     (1 + AWTO_FS_CELL_STEPS)
 #define AWTO_FS_STEP_LAST                       (AWTO_FS_STEP_GLYPH0 + AWTO_FS_GLYPH_STEPS)
 
-#pragma place bank(11)                      // leaf readers in the data's bank
+#pragma place bank(6)                       // leaf readers in the data's bank
 static BYTE FsByte(WORD usIdx)
 {
     return g_aucFsGlyph[usIdx];
 }
 
-#pragma place bank(11)
+#pragma place bank(6)
 static BYTE FsTitle(BYTE ucCol)
 {
     return g_aucFsTitle[ucCol];

@@ -121,9 +121,9 @@ def text() -> str:
             f"#define AWTO_FS_COLS {COLS}\n#define AWTO_FS_ROWS {ROWS}\n#define AWTO_FS_PM_COLS {PM_COLS}\n#define AWTO_FS_PM_ROWS {PM_ROWS}\n"
             f"#define AWTO_FS_PM_COL0 {PM_COL0}\n#define AWTO_FS_PM_ROW0 {PM_ROW0}\n#define AWTO_FS_ROW_TITLE {ROW_TITLE}\n"
             f"#define AWTO_FS_PM_OPEN {PM_OPEN}\n#define AWTO_FS_GLYPHS {GLYPHS}\n#define AWTO_FS_GLYPH_BYTES 27\n"
-            "#pragma place bank(11)                      // data and its readers (FsByte, FsTitle) share the bank\n"
+            "#pragma place bank(6)                       // data and its readers (FsByte, FsTitle) share the bank\n"
             f"static const __code BYTE g_aucFsGlyph[AWTO_FS_GLYPHS * AWTO_FS_GLYPH_BYTES] = {{\n" + ",\n".join(rows) + "};\n"
-            "#pragma place bank(11)\n"
+            "#pragma place bank(6)\n"
             f"static const __code BYTE g_aucFsTitle[2 * AWTO_FS_COLS] = {{{t}}};\n")
 
 

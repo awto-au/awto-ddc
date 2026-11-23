@@ -4477,3 +4477,8 @@ BYTE AwtoDpRx1LtBusy(void)                          // sync log: link training u
 {
     return (GET_DP_RX1_LINK_TRAINING_STATUS() != _DP_LINK_TRAINING_NONE);
 }
+
+BYTE AwtoDpRx1Trained(void)                         // port status (#323): the last training passed
+{
+    return (GET_DP_RX1_LINK_TRAINING_STATUS() == _DP_NORMAL_LINK_TRAINING_PASS);
+}

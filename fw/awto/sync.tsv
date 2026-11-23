@@ -162,6 +162,13 @@ FA	01	vport	% HPD high	timing
 FA	02	n	EDID channels on:HPD pin mask % (bit0 = D1)	timing
 FA	03	n	EDID load start:HPD mask %	timing
 FA	04	ms	EDID load end:took %	timing
+FA	10	vport	% cable pin low	timing
+FA	11	vport	% cable pin high	timing
+FA	12	vport	% TMDS clock lost	timing
+FA	13	vport	% TMDS clock stable	timing
+FA	14	vport	% DP link down	timing
+FA	15	vport	% DP link trained	timing
+FA	19	vport	% DP AUX seen	timing
 E8	01	n	OSD SRAM probe done:% addresses written and read back from M1 / M2 on the MCU, results in g_stAwtoOsdProbe
 E8	03	-	OSD SRAM probe refused:the OSD is on	warning
 EA	*	mon	monitor: %

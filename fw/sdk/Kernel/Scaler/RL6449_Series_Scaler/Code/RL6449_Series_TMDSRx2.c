@@ -2242,6 +2242,9 @@ void ScalerTMDSRxIntHandler_EXINT0(void)
     {
         // Disable Freq Stable IRQ
         RxSetBit(P71_EF_HDMI_ERROR_TH, ~(_BIT7 | _BIT6), _BIT6);
+#if(_AWTO_PS_WAKE == _ON)
+        isr_g_pucAwtoClkEv[RX_CUR]++;                   // #323 port status: clock stable event
+#endif
 
 #if(_D2_HDMI_2_0_SUPPORT == _ON)
         // Set SCDC Port Clock Detected

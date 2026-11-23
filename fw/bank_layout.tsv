@@ -896,6 +896,10 @@ stub	_ScalerSyncInterfaceSwitch	C	0x2ad4	8
 stub	_ScalerSyncPowerProc	C	0x2adc	8
 stub	_ScalerSyncTMDSHPDToggleProc	C	0x2ae4	8
 stub	_ScalerSyncTMDSRxHdmiVideoSetting	C	0x2aec	8
+stub	_AwtoDpRx1Trained	C	0x2af4	8
+stub	_FsByte	C	0x2afc	8
+stub	_FsTitle	C	0x2b04	8
+stub	_AwtoPortMonPoll	C	0x2b0c	8
 stub	_ScalerTMDSFirstActiveProc	C	0x2b1c	8
 stub	_ScalerTMDSHotPlugEvent	C	0x2b24	8
 stub	_ScalerTMDSIntHandler_EXINT0	C	0x2b2c	8
@@ -1936,6 +1940,8 @@ fn	_ScalerTimerWDCancelTimerEvent	3	0xac64	44
 fn	_AwtoSwFastPoll	3	0xac90	672
 fn	_AwtoFastScalerStatus	3	0xaf30	24
 fn	_ScalerDpRx1DFELaneCheck	3	0xaf48	80
+fn	_AwtoDpRx1Trained	3	0xafa0	16
+fn	_AwtoPortMonDdc	3	0xafb0	28
 const	_tDDR2_PLL_PHASE	4	0x0000	16
 const	_tAwtoAudioTestAmp	4	0x0010	12
 const	_tAwtoAudioTestGain	4	0x001c	16
@@ -2348,7 +2354,7 @@ const	_tLUTGAMMA_18_TABLE	6	0x0164	6352
 const	_tLUTGAMMA_20_TABLE	6	0x1a34	6352
 const	_tLUTGAMMA_22_TABLE	6	0x3304	6352
 const	_tLUTGAMMA_24_TABLE	6	0x4bd4	6352
-const	_UserInterfaceGetOverScanStatus_tusOverscanEnTable_10000_1377	6	0x64a4	92
+const	_UserInterfaceGetOverScanStatus_tusOverscanEnTable_10000_1379	6	0x64a4	92
 const	_OperationFactoryTable	6	0x6500	756
 const	_tCOLOR_CONV_RGB2YUV_ITU709	6	0x67f4	32
 const	_tCOLOR_CONV_YUV2RGB_ITU601	6	0x6814	32
@@ -2480,8 +2486,12 @@ fn	_set_ap_gamma	6	0x9c14	64
 fn	_set_ap_user_rgb	6	0x9c54	32
 fn	_AwtoPanelForeign	6	0x9c74	28
 fn	_AwtoMsgLoad	6	0x9c90	16
+const	_g_aucFsTitle	6	0x9ca0	68
+fn	_FsByte	6	0x9ce4	20
+fn	_FsTitle	6	0x9cf8	12
 fn	_AwtoPutPassName	6	0x9e60	64
 const	_tAwtoPassName	6	0x9ea0	656
+const	_g_aucFsGlyph	6	0xa130	1396
 fn	_ScalerDpRx1Tp1SetPhy_EXINT0	7	0x0000	1928
 fn	_ScalerDpRx1Tp2SetPhy_EXINT0	7	0x0788	1464
 fn	_ScalerDpRx1Tp2LaneCheck_EXINT0	7	0x0d40	848
@@ -2856,7 +2866,7 @@ const	_tDISPLAY_DPTX_DRV_HBR2_TABLE	9	0x0000	56
 const	_tEDID_TABLE_D1	9	0x0038	268
 const	_tEDID_TABLE_D2	9	0x0144	268
 const	_tEDID_TABLE_D3	9	0x0250	268
-const	_set_ap_rotate_tFlipToSdk_10000_1401	9	0x035c	8
+const	_set_ap_rotate_tFlipToSdk_10000_1403	9	0x035c	8
 fn	_ScalerColor420To422D2D3Enable	9	0x0364	60
 fn	_ScalerDpPowerSwitch	9	0x03a0	120
 fn	_ScalerDpRx1AuxIntInitial	9	0x0418	116
@@ -3082,6 +3092,7 @@ fn	_AwtoSwPoll	10	0x1fb0	32
 fn	_ScalerTMDSRx2TMDSVideoDetectEvent	10	0x1fd0	20
 fn	_ScalerTMDSRxHdmi2FormatResetEvent	10	0x1fe4	24
 fn	_ScalerAudioLoadStableICodeEvent	10	0x1ffc	32
+const	_tAwtoPstId	10	0x201c	8
 fn	_ScalerDDR2RotationSetClientMux	10	0x2024	172
 fn	_ScalerDpSecDataReset	10	0x20e0	16
 fn	_ScalerDisplayDPTx1AuxPHYSet	10	0x20f0	100
@@ -3564,6 +3575,7 @@ fn	_AwtoTick	10	0x8914	8
 fn	_ScalerTMDSRxHotPlugHighProc	10	0x891c	132
 fn	_osd_tc_open_part	10	0x89a0	64
 fn	_AwtoFastScalerClearStatus	10	0x89e0	52
+fn	_AwtoPortMonCable	10	0x8a14	92
 fn	_ScalerTMDSRxHotPlugLowProc	10	0x8a74	104
 fn	_ScalerTMDSRxPowerOffProc	10	0x8adc	52
 fn	_ScalerTMDSRxReadRequestProc_EXINT0	10	0x8b10	92
@@ -3598,6 +3610,8 @@ fn	_AwtoPassEnd	10	0xa88c	132
 fn	_AwtoPassReport	10	0xa910	188
 fn	_AwtoPassSlow	10	0xa9cc	308
 fn	_AwtoDemoLog	10	0xab00	228
+fn	_AwtoPortMonClock	10	0xabe4	236
+fn	_AwtoPortMonPoll	10	0xacd0	408
 const	_g_aucPsData	11	0x0000	740
 const	___str_202	11	0x02e4	20
 const	___str_203	11	0x02f8	20
@@ -3623,16 +3637,14 @@ const	___str_222	11	0x0444	52
 const	___str_223	11	0x0478	20
 const	___str_224	11	0x048c	12
 const	___str_225	11	0x0498	20
-const	_tAwtoSyncCls	11	0x04ac	424
 const	_tAwtoSyncFmt	11	0x0654	576
-const	_tAwtoSyncTxtS	11	0x0894	21756
-const	_g_aucFsGlyph	11	0x5d90	2512
-const	_g_aucFsTitle	11	0x6760	68
+const	_tAwtoSyncTxtS	11	0x0894	22560
+const	_tAwtoSyncRowArg	11	0x60b4	448
+const	_tAwtoSyncRowId	11	0x6274	448
 const	_g_pcDeltaB	11	0x67a4	7432
 const	_s_tS2Font	11	0x84ac	84
 const	_tAwtoSyncIdRow	11	0x8500	532
-const	_tAwtoSyncRowArg	11	0x8714	424
-const	_tAwtoSyncRowId	11	0x88bc	424
+const	_tAwtoSyncCls	11	0x8714	448
 fn	_ScalerOsdChange4BitColor	11	0x8a64	84
 fn	_ScalerOsdReferenceDelay	11	0x8ab8	48
 fn	_ScalerOsdSramAddressCount	11	0x8ae8	212
@@ -3650,9 +3662,7 @@ fn	_AwtoSyncClsOf	11	0x95b4	20
 fn	_AwtoSyncTxt	11	0x95c8	288
 fn	_AwtoDpgTest	11	0x96e8	160
 fn	_AwtoFlashDraw	11	0x9788	1052
-fn	_FsByte	11	0x9ba4	20
 fn	_FsCellId	11	0x9bb8	140
-fn	_FsTitle	11	0x9c44	12
 const	_tAwtoRbPage	11	0x9ce4	80
 fn	_AwtoConStepRun	11	0x9d34	304
 fn	_AwtoTextOpenInit	11	0x9e64	24

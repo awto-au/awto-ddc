@@ -21,6 +21,13 @@ Issues: #78 (wake time), #139 (sync log), #239 (350.8 MHz boot), #256 / #147 / #
 | FC | 1 | port, ms | `DP link trained:D1, 120ms after the loop first saw it training` |
 | FA | 0 / 1 HPD pin low / high, 2 EDID channels enabled | port / pin mask (bit0 = D1) | `D2 HPD high`, `EDID channels on:HPD pin mask 6 (bit0 = D1)` |
 
+Per-port status word (#323, `g_pucAwtoPortSt[3]`, index = port - D1; `AwtoPortMonPoll` in `fw/log/sync.c`, called from `AwtoEdidPoll`, awake only):
+- bits: 0 cable pin (`PCB_Dn_PIN`, undebounced), 1 TMDS clock stable (D2 / D3), 2 DP link trained (D1), 3 EDID read since the cable came, 4 DP AUX command since the cable came (D1), 7 first poll done
+- clock = Rx freq detector state (`HDMI_FREQDET_CTRL` started + result + not unstable) or an `isr_g_pucAwtoClkEv` count change (EXINT0 clock-stable branch, count only, main never writes it)
+- DDC / AUX bits are sticky and drop with the cable; a picture on the port forces cable + clock / link
+- FA lines per changed bit: `FA 10/11` cable pin low / high, `12/13` clock lost / stable, `14/15` link down / trained, `19` AUX seen; a DDC set is the `E7` line, DDC / AUX clear with the cable pin low (no line of their own)
+- cost: +5 B XDATA (free 328 -> 323), ~2.4k sim cycles per pass (`scripts/speed_bench.py`); sim gate `portmon` (`scripts/portmon_sim.py`)
+
 HPD lines: pins polled once per main-loop pass (`AwtoEdidPoll`, <= 2.5 ms), the first pass logs all three levels; `E7` (`Dn EDID read`) is the DDC / AUX read latch, same poll.
 
 Scan outcome codes (F2 arg, set by `AWTO_SCAN_STAGE` at the SDK step, one line per change of outcome per port, 12 lines per episode):

@@ -110,6 +110,7 @@ SKIP_IF_MISSING = {      # gate -> map symbols the image must define, else SKIP 
     "conkeep": ("_g_stAwtoSync", "_AwtoConWrapLine"),
     "deadport": ("_AwtoDeadPortPoll",),
     "portcfg": ("_isr_g_ucAwtoPortOff",),
+    "portmon": ("_g_pucAwtoPortSt",),
     "inputrate": ("_g_pucAwtoInCnt", "_AwtoInRow"),
     "monitor": ("_g_stAwtoMon",),
     "panel": ("_g_ucAwtoPanelOwn",),
@@ -228,6 +229,7 @@ def gates(b: Path, m: Path, ref, tree):
         g["flashclk"] = [*PY, f"{s}/flash_clk_sim.py", b, "--map", m]
     g["deadport"] = [*PY, f"{s}/deadport_sim.py", b, m]       # #84: VCP 0x60 / selector refuse a port with no cable, guard back to auto
     g["portcfg"] = [*PY, f"{s}/portcfg_sim.py", b, m]         # #81: disabled port: HPD never high, never searched, selector re-enables
+    g["portmon"] = [*PY, f"{s}/portmon_sim.py", b, m]         # #323 / #324: per-port status word follows the cable pins, search order skips dead ports
     g["inputrate"] = [*PY, f"{s}/input_rate_sim.py", b, m]    # D7: pass / slow input rows: a pulse of the worst read gap is never missed
     g["monitor_real"] = [*PY, f"{s}/mon_sim_test.py", b, m]     # health monitor at the production period: rows, change steps, registry switch, heartbeat (300 simulated s)
     g["monitor_full"] = [*g["monitor_real"], "--scale", "10"]   # extensive: the same with the sample period / 10 (sim_time_scale.py), heartbeat included

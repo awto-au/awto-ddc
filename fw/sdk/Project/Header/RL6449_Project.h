@@ -1709,6 +1709,7 @@ extern unsigned char AwtoTmdsRx2Hs(void);
 extern unsigned char AwtoTmdsRx3Hs(void);
 extern unsigned char AwtoFbRegCount(void);
 extern unsigned char AwtoDpRx1LtBusy(void);
+extern unsigned char AwtoDpRx1Trained(void);
 extern void AwtoSyncPoll(void);
 extern void AwtoSdPhy(unsigned char ucEnd);
 extern void AwtoSdTick(void);
@@ -1734,6 +1735,17 @@ extern void AwtoPsAuxSeen(unsigned char ucPort);              // SDK DP PS prede
 // #162 step 3: power status changes are logged by the system machine (AwtoSyncPoll at the transition); per pass only the wake poll
 #define AWTO_SYNC_POLL()                                        { if(g_ucAwtoSyncPwr == _POWER_STATUS_SAVING) { AwtoPsWakePoll(); } }
 extern void AwtoEdidPoll(void);
+// #323 per-port status (index = port - D1): cable pin, TMDS clock (D2 / D3), DP link trained (D1), EDID read, DP AUX seen (D1)
+#define AWTO_PST_CABLE                                          0x01
+#define AWTO_PST_CLK                                            0x02
+#define AWTO_PST_LINK                                           0x04
+#define AWTO_PST_DDC                                            0x08
+#define AWTO_PST_AUX                                            0x10
+#define AWTO_PST_VALID                                          0x80    // the first poll has run
+#define AWTO_PST_LINE                                           0x10    // sync.tsv FA: + 2 * bit + level
+extern __xdata unsigned char g_pucAwtoPortSt[3];
+extern volatile __xdata unsigned char isr_g_pucAwtoClkEv[2] [[awto::isr_shared("EXINT0 counts clock-stable events, main reads the count")]];
+extern void AwtoPortMonDdc(unsigned char ucI);
 extern void AwtoSyncEdidOn(void);
 #define AWTO_SYNC_EDID_ON()                                     AwtoSyncEdidOn()
 extern void AwtoSyncEdidLoad(unsigned char ucEnd);
