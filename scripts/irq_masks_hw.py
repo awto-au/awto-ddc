@@ -27,7 +27,7 @@ def say(s: str) -> None:
 
 
 def dev(*a: str) -> str:
-    r = subprocess.run([str(ROOT / "dev.py"), *a], capture_output=True, text=True, cwd=ROOT, check=False)
+    r = subprocess.run([str(ROOT / "dev.py"), *a], capture_output=True, text=True, cwd=ROOT, check=False)  # rc ignored: callers parse the dev.py output
     return r.stdout + r.stderr
 
 

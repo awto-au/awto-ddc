@@ -37,7 +37,7 @@ def say(s):
 
 
 def run(*a, limit=60):
-    r = subprocess.run([sys.executable, *map(str, a)], capture_output=True, text=True, cwd=ROOT, timeout=limit, check=False)
+    r = subprocess.run([sys.executable, *map(str, a)], capture_output=True, text=True, cwd=ROOT, timeout=limit, check=False)  # rc ignored: callers parse the output
     return r.stdout + r.stderr
 
 

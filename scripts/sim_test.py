@@ -85,7 +85,7 @@ def simulate(ihx, outdir):
     ser = outdir / "serial.txt"
     ser.unlink(missing_ok=True)
     cmds = f"break 0x{m.group(1)}\nstep {STEP_CAP}\nquit\n"
-    r = subprocess.run([T.tool("ucsim_51"), "-t", "52", "-S", f"uart=0,out={ser}", str(ihx)],
+    r = subprocess.run([T.tool("ucsim_51"), "-t", "52", "-S", f"uart=0,out={ser}", str(ihx)],  # rc ignored: simulator quit rc is not a result; ticks and serial output decide
                        input=cmds, capture_output=True, text=True, timeout=SIM_TMO, check=False)
     (outdir / "sim.log").write_text(r.stdout + r.stderr)
     ticks = re.search(r"Simulated (\d+) ticks", r.stdout)

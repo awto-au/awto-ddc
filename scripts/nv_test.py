@@ -158,7 +158,7 @@ class Unit:
         raise SystemExit("g_stAwtoSync: no answer")
 
     def ddcutil(self, *args) -> str:
-        r = subprocess.run(["ddcutil", "--bus", str(self.u.bus_n), "--noverify", *args], capture_output=True, text=True,
+        r = subprocess.run(["ddcutil", "--bus", str(self.u.bus_n), "--noverify", *args], capture_output=True, text=True,  # rc ignored: cases judge the ddcutil text; a stuck bus is a case FAIL
                            timeout=10, check=False)                       # one ddcutil call ~0.2 s; 10 s = a stuck bus, case FAILs
         return r.stdout + r.stderr
 

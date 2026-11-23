@@ -136,7 +136,7 @@ def keil_compat():
     """--keil-compat, refusing a compiler without it: sdcc only warns on an unknown option, and the ~bit rule is gone."""
     global _KC
     if _KC is None:
-        r = subprocess.run([SDCC, "--help"], capture_output=True, text=True, timeout=30, check=False)
+        r = subprocess.run([SDCC, "--help"], capture_output=True, text=True, timeout=30, check=False)  # rc ignored: only the --keil-compat help text is tested
         if "--keil-compat" not in r.stdout + r.stderr:
             sys.exit(f"{SDCC} has no --keil-compat (awto-sdcc#25): Keil ~bit semantics would be lost")
         _KC = ["--keil-compat"]

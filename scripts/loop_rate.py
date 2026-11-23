@@ -38,7 +38,7 @@ def main() -> int:
             log.flush()
         def health(tag, keep):
             try:
-                r = subprocess.run([sys.executable, str(ROOT / "dev.py"), "health", "--unit", a.unit], capture_output=True,
+                r = subprocess.run([sys.executable, str(ROOT / "dev.py"), "health", "--unit", a.unit], capture_output=True,  # rc ignored: the HEALTH/loop-rate lines are parsed; missing = failure
                                    text=True, timeout=HEALTH_S, check=False)
             except subprocess.TimeoutExpired:
                 out(f"{tag}: health exceeded {HEALTH_S} s")

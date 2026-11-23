@@ -89,7 +89,7 @@ def main():
                 break
     finally:
         env["WINEPREFIX"] = os.path.join(ROOT, "tmp/wine/prefix")
-        subprocess.run(["wineserver", "-k"], env=env, check=False)
+        subprocess.run(["wineserver", "-k"], env=env, check=False)  # rc ignored: cleanup kill
         backend.wait()
         for f in glob.glob(
             os.path.join(

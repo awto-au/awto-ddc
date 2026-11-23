@@ -34,9 +34,9 @@ def main() -> int:
 
     i2cbus.require_unit(a.bus, a.serial)
     if a.cycle:
-        subprocess.run(["ddcutil", "--bus", str(a.bus), "setvcp", "0xD6", "4"], capture_output=True, timeout=CALL_S, check=False)
+        subprocess.run(["ddcutil", "--bus", str(a.bus), "setvcp", "0xD6", "4"], capture_output=True, timeout=CALL_S, check=True)
         time.sleep(OFF_S)
-        subprocess.run(["ddcutil", "--bus", str(a.bus), "--maxtries", "1,1,1", "setvcp", "0xD6", "1"], capture_output=True, timeout=CALL_S, check=False)
+        subprocess.run(["ddcutil", "--bus", str(a.bus), "--maxtries", "1,1,1", "setvcp", "0xD6", "1"], capture_output=True, timeout=CALL_S, check=False)  # rc ignored: first write may fail while the panel wakes; probe loop logs it
     t0, ok, bad, worst = time.monotonic(), 0, 0, 0.0
     LOG.parent.mkdir(parents=True, exist_ok=True)
     with LOG.open("a") as f:

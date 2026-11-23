@@ -61,7 +61,7 @@ def say(s: str) -> None:
 
 
 def dev(*args: str) -> str:
-    r = subprocess.run(
+    r = subprocess.run(  # rc ignored: callers parse the dev.py output
         [str(ROOT / "dev.py"), *args],
         check=False,
         capture_output=True,
@@ -229,7 +229,7 @@ def run_dpms(label: str, units: list[int], off_s: float) -> None:
         ],
         cwd=ROOT,
         env=dev_env,
-        check=False,
+        check=True,
     )
     time.sleep(off_s)
     t_on = dt.datetime.now().astimezone()
@@ -237,7 +237,7 @@ def run_dpms(label: str, units: list[int], off_s: float) -> None:
         [sys.executable, str(ROOT / "scripts/host_dpms.py"), "on"],
         cwd=ROOT,
         env=dev_env,
-        check=False,
+        check=True,
     )
     for u in units:
         t0 = time.monotonic()

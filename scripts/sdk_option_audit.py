@@ -50,6 +50,8 @@ def cpp(probe: Path, extra):
     r = subprocess.run(cmd, capture_output=True, text=True, errors="replace", timeout=PP_TIMEOUT, check=False)
     if r.stderr.strip():
         LOG.write(r.stderr[-4000:] + "\n")
+    if r.returncode:
+        sys.exit(f"sdcc -E rc {r.returncode} for {probe}: {r.stderr[-400:]}")
     return r.stdout
 
 

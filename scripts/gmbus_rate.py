@@ -31,7 +31,7 @@ def log(msg):
 
 def run(cmd, timeout):
     log("$ " + " ".join(cmd))
-    r = subprocess.run(cmd, capture_output=True, text=True, timeout=timeout, check=False)
+    r = subprocess.run(cmd, capture_output=True, text=True, timeout=timeout, check=False)  # rc ignored: callers read the rc from the returned result or the log
     for l in (r.stdout + r.stderr).splitlines():
         log("  " + l)
     return r

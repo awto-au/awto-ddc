@@ -37,7 +37,7 @@ def say(s):
 
 
 def sh(root, *cmd, timeout=900):
-    r = subprocess.run(cmd, cwd=root, capture_output=True, text=True, timeout=timeout, check=False, env=dict(os.environ, AWTO_DDC_REPO=str(root), AWTO_SIM_CORE="fast"))
+    r = subprocess.run(cmd, cwd=root, capture_output=True, text=True, timeout=timeout, check=False, env=dict(os.environ, AWTO_DDC_REPO=str(root), AWTO_SIM_CORE="fast"))  # rc ignored: callers parse the output
     return r.stdout + r.stderr
 
 

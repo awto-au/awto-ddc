@@ -63,6 +63,8 @@ def preprocess(use_cache):
             return out
         r = subprocess.run(K.sdcc_cmd(c, uv2.parent, defines, incs, model) + ["-E", str(c)],
                            capture_output=True, text=True, errors="replace", timeout=120, check=False)
+        if r.returncode:
+            sys.exit(f"{c.name}: sdcc -E rc {r.returncode}: {r.stderr[-400:]}")
         out.write_text(r.stdout)
         return out
     with ThreadPoolExecutor(os.cpu_count() or 4) as ex:

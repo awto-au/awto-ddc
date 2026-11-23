@@ -40,7 +40,7 @@ def say(s):
 
 def lines(sim, binp: Path):
     mp = binp.with_suffix(".map")
-    r = subprocess.run([sys.executable, str(ROOT / "scripts" / f"{sim}.py"), str(binp), str(mp), "--out", str(ROOT / "tmp/sim_timelines" / f"{binp.stem}.{sim}")]
+    r = subprocess.run([sys.executable, str(ROOT / "scripts" / f"{sim}.py"), str(binp), str(mp), "--out", str(ROOT / "tmp/sim_timelines" / f"{binp.stem}.{sim}")]  # rc ignored: timeline lines are parsed; none = failure
                        if sim != "key_sim_test" else [sys.executable, str(ROOT / "scripts" / f"{sim}.py"), str(binp), str(mp)],
                        capture_output=True, text=True, cwd=ROOT, env=dict(os.environ, AWTO_SIM_CORE="fast", PYTHONHASHSEED="0"), timeout=SIM_LIMIT_S, check=False)
     out = []
