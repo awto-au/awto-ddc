@@ -8,12 +8,16 @@ usage (via dev.py): ./dev.py ontime --unit N --trigger reset|ddc|switch [--runs 
 - Row = the newest sync episode (`./dev.py synclog`) after the trigger, polled until its `sync DONE` line is there.
 - Columns (ms from the episode start): init = INITIAL length, reached = first search visit, scan_ok, timing, disp = display
   setting stage, tail = ACTIVE wait timer, active = sync DONE ACTIVE; from_cmd = ACTIVE minus the D6 wake command (DDC/CI wake only); slow = slow pass stage lines.
+  active counts from the episode start, which can be minutes before the trigger (a DPMS-off unit still in its boot episode: #332);
+  from_host (dpms) = host display-on command to the sync DONE line, by the log's poll join (--json poll_wall): the wake time.
 Logs: ./tmp/logs/ontime/<label>.tsv (rows), <label>-U<unit>-<trigger><k>.txt (every synclog line of the run).
 """
 
 from __future__ import annotations
 
 import argparse
+import datetime as dt
+import json
 import os
 import re
 import subprocess
@@ -45,6 +49,7 @@ COLS = [
     "link",
     "health",
     "from_cmd",
+    "from_host",
     "slow",
 ]
 LINE = re.compile(r"^\S+\s+(\d+):(.*)$")
@@ -135,10 +140,39 @@ def health(unit: int) -> str:
     return m.group(1) if m else "FAIL"
 
 
-def record(label: str, unit: int, trig: str, run: int, txt: str, hl: str) -> None:
+def host_to_active_ms(unit: int, t_on: dt.datetime) -> int | None:
+    """Host display-on command to the newest `sync DONE` entry (poll_wall: host time of the read minus the fw ms since the entry)"""
+    m = re.search(r"SYNCJSON (\{.*\})", synclog_json(unit))
+    if not m:
+        return None
+    done = [
+        e
+        for e in json.loads(m.group(1))["entries"]
+        if "sync DONE" in e["text"] and e["poll_wall"]
+    ]
+    if not done:
+        return None
+    return round(
+        (dt.datetime.fromisoformat(done[-1]["poll_wall"]) - t_on).total_seconds() * 1000
+    )
+
+
+def synclog_json(unit: int) -> str:
+    return dev("synclog", "--unit", str(unit), "--json")
+
+
+def record(
+    label: str,
+    unit: int,
+    trig: str,
+    run: int,
+    txt: str,
+    hl: str,
+    from_host: int | None = None,
+) -> None:
     (OUT / f"{label}-U{unit}-{trig}{run}.txt").write_text(txt)
     row = parse(txt)
-    row.update(unit=unit, trigger=trig, run=run, health=hl)
+    row.update(unit=unit, trigger=trig, run=run, health=hl, from_host=from_host)
     tsv = OUT / f"{label}.tsv"
     new = not tsv.exists()
     with tsv.open("a") as f:
@@ -147,7 +181,7 @@ def record(label: str, unit: int, trig: str, run: int, txt: str, hl: str) -> Non
         f.write("\t".join(str(row[c]) for c in COLS) + "\n")
     say(
         f"{isostamp.now()} U{unit} {trig}{run}: ACTIVE {row['active']} ms init {row['init']} reached {row['reached']} "
-        f"scan_ok {row['scan_ok']} timing {row['timing']} disp {row['disp']} tail {row['tail']} cmd {row['from_cmd']} health {hl} slow {row['slow']}"
+        f"scan_ok {row['scan_ok']} timing {row['timing']} disp {row['disp']} tail {row['tail']} cmd {row['from_cmd']} from_host {row['from_host']} health {hl} slow {row['slow']}"
     )
 
 
@@ -182,7 +216,8 @@ def run_one(label: str, unit: int, trig: str, run: int, away: str, back: str) ->
 
 
 def run_dpms(label: str, units: list[int], off_s: float) -> None:
-    before = {u: mark(u) for u in units}
+    for u in units:
+        mark(u)  # host note + debug link off: DDC/CI stays free
     dev_env = dict(os.environ, AWTO_DPMS_FORCE="1")
     subprocess.run(
         [
@@ -197,6 +232,7 @@ def run_dpms(label: str, units: list[int], off_s: float) -> None:
         check=False,
     )
     time.sleep(off_s)
+    t_on = dt.datetime.now().astimezone()
     subprocess.run(
         [sys.executable, str(ROOT / "scripts/host_dpms.py"), "on"],
         cwd=ROOT,
@@ -204,14 +240,18 @@ def run_dpms(label: str, units: list[int], off_s: float) -> None:
         check=False,
     )
     for u in units:
-        record(
-            label,
-            u,
-            "dpms",
-            1,
-            wait_episode(u, before[u], ("sync episode: wake", "sync DONE")),
-            health(u),
-        )
+        t0 = time.monotonic()
+        # a sync DONE after the display-on command, whatever the episode kind (#332)
+        while True:
+            ms = host_to_active_ms(u, t_on)
+            if (ms is not None and ms >= 0) or time.monotonic() - t0 > EPISODE_LIMIT_S:
+                break
+        if ms is None or ms < 0:
+            say(
+                f"U{u}: no sync DONE after the display-on command within {EPISODE_LIMIT_S} s"
+            )
+            ms = None
+        record(label, u, "dpms", 1, synclog(u), health(u), ms)
 
 
 def main() -> int:
