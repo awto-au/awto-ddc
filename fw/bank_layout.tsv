@@ -29,6 +29,7 @@ stub	_osd_tc_open_part	C	0x0e38	8
 stub	_osd_tc_place_corner	C	0x0e40	8
 stub	_osd_tc_viewport	C	0x0e48	8
 stub	_AwtoFastScalerStatus	C	0x0e50	8
+stub	_AwtoPortSearchSkip	C	0x0e58	8
 const	___str_127	C	0x0ed4	12
 const	___str_128	C	0x0ee0	20
 const	___str_120	C	0x0ef4	8
@@ -900,6 +901,7 @@ stub	_AwtoDpRx1Trained	C	0x2af4	8
 stub	_FsByte	C	0x2afc	8
 stub	_FsTitle	C	0x2b04	8
 stub	_AwtoPortMonPoll	C	0x2b0c	8
+stub	_AwtoPortClass	C	0x2b14	8
 stub	_ScalerTMDSFirstActiveProc	C	0x2b1c	8
 stub	_ScalerTMDSHotPlugEvent	C	0x2b24	8
 stub	_ScalerTMDSIntHandler_EXINT0	C	0x2b2c	8
@@ -1605,6 +1607,7 @@ fn	_UserOsdHandler	2	0x4b60	72
 fn	_UserInterfaceGetAudioMuteStatus	2	0x4ba8	36
 fn	_UserInterfaceGetCableResetStatus	2	0x4bcc	60
 fn	_UserInterfaceGetForcePSStatus	2	0x4c08	12
+fn	_SysSourceSearchTimeInitial	2	0x4c14	252
 fn	_ScalerDpRx1ChangeSrambleSeed	2	0x4d14	8
 fn	_ScalerDpRx1LinkRateDetect	2	0x4d1c	96
 fn	_ScalerDpRx1VBIOSMSACheck	2	0x4d7c	336
@@ -1676,7 +1679,6 @@ fn	_ScalerTMDSRxSetDFEInitial_EXINT0	2	0xa788	1240
 fn	_ScalerTMDSRxSetPorchColor	2	0xac60	200
 fn	_ScalerTMDSRxSwitchSlaveAddr	2	0xad28	24
 fn	_ScalerDpRx1PSPreDetect	2	0xad40	144
-fn	_SysSourceSearchTimeInitial	2	0xadd0	216
 fn	_AwtoSyncConPoll	2	0xaea8	248
 const	_tSysLed	3	0x0000	20
 const	_tSysMode	3	0x0014	20
@@ -2354,7 +2356,7 @@ const	_tLUTGAMMA_18_TABLE	6	0x0164	6352
 const	_tLUTGAMMA_20_TABLE	6	0x1a34	6352
 const	_tLUTGAMMA_22_TABLE	6	0x3304	6352
 const	_tLUTGAMMA_24_TABLE	6	0x4bd4	6352
-const	_UserInterfaceGetOverScanStatus_tusOverscanEnTable_10000_1379	6	0x64a4	92
+const	_UserInterfaceGetOverScanStatus_tusOverscanEnTable_10000_1381	6	0x64a4	92
 const	_OperationFactoryTable	6	0x6500	756
 const	_tCOLOR_CONV_RGB2YUV_ITU709	6	0x67f4	32
 const	_tCOLOR_CONV_YUV2RGB_ITU601	6	0x6814	32
@@ -2866,7 +2868,7 @@ const	_tDISPLAY_DPTX_DRV_HBR2_TABLE	9	0x0000	56
 const	_tEDID_TABLE_D1	9	0x0038	268
 const	_tEDID_TABLE_D2	9	0x0144	268
 const	_tEDID_TABLE_D3	9	0x0250	268
-const	_set_ap_rotate_tFlipToSdk_10000_1403	9	0x035c	8
+const	_set_ap_rotate_tFlipToSdk_10000_1405	9	0x035c	8
 fn	_ScalerColor420To422D2D3Enable	9	0x0364	60
 fn	_ScalerDpPowerSwitch	9	0x03a0	120
 fn	_ScalerDpRx1AuxIntInitial	9	0x0418	116
@@ -3433,6 +3435,7 @@ fn	_RTDFactorySSCRight	10	0x4368	12
 fn	_ScalerAudioDACInitial	10	0x4374	100
 fn	_ScalerAudioDACOutputSwitch	10	0x43d8	28
 fn	_ScalerAudioGetDigitalAudioPort	10	0x43f4	60
+fn	_AwtoPortClass	10	0x4430	64
 fn	_ScalerColorSpaceConvertDDomainEnable	10	0x449c	28
 fn	_ScalerColorSpaceConvertIDomainEnable	10	0x44b8	36
 fn	_ScalerDpRx1ColorimetrySetting	10	0x44dc	308
@@ -3551,6 +3554,7 @@ fn	_AwtoKeyId	10	0x8420	56
 fn	_AwtoKeyNoOsd	10	0x8458	28
 fn	_AwtoKeyMsgNote	10	0x8474	68
 fn	_set_ap_power_mode	10	0x84b8	68
+fn	_AwtoPortSearchSkip	10	0x84fc	92
 fn	_ScalerTMDSRxDviVideoSetting	10	0x856c	88
 fn	_AwtoNvCommitSel	10	0x85c8	48
 fn	_AwtoNvTestWrite	10	0x85f8	40

@@ -941,7 +941,7 @@ void SysSourceSearchTimeInitial(BYTE ucSearchIndex)
 #if(_SOURCE_AUTO_SEARCH_STYLE == _SOURCE_POLLING_IN_SEARCH_STATE)
 
                 // No cable (sense pin low): nothing can lock, one search pass is enough (awto-ddc#290)
-                ScalerTimerReactiveTimerEvent((GET_CABLE_DETECT(ucSearchIndex) == _TRUE) ? _SOURCE_DEFAULT_SEARCH_TIME_ALL_PORT : _SOURCE_DEFAULT_SEARCH_TIME_NO_CABLE_PORT, _SYSTEM_TIMER_EVENT_SOURCE_CLEAR_DETECTING);
+                ScalerTimerReactiveTimerEvent((GET_CABLE_DETECT(ucSearchIndex) == _TRUE) ? ((AwtoPortClass(GET_INPUT_PORT(GET_INPUTPORT_TYPE(ucSearchIndex))) == 1) ? _SOURCE_DEFAULT_SEARCH_TIME_SILENT_PORT : _SOURCE_DEFAULT_SEARCH_TIME_ALL_PORT) : _SOURCE_DEFAULT_SEARCH_TIME_NO_CABLE_PORT, _SYSTEM_TIMER_EVENT_SOURCE_CLEAR_DETECTING);
 #else
                 switch(GET_PORT_TYPE(GET_INPUTPORT_TYPE(ucSearchIndex)))
                 {

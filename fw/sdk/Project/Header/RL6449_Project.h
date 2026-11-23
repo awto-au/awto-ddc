@@ -827,7 +827,7 @@ extern volatile __xdata unsigned char isr_g_ucAwtoPortOff;
 extern void AwtoPortSelect(unsigned char ucPort, unsigned char ucWhy);   // a selection enables a disabled port first
 extern void AwtoPortSkipSearch(void);
 extern void AwtoPortBoot(void);                                 // AwtoSetInit: stored enables -> mask, boot lines
-#define AWTO_PORT_SEARCH_GATE(idx)                              { if(AWTO_PORT_OFF(GET_INPUT_PORT(GET_INPUTPORT_TYPE(idx)))) { AwtoPortSkipSearch(); } }
+
 extern void AwtoDeadPortPoll(void);
 extern void AwtoNoCableHold(unsigned char ucPort);               // selector take of a cable-less port: dead-port auto search held off
 // Waits for: the user to cable the port just chosen (no-signal card up meanwhile). 30 s = a plug-in plus card read, a human-time
@@ -1762,6 +1762,14 @@ extern void AwtoPsPollSite(void);
 #define AWTO_SYNC_EDID_LOAD(e)
 #define AWTO_PS_POLL_SITE()
 #endif
+#if(_AWTO_PS_WAKE == _ON)
+extern unsigned char AwtoPortClass(unsigned char ucPort);        // #324: 0 dead (no cable, no clock, no EDID read, no AUX), 1 cabled but silent, 2 live
+extern unsigned char AwtoPortSearchSkip(unsigned char ucPort);   // 1 = the auto search passes this port (dead, and another enabled port is not)
+#define AWTO_PORT_SEARCH_GATE(idx)                              { BYTE ucAwtoP = GET_INPUT_PORT(GET_INPUTPORT_TYPE(idx)); if(AWTO_PORT_OFF(ucAwtoP) || (AwtoPortSearchSkip(ucAwtoP) != 0)) { AwtoPortSkipSearch(); } }
+#else
+#define AwtoPortClass(p)                                        2
+#define AWTO_PORT_SEARCH_GATE(idx)                              { if(AWTO_PORT_OFF(GET_INPUT_PORT(GET_INPUTPORT_TYPE(idx)))) { AwtoPortSkipSearch(); } }
+#endif
 extern __xdata unsigned char g_ucAwtoConAuto;  // the open console opened itself: SOURCE closes it for the selector (#132)
 extern __xdata unsigned char g_ucAwtoSyncCon;  // 0 = no console auto-open (sim / tests); the setting is registry sync_console
 #define AWTO_SYNC_OPEN_KEY                                      2       // ucOpenReq: UP+DOWN in power saving (#132): opens once awake, whatever the setting
@@ -2474,6 +2482,7 @@ extern bit SysMachineOffOrGoing(void);
 #define _SOURCE_DEFAULT_SEARCH_TIME_DP                          SEC(3)
 #define _SOURCE_DEFAULT_SEARCH_TIME_TYPE_C                      SEC(4.5)
 #define _SOURCE_DEFAULT_SEARCH_TIME_NO_CABLE_PORT               SEC(0.1)    // one search pass: worst source handler pass 80 ms x 1.25 (awto-ddc#290)
+#define _SOURCE_DEFAULT_SEARCH_TIME_SILENT_PORT                 SEC(1)      // cabled, no clock / EDID read / AUX seen: derivation in docs/input-sync-timeline.md (#324)
 
 
 //////////////////

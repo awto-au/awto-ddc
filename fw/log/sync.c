@@ -1542,6 +1542,39 @@ static BYTE AwtoPortMonClock(BYTE ucI, BYTE ucOld)  // ucI 1 / 2: detector resul
     return (((ucCtl & (_BIT7 | _BIT6 | _BIT3 | _BIT2)) == (_BIT7 | _BIT6)) || (ucHit != 0)) ? 1 : 0;
 }
 
+BYTE AwtoPortClass(BYTE ucPort)                     // #324: 0 dead, 1 cabled but silent, 2 live; cable = pin or SDK status, so a stale word never calls a cabled port dead
+{
+    BYTE ucI = ucPort - _D1_INPUT_PORT;
+
+    if(ucI > 2)
+    {
+        return 2;
+    }
+    if((g_pucAwtoPortSt[ucI] & (AWTO_PST_CLK | AWTO_PST_LINK | AWTO_PST_DDC | AWTO_PST_AUX)) != 0)
+    {
+        return 2;
+    }
+    return ((AwtoPortMonCable(ucI) != 0) || (SysSourceGetCableDetect(ucPort) != 0)) ? 1 : 0;
+}
+
+BYTE AwtoPortSearchSkip(BYTE ucPort)                // SysSourceHandler gate: auto search only, a fixed port is searched as asked
+{
+    BYTE ucP;
+
+    if((GET_SOURCE_SCAN_TYPE() == _SOURCE_SWITCH_FIXED_PORT) || (AwtoPortClass(ucPort) != 0))
+    {
+        return 0;
+    }
+    for(ucP = _D1_INPUT_PORT; ucP <= _D3_INPUT_PORT; ucP++)
+    {
+        if((ucP != ucPort) && !AWTO_PORT_OFF(ucP) && (AwtoPortClass(ucP) != 0))
+        {
+            return 1;
+        }
+    }
+    return 0;                                       // nothing else is alive: the full pass, every port searched
+}
+
 void AwtoPortMonDdc(BYTE ucI)                       // AwtoEdidPoll: the source read the EDID of port D1 + ucI (E7 is its line)
 {
     g_pucAwtoPortSt[ucI] |= AWTO_PST_DDC;

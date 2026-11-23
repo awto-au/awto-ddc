@@ -4,20 +4,24 @@
 usage: portmon_sim.py BIN MAP [--case status|order|all] [--mode 1080p60]
   status  boot to ACTIVE on D3: g_pucAwtoPortSt D3 = cable + clock, D1 / D2 = valid only; then a cable appears on D2 and goes again:
           the word follows and the FA lines (cable pin high / low) are in the sync log.
-  order   same boot: the search never leaves a visit line on an uncabled port longer than AWTO_NOCABLE_MAX_MS, and ACTIVE comes
-          within --active-ms (the dead ports are skipped).
+  nolive  no cable on any port: every port is still searched (the full pass, no port skipped).
+  order   boot with D2 uncabled (dead: the search never reaches it) and with D2 cabled but silent (left within SILENT_MAX_MS,
+          not the 2 s HDMI dwell); both end ACTIVE on D3.
 Log: tmp/logs/portmon_sim.log
 """
 import argparse
+import re
 import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
+import ddc_sim as DD
 import deadport_sim as DP
 import fw_sim as S
 
 CABLE, CLK, LINK, DDC, AUX, VALID = 0x01, 0x02, 0x04, 0x08, 0x10, 0x80
 D2_PIN = 0xFE32                                 # board header: low = cable
+SILENT_MAX_MS = 1800                            # _SOURCE_DEFAULT_SEARCH_TIME_SILENT_PORT 1000 ms + 2 sim passes (the sim main loop is coarse)
 
 
 def table(bus):
@@ -28,10 +32,9 @@ def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("bin", type=Path)
     ap.add_argument("map", type=Path)
-    ap.add_argument("--case", choices=["status", "order", "all"], default="all")
+    ap.add_argument("--case", choices=["status", "order", "nolive", "all"], default="all")
     ap.add_argument("--mode", default="1080p60")
     ap.add_argument("--sync-tsv", dest="sync_tsv", type=Path)
-    ap.add_argument("--active-ms", type=int, default=0, help="order: ACTIVE must come within this many ms of boot (0 = report only)")
     a = ap.parse_args()
     a.d2_cabled = False
     (S.ROOT / "tmp/logs").mkdir(parents=True, exist_ok=True)
@@ -41,9 +44,9 @@ def main() -> int:
         print(s)
         log.write(s + "\n")
 
+    rc = 0
     rig = DP.Rig(a)
     bus, _eng = rig.start()
-    rc = 0
     try:
         if not rig.up:
             say("FAIL no ACTIVE at boot")
@@ -74,8 +77,36 @@ def main() -> int:
                 ok = any(want in ln for ln in lines)
                 say(f"status line '{want}': {'PASS' if ok else 'FAIL'}")
                 rc |= 0 if ok else 1
-    finally:
         bus.close()
+        if a.case in ("order", "all"):
+            for cabled in (False, True):
+                a.d2_cabled = cabled
+                rig = DP.Rig(a)
+                bus, _eng = rig.start()
+                try:
+                    lines = DP.synclog(a, bus, lambda _s: None)
+                    left = [(m.group(1), int(m.group(2))) for m in (re.search(r"search left (D\d) after (\d+)ms", ln) for ln in lines) if m]
+                    d2 = [ms for p, ms in left if p == "D2"]
+                    taken = any("input taken:D3" in ln for ln in lines)
+                    ok = rig.up and taken and ((not d2) if not cabled else (len(d2) == 1 and d2[0] <= SILENT_MAX_MS))
+                    say(f"order D2 {'cabled, silent' if cabled else 'uncabled'}: {'PASS' if ok else 'FAIL'} D2 visits {d2}, D3 taken {taken}")
+                    rc |= 0 if ok else 1
+                finally:
+                    bus.close()
+        if a.case in ("nolive", "all"):
+            eng = DD.DdcEngine()
+            bus = S.SimBus(a.bin, a.map, video=a.mode, port="D3", devs=[DP.Pins({**DP.NOCABLE_D1, 0xFE32: 1, 0xFE2C: 1}), eng])
+            try:
+                bus.wait(4.0)
+                lines = DP.synclog(a, bus, lambda _s: None)
+                seen = sorted({m.group(1) for m in (re.search(r"search reached (D\d)", ln) for ln in lines) if m})
+                ok = seen == ["D1", "D2", "D3"]
+                say(f"nolive: {'PASS' if ok else 'FAIL'} ports reached {seen} (want D1 D2 D3)")
+                rc |= 0 if ok else 1
+            finally:
+                bus.close()
+    finally:
+        pass
     return rc
 
 

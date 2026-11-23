@@ -28,6 +28,14 @@ Per-port status word (#323, `g_pucAwtoPortSt[3]`, index = port - D1; `AwtoPortMo
 - FA lines per changed bit: `FA 10/11` cable pin low / high, `12/13` clock lost / stable, `14/15` link down / trained, `19` AUX seen; a DDC set is the `E7` line, DDC / AUX clear with the cable pin low (no line of their own)
 - cost: +5 B XDATA (free 328 -> 323), ~2.4k sim cycles per pass (`scripts/speed_bench.py`); sim gate `portmon` (`scripts/portmon_sim.py`)
 
+Source search uses the status word (#324, `AwtoPortClass` / `AwtoPortSearchSkip` in `fw/log/sync.c`, gate `AWTO_PORT_SEARCH_GATE` in `SysSourceHandler`):
+- class 0 dead = cable pin low and SDK cable status low and no clock / link / EDID read / AUX; 1 cabled but silent; 2 live
+- auto search skips a dead port when another enabled port is class 1 or 2; nothing else alive = full pass (no port skipped); a fixed-port search is never skipped
+- a skipped port still gets its first search pass (the gate runs on the next pass, 2 ms in the sim); the 100 ms no-cable dwell (#290) stays the floor for the full pass
+- dwell of a cabled port: class 1 `_SOURCE_DEFAULT_SEARCH_TIME_SILENT_PORT` 1 s (2.5 x the 402 ms a DP source took to read the EDID, unit 2), class 2 the SDK 2 s (HDMI) / 3 s (DP); the 4.5 s reactive re-arm on a predetect is unchanged
+- start port: the SDK start (NVRAM port; wake `SysSourceSearchLastPort`) is kept, a dead start port is passed over at once; the remembered ratio (#286) is read at PHY set-up only, no interaction
+- sim: D2 uncabled, base D2 visited 404 ms, ACTIVE 761 ms; now D2 not visited, ACTIVE 662 ms. D2 cabled but silent: base 2314 ms, ACTIVE 2671 ms; now 1316 ms, ACTIVE 1672 ms (`scripts/portmon_sim.py --case order`, unit 3 image, 2026-11-23)
+
 HPD lines: pins polled once per main-loop pass (`AwtoEdidPoll`, <= 2.5 ms), the first pass logs all three levels; `E7` (`Dn EDID read`) is the DDC / AUX read latch, same poll.
 
 Scan outcome codes (F2 arg, set by `AWTO_SCAN_STAGE` at the SDK step, one line per change of outcome per port, 12 lines per episode):
