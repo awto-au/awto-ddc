@@ -149,9 +149,9 @@ def main() -> int:
     new = [e for e in ents if e["boot"] == h["boot"]]
     r.check(old and new and [e["abs"] for e in ents] == list(range(ents[0]["abs"], ents[0]["abs"] + len(ents))), "warm reset: previous boot's lines kept, this boot's follow without a gap", f"{len(old)} old + {len(new)} new")
     r.check(all(e in [x2 for x2 in D.entries(r.rd, h, nxt, 4000)] for e in before), "warm reset: the newest lines of the previous boot are unchanged")
-    raw = S.read_ring(r.m.rd, r.ring)
-    _, lines = S.decode(raw, rows, whole=True)
-    r.check(any("boot:watchdog bite" in ln for ln in lines), "warm reset: this boot's reason line says watchdog bite", [ln for ln in lines if "boot:" in ln][-1:][0] if lines else "")
+    # the ring view holds the newest 88 lines only: a boot with more lines (a timing-dependent console line) pushes the reason line out of it
+    lines = [S.line(rows, (e["id"], e["arg"], e["ms"] & 0xFFFF, e["val"]), 0) for e in new]
+    r.check(any("boot:watchdog bite" in ln for ln in lines), "warm reset: this boot's reason line says watchdog bite (DDR entries of this boot)", next((ln for ln in lines if "boot:" in ln), ""))
     say(f"{'PASS' if r.fails == 0 else 'FAIL'} dram_log_sim {a.bin.name}: {r.fails} failed")
     return 1 if r.fails else 0
 
