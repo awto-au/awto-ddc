@@ -18,6 +18,7 @@ from collections import Counter
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
+import chip_mem as CM
 import fw_sim as F
 import rtd_diag
 
@@ -67,14 +68,17 @@ def profile(binp: Path, mapp: Path, passes: int, be: bool, log, search_index: in
     call_end, ret_end = F.sw_ret(img, call_sw) + 1, F.sw_ret(img, ret_sw) + 1
     rtab = (ret - 64, ret)
 
+    def fa(pc):                                  # stub symbols above common_end are bank-local (area ST<bank>_<fn>): key by bank << 16 | pc
+        return pc if pc < CM.COMMON_END else (bank << 16) | pc
+
     def region(pc):
         """'' or the trampoline part this pc belongs to"""
         if call <= pc < call_end:
             return "__bs_call"
         if rtab[0] <= pc < ret_end:
             return "__bs_ret+rtab"
-        i = bisect.bisect_right(stub_starts, pc) - 1
-        if i >= 0 and pc < stub_starts[i] + ssize:
+        i = bisect.bisect_right(stub_starts, fa(pc)) - 1
+        if i >= 0 and fa(pc) < stub_starts[i] + ssize:
             return "stub"
         return ""
 
@@ -137,7 +141,7 @@ def profile(binp: Path, mapp: Path, passes: int, be: bool, log, search_index: in
             t_pass += ticks
             nm = r and f"[{r}]" or sym_pc
             if r == "stub":
-                nm = "[stub] " + stub_name[stub_starts[bisect.bisect_right(stub_starts, pc) - 1]][5:]
+                nm = "[stub] " + stub_name[stub_starts[bisect.bisect_right(stub_starts, fa(pc)) - 1]][5:]
             excl[nm] += ticks
             if r:
                 reg[r] += ticks
@@ -151,12 +155,12 @@ def profile(binp: Path, mapp: Path, passes: int, be: bool, log, search_index: in
             if passes_done >= 0 and r2_ok(npc):
                 calls[tgt] += 1
             r2 = region(npc)
-            stackf.append(f"[stub] {stub_name[npc][5:]}" if r2 == "stub" else tgt)
+            stackf.append(f"[stub] {stub_name[stub_starts[bisect.bisect_right(stub_starts, fa(npc)) - 1]][5:]}" if r2 == "stub" else tgt)
             if r2 == "stub":
                 cnt["stub_entries"] += 1 if passes_done >= 0 else 0
                 if passes_done >= 0:
-                    xcalls[f"{sym_pc} -> {stub_name[npc][5:]}"] += 1
-                    edges[f"{sym_pc} _{stub_name[npc][5:]}"] += 1
+                    xcalls[f"{sym_pc} -> {stub_name[stub_starts[bisect.bisect_right(stub_starts, fa(npc)) - 1]][5:]}"] += 1
+                    edges[f"{sym_pc} _{stub_name[stub_starts[bisect.bisect_right(stub_starts, fa(npc)) - 1]][5:]}"] += 1
             else:
                 cnt["direct_calls"] += 1 if passes_done >= 0 else 0
                 if passes_done >= 0 and r2_ok(npc):
