@@ -21,7 +21,7 @@ SLOT = 388                          # size the icon blob was built for (_tFONT1_
 
 
 def sdk_icon(name="INFORMATION"):
-    m = re.search(r"tFONT1_ICON_%s\[\]=\s*\{(.*?)\n\};" % name, SDK_SRC.read_text(), re.DOTALL)
+    m = re.search(rf"tFONT1_ICON_{name}\[\]=\s*\{{(.*?)\n\}};", SDK_SRC.read_text(), re.DOTALL)
     return bytes(int(x, 16) for x in re.findall(r"0x([0-9a-fA-F]{2})", m.group(1)))
 
 

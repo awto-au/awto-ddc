@@ -187,7 +187,7 @@ def main() -> int:
             ad = addr.get("_" + cn) if fn is None else None
             lab = ("_" + cn) if fn is None else f"_{fn}_{cn}"
             hot = "ISR" if any(r == lab or r.startswith(lab + "_") for r in isr) else "   "
-            log(f"{area:5} {('0x%02X' % ad) if ad is not None else '  -  '} {size:3} {hot} {mod:32} {(fn + ':') if fn else ''}{cn}")
+            log(f"{area:5} {(f'0x{ad:02X}') if ad is not None else '  -  '} {size:3} {hot} {mod:32} {(fn + ':') if fn else ''}{cn}")
             tot[area] += size
         for blk in re.findall(r"^(DDOVL\w*|SSEG|BSEG_BYTES|BIT_BANK|DSEG|ISEG)\s+([0-9A-F]{8})\s+([0-9A-F]{8})", mp, re.MULTILINE):
             log(f"area {blk[0]:10} at 0x{int(blk[1], 16):02X} size {int(blk[2], 16)}")
@@ -229,7 +229,7 @@ def main() -> int:
     bad, sh = [], shared_refs(Path(a.asm))
     for area, mod, fn, cn, size, named in rows:
         lab = ("_" + cn) if fn is None else f"_{fn}_{cn}"
-        is_sh = any(r == lab or r.startswith(lab + "_") or r.startswith(lab + "+") for r in sh)
+        is_sh = any(r == lab or r.startswith((lab + "_", lab + "+")) for r in sh)
         want = PREFIX[area] + (ISR if is_sh else "") + base_of(cn)
         if named and cn != want:
             bad.append((area, mod, fn, cn, want))

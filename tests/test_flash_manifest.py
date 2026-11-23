@@ -132,7 +132,7 @@ def test_first_flash_no_manifest_builds_diff_from_device_and_writes_manifest_las
     assert any("no valid device manifest" in x for x in _log)
     m, _ = dev_manifest(isp)
     assert m is not None and m.matches(img_runs()) == list(range(NIMG))
-    assert [e for e in isp.ev if e[0] == "erase"][0] == ("erase", MAN)   # invalidated before the first image erase
+    assert next(e for e in isp.ev if e[0] == "erase") == ("erase", MAN)   # invalidated before the first image erase
     last_img = max(i for i, e in enumerate(isp.ev) if e[1] < MAN)
     first_man_prog = min(i for i, e in enumerate(isp.ev) if e[0] == "prog" and e[1] >= MAN)
     assert first_man_prog > last_img                                 # manifest only after every image sector
@@ -259,7 +259,7 @@ def test_summary_lines(tmp_path, _log):
     for name, lines in steps:
         print(f"## {name}")
         print("\n".join(lines))
-    sec = {n: [l for l in ls if l.startswith("SUMMARY: sectors")][0] for n, ls in steps}
+    sec = {n: next(l for l in ls if l.startswith("SUMMARY: sectors")) for n, ls in steps}
     for line in sec.values():
         nimg, erased, prog, _pg, skipped = map(int, re.search(
             r"image (\d+), erased (\d+), programmed (\d+) \((\d+) pages\), skipped (\d+)", line).groups())

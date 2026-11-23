@@ -47,7 +47,7 @@ def reduce(rows):
         k = (r[6], int(r[7], 16), r[9])
         e = out.get(k)
         if e is None:
-            e = out[k] = dict(final=r[10], first=r[10], seq=len(order), phase=r[11], phases=set(), name=r[8], n=0, ms=r[2], fn=r[5])
+            e = out[k] = {"final": r[10], "first": r[10], "seq": len(order), "phase": r[11], "phases": set(), "name": r[8], "n": 0, "ms": r[2], "fn": r[5]}
             order.append(k)
         e["final"] = r[10]; e["n"] += 1; e["phases"].add(r[11])
     return out, order, rows[end][2]

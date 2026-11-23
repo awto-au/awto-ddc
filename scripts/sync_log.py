@@ -61,8 +61,8 @@ def load_rows(tsv: Path) -> list[dict]:
             continue
         i, a, f, t, *c = ln.split("\t")                  # optional 5th column: colour class (fw/awto/sync_classes.tsv)
         port = f.startswith("port")
-        out.append(dict(id=int(i, 16), arg=None if a == "*" else int(a, 16), port=port, fmt=f[4:] if port else f, text=t,
-                        cls=sync_classes.check(c[0] if c else "")))
+        out.append({"id": int(i, 16), "arg": None if a == "*" else int(a, 16), "port": port, "fmt": f[4:] if port else f, "text": t,
+                        "cls": sync_classes.check(c[0] if c else "")})
     return out
 
 
@@ -268,9 +268,9 @@ DIAG_T2 = 0x16                                           # StAwtoDiag.usT2Isr (d
 
 
 def ht_decode(b: bytes) -> dict:
-    return dict(syncs=b[0], ofs=b[1] - 256 if b[1] >= 128 else b[1], frac=int.from_bytes(b[2:4], "big"),
-                epoch=int.from_bytes(b[4:8], "big"), fw=int.from_bytes(b[8:12], "big"),
-                drift=int.from_bytes(b[12:14], "big", signed=True), up_hi=int.from_bytes(b[14:16], "big"))
+    return {"syncs": b[0], "ofs": b[1] - 256 if b[1] >= 128 else b[1], "frac": int.from_bytes(b[2:4], "big"),
+                "epoch": int.from_bytes(b[4:8], "big"), "fw": int.from_bytes(b[8:12], "big"),
+                "drift": int.from_bytes(b[12:14], "big", signed=True), "up_hi": int.from_bytes(b[14:16], "big")}
 
 
 def fw_now(ht: dict, t2: int) -> int:
@@ -505,8 +505,8 @@ read_ring.dram_missing = 0
 
 def decode(raw: bytes, rows: list[dict], whole: bool = False, note: bytes | None = None):
     """whole=True: every entry still in the ring (all episodes), times relative to the current episode's t0"""
-    h = dict(magic=raw[0:2], version=raw[2], seq=raw[3], ep_seq=raw[4], kind=raw[5], port=raw[6],
-             t0=raw[7] << 8 | raw[8], done=raw[9], open_req=raw[10])
+    h = {"magic": raw[0:2], "version": raw[2], "seq": raw[3], "ep_seq": raw[4], "kind": raw[5], "port": raw[6],
+             "t0": raw[7] << 8 | raw[8], "done": raw[9], "open_req": raw[10]}
     if h["magic"] != b"SY":
         return h, []
     n_, wrap = raw[12], raw[13]

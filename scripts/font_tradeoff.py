@@ -220,21 +220,21 @@ def main():
                 sraw, svlc = blob_sizes(v, u_scr)
                 sfw = v.words_per_unit * len(u_scr)
                 araw, avlc = blob_sizes(v, u_asc)
-                rows.append(dict(
-                    variant=v.name, font=Path(FONTS[pitch]).stem, bpp=bpp,
-                    geometry="12x18 @2x" if geom == "a" else "24x36 @1x", pitch=pitch,
-                    words_per_unit=v.words_per_unit,
-                    ascii_units=len(u_asc), ascii_words=len(u_asc) * v.words_per_unit,
-                    ascii_raw_B=araw, ascii_vlc_B=avlc, ascii_note=asc_note,
-                    screen_units=len(u_scr), union_units=len(u_all),
-                    font_words=fw, map_HxW=f"{H}x{W}", map_words=mapw, total_words=total,
-                    sram_pct=round(100 * total / SRAM_WORDS, 1), free_words=free,
-                    icons_1bpp_fit=free // 9,
-                    raw_B=raw, vlc_B=vlc, vlc_ratio=round(vlc / raw, 2) if raw else 0,
-                    scr_total_words=mapw + sfw, scr_sram_pct=round(100 * (mapw + sfw) / SRAM_WORDS, 1),
-                    scr_raw_B=sraw, scr_vlc_B=svlc,
-                    line_px=W * v.uw * v.scale,
-                ))
+                rows.append({
+                    "variant": v.name, "font": Path(FONTS[pitch]).stem, "bpp": bpp,
+                    "geometry": "12x18 @2x" if geom == "a" else "24x36 @1x", "pitch": pitch,
+                    "words_per_unit": v.words_per_unit,
+                    "ascii_units": len(u_asc), "ascii_words": len(u_asc) * v.words_per_unit,
+                    "ascii_raw_B": araw, "ascii_vlc_B": avlc, "ascii_note": asc_note,
+                    "screen_units": len(u_scr), "union_units": len(u_all),
+                    "font_words": fw, "map_HxW": f"{H}x{W}", "map_words": mapw, "total_words": total,
+                    "sram_pct": round(100 * total / SRAM_WORDS, 1), "free_words": free,
+                    "icons_1bpp_fit": free // 9,
+                    "raw_B": raw, "vlc_B": vlc, "vlc_ratio": round(vlc / raw, 2) if raw else 0,
+                    "scr_total_words": mapw + sfw, "scr_sram_pct": round(100 * (mapw + sfw) / SRAM_WORDS, 1),
+                    "scr_raw_B": sraw, "scr_vlc_B": svlc,
+                    "line_px": W * v.uw * v.scale,
+                })
                 im = render_screen(v, screen)
                 im.save(OUT / f"var_{v.name}.png")
                 # 400% zoom of the first menu row, first 12 units wide; cropped at screen px

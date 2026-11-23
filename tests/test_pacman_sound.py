@@ -8,6 +8,8 @@ import wave
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "scripts"))
+import itertools
+
 import pacman_sound as P
 
 K = P.PS_K_DEFAULT_HZ
@@ -80,7 +82,7 @@ def test_new_tracks_present_with_priorities():
 
 def test_ghost_sweep_rises_and_fruit_falls_then_rises():
     ghost = [hz for hz, _ in P.decode(P.encode("ghost", K)[0], K)]
-    assert all(b > a for a, b in zip(ghost, ghost[1:])) and ghost[0] < 400 and ghost[-1] > 1500
+    assert all(b > a for a, b in itertools.pairwise(ghost)) and ghost[0] < 400 and ghost[-1] > 1500
     fruit = [hz for hz, _ in P.decode(P.encode("fruit", K)[0], K) if hz > 0]
     assert fruit[0] > fruit[11] and fruit[-1] > fruit[12]
 

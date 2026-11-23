@@ -60,13 +60,13 @@ def test_win_effect_3d():
 
 
 def test_win_gradient():
-    i = D.Img().window(0, 40, 30, 299, 119, 4, gradient=dict(dir=0, pol=(1, 1, 0), en=(1, 0, 1), step=2))
+    i = D.Img().window(0, 40, 30, 299, 119, 4, gradient={"dir": 0, "pol": (1, 1, 0), "en": (1, 0, 1), "step": 2})
     assert px(i, 40, 50) == P[4]
     assert px(i, 48, 50) == (P[4][0] + 32, P[4][1], P[4][2] - 32)        # 4 levels of 8 after 8 px at 2 px per level
 
 
 def test_win_gradient_vertical():
-    i = D.Img().window(0, 40, 30, 299, 119, 4, gradient=dict(dir=1, pol=(0, 1, 1), en=(1, 0, 0), step=1))
+    i = D.Img().window(0, 40, 30, 299, 119, 4, gradient={"dir": 1, "pol": (0, 1, 1), "en": (1, 0, 0), "step": 1})
     assert px(i, 100, 30) == P[4] and px(i, 100, 34)[0] == P[4][0] - 32 and px(i, 200, 34) == px(i, 100, 34)
 
 

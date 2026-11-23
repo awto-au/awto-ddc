@@ -52,7 +52,7 @@ class ClockModel:
         f = src / max(1, (sel >> 2) & 0x0F) / md
         if not self.f2_log or self.f2_log[-1][1:] != (fd2, name == "M2PLL"):
             self.f2_log.append((m.instr, fd2, name == "M2PLL"))
-        self.ratio_x256 = int(round(256.0 * fd2 / md))       # f_flash = source / FLASH_CLK_DIV / FLASH_CLK_DIV2, f_cpu = source / FLASH_CLK_DIV / MCU_CLK_DIV
+        self.ratio_x256 = round(256.0 * fd2 / md)       # f_flash = source / FLASH_CLK_DIV / FLASH_CLK_DIV2, f_cpu = source / FLASH_CLK_DIV / MCU_CLK_DIV
         if f != self.f_cpu or name != self.src:
             self.f_cpu, self.src = f, name
             self.log.append((getattr(m, "wall_ms", 0.0), f, name))

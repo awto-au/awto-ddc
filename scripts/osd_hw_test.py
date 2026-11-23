@@ -203,9 +203,9 @@ def op(dev, code: int, limit_s: float, *, mode=M_SDK, gap=0, flags=None, seed=0,
             raise TimeoutError(f"op {code} {label}: not done after {dev.now() - t0:.2f} s (limit {limit_s:.2f} s)")
     raw = dev.rd(0, SIZE)
     be = lambda o: int.from_bytes(raw[o:o + 2], "big")
-    return dict(state=raw[O_STATE], ovl=raw[O_OVL], bad=be(O_BAD), first=be(O_FIRST), crc=be(O_CRC), ms=be(O_MS), frame=be(O_FRAME),
-                regs=dict(zip(REG_NAMES, raw[O_REGS:O_REGS + N_REGS])), badb=raw[O_BADB:O_BADB + 8], buf=raw[O_BUF:O_BUF + BUF], run=raw[O_RUN],
-                host_s=dev.now() - t0)
+    return {"state": raw[O_STATE], "ovl": raw[O_OVL], "bad": be(O_BAD), "first": be(O_FIRST), "crc": be(O_CRC), "ms": be(O_MS), "frame": be(O_FRAME),
+                "regs": dict(zip(REG_NAMES, raw[O_REGS:O_REGS + N_REGS])), "badb": raw[O_BADB:O_BADB + 8], "buf": raw[O_BUF:O_BUF + BUF], "run": raw[O_RUN],
+                "host_s": dev.now() - t0}
 
 
 def set_flags(dev, flags: int) -> None:

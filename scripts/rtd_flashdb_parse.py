@@ -47,7 +47,7 @@ def setup_log():
 
 
 def h8(b):
-    return "0x%02x" % b
+    return f"0x{b:02x}"
 
 
 def cstr(b):
@@ -62,9 +62,9 @@ def decode_script(s):
     ops, i = [], 0
     while i < len(s):
         if s[i] == 0x06 and i + 3 <= len(s):
-            ops.append("wr %02x=%02x" % (s[i + 1], s[i + 2])); i += 3
+            ops.append(f"wr {s[i + 1]:02x}={s[i + 2]:02x}"); i += 3
         elif s[i] == 0x0D and i + 8 <= len(s):
-            ops.append("poll %02x&%02x==%02x args=%s" % (s[i + 1], s[i + 2], s[i + 3], s[i + 4:i + 8].hex()))
+            ops.append(f"poll {s[i + 1]:02x}&{s[i + 2]:02x}=={s[i + 3]:02x} args={s[i + 4:i + 8].hex()}")
             i += 8
         else:
             break
@@ -121,7 +121,7 @@ def parse_chip_v2(i, r, swren_names):
 def parse_flashset_v2(d, swren_names):
     magic, ver, count, nsw = struct.unpack_from("<IHHH", d, 0)
     if magic != MAGIC:
-        raise ValueError("bad magic 0x%08x" % magic)
+        raise ValueError(f"bad magic 0x{magic:08x}")
     p = HDR
     chips = [parse_chip_v2(i, d[p + i * REC:p + (i + 1) * REC], swren_names) for i in range(count)]
     p += count * REC
@@ -143,7 +143,7 @@ def parse_flashset_v2(d, swren_names):
     for c in chips:
         if c["swren_offset"] is not None and c["swren_offset"] not in known:
             logging.warning("chip %s: swren_offset %d matches no script", c["name"], c["swren_offset"])
-    hdr = {"magic": "0x%08x" % magic, "format_version": ver, "chip_count": count, "swren_count": nsw,
+    hdr = {"magic": f"0x{magic:08x}", "format_version": ver, "chip_count": count, "swren_count": nsw,
            "format": "FlashSet.dat v2 (72 B records)"}
     return hdr, chips, scripts
 
@@ -154,7 +154,7 @@ def parse_flash_legacy(d):
     Same field order as v2 minus the pad/reserved gaps. [fw] for the fields below; script semantics as in v2."""
     magic, ver, count = struct.unpack_from("<IHH", d, 0)
     if magic != MAGIC:
-        raise ValueError("bad magic 0x%08x" % magic)
+        raise ValueError(f"bad magic 0x{magic:08x}")
     p, chips = 8, []
     for i in range(count):
         start = p
@@ -191,7 +191,7 @@ def parse_flash_legacy(d):
         p = end
     if p != len(d):
         raise ValueError("record parse ended at %d, file is %d bytes" % (p, len(d)))
-    hdr = {"magic": "0x%08x" % magic, "format_version": ver, "chip_count": count,
+    hdr = {"magic": f"0x{magic:08x}", "format_version": ver, "chip_count": count,
            "format": "Flash.dat legacy (variable-length records, ASCII-hex SWREN script per chip)"}
     return hdr, chips, []
 
@@ -293,23 +293,23 @@ def cmd_diff(a, b):
     kind, ka = _keyed(da)
     kind2, kb = _keyed(db)
     if kind != kind2:
-        raise ValueError("cannot diff %s against %s" % (kind, kind2))
+        raise ValueError(f"cannot diff {kind} against {kind2}")
     ha, hb = da["header"], db["header"]
-    lines = ["# %s diff: %s (%s, %s) -> %s (%s, %s)" % (kind, os.path.basename(a), ha.get("tool_version"), ha.get("sha256", "")[:12],
+    lines = ["# {} diff: {} ({}, {}) -> {} ({}, {})".format(kind, os.path.basename(a), ha.get("tool_version"), ha.get("sha256", "")[:12],
                                                       os.path.basename(b), hb.get("tool_version"), hb.get("sha256", "")[:12])]
     added = [k for k in kb if k not in ka]
     removed = [k for k in ka if k not in kb]
     changed = [k for k in ka if k in kb and ka[k] != kb[k]]
     for k in added:
         jid = kb[k].get("jedec", kb[k].get("scaler_id", ""))
-        lines.append("+ added   %s (%s)" % (k, jid))
+        lines.append(f"+ added   {k} ({jid})")
     for k in removed:
         jid = ka[k].get("jedec", ka[k].get("scaler_id", ""))
-        lines.append("- removed %s (%s)" % (k, jid))
+        lines.append(f"- removed {k} ({jid})")
     for k in changed:
         for f in sorted(set(ka[k]) | set(kb[k])):
             if ka[k].get(f) != kb[k].get(f):
-                lines.append("~ changed %s.%s: %s -> %s" % (k, f, json.dumps(ka[k].get(f)), json.dumps(kb[k].get(f))))
+                lines.append(f"~ changed {k}.{f}: {json.dumps(ka[k].get(f))} -> {json.dumps(kb[k].get(f))}")
     if kind == "chip":
         sa = {s["offset"]: s["raw"] for s in da.get("swren_scripts", [])}
         sb = {s["offset"]: s["raw"] for s in db.get("swren_scripts", [])}

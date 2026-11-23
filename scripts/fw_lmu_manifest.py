@@ -25,7 +25,7 @@ def main():
     log = (root / "tmp/logs/fw_lmu_manifest.log").open("a")
     scratch = root / "tmp/lmu"; scratch.mkdir(parents=True, exist_ok=True)
     rows = ["vendor\tpackage\turl\tnotes"]
-    for url in sorted(set(l.strip() for l in src.read_text().splitlines() if "LatestVersion.txt" in l and "/fw/" in l)):
+    for url in sorted({l.strip() for l in src.read_text().splitlines() if "LatestVersion.txt" in l and "/fw/" in l}):
         base, fn = url.rsplit("/", 1)
         model = base.rsplit("/", 1)[1]
         pre = "tbt_" if fn.startswith("TBT") else ""

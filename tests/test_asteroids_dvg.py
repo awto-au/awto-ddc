@@ -15,8 +15,7 @@ needs_rom = pytest.mark.skipif(not ZIP.exists(), reason="Asteroids ROM set not p
 
 def test_no_rom_derived_files_tracked():
     files = subprocess.run(["git", "ls-files"], cwd=ROOT, capture_output=True, text=True, check=True).stdout.split("\n")
-    bad = [f for f in files if f.endswith((".np3", ".ef2", ".h2", ".j2", ".c8")) or "asteroids_shapes" in f
-           or f.endswith("asteroid.zip") or "/asteroids/" in f or f.startswith("tmp/asteroids")]
+    bad = [f for f in files if f.endswith((".np3", ".ef2", ".h2", ".j2", ".c8", "asteroid.zip")) or "asteroids_shapes" in f or "/asteroids/" in f or f.startswith("tmp/asteroids")]
     assert not bad, bad
 
 

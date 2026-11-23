@@ -26,7 +26,7 @@ def load(p, until_ms):
             break
         if r[6] == "CALL":
             cur = None
-            seq.append(dict(kind="CALL", ms=ms, name=r[8], args=r[9], instr=int(r[1])))
+            seq.append({"kind": "CALL", "ms": ms, "name": r[8], "args": r[9], "instr": int(r[1])})
             continue
         if r[6] != "W":
             continue
@@ -36,7 +36,7 @@ def load(p, until_ms):
             cur["bytes"][a] = v
             cur["end_ms"] = ms
             continue
-        cur = dict(kind="W", ms=ms, end_ms=ms, base=base, bytes={a: v}, fn=r[5].split("+")[0], instr=int(r[1]))
+        cur = {"kind": "W", "ms": ms, "end_ms": ms, "base": base, "bytes": {a: v}, "fn": r[5].split("+")[0], "instr": int(r[1])}
         seq.append(cur)
     for e in seq:
         if e["kind"] == "W":

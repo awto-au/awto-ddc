@@ -344,7 +344,7 @@ def interp(ins, upto: int) -> tuple[dict, dict]:
         m = re.match(r"mov\s+(r\d|a),\s*dp([lh])$", t)
         if m:
             continue
-        if t.startswith("movx\t@dptr,a") or t.startswith("movx @dptr,a"):
+        if t.startswith(("movx\t@dptr,a", "movx @dptr,a")):
             d = st.get("dptr")
             if isinstance(d, str):
                 parm[d] = st.get("a")
@@ -404,9 +404,9 @@ def extract_sites(fns, ctx, live, defs: Eval, build: Path):
     for fn in fns.values():
         nops = 0
         for file, line, text, ins in fn.stmts:
-            base = dict(file=rel(file), line=line, function=fn.name[1:], module=fn.module, stmt=text[:140],
-                        context=(ctx.get(fn.name) or ["unreachable"])[0], ctx_all=",".join(ctx.get(fn.name, [])),
-                        linked="yes", reachable="yes" if fn.name in live else "no")
+            base = {"file": rel(file), "line": line, "function": fn.name[1:], "module": fn.module, "stmt": text[:140],
+                        "context": (ctx.get(fn.name) or ["unreachable"])[0], "ctx_all": ",".join(ctx.get(fn.name, [])),
+                        "linked": "yes", "reachable": "yes" if fn.name in live else "no"}
             for i, (a, t) in enumerate(ins):
                 m = re.match(r"(lcall|ljmp|acall|ajmp)\s+([A-Za-z_]\w*)", t)
                 if not m:
@@ -450,10 +450,10 @@ def extract_sites(fns, ctx, live, defs: Eval, build: Path):
             if re.search(r"\b_nop_\s*\(\s*\)", text):
                 nops += 1
         if nops:
-            rows.append(dict(kind="nop", file=rel(fn.stmts[0][0]), line=0, function=fn.name[1:], module=fn.module, stmt=f"{nops} x _nop_()",
-                             context=(ctx.get(fn.name) or ["unreachable"])[0], ctx_all=",".join(ctx.get(fn.name, [])), linked="yes",
-                             reachable="yes" if fn.name in live else "no", addr=f"0x{fn.addr:x}", value=nops, units="nop",
-                             mode="blind", bound="", expiry="none", args="", in_loop=""))
+            rows.append({"kind": "nop", "file": rel(fn.stmts[0][0]), "line": 0, "function": fn.name[1:], "module": fn.module, "stmt": f"{nops} x _nop_()",
+                             "context": (ctx.get(fn.name) or ["unreachable"])[0], "ctx_all": ",".join(ctx.get(fn.name, [])), "linked": "yes",
+                             "reachable": "yes" if fn.name in live else "no", "addr": f"0x{fn.addr:x}", "value": nops, "units": "nop",
+                             "mode": "blind", "bound": "", "expiry": "none", "args": "", "in_loop": ""})
     return rows
 
 
@@ -547,10 +547,10 @@ def compiled_out(fns, build: Path, ev: Eval, ctx) -> list[dict]:
                     a = split_args(l, m.group(0).rstrip("( ").strip())
                     v = ev.value(a[0]) if a else None
                     units = "ms"
-                rows.append(dict(kind=kind, file=f, line=n, function=cur, module=Path(f).stem, stmt=l.strip()[:140], context="n/a",
-                                 ctx_all="", linked="no (compiled out: #if / unreferenced)", reachable="no", addr="",
-                                 value=v if v is not None else "", units=units, mode={"delay_ms": "blind", "delay_us": "blind", "poll": "polled",
-                                 "timer_event": "deferred", "wait_event": "polled"}[kind], bound="", expiry="", args="", in_loop=""))
+                rows.append({"kind": kind, "file": f, "line": n, "function": cur, "module": Path(f).stem, "stmt": l.strip()[:140], "context": "n/a",
+                                 "ctx_all": "", "linked": "no (compiled out: #if / unreferenced)", "reachable": "no", "addr": "",
+                                 "value": v if v is not None else "", "units": units, "mode": {"delay_ms": "blind", "delay_us": "blind", "poll": "polled",
+                                 "timer_event": "deferred", "wait_event": "polled"}[kind], "bound": "", "expiry": "", "args": "", "in_loop": ""})
                 break
     return rows
 
@@ -584,9 +584,9 @@ def param_rows(ev: Eval, build: Path) -> list[dict]:
         if not isinstance(v, (int, float)) or v == 0:
             continue
         s = where.get(k, (0, "", 0))
-        rows.append(dict(kind="param", file=s[1], line=s[2], function="", module="", stmt=f"#define {k} {ev.obj[k]}"[:140], context="config",
-                         ctx_all="", linked="yes", reachable="", addr="", value=int(v) if float(v).is_integer() else v, units="ms",
-                         mode="constant", bound="", expiry="", args=k, in_loop=""))
+        rows.append({"kind": "param", "file": s[1], "line": s[2], "function": "", "module": "", "stmt": f"#define {k} {ev.obj[k]}"[:140], "context": "config",
+                         "ctx_all": "", "linked": "yes", "reachable": "", "addr": "", "value": int(v) if float(v).is_integer() else v, "units": "ms",
+                         "mode": "constant", "bound": "", "expiry": "", "args": k, "in_loop": ""})
     return rows
 
 
@@ -702,8 +702,8 @@ def sim_measure(binp: Path, mapp: Path, rows, out: Path, stub_names: dict, fn_na
             arg = regs["a1"]
             key, pc, bank = locate(kind, arg)
             now = t2()
-            s = sites.setdefault(key, dict(kind=kind, calls=0, nominal_ms=0, ms=0.0, first_ms=now, expired=0, args=[],
-                                           act_calls=0, act_ms=0.0, act_expired=0))
+            s = sites.setdefault(key, {"kind": kind, "calls": 0, "nominal_ms": 0, "ms": 0.0, "first_ms": now, "expired": 0, "args": [],
+                                           "act_calls": 0, "act_ms": 0.0, "act_expired": 0})
             ph = phase["p"]
             s[ph + "calls"] += 1
             if kind == "delay_ms" and not ph:
@@ -757,9 +757,9 @@ def sim_measure(binp: Path, mapp: Path, rows, out: Path, stub_names: dict, fn_na
         while t2() - t_active < ACTIVE_MS:
             m.run(200_000); used += 200_000
     d = b.diag()
-    res = dict(image=binp.name, reached_active=prev == 3, fw_ms_at_active=t_active, active_window_ms=t2() - t_active, fw_ms_at_end=t2(),
-               instr=used, timeline=timeline, events=events, hits=hits, stub_hits=dict(m.stub_hits),
-               stages={k: v for k, v in d.items() if k not in ("raw",)}, sites=sites)
+    res = {"image": binp.name, "reached_active": prev == 3, "fw_ms_at_active": t_active, "active_window_ms": t2() - t_active, "fw_ms_at_end": t2(),
+               "instr": used, "timeline": timeline, "events": events, "hits": hits, "stub_hits": dict(m.stub_hits),
+               "stages": {k: v for k, v in d.items() if k not in ("raw",)}, "sites": sites}
     out.write_text(json.dumps(res, indent=1, default=str))
     b.close()
     return res
@@ -801,7 +801,7 @@ def write_tsv(rows, path: Path):
             out = []
             for c in COLS:
                 v = {"class": r.get("cls", ""), "class_reason": r.get("why", ""), "citation": r.get("cite", ""),
-                     "stated_reason": r.get("stated", ""), "value_ms": ("%g" % vms(r)) if vms(r) else ""}.get(c, r.get(c, ""))
+                     "stated_reason": r.get("stated", ""), "value_ms": (f"{vms(r):g}") if vms(r) else ""}.get(c, r.get(c, ""))
                 out.append(str(v).replace("\t", " ").replace("\n", " "))
             f.write("\t".join(out) + "\n")
 

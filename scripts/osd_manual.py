@@ -289,8 +289,8 @@ def f_win_border():
 def f_win_gradient():
     s = Scene("window gradient", "WIN0 RGB+ H [spec-model]")
     s.st.pal[12] = (0, 0, 40)
-    s.win(0, 10, 10, 90, 98, 12, grad=dict(dir=0, pol=(1, 1, 1), en=(1, 1, 1), step=4))
-    s.win(5, 100, 10, 180, 98, 12, grad=dict(dir=1, pol=(1, 0, 0), en=(1, 0, 0), step=4))
+    s.win(0, 10, 10, 90, 98, 12, grad={"dir": 0, "pol": (1, 1, 1), "en": (1, 1, 1), "step": 4})
+    s.win(5, 100, 10, 180, 98, 12, grad={"dir": 1, "pol": (1, 0, 0), "en": (1, 0, 0), "step": 4})
     return s
 
 
@@ -568,7 +568,7 @@ def main() -> int:
             elif not np.array_equal(np.asarray(Image.open(p).convert("RGB")), arr):
                 say(f"CHECK differs {p.relative_to(ROOT)}")
                 bad += 1
-        stray = sorted(set(p.stem for p in IMG.glob("*.png")) - set(imgs)) if not a.only and IMG.exists() else []
+        stray = sorted({p.stem for p in IMG.glob("*.png")} - set(imgs)) if not a.only and IMG.exists() else []
         for f in stray:
             say(f"CHECK stray image {f}.png")
         bad += len(stray)

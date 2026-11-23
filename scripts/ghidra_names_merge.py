@@ -38,8 +38,8 @@ def read(path, phase3=False):
         if len(f) < 3:
             continue
         f += [""] * (7 - len(f))
-        out.append(dict(addr=f[0].lower(), name=f[1], type=f[2], comment=f[3], status=f[4], conf=f[5],
-                        bank=(f[6] if phase3 else ""), order=i))
+        out.append({"addr": f[0].lower(), "name": f[1], "type": f[2], "comment": f[3], "status": f[4], "conf": f[5],
+                        "bank": (f[6] if phase3 else ""), "order": i})
     return out
 
 

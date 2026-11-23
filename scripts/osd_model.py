@@ -357,14 +357,14 @@ def decode_window(win: dict, i: int) -> dict | None:
     y0 = (w[1][0] & 15) << 8 | w[1][2]
     x1 = (w[2][0] >> 4) << 8 | w[2][1]
     y1 = (w[2][0] & 15) << 8 | w[2][2]
-    return dict(i=i, en=en, x0=x0, y0=y0, x1=x1, y1=y1, color=(w[3][0] >> 5 & 1) << 5 | w[3][1] & 0x1F,
-                blend=w[3][2] >> 7 & 1, eff_en=w[3][2] >> 4 & 1, eff_opt=w[3][2] >> 1 & 7,
-                bor=(w[3][0] >> 6 & 1) << 5 | (w[0][0] >> 6 & 1) << 4 | (w[0][1] & 15), sha=(w[3][0] >> 7 & 1) << 5 | (w[0][0] >> 7 & 1) << 4 | (w[0][1] >> 4),   # colour index bits 5 / 4 / 3:0 in ADR3 / ADR0 / ADR0 [regdb]
-                dsel=w[3][0] >> 2 & 1,
-                eff_w=(w[0][0] >> 3 & 7) + 1, eff_h=(w[0][0] & 7) + 1, gra=(w[3][2] >> 6 & 1) if i == 0 or 5 <= i <= 9 else 0, gdir=w[3][2] >> 5 & 1,
-                gpol=(w[0][2] >> 7 & 1, w[0][2] >> 6 & 1, w[0][2] >> 5 & 1), gstep=(w[0][2] >> 3 & 3) + 1,
-                gen=(w[0][2] >> 2 & 1, w[0][2] >> 1 & 1, w[0][2] & 1), gsat=win.get(win_base(i) + 3, [0, 0, 0])[0] >> 4 & 1, lvext=win.get(win_base(i) + 3, [0, 0, 0])[0] & 1,
-                grev=win.get(win_base(i) + 3, [0, 0, 0])[0] >> 3 & 1, satc=tuple(win.get(sat_adr4(i), [0, 0, 0])) if sat_adr4(i) else None)
+    return {"i": i, "en": en, "x0": x0, "y0": y0, "x1": x1, "y1": y1, "color": (w[3][0] >> 5 & 1) << 5 | w[3][1] & 0x1F,
+                "blend": w[3][2] >> 7 & 1, "eff_en": w[3][2] >> 4 & 1, "eff_opt": w[3][2] >> 1 & 7,
+                "bor": (w[3][0] >> 6 & 1) << 5 | (w[0][0] >> 6 & 1) << 4 | (w[0][1] & 15), "sha": (w[3][0] >> 7 & 1) << 5 | (w[0][0] >> 7 & 1) << 4 | (w[0][1] >> 4),   # colour index bits 5 / 4 / 3:0 in ADR3 / ADR0 / ADR0 [regdb]
+                "dsel": w[3][0] >> 2 & 1,
+                "eff_w": (w[0][0] >> 3 & 7) + 1, "eff_h": (w[0][0] & 7) + 1, "gra": (w[3][2] >> 6 & 1) if i == 0 or 5 <= i <= 9 else 0, "gdir": w[3][2] >> 5 & 1,
+                "gpol": (w[0][2] >> 7 & 1, w[0][2] >> 6 & 1, w[0][2] >> 5 & 1), "gstep": (w[0][2] >> 3 & 3) + 1,
+                "gen": (w[0][2] >> 2 & 1, w[0][2] >> 1 & 1, w[0][2] & 1), "gsat": win.get(win_base(i) + 3, [0, 0, 0])[0] >> 4 & 1, "lvext": win.get(win_base(i) + 3, [0, 0, 0])[0] & 1,
+                "grev": win.get(win_base(i) + 3, [0, 0, 0])[0] >> 3 & 1, "satc": tuple(win.get(sat_adr4(i), [0, 0, 0])) if sat_adr4(i) else None}
 
 
 EFF_NAMES = ["shadow1", "shadow2", "shadow3", "shadow4", "3D1", "3D2", "rsv", "border"]
@@ -407,7 +407,7 @@ def window_extras(st: OsdState, i: int) -> dict:
     code = a10[0] >> 1 & 3
     rd = (8 << code, tuple(a10[0] >> b & 1 for b in (6, 5, 4, 3))) if a10[0] & 1 and code < 3 else None   # size 8 / 16 / 32 [regdb]; corners UL, LL, UR, LR
     mk = (a9[0] >> 3 & 1) if a9[0] & 4 else None
-    return dict(cb=cb, pix=max(a9[1], 1), gray=a9[0] >> 1 & 1, round=rd, mask=mk, rot=a9[0] & 1)
+    return {"cb": cb, "pix": max(a9[1], 1), "gray": a9[0] >> 1 & 1, "round": rd, "mask": mk, "rot": a9[0] & 1}
 
 
 def round_cuts(st: OsdState, n: int, opt: Opt) -> list[int]:
@@ -422,7 +422,7 @@ def round_cuts(st: OsdState, n: int, opt: Opt) -> list[int]:
     else:
         v = [r(FRAME + 0x6C + k) & 31 for k in range(32)]
     if not any(v) and opt.round_circle:
-        return [max(0, n - int(round((n * n - (n - k - 0.5) ** 2) ** 0.5))) for k in range(n)]
+        return [max(0, n - round((n * n - (n - k - 0.5) ** 2) ** 0.5)) for k in range(n)]
     return [n - x for x in v]
 
 
@@ -488,12 +488,12 @@ def decode_char(w: list[int]) -> dict:
     if kind == "2bit":
         c0 = (b0 >> 5 & 1) << 3 | (b0 & 1) << 2 | b2 >> 6
         c1 = (b0 >> 4 & 1) << 3 | (b2 & 7)
-        return dict(kind=kind, id=b1, width=GW, cols=(c0, c1, b2 >> 3 & 7, b0 >> 1 & 7), fg=c1, bg=c0)
+        return {"kind": kind, "id": b1, "width": GW, "cols": (c0, c1, b2 >> 3 & 7, b0 >> 1 & 7), "fg": c1, "bg": c0}
     if kind == "4bit":                                   # SDK ScalerOsdChange4BitColor: B0 = 0xC0 | background colour, B2 = palette-set flags [SDK]; bg index 0 is drawn (photo, unit 3)
-        return dict(kind=kind, id=b1, width=GW, fg=0, bg=b0 & 0x3F, pset=b2)
+        return {"kind": kind, "id": b1, "width": GW, "fg": 0, "bg": b0 & 0x3F, "pset": b2}
     if kind == "blank":                                  # SDK OsdBlankFont: B0 = type, B1 = pixel length, B2 = background colour (6 bit)
-        return dict(kind=kind, id=0, width=b1, fg=0, bg=b2 & 0x3F)
-    return dict(kind=kind, id=b1 + (256 if kind == "1bit" and b0 & 0x20 else 0), width=b0 & 0x1F, fg=b2 >> 4, bg=b2 & 15)
+        return {"kind": kind, "id": 0, "width": b1, "fg": 0, "bg": b2 & 0x3F}
+    return {"kind": kind, "id": b1 + (256 if kind == "1bit" and b0 & 0x20 else 0), "width": b0 & 0x1F, "fg": b2 >> 4, "bg": b2 & 15}
 
 
 def frame_geometry(st: OsdState) -> dict:
@@ -503,15 +503,15 @@ def frame_geometry(st: OsdState) -> dict:
     vd = r(FRAME) << 3 | (r(FRAME + 2) >> 3 & 7)
     fh = (r(FRAME + 0x24) >> 4) << 8 | r(FRAME + 0x25)
     fv = (r(FRAME + 0x24) & 15) << 8 | r(FRAME + 0x26)
-    return dict(en=r(FRAME + 2) & 1, sx=2 if r(FRAME + 0x0A) & 2 else 1, sy=2 if r(FRAME + 0x0A) & 1 else 1,
-                hd=hd, vd=vd, step=step, fh=fh, fv=fv,
-                fs_base=((r(FRAME + 0x1B) >> 4) << 8 | r(FRAME + 0x1C)) if ((r(FRAME + 0x18) & 0xC0) == 0x80 or r(FRAME + 0x18) & 0x08) else  # roll-up / two fonts: font-select base 0
+    return {"en": r(FRAME + 2) & 1, "sx": 2 if r(FRAME + 0x0A) & 2 else 1, "sy": 2 if r(FRAME + 0x0A) & 1 else 1,
+                "hd": hd, "vd": vd, "step": step, "fh": fh, "fv": fv,
+                "fs_base": ((r(FRAME + 0x1B) >> 4) << 8 | r(FRAME + 0x1C)) if ((r(FRAME + 0x18) & 0xC0) == 0x80 or r(FRAME + 0x18) & 0x08) else  # roll-up / two fonts: font-select base 0
                 ((r(FRAME + 0x0D) >> 4) << 8 | r(FRAME + 0x0C)),
-                two=r(FRAME + 0x18) >> 3 & 1, row_base1=r(FRAME + 0x1A), fs_base1=(r(FRAME + 0x1B) & 15) << 8 | r(FRAME + 0x1D),
-                hd2=r(FRAME + 4) << 2 | r(FRAME + 5) >> 6 | (r(FRAME + 6) & 3) << 10, vd2=r(FRAME + 3) << 3 | (r(FRAME + 5) >> 3 & 7),
-                fhb=(r(FRAME + 0x27) >> 4) << 8 | r(FRAME + 0x28), fvb=(r(FRAME + 0x27) & 15) << 8 | r(FRAME + 0x29), font_base=(r(FRAME + 0x17) >> 3 & 7) << 12 | r(FRAME + 0x0E) << 4 | r(FRAME + 0x0D) & 15,
-                row_base=r(FRAME + 0x19), blend_type=r(FRAME + 0x0A) >> 2 & 3, zone=r(FRAME + 2) >> 1 & 3,
-                su_on=r(FRAME + 0xC0) >> 7 & 1, big=r(FRAME + 0x43) >> 6 & 1, fb_shift=(r(FRAME + 0x5C) << 4 | r(FRAME + 0x5D) & 15) if r(FRAME + 0x5E) & 0x80 else 0)
+                "two": r(FRAME + 0x18) >> 3 & 1, "row_base1": r(FRAME + 0x1A), "fs_base1": (r(FRAME + 0x1B) & 15) << 8 | r(FRAME + 0x1D),
+                "hd2": r(FRAME + 4) << 2 | r(FRAME + 5) >> 6 | (r(FRAME + 6) & 3) << 10, "vd2": r(FRAME + 3) << 3 | (r(FRAME + 5) >> 3 & 7),
+                "fhb": (r(FRAME + 0x27) >> 4) << 8 | r(FRAME + 0x28), "fvb": (r(FRAME + 0x27) & 15) << 8 | r(FRAME + 0x29), "font_base": (r(FRAME + 0x17) >> 3 & 7) << 12 | r(FRAME + 0x0E) << 4 | r(FRAME + 0x0D) & 15,
+                "row_base": r(FRAME + 0x19), "blend_type": r(FRAME + 0x0A) >> 2 & 3, "zone": r(FRAME + 2) >> 1 & 3,
+                "su_on": r(FRAME + 0xC0) >> 7 & 1, "big": r(FRAME + 0x43) >> 6 & 1, "fb_shift": (r(FRAME + 0x5C) << 4 | r(FRAME + 0x5D) & 15) if r(FRAME + 0x5E) & 0x80 else 0}
 
 
 def glyph_bits(st: OsdState, g: dict, gid: int) -> np.ndarray:
@@ -554,7 +554,7 @@ def layout_rows(st: OsdState, g: dict, rb: int | None = None, cb: int | None = N
         if rc is None or not rc[0] & 0x80:
             break
         n = rc[2]
-        rows.append(dict(h=(rc[1] & 0x3F) + 1, n=n, chars=[decode_char(st.font.get(ca + k, [0, 0, 0])) for k in range(n)]))
+        rows.append({"h": (rc[1] & 0x3F) + 1, "n": n, "chars": [decode_char(st.font.get(ca + k, [0, 0, 0])) for k in range(n)]})
         a, ca = a + 1, ca + n
     return rows
 

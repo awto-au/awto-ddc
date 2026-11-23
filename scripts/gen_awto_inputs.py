@@ -33,8 +33,8 @@ def rows():
             continue
         n, pin, kind, src, a, b, text, screen, lg, desc, rate = ln.split("\t")
         assert rate in ("pass", "slow"), ln
-        out.append(dict(name=n, pin=int(pin), kind=KINDS[kind], src=SRCS[src], a=a if src == "xreg" else int(a, 0), b=int(b, 0), text=text,
-                        screen=screen == "y", log=lg == "y", desc=desc, srcname=src, kindname=kind, fast=rate == "pass"))
+        out.append({"name": n, "pin": int(pin), "kind": KINDS[kind], "src": SRCS[src], "a": a if src == "xreg" else int(a, 0), "b": int(b, 0), "text": text,
+                        "screen": screen == "y", "log": lg == "y", "desc": desc, "srcname": src, "kindname": kind, "fast": rate == "pass"})
     n_screen = sum(r["screen"] for r in out)
     assert all(r["screen"] for r in out[:n_screen]), "screen rows must come first"
     assert len(out) <= 255, "ring id is one byte"

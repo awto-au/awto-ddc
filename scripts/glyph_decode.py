@@ -47,7 +47,7 @@ def decode_blob(d, off):
             elif code == "11111111":
                 end = True; break
             elif len(code) > 8:
-                raise ValueError("bad VLC code at blob %#x" % off)
+                raise ValueError(f"bad VLC code at blob {off:#x}")
         if end:
             break
     by = bytes(((nibs[i] << 4) | nibs[i + 1]) for i in range(0, len(nibs) - 1, 2))

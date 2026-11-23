@@ -96,8 +96,8 @@ def main():
             dest.rename(dest.with_suffix(dest.suffix + ".bad")); continue
         mpath = vroot / vendor / "sources" / "manifest.json"
         man = json.loads(mpath.read_text()) if mpath.exists() else []
-        man.append(dict(package=pkg, file=name, url=url, fetched=isostamp.now(),
-                        size=n, sha256=h.hexdigest(), magic=head[:4].hex(), notes=notes))
+        man.append({"package": pkg, "file": name, "url": url, "fetched": isostamp.now(),
+                        "size": n, "sha256": h.hexdigest(), "magic": head[:4].hex(), "notes": notes})
         mpath.write_text(json.dumps(man, indent=1))
         rpath = vroot / vendor / "README.md"
         if not rpath.exists():

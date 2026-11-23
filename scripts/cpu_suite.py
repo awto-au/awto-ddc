@@ -210,8 +210,8 @@ def run_one(dev, case: Case, run: Run) -> dict:
     dev.wr(O_GO, bytes([case.cid]))
     done = dev.wait_done(case.bound_ms)
     r = dev.rd(0, O_END)
-    return dict(done=done and r[O_SEQ] != seq, state=r[O_STATE], fwpass=r[O_PASS], bad=be(r, O_BAD, 2), v0=be(r, O_V0, 4), v1=be(r, O_V1, 4), v2=be(r, O_V2, 4),
-                ms=be(r, O_MS, 2), flags=r[O_FLAGS], ckcon=r[O_CKCON], rcap=be(r, O_RCAP, 2), sp=r[O_SPMAX], stack=r[O_STACK])
+    return {"done": done and r[O_SEQ] != seq, "state": r[O_STATE], "fwpass": r[O_PASS], "bad": be(r, O_BAD, 2), "v0": be(r, O_V0, 4), "v1": be(r, O_V1, 4), "v2": be(r, O_V2, 4),
+                "ms": be(r, O_MS, 2), "flags": r[O_FLAGS], "ckcon": r[O_CKCON], "rcap": be(r, O_RCAP, 2), "sp": r[O_SPMAX], "stack": r[O_STACK]}
 
 
 def judge(case: Case, run: Run, res: dict, ctx: dict) -> tuple[bool, str]:
@@ -314,8 +314,8 @@ def suite(dev, name: str, khz: int, cases: list, ctx: dict, rows: list, allow_wr
                 fails += 1
                 if c.name == "R_READ" and res["done"]:
                     reg_blocks(dev, khz, run, lambda s: say(f"[{name}] {s}"))
-            rows.append(dict(clock=name, case=c.name, label=run.label, stretch=run.stretch, arg=run.arg, pass_=int(ok), bad=res["bad"], v0=res["v0"], v1=res["v1"], v2=res["v2"], ms=res["ms"],
-                             ckcon=res["ckcon"], note=note))
+            rows.append({"clock": name, "case": c.name, "label": run.label, "stretch": run.stretch, "arg": run.arg, "pass_": int(ok), "bad": res["bad"], "v0": res["v0"], "v1": res["v1"], "v2": res["v2"], "ms": res["ms"],
+                             "ckcon": res["ckcon"], "note": note})
     return fails
 
 

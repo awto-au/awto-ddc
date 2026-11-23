@@ -237,7 +237,7 @@ def _():
 
 
 @demo("window_gradient", "win_gradient", "Window gradient, horizontal, R up / B down, 2 steps per level.", "spec-model")
-def _(): return Img().window(0, 40, 30, 299, 119, 4, gradient=dict(dir=0, pol=(1, 1, 0), en=(1, 0, 1), step=2))
+def _(): return Img().window(0, 40, 30, 299, 119, 4, gradient={"dir": 0, "pol": (1, 1, 0), "en": (1, 0, 1), "step": 2})
 
 
 @demo("window_shadow", "win_effect", "Window effect types: shadow 1, 3D button 1, border.", "spec-model")

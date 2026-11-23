@@ -228,9 +228,9 @@ def judge(pr, run, fails):
     for d, arg in a.get("ScalerTimerDelayXms", []):
         if not (arg - 1.0 - 0.05 <= d <= arg + A_SLACK_MS):
             bad.append((arg, round(d, 3)))
-    f.append(("A DelayXms wall ms within [arg-1, arg+%g]" % A_SLACK_MS, not bad, f"{len(a.get('ScalerTimerDelayXms', []))} calls; outside: {bad[:6]}"))
+    f.append((f"A DelayXms wall ms within [arg-1, arg+{A_SLACK_MS:g}]", not bad, f"{len(a.get('ScalerTimerDelayXms', []))} calls; outside: {bad[:6]}"))
     bad = [(arg, round(d, 3)) for d, arg in a.get("ScalerTimerPollingFlagProc", []) if d > arg + 1.0 + A_SLACK_MS]
-    f.append(("A PollingFlagProc wall ms <= timeout + 1 + %g" % A_SLACK_MS, not bad, f"{len(a.get('ScalerTimerPollingFlagProc', []))} calls; outside (timeout, ms): {bad[:6]}"))
+    f.append((f"A PollingFlagProc wall ms <= timeout + 1 + {A_SLACK_MS:g}", not bad, f"{len(a.get('ScalerTimerPollingFlagProc', []))} calls; outside (timeout, ms): {bad[:6]}"))
     bad = [round(d, 3) for d, _ in a.get("ScalerTimerWaitForEvent", []) if d > A_EVENT_BOUND_MS + A_SLACK_MS]
     f.append(("A WaitForEvent wall ms <= %d + %g" % (A_EVENT_BOUND_MS, A_SLACK_MS), not bad, f"{len(a.get('ScalerTimerWaitForEvent', []))} calls; outside: {bad[:6]}"))
     # class B routines (main-context DELAY_5US / DELAY_XUS): hot min per (clock state, routine, argument) against the nominal of the argument

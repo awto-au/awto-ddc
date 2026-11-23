@@ -159,7 +159,7 @@ def read_isp(bus: int, root: Path):
     try:
         head = isp.read_flash(MSG_ADDR, 1024)
         if head[:4] != MAGIC:
-            raise ValueError("no message table at 0x%x (image without #56 block)" % MSG_ADDR)
+            raise ValueError(f"no message table at 0x{MSG_ADDR:x} (image without #56 block)")
         total = struct.unpack(">I", head[16:20])[0]
         blk = head if total <= 1024 else head + isp.read_flash(MSG_ADDR + 1024, total - 1024)
     finally:

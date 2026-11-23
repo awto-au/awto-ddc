@@ -17,6 +17,8 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 import sdcc_tools as T
 
 LINK_TIMEOUT = 120          # full firmware link ~20 s (2026-11-04); stall guard, awto-dan#53
+import itertools
+
 import chip_mem as CM
 
 DIRECT_END = CM.DIRECT_END
@@ -184,7 +186,7 @@ def link(cmd, ihx: Path, rels):
             if int(n, 16)]
     iram = [x for x in iram if x[2] != "DSEG"] + [(*d, "DSEG") for d in dseg_runs(mt, rels, memf)]
     iram = sorted(set(iram))
-    clash = [(x[2], y[2]) for x, y in zip(iram, iram[1:]) if y[0] < x[1] and not (x[2] == y[2])]
+    clash = [(x[2], y[2]) for x, y in itertools.pairwise(iram) if y[0] < x[1] and x[2] != y[2]]
     top = max((hi for _, hi, _ in iram), default=0)
     if clash or stack is None or stack < top:
         r.returncode = 1

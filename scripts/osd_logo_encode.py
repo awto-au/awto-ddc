@@ -44,14 +44,14 @@ def log(s):
 # ---- SDK source parsing -------------------------------------------------------------------------
 def sdk_blob(name):
     src = (OSD / "RTD2014OsdFontVLC.c").read_text()
-    m = re.search(r"tICON_REALTEK_1BIT_%s\[\]=\s*\{(.*?)\n\};" % name, src, re.DOTALL)
+    m = re.search(rf"tICON_REALTEK_1BIT_{name}\[\]=\s*\{{(.*?)\n\}};", src, re.DOTALL)
     return bytes(int(x, 16) for x in re.findall(r"0x([0-9a-fA-F]{2})", m.group(1)))
 
 
 def sdk_map(name):
     """tiOSD_REALTEK_1BIT_<name> -> list of rows of tile ids (suffix of _Logo[1]_0xNN)."""
     src = (OSD / "RTD2014OsdFontTable.c").read_text()
-    m = re.search(r"tiOSD_REALTEK_1BIT_%s\[\]=\s*\{(.*?)\n\};" % name, src, re.DOTALL)
+    m = re.search(rf"tiOSD_REALTEK_1BIT_{name}\[\]=\s*\{{(.*?)\n\}};", src, re.DOTALL)
     rows, cur = [], []
     for t in re.findall(r"_Logo1?_0x[0-9a-f]{2}|_NEXT_|_END_", m.group(1)):
         if t == "_NEXT_":
@@ -108,7 +108,7 @@ def decode_map_header(blob):
 
 
 def c_array(name, data, per=12, comment=None):
-    lines = [f"    {','.join('0x%02x' % b for b in data[i:i + per])}," for i in range(0, len(data), per)]
+    lines = [f"    {','.join(f'0x{b:02x}' for b in data[i:i + per])}," for i in range(0, len(data), per)]
     return (f"// {comment}\n" if comment else "") + f"BYTE __code {name}[] =\n{{\n" + "\n".join(lines) + "\n};\n"
 
 

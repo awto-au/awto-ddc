@@ -191,7 +191,7 @@ def test_block_path_used_when_version_2():
     H.run(H.Dbg(io), MAPS, (3840, 2160, 60.0), rep, wait=clk.wait)
     assert all(names(rep).values()), rep.rows
     assert io.blk_reads > 10
-    assert "block reads" in dict((n, d) for n, _, d in rep.rows)["diag stage"]
+    assert "block reads" in {n: d for n, _, d in rep.rows}["diag stage"]
 
 
 def test_byte_path_when_version_1():

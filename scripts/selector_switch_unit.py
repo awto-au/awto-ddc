@@ -141,8 +141,8 @@ def case(u, frm, to, how, seen):
         return u.port() == PORT[to] and m in want and (to != "D1" or MODE_SEARCH in went)
     settled = u.until(done, SETTLE_S)
     seen, new = ring_new(u, seen)
-    K.say(f"  take: selector {'closed after %.2f s' % closed if closed is not None else 'STILL OPEN'}; port {name(u.port())} "
-          f"mode {u.mode()} ({'settled %.2f s' % settled if settled is not None else 'not settled'}, "
+    K.say(f"  take: selector {f'closed after {closed:.2f} s' if closed is not None else 'STILL OPEN'}; port {name(u.port())} "
+          f"mode {u.mode()} ({f'settled {settled:.2f} s' if settled is not None else 'not settled'}, "
           f"{time.monotonic() - t0:.1f} s after the take); opened on item {opened}")
     K.say("  ring:\n" + "\n".join("    " + ln.strip() for ln in new))
     if closed is None and any(f"input selector:{to} refused, no cable" in ln for ln in new):   # still open + its line (old lines may re-show)

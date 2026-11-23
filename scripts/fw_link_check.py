@@ -63,8 +63,8 @@ def parse_map(path):
     for l in Path(path).read_text(errors="replace").splitlines():
         m = re.match(r"^(\S+)\s+([0-9A-F]{8})\s+([0-9A-F]{8}) =\s+\d+\. bytes \((.*)\)", l)
         if m:
-            cur = areas.setdefault(f"{m.group(1)}@{m.group(2)}", dict(    # names are cut to 32 chars: not unique
-                name=m.group(1), addr=int(m.group(2), 16), size=int(m.group(3), 16), attr=m.group(4), syms=[]))
+            cur = areas.setdefault(f"{m.group(1)}@{m.group(2)}", {    # names are cut to 32 chars: not unique
+                "name": m.group(1), "addr": int(m.group(2), 16), "size": int(m.group(3), 16), "attr": m.group(4), "syms": []})
             continue
         m = re.match(r"^C:\s+([0-9A-F]{8})\s+(\S+)", l)
         if m and cur is not None and not m.group(2).startswith(("l_", "s_")):
@@ -176,8 +176,8 @@ class Image:
                 if an in ("XINIT", "CONST"):
                     kind = "const"
             reg = "C" if a["addr"] < common else a["addr"] >> 16
-            self.chunks.append(dict(kind=kind, name=name, addr=a["addr"], size=a["size"], reg=reg, area=an,
-                                    syms=a["syms"]))
+            self.chunks.append({"kind": kind, "name": name, "addr": a["addr"], "size": a["size"], "reg": reg, "area": an,
+                                    "syms": a["syms"]})
         self.by_reg = defaultdict(list)
         for c in self.chunks:
             self.by_reg[c["reg"]].append(c)
@@ -680,7 +680,7 @@ def equiv(good, bad):
     gs, bs = stub_targets(good), stub_targets(bad)
     gc = {c["name"]: c for c in good.chunks if c["area"].startswith("CH") and c["kind"] != "stub"}
     bc = {c["name"]: c for c in bad.chunks if c["area"].startswith("CH") and c["kind"] != "stub"}
-    add = lambda kind, src, det, addr: F.append(dict(kind=kind, src=src, det=det, addr=addr))
+    add = lambda kind, src, det, addr: F.append({"kind": kind, "src": src, "det": det, "addr": addr})
     for n in sorted(set(gc) | set(bc)):
         if n not in gc or n not in bc:
             add("equiv_chunk_missing", n, "only in " + ("bad" if n in bc else "good"), 0)
@@ -809,11 +809,11 @@ def asm_const_ptr(im, asm_dir):
                     fc = look(cal)
                     xb = fc and fc["reg"] != "C" and k["reg"] != "C" and fc["reg"] != k["reg"]
                     if xb and cal in reader:
-                        F.append(dict(kind="const_ptr_gptr_xbank", src=cur, addr=k["addr"],
-                                      det=f"{m.group(1)} (bank {k['reg']}) passed to gptr reader {cal} (bank {fc['reg']})"))
+                        F.append({"kind": "const_ptr_gptr_xbank", "src": cur, "addr": k["addr"],
+                                      "det": f"{m.group(1)} (bank {k['reg']}) passed to gptr reader {cal} (bank {fc['reg']})"})
                     elif xb and cal in creader:
-                        F.append(dict(kind="const_ptr_code_xbank", src=cur, addr=k["addr"],
-                                      det=f"{m.group(1)} (bank {k['reg']}) passed to movc reader {cal} (bank {fc['reg']})"))
+                        F.append({"kind": "const_ptr_code_xbank", "src": cur, "addr": k["addr"],
+                                      "det": f"{m.group(1)} (bank {k['reg']}) passed to movc reader {cal} (bank {fc['reg']})"})
                     break
                 if re.match(r"^\s+(ret|reti)\b", l2):
                     break
@@ -880,7 +880,7 @@ def isr_findings(im, proven, sw_ok):
             continue
         why = ("selects a register bank != 0" if sv is None else f"does not save {','.join(miss)}" if miss
                else "bank switch not proven")
-        F += [dict(kind="isr_reach_stub", src=name, det=f"{s}: {why}", addr=root) for s in sorted(hits)]
+        F += [{"kind": "isr_reach_stub", "src": name, "det": f"{s}: {why}", "addr": root} for s in sorted(hits)]
     return F
 
 
@@ -898,11 +898,11 @@ def run(bin_path, map_path, layout, common, log=print, asm_dir=None):
     proven = []
     F = check(im, xd, d8051.load_regnames(), proven)
     if im.unknown:
-        F.append(dict(kind="kind_source", src="image", addr=0,
-                      det=f"{len(im.unknown)} CH areas have no kind from --asm .rst or --layout, not checked (e.g. {im.unknown[0]})"))
+        F.append({"kind": "kind_source", "src": "image", "addr": 0,
+                      "det": f"{len(im.unknown)} CH areas have no kind from --asm .rst or --layout, not checked (e.g. {im.unknown[0]})"})
     if im.stale:                                             # one finding: a wrong tree makes every area disagree
-        F.append(dict(kind="kind_stale", src="image", addr=0,
-                      det=f"{len(im.stale)} CH areas disagree with --asm/.rst or --layout (e.g. {im.stale[0]})"))
+        F.append({"kind": "kind_stale", "src": "image", "addr": 0,
+                      "det": f"{len(im.stale)} CH areas disagree with --asm/.rst or --layout (e.g. {im.stale[0]})"})
     if asm_dir:
         F += asm_const_ptr(im, asm_dir)
     F += isr_findings(im, proven, not switch_proof(im)[1])

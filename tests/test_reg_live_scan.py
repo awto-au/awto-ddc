@@ -77,7 +77,7 @@ def test_json_format_and_every_read_logged():
     res, lines, saves = run(FakeBus(), [0x10, 0x11], True)
     assert set(res) >= {"path", "pages", "heartbeats", "result", "abort", "calibration", "reads_ok", "reads_failed", "elapsed_s", "wall_s"}
     assert res["path"] == "block" and len(res["pages"]["10"]) == 256 and res["pages"]["10"][5] == 5
-    assert [h["tag"] for h in res["heartbeats"]][0] == "before" and res["heartbeats"][-1]["tag"] == "after"
+    assert next(h["tag"] for h in res["heartbeats"]) == "before" and res["heartbeats"][-1]["tag"] == "after"
     assert all(h["value"] == 0xCF for h in res["heartbeats"])
     assert len(saves) == 2 and json.loads(saves[-1])["pages"]["11"][7] == 7
     assert sum(1 for ln in lines if ln.startswith("1005 05 ok")) == 1       # one line per byte read

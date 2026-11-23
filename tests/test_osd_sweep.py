@@ -24,7 +24,7 @@ def test_sweeps_cover_every_legal_value():
     g = S.cases()
     assert sorted(c.fff1 for c in g["fff1"] if c.fff1 < 0x80) == list(range(16))
     assert 0 in [c.fffb for c in g["fffb"]] and 255 in [c.fffb for c in g["fffb"]]
-    assert [c.ffbc for c in g["ffbc"]][0] == 15 and [c.ffbc for c in g["ffbc"]][-1] == 0      # reset value first, undocumented 0 last
+    assert next(c.ffbc for c in g["ffbc"]) == 15 and [c.ffbc for c in g["ffbc"]][-1] == 0      # reset value first, undocumented 0 last
 
 
 def test_struct_offsets_are_sequential():

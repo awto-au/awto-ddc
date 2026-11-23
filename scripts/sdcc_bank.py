@@ -886,7 +886,7 @@ def main() -> int:
         for k, v in sz.items():
             if k.startswith("BANK"):
                 final[int(k[4:])] += v
-            elif sticky and (k.startswith("CH") or k.startswith("ST")):
+            elif sticky and (k.startswith(("CH", "ST"))):
                 if v > (STUB_SIZE if k.startswith("ST") else placed_slot[k]):
                     sys.exit(f"slot overflow: area {k} is {v} B")
     log("final bank sizes: " + ", ".join(f"{i}:{v}" for i, v in enumerate(final) if v))

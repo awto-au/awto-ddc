@@ -86,7 +86,7 @@ def bits(addr, mask, shift):
 
 
 def fmt_ref(r):
-    return ("0x%04X" % r[0], "%d:%d" % (r[1], r[2])) if r else ("", "")
+    return (f"0x{r[0]:04X}", "%d:%d" % (r[1], r[2])) if r else ("", "")
 
 
 class Db:
@@ -146,7 +146,7 @@ def parse(d, db):
         r.p = b + PIN_REC
         if t[3] != PAD or t[75] != PAD or t[72] not in (0, 0xFF):
             warn["tail"] += 1
-        p = dict(idx=i, pin=name, port=port, volt=volt, T=t)
+        p = {"idx": i, "pin": name, "port": port, "volt": volt, "T": t}
         u16 = lambda o, t=t: t[o] | t[o + 1] << 8
         p["prio"] = bits(u16(4), t[6], t[7])
         p["prio_sel"] = [j for j in range(9) if t[8 + j]]
@@ -240,9 +240,9 @@ def parse(d, db):
     logging.info("%s tag=%s hdr=(%d,%d) pins=%d spi=%d pairs=%d adc=%d ports=%d timers=%d pwm=%d "
                  "schmitt=%d trailing_bytes=%d (%s) warn=%s", chip, chip, hdr_a, hdr_b, len(pins), len(spi),
                  len(pairs), len(adc), len(ports), len(timers), len(pwm), len(schmitt), left, tail, warn)
-    return dict(chip=chip, pins=pins, spi=spi, pairs=pairs, adc=adc, ports=ports,
-                timers=timers, pwm=pwm, schmitt=schmitt, by_port=by_port, pin_of=pin_of, warn=warn,
-                hdr=(hdr_a, hdr_b), left=left)
+    return {"chip": chip, "pins": pins, "spi": spi, "pairs": pairs, "adc": adc, "ports": ports,
+                "timers": timers, "pwm": pwm, "schmitt": schmitt, "by_port": by_port, "pin_of": pin_of, "warn": warn,
+                "hdr": (hdr_a, hdr_b), "left": left}
 
 
 COLS = ["table", "idx", "pin", "port", "voltage", "peer", "peer_pin", "signal", "direction",
@@ -273,9 +273,9 @@ def mentions(desc, pin):
 
 
 def build_rows(g, db):
-    out, st = [], dict(n=0, exact=0, said=0, said_n=0)
+    out, st = [], {"n": 0, "exact": 0, "said": 0, "said_n": 0}
     for p in g["pins"]:
-        row = dict(table="PIN", idx=p["idx"], pin=p["pin"], port=p["port"], voltage=p["volt"])
+        row = {"table": "PIN", "idx": p["idx"], "pin": p["pin"], "port": p["port"], "voltage": p["volt"]}
         c = p["caps"]
         row["direction"] = "/".join(x for x, m in (("I", 1), ("O_PP", 2), ("O_OD", 4)) if c & m)
         row["pp_code"] = p["pp"] if c & 2 else ""
@@ -302,41 +302,41 @@ def build_rows(g, db):
                 row["prio_fn"] = prio_fn(ds, p["pin"])
         row["pu_code"] = "" if p["pu"] == 0xFF else p["pu"]
         row["pd_code"] = "" if p["pd"] == 0xFF else p["pd"]
-        row["raw"] = "caps=%02x bm=%02x%02x sel=%s tail=%s" % (
+        row["raw"] = "caps={:02x} bm={:02x}{:02x} sel={} tail={}".format(
             c, p["T"][21], p["T"][22], ",".join(map(str, p["prio_sel"])), p["T"][:4].hex())
         row["description"] = esc(" | ".join(desc))
         out.append(row)
     for tb, i, pn, sg, ref, ex in g["spi"]:
         reg, bt = fmt_ref(ref)
         nm, ds, e = db.look(ref)
-        out.append(dict(table=tb, idx=i, pin=pn, port=g["by_port"].get(pn, {}).get("port", ""),
-                        signal=sg, reg=reg, bits=bt, reg_field=nm, raw=ex, description=esc(ds)))
+        out.append({"table": tb, "idx": i, "pin": pn, "port": g["by_port"].get(pn, {}).get("port", ""),
+                        "signal": sg, "reg": reg, "bits": bt, "reg_field": nm, "raw": ex, "description": esc(ds)})
     for sec, rid, a, b in g["pairs"]:
         pa = g["by_port"].get(a)
         fn = prio_fn(db.look(pa["prio"])[1], pa["pin"]) if pa and pa["prio"] else ""
-        out.append(dict(table="PAIR%d" % (sec + 1), idx=rid, pin=g["pin_of"](a), port=a, peer=b,
-                        peer_pin=g["pin_of"](b), signal=fn))
+        out.append({"table": "PAIR%d" % (sec + 1), "idx": rid, "pin": g["pin_of"](a), "port": a, "peer": b,
+                        "peer_pin": g["pin_of"](b), "signal": fn})
     for rid, a, ref in g["adc"]:
         reg, bt = fmt_ref(ref)
         nm, ds, _e = db.look(ref)
-        out.append(dict(table="ADC", idx=rid, pin=g["pin_of"](a), port=a, reg=reg, bits=bt,
-                        reg_field=nm, description=esc(ds)))
+        out.append({"table": "ADC", "idx": rid, "pin": g["pin_of"](a), "port": a, "reg": reg, "bits": bt,
+                        "reg_field": nm, "description": esc(ds)})
     for i, (nm_, ref, ex) in enumerate(g["ports"]):
         reg, bt = fmt_ref(ref)
         nm, ds, _e = db.look(ref)
-        out.append(dict(table="PORT", idx=i, port=nm_, reg=reg, bits=bt, reg_field=nm, raw=ex,
-                        description=esc(ds)))
+        out.append({"table": "PORT", "idx": i, "port": nm_, "reg": reg, "bits": bt, "reg_field": nm, "raw": ex,
+                        "description": esc(ds)})
     for i, (tn, pn) in enumerate(g["timers"]):
-        out.append(dict(table="TIMER", idx=i, pin=g["pin_of"](pn), port=pn, signal=tn))
+        out.append({"table": "TIMER", "idx": i, "pin": g["pin_of"](pn), "port": pn, "signal": tn})
     for rid, items in g["pwm"]:
         for k, ref in enumerate(items):
             reg, bt = fmt_ref(ref)
             nm, ds, _e = db.look(ref)
-            out.append(dict(table="PWM", idx=rid - 1, signal=k, reg=reg, bits=bt,
-                            reg_field=nm, description=esc(ds)))
+            out.append({"table": "PWM", "idx": rid - 1, "signal": k, "reg": reg, "bits": bt,
+                            "reg_field": nm, "description": esc(ds)})
     for i, a in enumerate(g["schmitt"]):
-        out.append(dict(table="SCHMITT", idx=i, reg="0x%04X" % a, bits="7:0",
-                        signal=",".join(db.regfields(a))))
+        out.append({"table": "SCHMITT", "idx": i, "reg": f"0x{a:04X}", "bits": "7:0",
+                        "signal": ",".join(db.regfields(a))})
     return out, st
 
 

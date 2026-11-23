@@ -105,7 +105,7 @@ class Sim:
 
     def send(self, t: dt.datetime) -> float:
         e = int(t.timestamp())
-        ms = int(round((t.timestamp() - e) * 1000))
+        ms = round((t.timestamp() - e) * 1000)
         t_send = self.bus.now()
         self.mccs.tx(HT.packet(t.timestamp(), OFS)[1:-1], reply=False)    # host_time.py's own encoding (len, chk: Mccs.tx)
         say(f"sent host time {t.isoformat(timespec='milliseconds')} (unix {e}.{ms:03d}) at fw {self.bus.now():.3f} s")

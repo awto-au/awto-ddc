@@ -35,9 +35,9 @@ from _repo import ROOT
 LOG = ROOT / "tmp/logs/menu_cli.log"
 MAIN = 0xFE
 SELECT_PAGE = 0x100                                  # MO_SELECT_PAGE (fw/rtdfw/awto/include/menu.h): arg bit 8 = page entry; row ids reach 255
-OPS = dict(key=1, open=2, select=3, set=4, back=5, close=6, enter=7, hold=8)
-KEYS = dict(menu=0, right=1, left=2, exit=3)
-MASK = dict(power=0x01, menu=0x02, right=0x04, left=0x08, exit=0x10)
+OPS = {"key": 1, "open": 2, "select": 3, "set": 4, "back": 5, "close": 6, "enter": 7, "hold": 8}
+KEYS = {"menu": 0, "right": 1, "left": 2, "exit": 3}
+MASK = {"power": 0x01, "menu": 0x02, "right": 0x04, "left": 0x08, "exit": 0x10}
 FIELDS = ["magic", "version", "open", "page", "cursor", "item_id", "item_page", "mode", "top", "val_lo", "val_hi",
           "redraw_lo", "redraw_hi", "last_key", "pending", "n", "parent", "seq"]
 READS = 5                # torn-read retries: the firmware updates the struct from its main loop, the host reads async

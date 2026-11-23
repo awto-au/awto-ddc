@@ -70,8 +70,8 @@ class Db:
     def learn_tags(self, t0):
         d = self.d
         f = t0 + TAIL_LEN
-        self.tags = dict(g=d[f + 10:f + 12], o=d[f + 18:f + 20], kt=d[f + 28:f + 32],
-                         use=d[t0 + 20:t0 + 28], s=d[t0 + 30:t0 + 32], z=d[t0 + 12:t0 + 16])
+        self.tags = {"g": d[f + 10:f + 12], "o": d[f + 18:f + 20], "kt": d[f + 28:f + 32],
+                         "use": d[t0 + 20:t0 + 28], "s": d[t0 + 30:t0 + 32], "z": d[t0 + 12:t0 + 16]}
         logging.info("learned tags: %s", {k: v.hex() for k, v in self.tags.items()})
 
     def s(self, ptr):
@@ -105,8 +105,8 @@ class Db:
             while self.is_field(pos):
                 fields.append(pos)
                 pos += FIELD_LEN
-            reg = dict(nameptr=nameptr, addr=addr, addr2=addr2, pidx=pidx, pidx2=pidx2,
-                       lvl=lvl, nf=nf, fptr=fptr, fields=fields, tail=tail)
+            reg = {"nameptr": nameptr, "addr": addr, "addr2": addr2, "pidx": pidx, "pidx2": pidx2,
+                       "lvl": lvl, "nf": nf, "fptr": fptr, "fields": fields, "tail": tail}
             regs.append(reg)
             if not fields:
                 logging.warning("register at tail 0x%x has no fields", tail)
@@ -183,8 +183,8 @@ def main():
             kt, = struct.unpack_from("<I", d, f + 32)
             w_lo, w_hi = struct.unpack_from("<II", d, f)
             wide = None if (w_lo, w_hi) == (0xFFFFFFFF, 0xFFFFFFFF) else (w_lo, w_hi)
-            fl.append(dict(lo=lo, hi=hi, acc=acc, rv=rv, name=db.s(prev_kt),
-                           desc=db.s(p_desc), rgrp=db.s(p_grp), wide=wide, kt=kt))
+            fl.append({"lo": lo, "hi": hi, "acc": acc, "rv": rv, "name": db.s(prev_kt),
+                           "desc": db.s(p_desc), "rgrp": db.s(p_grp), "wide": wide, "kt": kt})
             prev_kt = kt
         r["fl"] = fl
     # last field's kt = group id of the NEXT register; first reg: preamble[-1] [fw]
@@ -262,7 +262,7 @@ def main():
         fo.write("\t".join(cols) + "\n")
         for r in regs:
             pg = "%02X" % (r["addr"] >> 8)
-            adr = "0x%04X" % r["addr"]
+            adr = "0x{:04X}".format(r["addr"])
             pidx = r["pidx"] if r["lvl"] != 1 else ""
             regreset = 0
             for f in r["fl"]:
@@ -280,7 +280,7 @@ def main():
                 w = f["wide"]
                 fo.write("\t".join(str(x) for x in [
                     pg, adr, pidx, r["lvl"], "FIELD", r["name"], f["hi"], f["lo"], f["name"], acc,
-                    "0x%02X" % f["rv"], r["group"], r["gid"],
+                    "0x{:02X}".format(f["rv"]), r["group"], r["gid"],
                     w[0] if w else "", w[1] if w else "", esc(f["rgrp"]), esc(f["desc"])]) + "\n")
                 nfld += 1
     logging.info("wrote %d register rows, %d field rows, %d pages", nreg, nfld, len(by_page))

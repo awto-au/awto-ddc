@@ -115,7 +115,7 @@ def main() -> int:
                         break
                 time.sleep(POLL_S)
             say(f"run {run + 1} {a.label}: off {a.off_s:.1f} s; host DPMS-on call -> sysfs On {(t_on - t_cmd) * 1000:.0f} ms; "
-                f"picture {'%.0f ms after sysfs On' % (hit - on_ms) if hit is not None else 'NOT seen in %.1f s' % WAKE_LIMIT_S}")
+                f"picture {'%.0f ms after sysfs On' % (hit - on_ms) if hit is not None else f'NOT seen in {WAKE_LIMIT_S:.1f} s'}")
             for ms, i, g in evs:
                 say(f"  {ms - on_ms:+7.0f} ms  {T.name(i, g)}")
             if hit is None:

@@ -369,7 +369,7 @@ def cmd_compile(uv2_rel, jobs, only, target):
     for f, rc, msg in bad:
         errs = [l for l in msg.splitlines() if "error" in l.lower() or "TIMEOUT" in l]
         per_file[f] = errs[:20]
-        for e in set(norm_err(l) for l in errs):
+        for e in {norm_err(l) for l in errs}:
             hist[e] += 1
     (WORK / "logs").mkdir(parents=True, exist_ok=True)
     whist, wfile = Counter(), {}                             # warnings of every file, ok or not (#26)
@@ -377,7 +377,7 @@ def cmd_compile(uv2_rel, jobs, only, target):
         ws = [l for l in msg.splitlines() if "warning" in l.lower()]
         if ws:
             wfile[f] = ws
-            for w in set(norm_err(l) for l in ws):
+            for w in {norm_err(l) for l in ws}:
                 whist[w] += 1
     wtxt = "".join(f"== {f}\n" + "\n".join(ws) + "\n" for f, ws in sorted(wfile.items()))
     (WORK / "warnings.txt").write_text(wtxt)

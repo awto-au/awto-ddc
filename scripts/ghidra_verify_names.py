@@ -38,7 +38,7 @@ def vendor_regs(bank):
     d = {}
     for f in ("regwrites.tsv", "regreads.tsv"):
         for l in (VEND / f"bank{bank}" / f).read_text().splitlines():
-            if l.startswith("#") or l.startswith("bank"):
+            if l.startswith(("#", "bank")):
                 continue
             c = l.split("\t")
             try:

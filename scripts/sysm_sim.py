@@ -26,6 +26,8 @@ from typing import ClassVar
 from _log import log_line as _log_line
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
+import itertools
+
 import fw_sim as S
 import led_check as LED
 import osd_test as T
@@ -270,7 +272,7 @@ class Run:
                    "; ".join(f"{t} {ph} {w} {o:02X}->{n:02X}" for t, ph, w, o, n, _ in outside[:6]))
         trans = [(i, m.group(1), m.group(2)) for i, x in enumerate(lines)
                  if (m := re.search(r"system:in (.+?) for \d+ms->(.+?):", x))]
-        broken = [(a, b) for (_, _, a2), (_, b, _) in zip(trans, trans[1:]) for a, b in [(a2, b)] if a != b]
+        broken = [(a, b) for (_, _, a2), (_, b, _) in itertools.pairwise(trans) for a, b in [(a2, b)] if a != b]
         self.check(trans and not broken, f"transition chain unbroken ({len(trans)} transitions)", str(broken[:4]))
         unnamed = [x for x in lines if re.search(r"system:in [0-9A-F]{2} for |->[0-9A-F]{2}:|ms->[^:]+:[0-9A-F]{2}\b| by [0-9A-F]{2} ", x)]
         self.check(not unnamed, "every state / who / request has a name (no hex code in a system line)", str(unnamed[:3]))

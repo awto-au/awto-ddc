@@ -37,7 +37,7 @@ def test_generated_file_current():
 
 
 def test_vcp_value():
-    reg = [r for r in (ROOT / "fw/rtdfw/settings/registry.tsv").read_text().splitlines() if r.startswith("121\t")][0].split("\t")
+    reg = next(r for r in (ROOT / "fw/rtdfw/settings/registry.tsv").read_text().splitlines() if r.startswith("121\t")).split("\t")
     assert reg[14].split("|")[FS.VCP_FLASH_SCREEN] == "Flash warning"
     assert reg[11] == f"0x{FS.VCP_SAVER:02X}"
 

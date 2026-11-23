@@ -15,6 +15,8 @@ from pathlib import Path
 
 os.environ.setdefault("AWTO_SIM_CORE", "fast")
 sys.path.insert(0, str(Path(__file__).resolve().parent))
+import itertools
+
 import audio_sim as A
 import ddc_sim as D
 import osd_render as R
@@ -53,7 +55,7 @@ def analyse(events, t0: float, t1: float):
             redundant += 1 if sc == last_sc else 0
             last_sc = sc
             pending = t
-    gaps = [(b - a) * MS for a, b in zip(starts, starts[1:])]
+    gaps = [(b - a) * MS for a, b in itertools.pairwise(starts)]
     return {"notes": len(starts), "per_s": len(starts) / (t1 - t0), "gaps": gaps, "gates": gates, "redundant": redundant}
 
 
@@ -90,7 +92,7 @@ def main() -> int:
     say(f"{a.bin.name} {a.saver} {a.seconds:.0f} s: {r['notes']} pitch latches ({r['per_s']:.1f} / s), redundant (same pitch again) {r['redundant']}")
     say(f"  latch spacing ms: min {min(n):.1f} median {statistics.median(n):.1f} p95 {sorted(n)[int(len(n) * 0.95)]:.1f} max {max(n):.1f}")
     say(f"  gate (latch -> amp open) ms: min {min(g):.1f} median {statistics.median(g):.1f} p95 {sorted(g)[int(len(g) * 0.95)]:.1f} max {max(g):.1f}; designed 4")
-    pg = sorted((y - x) * MS for x, y in zip(polls, polls[1:]) if t0 <= x < t1)
+    pg = sorted((y - x) * MS for x, y in itertools.pairwise(polls) if t0 <= x < t1)
     p99 = pg[int(len(pg) * 0.99)]
     say(f"  poll gap ms: median {statistics.median(pg):.2f} p99 {p99:.2f} max {pg[-1]:.1f} ({len(pg)} polls)")
     lim = a.max_poll_ms if a.max_poll_ms is not None else POLL_P99_MS[a.saver]

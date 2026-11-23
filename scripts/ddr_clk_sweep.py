@@ -172,7 +172,7 @@ def tsv(row: dict) -> None:
     with TSV.open("a") as f:
         if new:
             f.write("\t".join(["time"] + keys) + "\n")
-        f.write("\t".join([isostamp.now()] + [("%.4g" % row[k]) if isinstance(row.get(k), float) else str(row.get(k, "")) for k in keys]) + "\n")
+        f.write("\t".join([isostamp.now()] + [(f"{row[k]:.4g}") if isinstance(row.get(k), float) else str(row.get(k, "")) for k in keys]) + "\n")
 
 
 def goto(ctx, pct: float, label: str) -> bytes | None:

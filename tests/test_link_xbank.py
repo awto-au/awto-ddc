@@ -28,7 +28,7 @@ _reader:
 
 def chunk(area, kind, reg, syms=True):
     name = area[2:] if syms else area                  # map symbol `_x`, or a static's bare area `CH_x`
-    return dict(kind=kind, name=name, area=area, reg=reg, addr=0x10000 * (reg if reg != "C" else 0), size=4)
+    return {"kind": kind, "name": name, "area": area, "reg": reg, "addr": 0x10000 * (reg if reg != "C" else 0), "size": 4}
 
 
 def run(tmp_path, reader_bank, static=False):

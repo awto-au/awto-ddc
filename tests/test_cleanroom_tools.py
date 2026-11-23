@@ -160,7 +160,7 @@ def test_equiv_barrier_delay_ds(tmp_path):
 
 def test_equiv_w1c_ignored(tmp_path):
     _, w1c = TE.regdb_facts()
-    a = sorted(w1c)[0]
+    a = min(w1c)
     ours = BASE[:2] + [("W", a, "", 0xFF, 15)] + BASE[2:]
     assert equiv(tmp_path, ours)[1] == 0
 

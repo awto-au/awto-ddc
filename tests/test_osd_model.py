@@ -121,7 +121,7 @@ def test_window_decode_boot_values():
 
 
 def test_char_and_geometry_decode():
-    assert M.decode_char([0x4C, 7, 0x10]) == dict(kind="1bit", id=7, width=12, fg=1, bg=0)
+    assert M.decode_char([0x4C, 7, 0x10]) == {"kind": "1bit", "id": 7, "width": 12, "fg": 1, "bg": 0}
     assert M.decode_char([0x6C, 7, 0x00])["id"] == 263                  # B0[5]: font 256..511
     assert M.decode_char([0xC1, 0, 0])["kind"] == "4bit" and M.decode_char([0x80, 0, 0])["kind"] == "2bit"
     regs = bytearray(256)

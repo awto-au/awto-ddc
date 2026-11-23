@@ -121,9 +121,9 @@ def test_compiled_out_rows(build):
 
 
 def test_reasons_and_classification():
-    rows = [dict(kind="delay_ms", file="a/B.c", line=7, function="F", value=10, args=""),
-            dict(kind="timer_event", file="a/B.c", line=9, function="F", value=5, args=""),
-            dict(kind="param", file="", line=0, function="", value=550, args="_PANEL_POWER_ON_T3")]
+    rows = [{"kind": "delay_ms", "file": "a/B.c", "line": 7, "function": "F", "value": 10, "args": ""},
+            {"kind": "timer_event", "file": "a/B.c", "line": 9, "function": "F", "value": 5, "args": ""},
+            {"kind": "param", "file": "", "line": 0, "function": "", "value": 550, "args": "_PANEL_POWER_ON_T3"}]
     reasons = [("delay_ms@B.c:7#10", "removable", "why", "cite", "", ""), ("_PANEL_POWER_ON_T3", "required", "spec", "ds", "", "")]
     out = D.classify(rows, reasons)
     assert [r["cls"] for r in out] == ["removable", "non-blocking", "required"]

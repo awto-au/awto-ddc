@@ -225,13 +225,13 @@ class Types:
                 vals.append((k, cur)); cur += 1
             mx = max([v for _, v in vals] + [0]); mn = min([v for _, v in vals] + [0])
             size = 1 if mx < 256 and mn >= 0 else 2 if mx < 65536 and mn > -32768 else 4
-            self.agg[name] = dict(kind="E", size=size, vals=vals)
+            self.agg[name] = {"kind": "E", "size": size, "vals": vals}
             self.order.append(name)
             return
         fields, size = self.layout(kind, body)
         if fields is None:
             return
-        self.agg[name] = dict(kind="S" if kind == "struct" else "U", size=size, fields=fields)
+        self.agg[name] = {"kind": "S" if kind == "struct" else "U", "size": size, "fields": fields}
         self.order.append(name)
 
     def split_members(self, body):
@@ -279,7 +279,7 @@ class Types:
                     return None, 0
                 self.anon += 1
                 tname = nt or f"_anon{self.anon}"
-                self.agg[tname + "_t"] = dict(kind="S" if nk == "struct" else "U", size=ssz, fields=sub)
+                self.agg[tname + "_t"] = {"kind": "S" if nk == "struct" else "U", "size": ssz, "fields": sub}
                 self.order.append(tname + "_t")
                 m = re.match(r"^(\w+)\s*((?:\[[^\]]*\])*)$", rest)
                 if not m:
@@ -314,7 +314,7 @@ class Types:
                     usz = sz if sz in (1, 2, 4) else 1
                     if unit is None or unit["size"] != usz or unit["used"] + bits > unit["cap"]:
                         flush()
-                        unit = dict(start=off, size=usz, cap=8 * usz, used=0, names=[])
+                        unit = {"start": off, "size": usz, "cap": 8 * usz, "used": 0, "names": []}
                         off += usz
                     unit["used"] += bits; unit["names"].append(f"{name}:{bits}")
                     continue

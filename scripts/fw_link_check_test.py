@@ -238,7 +238,7 @@ def main():
         im = Img()
         im.add(f"_t{base:x}", base, [(b"\x01\x02", "")], data=True)
         im.add("_f", 0x16000, [(b"\x24\x10", f"add a,#_t{base:x}"), (b"\x74\x80", "mov a,#0x80"),
-                               (b"\x34\xf5", "addc a,#(_t%x >> 8)" % base), (b"\x22", "ret")])
+                               (b"\x34\xf5", f"addc a,#(_t{base:x} >> 8)"), (b"\x22", "ret")])
         with tempfile.TemporaryDirectory() as d:
             b, m, asm = im.files(d)
             _, F = L.run(b, m, "", 0x5000, log=lambda s: None, asm_dir=asm)

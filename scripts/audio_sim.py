@@ -99,7 +99,7 @@ def segments(events, t_end: float, model: dict | None = None):
 def synth(events, t0: float, t1: float, rate: int = WAV_RATE, model: dict | None = None) -> np.ndarray:
     """int16 mono samples for firmware time [t0, t1)."""
     md = {**MODEL, **(model or {})}
-    n = max(0, int(round((t1 - t0) * rate)))
+    n = max(0, round((t1 - t0) * rate))
     seg = segments(events, t1, md)
     ts = np.arange(n) / rate + t0
     freq = np.zeros(n)

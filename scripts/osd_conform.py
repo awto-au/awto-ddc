@@ -81,7 +81,7 @@ def _():
 def _():
     i = D.Img()
     for k in range(4):
-        i.window(0 if k == 0 else 5 + k - 1, 20, 20 + 70 * k, 299, 80 + 70 * k, 4, gradient=dict(dir=0, pol=(1, 1, 0), en=(1, 0, 1), step=k + 1))
+        i.window(0 if k == 0 else 5 + k - 1, 20, 20 + 70 * k, 299, 80 + 70 * k, 4, gradient={"dir": 0, "pol": (1, 1, 0), "en": (1, 0, 1), "step": k + 1})
     return i
 
 
@@ -116,7 +116,7 @@ def _():
 
 
 @case("C-OFFS", "Position offsets 3A2C / 3A2F (delay units) and 3A32 (window offsets, px) and the fine-tune bits 3A1E[7,3]: measure the shift of a "
-                "window + text from the same image with offsets 0 (sim option osd_offsets).", opt=dict(osd_offsets=True))
+                "window + text from the same image with offsets 0 (sim option osd_offsets).", opt={"osd_offsets": True})
 def _():
     i = D.Img().window(0, 10, 10, 69, 49, 2)
     i.map([(18, [i.c1(1, 1, 4)] * 5)]).place(80, 10)
@@ -132,12 +132,12 @@ def _():
     return i
 
 
-@case("C-FMASK", "Font mask 3A45..4C: units of row / column (map row index, cell index = sim) and inclusive end.", opt=dict(fontmask_unit="cell"))
+@case("C-FMASK", "Font mask 3A45..4C: units of row / column (map row index, cell index = sim) and inclusive end.", opt={"fontmask_unit": "cell"})
 def _():
     return D.DEMOS["font_mask"].build()
 
 
-@case("C-ROWTOT", "font_row_total 3A3E / 3F / 40: does a smaller value than the map's row count hide the rows below it (sim option row_total)?", opt=dict(row_total=True))
+@case("C-ROWTOT", "font_row_total 3A3E / 3F / 40: does a smaller value than the map's row count hide the rows below it (sim option row_total)?", opt={"row_total": True})
 def _():
     i = D.Img().window(0, 10, 10, 200, 100, 8)
     i.text_boxes(4, 6, 1, 4).place(12, 12)
@@ -145,7 +145,7 @@ def _():
     return i
 
 
-@case("C-AREA", "osd_wid1 / osd_len1 3A38..3A: does the first OSD clip to wid x len (px, sim option area_clip)?", opt=dict(area_clip=True))
+@case("C-AREA", "osd_wid1 / osd_len1 3A38..3A: does the first OSD clip to wid x len (px, sim option area_clip)?", opt={"area_clip": True})
 def _():
     i = D.Img().window(0, 10, 10, 300, 200, 8)
     i.text_boxes(5, 20, 1, 4).place(12, 12)
@@ -154,7 +154,7 @@ def _():
 
 
 @case("C-SUREG", "Scale-up region 3AC4..CB: with factor 200 %, is the source the region (start / size in panel px, sim option su_region) or the whole OSD? "
-                 "Which px is the output origin?", opt=dict(su_region=True))
+                 "Which px is the output origin?", opt={"su_region": True})
 def _():
     i = D.Img().window(0, 10, 10, 129, 79, 2).place(12, 12)
     i.text_boxes(3, 8, 1, 4)
@@ -173,7 +173,7 @@ def _():
 
 
 @case("C-ROTWIN", "Auto rotation 180 / CW / CCW with windows that have rotate_en (ADR9[0]): do the windows turn with the text block (sim option win_rotate)?",
-      opt=dict(win_rotate=True))
+      opt={"win_rotate": True})
 def _():
     i = D.Img().window(0, 0, 0, 79, 39, 2, adr9=(1, 1, 0)).window(2, 0, 50, 79, 89, 3, adr9=(0, 1, 0))
     i.map([(18, [i.c1(1, 1, 4)] * 8)]).place(40, 40, font=(100, 0))

@@ -63,8 +63,8 @@ NV_SIZE = 20
 
 def decode(b: bytes) -> dict:
     w = lambda o: b[o] << 8 | b[o + 1]
-    return dict(magic=chr(b[0]), mask=b[1], why=b[2], in_ddc=b[3], defer=w(4), flush=w(6), item_wr=w(8), ops=w(10),
-                stable=w(12), ddc_idle=w(14), erase=w(16), bytes=w(18))
+    return {"magic": chr(b[0]), "mask": b[1], "why": b[2], "in_ddc": b[3], "defer": w(4), "flush": w(6), "item_wr": w(8), "ops": w(10),
+                "stable": w(12), "ddc_idle": w(14), "erase": w(16), "bytes": w(18)}
 
 
 def show(d: dict) -> str:

@@ -17,7 +17,7 @@ SRC = ROOT / "tmp/sdcc-port/src/User/RTD Series/RTD2014Osd/Code/RTD2014OsdFontDy
 
 
 def render(name):
-    m = re.search(r"tFONT1_ICON_%s\[\]=\s*\{(.*?)\n\};" % name, SRC.read_text(), re.DOTALL)
+    m = re.search(rf"tFONT1_ICON_{name}\[\]=\s*\{{(.*?)\n\}};", SRC.read_text(), re.DOTALL)
     blob = bytes(int(x, 16) for x in re.findall(r"0x([0-9a-fA-F]{2})", m.group(1)))
     _, _, by = decode_blob(blob, 0)
     n = len(by) // 27

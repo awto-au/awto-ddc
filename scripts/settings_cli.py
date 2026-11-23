@@ -28,7 +28,7 @@ from _repo import ROOT
 LOG = ROOT / "tmp/logs/settings_cli.log"
 DBG = 0x6A                           # debug slave 0x35, 8-bit address
 SEL, VAL, SCHEMA, CMD = 0xE0, 0xE1, 0xE2, 0xE3
-BOX = dict(magic=0, cmd=1, code=2, result=3, val_lo=4, val_hi=5, cur_lo=6, cur_hi=7, max_lo=8, max_hi=9, type=10, seq=11)
+BOX = {"magic": 0, "cmd": 1, "code": 2, "result": 3, "val_lo": 4, "val_hi": 5, "cur_lo": 6, "cur_hi": 7, "max_lo": 8, "max_hi": 9, "type": 10, "seq": 11}
 POLLS = 40                           # mailbox answer: main loop serves it every pass (~3 ms); one poll = 3 I2C transfers
 # hardware: the main loop can be blocked by an OSD draw (input-info pop-up 375 ms, #60); 1.25 x -> 0.47 s, then FAIL
 MAILBOX_S = 0.47
@@ -166,7 +166,7 @@ def show(r: dict, v: int) -> str:
     elif r["unit"] == "dhz":
         t = f"{v / 10:.1f} Hz"
     else:
-        t = f"{v} {dict(percent='%', ms='ms', s='s', hz='Hz').get(r['unit'], '')}".strip()
+        t = f"{v} { {'percent': '%', 'ms': 'ms', 's': 's', 'hz': 'Hz'}.get(r['unit'], '')}".strip()
     return f"{r['name']} = {t} (raw {v})"
 
 

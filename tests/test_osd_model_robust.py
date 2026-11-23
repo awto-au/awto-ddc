@@ -56,7 +56,7 @@ def test_random_images_other_canvas_sizes():
 
 def test_full_panel_render_time_budget():
     """Saver sims render hundreds of frames: a busy 4K image (windows + a full text map + highlight + blend) must stay under 2.5 s (2.1 s before the glyph memo, ~1.2 s now on the dev box)."""
-    i = D.Img().window(0, 100, 100, 3000, 1500, 2, gradient=dict(dir=0, pol=(1, 1, 1), en=(1, 1, 1), step=1))
+    i = D.Img().window(0, 100, 100, 3000, 1500, 2, gradient={"dir": 0, "pol": (1, 1, 1), "en": (1, 1, 1), "step": 1})
     i.window(10, 200, 200, 3000, 1400, 3, adr4=(0x80, 1, 4)).window(2, 300, 300, 3500, 1800, 4)
     i.text_boxes(100, 255, 1, 4).place(0, 0)
     i.reg(0x0A, 0x08, 0x0C).reg(0x2A, 0x42).ovl.__setitem__(0, 0x09)

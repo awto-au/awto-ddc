@@ -370,7 +370,7 @@ def main():
         for name, khz in clock_states():
             say(f"{name} MHz: DELAY_5US count {counts(khz)[0]}, 4 us base count {counts(khz)[1]}")
         return 0
-    mapp = a.map or sorted((a.tree / "tmp/fw").glob("*-be.map"), key=lambda p: p.stat().st_mtime)[-1]
+    mapp = a.map or max((a.tree / "tmp/fw").glob("*-be.map"), key=lambda p: p.stat().st_mtime)
     say(f"delay_audit tree {a.tree} map {mapp.name}")
     if a.write_budget:
         return write_budget(a.tree, mapp)

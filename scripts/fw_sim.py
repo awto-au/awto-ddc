@@ -1482,7 +1482,7 @@ def ddr_trace(binp: Path, mapp: Path, mode: str, max_instr: int, log, vendor: Pa
 def msg_source(mid: int) -> str:
     """AwtoMsg0/AwtoMsgV(0xID...) call site in the SDK sources (tmp/sdcc-port/src), first RL6449-relevant match."""
     root = ROOT / "tmp/sdcc-port/src/Kernel"
-    pat = re.compile(r"AwtoMsg[0V]\(0x%04X\b" % mid, re.IGNORECASE)
+    pat = re.compile(rf"AwtoMsg[0V]\(0x{mid:04X}\b", re.IGNORECASE)
     for f in sorted(root.rglob("*.c")):
         if any(x in f.parts for x in ("RL6492_Series_Scaler", "RL6463_Series_Scaler", "RL6432_Series_Scaler", "RL6410_Series_Scaler",
                                       "RL6369_Series_Scaler")):

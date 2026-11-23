@@ -15,6 +15,7 @@ usage: panel_unit.py TAG [--cold 3] [--power-key 1] [--switch 0] [--no-flash]   
 Ring text per run: tmp/logs/panel_unit/<tag>-<run>.txt. Log: tmp/logs/panel_unit.log
 """
 import argparse
+import itertools
 import re
 import subprocess
 import sys
@@ -116,7 +117,7 @@ def time_gaps(rows: list) -> list:
     for kind in ("panel", "system"):
         tr = [(t, m.group(1), m.group(3), int(m.group(2)) if m.group(2) else None) for t, x in rows
               if (m := re.match(rf"{kind}: in (.+?) for (\d+)ms->(.+?):", x))]
-        for (t1, a1, b1, _), (t2, a2, b2, n2) in zip(tr, tr[1:]):
+        for (t1, a1, b1, _), (t2, a2, b2, n2) in itertools.pairwise(tr):
             if b1 != a2 or a1 == b1 or (a1, b1) == ("VIDEO", "T4") or n2 is None:
                 continue                         # gap / A -> A (entry kept) / T4 counts from the backlight-off
             if abs((t2 - t1) - n2) > TIME_SLACK_MS:
@@ -128,21 +129,21 @@ def facts(txt: str) -> dict:
     rows = [(int(m.group(1)), m.group(2).strip()) for m in re.finditer(r"(?m)^(?:\S+\s+)?(\d+):(.*)$", txt)]
     ms = lambda pat: next((t for t, x in rows if re.search(pat, x)), None)
     bl = [(t, "off" if "pin off" in x else "on") for t, x in rows if re.search(r"backlight pin (on|off)|backlight on at once", x)]
-    blink = sum(1 for a, b in zip(bl, bl[1:]) if a[1] == "off" and b[1] == "on")
+    blink = sum(1 for a, b in itertools.pairwise(bl) if a[1] == "off" and b[1] == "on")
     video = ms(r"->VIDEO:eDP-1 link trained")
     blon = next((t for t, x in bl if x == "on"), None)
     gaps = time_gaps(rows)
     act = [i for i, (_, x) in enumerate(rows) if re.search(r"->ACTIVE:", x)]
     tim = [re.match(r"(D\d) timing", x) for _, x in rows[:act[-1]]] if act else []
     port = next((m.group(1) for m in reversed(tim) if m), None)
-    return dict(off=ms(r"->(OFF|AC ON):"), search=ms(r"->SEARCH:"), active=ms(r"->ACTIVE:"),
-                last_active=rows[act[-1]][0] if act else None, port=port, actives=len(act),
-                flaps=len(re.findall(r"D2 signal lost", txt)) + sum(int(x) for x in re.findall(r"repeated (\d+) more", txt)),
-                bl=" ".join(f"{x}@{t}" for t, x in bl), blinks=blink, tgaps=len(gaps), tgap_lines=gaps,
-                links=sum(1 for _, x in rows if re.search(r"eDP-1 link trained( in \d+ ms)?, stream on", x)),
-                link_fail=sum(1 for _, x in rows if "link training FAIL" in x),
-                stream_bl=(blon - video) if (video is not None and blon is not None) else None,
-                outside=sum(1 for _, x in rows if "outside the panel machine" in x))
+    return {"off": ms(r"->(OFF|AC ON):"), "search": ms(r"->SEARCH:"), "active": ms(r"->ACTIVE:"),
+                "last_active": rows[act[-1]][0] if act else None, "port": port, "actives": len(act),
+                "flaps": len(re.findall(r"D2 signal lost", txt)) + sum(int(x) for x in re.findall(r"repeated (\d+) more", txt)),
+                "bl": " ".join(f"{x}@{t}" for t, x in bl), "blinks": blink, "tgaps": len(gaps), "tgap_lines": gaps,
+                "links": sum(1 for _, x in rows if re.search(r"eDP-1 link trained( in \d+ ms)?, stream on", x)),
+                "link_fail": sum(1 for _, x in rows if "link training FAIL" in x),
+                "stream_bl": (blon - video) if (video is not None and blon is not None) else None,
+                "outside": sum(1 for _, x in rows if "outside the panel machine" in x)}
 
 
 def report(tag: str, name: str, txt: str) -> dict:

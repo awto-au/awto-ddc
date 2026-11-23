@@ -27,4 +27,4 @@ if __name__ == "__main__":
     d = open(sys.argv[1], "rb").read()
     s, n = int(sys.argv[2], 16), int(sys.argv[3], 16)
     for k, g in enumerate(decode(d[s:s+n])):
-        print(k, len(g), "".join("%x" % v for v in g))
+        print(k, len(g), "".join(f"{v:x}" for v in g))

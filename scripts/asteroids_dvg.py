@@ -48,7 +48,7 @@ class Dvg:
     def fetch(self, a):
         i = a - ROM_BASE_WORD
         if not 0 <= i < len(self.w):
-            raise IndexError("word address %#x outside ROM" % a)
+            raise IndexError(f"word address {a:#x} outside ROM")
         return self.w[i]
 
     def decode(self, addr, gs=0, max_ops=400):

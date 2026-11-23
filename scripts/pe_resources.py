@@ -111,7 +111,7 @@ def parse_dialog(d):
         if cid > 0x7FFFFFFF or (not ex and cid == 0xFFFF):
             cid = -1
         if u16(d, o) == 0xFFFF:
-            c = CLASSES.get(u16(d, o + 2), "0x%x" % u16(d, o + 2))
+            c = CLASSES.get(u16(d, o + 2), f"0x{u16(d, o + 2):x}")
             o += 4
         else:
             c, o = wstr(d, o)
@@ -189,7 +189,7 @@ def parse_accel(d):
     rows = []
     for o in range(0, len(d) - 7, 8):
         fl, key, cid = struct.unpack_from("<HHH", d, o)
-        rows.append((str(cid), "Accel", "key=0x%x flags=0x%x" % (key, fl)))
+        rows.append((str(cid), "Accel", f"key=0x{key:x} flags=0x{fl:x}"))
         if fl & 0x80:
             break
     return rows
@@ -205,7 +205,7 @@ def parse_dlginit(d):
         ln = u32(d, o + 4)
         data = d[o + 8:o + 8 + ln]
         o += 8 + ln
-        rows.append((str(cid), "DlgInit0x%x" % msg, data.split(b"\0")[0].decode("latin-1")))
+        rows.append((str(cid), f"DlgInit0x{msg:x}", data.split(b"\0")[0].decode("latin-1")))
     return rows
 
 
@@ -228,16 +228,16 @@ def process(path, root, out, log):
     try:
         res = list(walk_resources(d))
     except (struct.error, IndexError, ValueError, KeyError, OSError) as e:
-        log("%s: resource walk failed: %r" % (src, e))
+        log(f"{src}: resource walk failed: {e!r}")
         return {}
     for t, n, lang, data in res:
         tn = TYPES.get(t, str(t)) if isinstance(t, int) else str(t)
         try:
             if t == 5:
                 rows = parse_dialog(data)
-                rid = "dlg:%s" % n
+                rid = f"dlg:{n}"
                 for cid, c, txt in rows:
-                    out.append((src, "DIALOG", "%s/%s" % (rid, cid), c, txt))
+                    out.append((src, "DIALOG", f"{rid}/{cid}", c, txt))
                 counts["dialogs"] = counts.get("dialogs", 0) + 1
                 counts["controls"] = counts.get("controls", 0) + len(rows) - 1
                 continue
@@ -245,7 +245,7 @@ def process(path, root, out, log):
                 rows = parse_menu(data)
                 counts["menus"] = counts.get("menus", 0) + 1
                 for cid, c, txt in rows:
-                    out.append((src, "MENU", "menu:%s/%s" % (n, cid), c, txt))
+                    out.append((src, "MENU", f"menu:{n}/{cid}", c, txt))
                 continue
             if t == 6:
                 rows = parse_strings(n, data)
@@ -255,17 +255,17 @@ def process(path, root, out, log):
                 continue
             if t == 9:
                 for cid, c, txt in parse_accel(data):
-                    out.append((src, "ACCEL", "accel:%s/%s" % (n, cid), c, txt))
+                    out.append((src, "ACCEL", f"accel:{n}/{cid}", c, txt))
                 continue
             if t == 240:
                 for cid, c, txt in parse_dlginit(data):
-                    out.append((src, "DLGINIT", "dlg:%s/%s" % (n, cid), c, txt))
+                    out.append((src, "DLGINIT", f"dlg:{n}/{cid}", c, txt))
                 continue
             if t == 16:
                 for k, c, v in parse_version(data):
                     out.append((src, "VERSION", k, c, v))
         except (struct.error, IndexError, ValueError, KeyError, OSError) as e:
-            log("%s: %s %s parse error %r" % (src, tn, n, e))
+            log(f"{src}: {tn} {n} parse error {e!r}")
     return counts
 
 
@@ -286,7 +286,7 @@ def main():
     for p in files:
         rtd_gate.gate_or_exit(str(p), "PE-resources", warn_only=warn_only or None, log=log)
         c = process(p, root, out, log)
-        log("%s: %s" % (p.relative_to(root), c))
+        log(f"{p.relative_to(root)}: {c}")
     outp.parent.mkdir(parents=True, exist_ok=True)
     with outp.open("w", encoding="utf-8") as f:
         for r in out:

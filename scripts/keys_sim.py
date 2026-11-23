@@ -100,7 +100,7 @@ class Keys:
         st = {"open": b[3], "drawn": b[4], "count": b[5], "a0": b[6], "a1": b[7], "p30": b[8], "mask": b[9], "msg": b[10], "flags": b[11], "redraws": b[12],
               "menu": self.m.rd(self.menu_on)[0], "mode": self.m.rd(self.mode_a)[0] & 0x1F}
         if log:
-            st["log"] = [dict(seq=e[0], tick=e[1] << 8 | e[2], a0=e[3], a1=e[4], flags=e[5], mask=e[6], msg=e[7])
+            st["log"] = [{"seq": e[0], "tick": e[1] << 8 | e[2], "a0": e[3], "a1": e[4], "flags": e[5], "mask": e[6], "msg": e[7]}
                          for e in (b[16 + 8 * i:24 + 8 * i] for i in range(16))]
         return st
 

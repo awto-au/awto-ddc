@@ -21,6 +21,8 @@ from pathlib import Path
 from _log import log_line as _log_line
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
+import itertools
+
 import numpy as np
 import osd_model as M
 import osd_render as R
@@ -98,7 +100,7 @@ class Run:
         self.check(len(st) >= want, f"{tag}: boot stage lines", f"{len(st)} of {want}")
         ms = [int(ln.split(":", 1)[0]) for ln in lines]
         # 1 ms slack: the WDT-counter time (before Timer2) and the Timer2 time meet with integer-ms truncation
-        self.check(all(b >= a - 1 for a, b in zip(ms, ms[1:])), f"{tag}: line times never step back (> 1 ms)", str(ms[:12]))
+        self.check(all(b >= a - 1 for a, b in itertools.pairwise(ms)), f"{tag}: line times never step back (> 1 ms)", str(ms[:12]))
         self.shot(f"boot_reason_{tag}")
 
     def machine_times(self, evs):
@@ -109,7 +111,7 @@ class Run:
             if name == "backlight":              # backlight sub-state lines (11 C0..DF): arg = C0 | old << 2 | new (+ 10 delayed)
                 tr = [(ms, ((a >> 2 & 3) << 4) | (a & 3), v) for ms, a, v in tr]
             bad = []
-            for (t1, a1, _), (t2, a2, v2) in zip(tr, tr[1:]):
+            for (t1, a1, _), (t2, a2, v2) in itertools.pairwise(tr):
                 if (a1 & 0x0F) != (a2 >> 4) or (a1 >> 4) == (a1 & 0x0F) or (eid == 0x11 and a1 == 0x49):
                     continue                     # chain gap / A -> A (entry kept) / VIDEO -> T4 (T4 counts from the backlight-off)
                 inn = (v2 & 0xFFFF) if eid == 0x11 else (v2 & 0xFFFFFF)

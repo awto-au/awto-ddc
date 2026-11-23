@@ -16,7 +16,7 @@ def _num(s):
 def load(path=TSV):
     rows = []
     for ln in Path(path).read_text().splitlines():
-        if not ln.strip() or ln.startswith("#") or ln.startswith("name\t"):
+        if not ln.strip() or ln.startswith(("#", "name\t")):
             continue
         name, macro, run, vcp, option, note = (ln.split("\t") + [""])[:6]
         rows.append({"name": name, "macro": macro, "run": _num(run), "vcp": _num(vcp), "option": None if option == "-" else option, "note": note})

@@ -56,7 +56,7 @@ def cmd_diff(paths):
 
 
 def popcount(b: bytes) -> int:
-    return sum(bin(x).count("1") for x in b)
+    return sum((x).bit_count() for x in b)
 
 
 def cmd_scan(paths):

@@ -33,6 +33,8 @@ from sdcc_overlay import repo_root
 
 ROOT = repo_root()
 LOG = None
+import itertools
+
 import chip_mem as CM
 
 
@@ -125,7 +127,7 @@ def check_xdata(mp: str, hs):
             bad.append(f"{m.group(1)} 0x{a:04x}+{n}")
     spans = sorted((int(m.group(2), 16), int(m.group(3), 16), m.group(1)) for m in re.finditer(
         r"^(X\w*SEG\d*|XS_\w+)\s+([0-9A-F]{8})\s+([0-9A-F]{8})", mp, re.MULTILINE) if int(m.group(3), 16))
-    bad += [f"{p[2]} overlaps {q[2]}" for p, q in zip(spans, spans[1:]) if p[0] + p[1] > q[0] and p[0] != q[0]]
+    bad += [f"{p[2]} overlaps {q[2]}" for p, q in itertools.pairwise(spans) if p[0] + p[1] > q[0] and p[0] != q[0]]
     if bad:
         sys.exit(f"XDATA outside holes {[(hex(a), hex(b)) for a, b in hs]}: {sorted(set(bad))}")
 

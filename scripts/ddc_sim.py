@@ -102,7 +102,7 @@ class Mccs:
             Mccs.retries += 1
         if r is None or len(r) < 11 or r[2] != 0x02 or r[4] != code:
             return None
-        return dict(rc=r[3], type=r[5], max=r[6] << 8 | r[7], cur=r[8] << 8 | r[9])
+        return {"rc": r[3], "type": r[5], "max": r[6] << 8 | r[7], "cur": r[8] << 8 | r[9]}
 
     def set(self, code: int, v: int):
         self.tx(bytes([0x03, code, v >> 8, v & 0xFF]), reply=False)

@@ -143,7 +143,7 @@ def main():
         for m in mons:
             br, pw = getvcp(m, VCP_BRIGHT), getvcp(m, VCP_POWER)
             print(f"{m['connector']:16} {m['bus']:>3}  {br[0] if br else '?':>10}  "
-                  f"{('0x%02x' % pw[0]) if pw else '?':9}  {m['model']}")
+                  f"{(f'0x{pw[0]:02x}') if pw else '?':9}  {m['model']}")
         return 0
     if a.cmd == "get":
         rc = 0
@@ -167,7 +167,7 @@ def main():
     if a.cmd == "brightness":
         if not 0 <= a.value <= 100:
             ap.error("brightness 0-100")
-        return 0 if all([setvcp(m, VCP_BRIGHT, a.value) for m in sel]) else 1
+        return 0 if all(setvcp(m, VCP_BRIGHT, a.value) for m in sel) else 1
 
 
 if __name__ == "__main__":

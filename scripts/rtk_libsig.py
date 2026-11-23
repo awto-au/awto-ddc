@@ -61,10 +61,10 @@ def build(lib, label):
             data = bytes(seg.data[off:off + size])
             mask = bytes(0x00 if (off + i) in seg.reloc or not seg.known[off + i] else 0xFF
                          for i in range(size))
-            fns.append(dict(name=omf.display_name(m, pub), sym=pub, module=m.name, size=size,
-                            hex=data.hex(), mask=mask.hex()))
+            fns.append({"name": omf.display_name(m, pub), "sym": pub, "module": m.name, "size": size,
+                            "hex": data.hex(), "mask": mask.hex()})
     SIGDIR.mkdir(parents=True, exist_ok=True)
-    json.dump(dict(label=label, lib=str(lib), functions=fns), open(sigfile(label), "w"), indent=0)
+    json.dump({"label": label, "lib": str(lib), "functions": fns}, open(sigfile(label), "w"), indent=0)
     log(f"build {label}: {len(fns)} functions -> {sigfile(label)}")
 
 
@@ -140,8 +140,8 @@ def match(image, labels, outdir):
         for f in db["functions"]:
             cls, hits, sc, best = classify(f, banks)
             bank = ";".join(f"{b}:{a:04x}" for b, a in hits[:4]) + (f";+{len(hits)-4}" if len(hits) > 4 else "")
-            rows.append(dict(function=f["name"], module=f["module"], label=db["label"], size=f["size"],
-                             cls=cls, where=bank, pct=round(sc * 100, 1), hits=hits, best=best))
+            rows.append({"function": f["name"], "module": f["module"], "label": db["label"], "size": f["size"],
+                             "cls": cls, "where": bank, "pct": round(sc * 100, 1), "hits": hits, "best": best})
     # a >=50% fuzzy placement that is the EXACT placement of a different lib function is that
     # sibling's code (same shape, other constants), not evidence for this function: SIBLING
     exact_at = {r["hits"][0]: r["function"] for r in rows if r["cls"] == "EXACT"}

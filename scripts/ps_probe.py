@@ -22,6 +22,8 @@ import isostamp
 from _log import Logger
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
+import itertools
+
 import dbg_xdata as X
 import wdt_test as W
 
@@ -99,7 +101,7 @@ def main() -> int:
                 continue
             rows.append((round((time.monotonic() - h0) * 1000), p[0], d[0] << 8 | d[1], d[2] << 8 | d[3], n[0] << 8 | n[1]))
         hb = pl = ms = 0
-        for r0, r1 in zip(rows, rows[1:]):
+        for r0, r1 in itertools.pairwise(rows):
             if r0[1] == r1[1] == 3 and r1[4] >= r0[4]:
                 hb += (r1[2] - r0[2]) & 0xFFFF; pl += r1[4] - r0[4]; ms += (r1[3] - r0[3]) & 0xFFFF
         say(f"trace: {len(rows)} rows in {a.trace_s} s; power SAVING rows {sum(r[1] == 3 for r in rows)}")

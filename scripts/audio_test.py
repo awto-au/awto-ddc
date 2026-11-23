@@ -195,9 +195,9 @@ def host(unmute: bool) -> str:
                                      "sad0_rates", "sad0_bits", "speakers"):
                 say(f"host: ELD {e.name} {' '.join(ln.split())}")
     # IEC958 Playback Switch index n belongs to the n-th HDMI pcm of the card (HDMI 0 -> index 0)
-    hdmi_n = [int(m.group(2)) for m in re.finditer(rf"card {card}: \S+ \[[^]]*\], device (\d+): HDMI (\d+)",
+    hdmi_n = next(int(m.group(2)) for m in re.finditer(rf"card {card}: \S+ \[[^]]*\], device (\d+): HDMI (\d+)",
                                                    subprocess.run(["aplay", "-l"], capture_output=True, text=True, check=False).stdout)
-              if int(m.group(1)) == dev][0]
+              if int(m.group(1)) == dev)
     ctl = f"IEC958 Playback Switch',index={hdmi_n}"
     cur = subprocess.run(["amixer", "-c", cid, "cget", f"iface=MIXER,name='{ctl}"], capture_output=True, text=True, check=False).stdout
     state = "on" if "values=on" in cur else "off"

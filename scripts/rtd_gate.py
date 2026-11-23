@@ -101,8 +101,7 @@ def detect_kind(path, reg=None):
             return kind
         if any(base.endswith(e) for e in spec.get("match_ext", [])):
             return kind
-    raise GateError("no registry kind matches %r (known: %s); add it to %s"
-                    % (base, ", ".join(reg["kinds"]), REG_NAME))
+    raise GateError("no registry kind matches {!r} (known: {}); add it to {}".format(base, ", ".join(reg["kinds"]), REG_NAME))
 
 
 def detect_tool_version(path):
@@ -135,7 +134,7 @@ def _db_v1_derived(d):
     out = {"hdr_size": _u32(d, 8)}
     hs = out["hdr_size"]
     if not hs or hs < 0x20 or hs + 0x14 + 2 * FL > len(d):
-        out["stream_error"] = "hdr_size %r unusable" % hs
+        out["stream_error"] = f"hdr_size {hs!r} unusable"
         return out
     t0 = hs + 0x14
     f0 = t0 + TL
@@ -236,11 +235,11 @@ def _pe_derived(d):
     out["pe_sig"] = int(d[pe:pe + 4] == b"PE\0\0")
     if not out["pe_sig"]:
         return out
-    out["machine"] = "0x%04x" % _u16(d, pe + 4)
+    out["machine"] = f"0x{_u16(d, pe + 4):04x}"
     out["nsections"] = _u16(d, pe + 6)
     opt = pe + 24
     magic = _u16(d, opt)
-    out["opt_magic"] = "0x%03x" % magic
+    out["opt_magic"] = f"0x{magic:03x}"
     ddoff = opt + (96 if magic == 0x10B else 112)
     if ddoff + 24 <= len(d):
         rva, size = struct.unpack_from("<II", d, ddoff + 16)
@@ -269,7 +268,7 @@ def compute_signature(path, kind=None, reg=None):
     der = sig["derived"]
     if c == "rtd-magic":
         m = _u32(d, 0)
-        sig["magic"] = "0x%08X" % m if m is not None else None
+        sig["magic"] = f"0x{m:08X}" if m is not None else None
         v = _u32(d, 4)
         sig["version"] = str(v) if v is not None else None
         der["hdr_u32_2"] = _u32(d, 8)
@@ -345,33 +344,29 @@ def gate(path, kind=None, warn_only=False, tool_version=None, reg=None):
     res.version = sig["version"]
     fatal, warn = res.fatal, res.warnings
     c = spec["container"]
-    if c == "rtd-magic" and sig["magic"] != "0x%08X" % MAGIC:
-        fatal.append("%s: bad magic %s (expected 0x%08X); refusing to parse - not an RTD "
-                     "container or the format changed" % (kind, sig["magic"], MAGIC))
+    if c == "rtd-magic" and sig["magic"] != f"0x{MAGIC:08X}":
+        fatal.append("{}: bad magic {} (expected 0x{:08X}); refusing to parse - not an RTD "
+                     "container or the format changed".format(kind, sig["magic"], MAGIC))
     vers = spec["versions"]
     vspec = vers.get(sig["version"]) if not fatal else None
     if not fatal and vspec is None:
         known = ",".join(vers)
-        fatal.append("%s version %s unknown; registry knows %s; refusing to parse - "
-                     "re-validate layout (see docs/reversing/realtek-rtd/extraction.md)"
-                     % (kind, sig["version"], known))
+        fatal.append("{} version {} unknown; registry knows {}; refusing to parse - "
+                     "re-validate layout (see docs/reversing/realtek-rtd/extraction.md)".format(kind, sig["version"], known))
     if vspec is not None:
         res.status = vspec["status"]
         if vspec["status"] == "known-unsupported":
-            fatal.append("%s version %s is a known variant with no parser (%s)"
-                         % (kind, sig["version"], vspec.get("note", "")))
+            fatal.append("{} version {} is a known variant with no parser ({})".format(kind, sig["version"], vspec.get("note", "")))
         else:
             if sig["size"] < vspec.get("min_size", 0):
                 fatal.append("%s size %d below minimum %d" % (kind, sig["size"], vspec["min_size"]))
             for key, got, rule, ok in compare(sig, vspec):
                 if not ok:
-                    fatal.append("%s v%s layout drift: %s = %r, registry expects %r; refusing "
-                                 "to parse - re-validate layout"
-                                 % (kind, sig["version"], key, got, rule))
+                    fatal.append("{} v{} layout drift: {} = {!r}, registry expects {!r}; refusing "
+                                 "to parse - re-validate layout".format(kind, sig["version"], key, got, rule))
             for key, got, rule, ok in compare(sig, vspec, "expect_warn"):
                 if not ok:
-                    warn.append("%s v%s soft-check %s = %r, registry expects %r"
-                                % (kind, sig["version"], key, got, rule))
+                    warn.append("{} v{} soft-check {} = {!r}, registry expects {!r}".format(kind, sig["version"], key, got, rule))
             ref = vspec.get("reference") or {}
             if ref.get("sha256") == sig["sha256"]:
                 res.exact_reference = True
@@ -379,14 +374,14 @@ def gate(path, kind=None, warn_only=False, tool_version=None, reg=None):
             validated = vspec.get("validated_tool_versions", [])
             tv = tool_version or detect_tool_version(path)
             if tv and validated and tv not in validated and not fatal:
-                warn.append("%s v%s passes layout checks but tool version %s was never "
-                            "validated (validated: %s)" % (kind, sig["version"], tv,
+                warn.append("{} v{} passes layout checks but tool version {} was never "
+                            "validated (validated: {})".format(kind, sig["version"], tv,
                                                            ", ".join(validated)))
             if not tv:
                 res.notes.append("tool version not detected")
     if fatal and not warn_only:
         cls = GateUnsupported if res.status == "known-unsupported" else GateError
-        raise cls("; ".join(fatal) + " [%s]" % path, res)
+        raise cls("; ".join(fatal) + f" [{path}]", res)
     return res
 
 
@@ -397,16 +392,16 @@ def gate_or_exit(path, kind=None, warn_only=None, tool_version=None, log=print):
     try:
         res = gate(path, kind, warn_only=warn_only, tool_version=tool_version)
     except GateUnsupported as e:
-        log("GATE UNSUPPORTED: %s" % e)
+        log(f"GATE UNSUPPORTED: {e}")
         sys.exit(EXIT_UNSUPPORTED)
     except GateError as e:
-        log("GATE REFUSED: %s" % e)
+        log(f"GATE REFUSED: {e}")
         sys.exit(EXIT_REFUSED)
     for w in res.warnings:
-        log("GATE WARN: %s" % w)
+        log(f"GATE WARN: {w}")
     for f in res.fatal:
-        log("GATE WARN (--warn-only, would refuse): %s" % f)
-    log("gate %s %s v%s: %s" % (res.kind, os.path.basename(path), res.version, res.state))
+        log(f"GATE WARN (--warn-only, would refuse): {f}")
+    log(f"gate {res.kind} {os.path.basename(path)} v{res.version}: {res.state}")
     return res
 
 

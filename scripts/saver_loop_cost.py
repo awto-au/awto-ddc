@@ -19,6 +19,8 @@ from _log import log_line as _log_line
 
 os.environ.setdefault("AWTO_SIM_CORE", "fast")
 sys.path.insert(0, str(Path(__file__).resolve().parent))
+import itertools
+
 import ddc_sim as D
 import osd_render as R
 import pacman_sim as P
@@ -93,7 +95,7 @@ def measure(a, case: str) -> dict:
     starts = [i for i, e in enumerate(ev) if e[0] == PASS_FIRST]
     cost, cost_us, n_pass = collections.Counter(), collections.Counter(), 0
     tot_i, tot_us, worst = 0, 0.0, 0.0
-    for s, e in zip(starts, starts[1:]):
+    for s, e in itertools.pairwise(starts):
         for k in range(s, e):
             cost[ev[k][0]] += ev[k + 1][1] - ev[k][1]
             cost_us[ev[k][0]] += ev[k + 1][2] - ev[k][2]

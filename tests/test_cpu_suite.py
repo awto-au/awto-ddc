@@ -56,7 +56,7 @@ def test_crc16_check_value():
 
 
 def fake(**kw):
-    r = dict(done=True, state=C.ST_DONE, fwpass=1, bad=0, v0=0, v1=0, v2=0, ms=1, flags=0, ckcon=0, rcap=0, sp=0, stack=0)
+    r = {"done": True, "state": C.ST_DONE, "fwpass": 1, "bad": 0, "v0": 0, "v1": 0, "v2": 0, "ms": 1, "flags": 0, "ckcon": 0, "rcap": 0, "sp": 0, "stack": 0}
     r.update(kw)
     return r
 

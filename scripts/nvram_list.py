@@ -136,8 +136,8 @@ def struct_fields(h_text: str, name: str) -> list[dict]:
         if not m or m[1] == "struct":
             continue
         cm = cm.strip().rstrip(";").strip()
-        fields.append(dict(ctype=m[1], name=m[2], width=int(m[3]) if m[3] else None,
-                           comment="" if cm.startswith("--") else cm))
+        fields.append({"ctype": m[1], "name": m[2], "width": int(m[3]) if m[3] else None,
+                           "comment": "" if cm.startswith("--") else cm})
     pos, open_, used = 0, False, 0
     for f in fields:
         if f["width"]:

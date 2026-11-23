@@ -232,9 +232,9 @@ def unsourced():
         m, seg, off, size = fns[n]
         regs, ports, calls = touched(m, seg, off, size)
         cls, where, pct = match.get(n, ("?", "", ""))
-        rows.append(dict(name=n, module=m.name, size=size, cls=cls, where=where, pct=pct,
-                         regs=regs, ports=ports, calls=calls, cat=category(n),
-                         refs=sorted(refs.get(n, [])), src=(defs.get(n) or [''])[0]))
+        rows.append({"name": n, "module": m.name, "size": size, "cls": cls, "where": where, "pct": pct,
+                         "regs": regs, "ports": ports, "calls": calls, "cat": category(n),
+                         "refs": sorted(refs.get(n, [])), "src": (defs.get(n) or [''])[0]})
     return fns, rows
 
 
@@ -271,7 +271,7 @@ def c_source(name):
     defs = sdk_defs()
     cands = [SDK / f for f in defs.get(name, [])]
     if not cands:
-        cands = [f for f in SDK.glob("RL6*_Series_Scaler/Lib/Code/**/*.c") if re.search(r"\b%s\s*\(" % name, f.read_text(errors="replace"))]
+        cands = [f for f in SDK.glob("RL6*_Series_Scaler/Lib/Code/**/*.c") if re.search(rf"\b{name}\s*\(", f.read_text(errors="replace"))]
     for f in cands:
         txt = f.read_text(errors="replace")
         for m in DEF_RE.finditer(txt):

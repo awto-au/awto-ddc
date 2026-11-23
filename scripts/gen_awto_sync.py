@@ -67,8 +67,8 @@ def rows(path: Path = TSV, classes: dict | None = None):
             continue
         i, a, f, t, *c = ln.split("\t")
         assert len(c) <= 1, f"sync.tsv {i} {a}: more than 5 columns"
-        out.append(dict(id=int(i, 16), arg=0xFF if a == "*" else int(a, 16), a=a, f=f, fmt=parse_fmt(f), text=resolve(t),
-                        cls=sync_classes.check(c[0] if c else "", classes)))
+        out.append({"id": int(i, 16), "arg": 0xFF if a == "*" else int(a, 16), "a": a, "f": f, "fmt": parse_fmt(f), "text": resolve(t),
+                        "cls": sync_classes.check(c[0] if c else "", classes)})
     out = [x for x in out if x["id"] not in NAME_IDS] + [x for x in out if x["id"] in NAME_IDS]   # logged rows first, names after
     n = logged(out)
     assert all(x["cls"] == sync_classes.DEFAULT for x in out[n:]), "name table rows (15..1B) are never logged: no colour class"
@@ -265,7 +265,7 @@ def port_sigs(path: Path = PS_TSV):
             ia = int(a, 0)
         c = col.get(pi, PS_COL0)
         sep = 1 if src in PS_W else 0                 # "p17 12/s", but "hpd+"
-        out.append(dict(port=pi, label=lab, src=PS_SRC[src], a=ia, b=int(b, 0), lcol=c, col=c + len(lab) + sep))
+        out.append({"port": pi, "label": lab, "src": PS_SRC[src], "a": ia, "b": int(b, 0), "lcol": c, "col": c + len(lab) + sep})
         col[pi] = c + len(lab) + sep + PS_W.get(src, 1) + 1
     assert max(col.values()) <= 46, "signal line wider than the selector (AWTO_SRC_COLS)"
     return out, cnts

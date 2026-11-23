@@ -94,7 +94,7 @@ def rom_shapes(zip_path):
 
     def lines(name):
         segs, _ = dvg.decode(cat[name])
-        return [[(int(round(x)), int(round(y))) for x, y in pl] for pl in D.polylines(segs, 0)]
+        return [[(round(x), round(y)) for x, y in pl] for pl in D.polylines(segs, 0)]
 
     sh = {i: lines("rock%d" % i) for i in range(N_ROCKS)}
     sh[ID_SAUCER] = lines("saucer")

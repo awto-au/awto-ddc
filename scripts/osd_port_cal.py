@@ -16,6 +16,8 @@ from pathlib import Path
 
 os.environ.setdefault("AWTO_SIM_CORE", "fast")
 sys.path.insert(0, str(Path(__file__).resolve().parent))
+import itertools
+
 import osd_hw_test as H
 from _log import log_line as _log_line
 
@@ -45,7 +47,7 @@ def main() -> int:
             marks.clear()
             r = H.op(dev, H.OP_WRITE, OP_LIMIT_S, mode=mode, flags=H.F_REPEAT | (H.F_EA_OFF if ea_off else 0), seed=0x3C,
                      addr=addr, n=words * H.WORD_B, label="cal")
-            d = [(b[0] - a_[0], b[1] - a_[1], b[2] - a_[2], b[3] - a_[3]) for a_, b in zip(marks[1:], marks[2:])]   # skip chunk 0 (refill)
+            d = [(b[0] - a_[0], b[1] - a_[1], b[2] - a_[2], b[3] - a_[3]) for a_, b in itertools.pairwise(marks)]   # skip chunk 0 (refill)
             n = len(d) * CHUNK
             us = sum(x[0] for x in d) * 1000.0 / n
             hw = HW_US_PER_B.get((mode, ea_off))

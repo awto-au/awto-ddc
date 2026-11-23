@@ -23,6 +23,8 @@ from pathlib import Path
 from _log import log_line as _log_line
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
+import itertools
+
 import fw_sim as S
 import led_check as LED
 import osd_test as T
@@ -256,7 +258,7 @@ class Run:
         self.check("outside the panel machine" not in txt, "firmware logged no 'outside the panel machine' line")
         bl = [(t, ph, v) for t, ph, w, v, _ in ev if w == "BL pin"]
         vdd = [(t, ph, v) for t, ph, w, v, _ in ev if w == "VDD pin"]
-        blink = [(a, b) for a, b in zip(bl, bl[1:]) if a[2] == 0 and b[2] == 1 and
+        blink = [(a, b) for a, b in itertools.pairwise(bl) if a[2] == 0 and b[2] == 1 and
                  not any(a[0] <= t <= b[0] and v == 0 for t, _, v in vdd) and a[1] == b[1] and a[1] not in ("signal back",)]
         self.check(not blink, "no backlight blink (pin off -> on inside one phase without a panel off)", str(blink[:3]))
         links = [(t, ph) for t, ph, w, v, _ in ev if w == "DPTx LinkSequence"]
@@ -282,7 +284,7 @@ class Run:
                 offs.append((x[0], v[0]))
         self.check(all(v - b >= PANEL["T4"] + PANEL["T5"] for b, v in offs), f"VDD off >= T4 + T5 ({PANEL['T4'] + PANEL['T5']} ms) after backlight off",
                    str([f"{v - b} (@{b})" for b, v in offs]))
-        t6 = [(b[0] - a[0]) for a, b in zip(vdd, vdd[1:]) if a[2] == 0 and b[2] == 1]
+        t6 = [(b[0] - a[0]) for a, b in itertools.pairwise(vdd) if a[2] == 0 and b[2] == 1]
         self.check(all(x >= PANEL["T6"] for x in t6), f"VDD on >= T6 ({PANEL['T6']} ms) after VDD off", str(t6))
         self.edge_lines(self.events)                 # all writes: boot pin init gives the level before the first edge
 

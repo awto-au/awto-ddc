@@ -11,11 +11,11 @@ def decode(b: bytes, stall: bytes | None = None) -> dict | None:
     """None when the block holds no sample yet (magic missing: the first sample is AWTO_MON_MS after boot, or registry monitor off from the start)."""
     if len(b) < SIZE or b[0:2] != b"MN":
         return None
-    return dict(version=b[2], on=b[3], beat=b[4], adc=list(b[5:9]), trim=b[9] << 8 | b[10], loop=b[11] << 8 | b[12],
-                poke=b[13], poke_ms=round(b[13] * POKE_MS), site=b[14], stack=b[15], boot=b[16],
-                up_s=b[17] << 16 | b[18] << 8 | b[19], rows=b[20],
-                gap=[((s[2 * i] << 8 | s[2 * i + 1]) * STALL_UNIT_NS // 100000) / 10 for i in range(4)] if (s := stall) and len(s) >= STALL_SIZE else [0.0] * 4,
-                gap_site=list(s[8:12]) if s and len(s) >= STALL_SIZE else [0] * 4)
+    return {"version": b[2], "on": b[3], "beat": b[4], "adc": list(b[5:9]), "trim": b[9] << 8 | b[10], "loop": b[11] << 8 | b[12],
+                "poke": b[13], "poke_ms": round(b[13] * POKE_MS), "site": b[14], "stack": b[15], "boot": b[16],
+                "up_s": b[17] << 16 | b[18] << 8 | b[19], "rows": b[20],
+                "gap": [((s[2 * i] << 8 | s[2 * i + 1]) * STALL_UNIT_NS // 100000) / 10 for i in range(4)] if (s := stall) and len(s) >= STALL_SIZE else [0.0] * 4,
+                "gap_site": list(s[8:12]) if s and len(s) >= STALL_SIZE else [0] * 4}
 
 
 def text(d: dict) -> str:

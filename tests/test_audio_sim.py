@@ -8,6 +8,8 @@ from pathlib import Path
 import numpy as np
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "scripts"))
+import itertools
+
 import audio_sim as A
 
 K = A.MODEL["k_hz"]
@@ -64,7 +66,7 @@ def test_ghost_track_bytes_render_rising_pitches():
         t += ms / 1000.0
     pcm = A.synth(ev, 0.1, t)
     got = [peak_hz(pcm[int((a - 0.1) * RATE):int((b - 0.1) * RATE)]) for a, b, _ in want]
-    assert all(y > x for x, y in zip(got, got[1:]))
+    assert all(y > x for x, y in itertools.pairwise(got))
     assert all(abs(g - f) / f < 0.12 for g, (_, _, f) in zip(got, want))
 
 

@@ -148,7 +148,7 @@ def assign(items, layout, common_lo, common_hi, nbanks, bank_cap, log=print, res
         if done is None:
             why = (labels or {}).get(it.key)
             raise SystemExit(f"{why + ': ' if why else 'layout: '}no room for {it.key[1]} ({it.slot} B) in "
-                             f"{'common' if it.region == 'C' else 'bank %s' % it.region}: {regs[it.region].free()} B free; "
+                             f"{'common' if it.region == 'C' else f'bank {it.region}'}: {regs[it.region].free()} B free; "
                              f"free per region { {k: v.free() for k, v in regs.items()} }")
         if done != it.region:
             moved[it.key] = done

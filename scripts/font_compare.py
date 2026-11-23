@@ -1,7 +1,9 @@
 #!/usr/bin/env python3
 """Render the current RTD/AWTO fonts and native bitmap-font candidates."""
 
+import functools
 import importlib.util
+import operator
 import re
 from pathlib import Path
 
@@ -62,7 +64,7 @@ def proportional_glyphs():
         if not match.group(1).startswith("U"):
             continue
         rows_by_tile = [sdk_bits(raw[k * 27:(k + 1) * 27]) for k in range(count)]
-        rows = [sum((rows_by_tile[k][y][:glyph_widths[k]] for k in range(count)), []) for y in range(18)]
+        rows = [functools.reduce(operator.iadd, (rows_by_tile[k][y][:glyph_widths[k]] for k in range(count)), []) for y in range(18)]
         glyphs[chr(int(match.group(1)[1:], 16))] = (rows, sum(glyph_widths))
     return glyphs
 

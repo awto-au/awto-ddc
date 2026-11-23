@@ -184,7 +184,7 @@ def tsv(row: dict) -> None:
     with TSV.open("a") as f:
         if new:
             f.write("\t".join(["time"] + keys) + "\n")
-        f.write("\t".join([isostamp.now()] + [("%.4g" % row[k]) if isinstance(row.get(k), float) else str(row.get(k, "")) for k in keys]) + "\n")
+        f.write("\t".join([isostamp.now()] + [(f"{row[k]:.4g}") if isinstance(row.get(k), float) else str(row.get(k, "")) for k in keys]) + "\n")
 
 
 def fifo_new(pre: bytes, post: bytes) -> str:
@@ -336,7 +336,7 @@ def hold_case(ctx, c: Case, hold_ms: int = HOLD_FW_MS) -> dict:
     row["pass"] = bool(hb_ok and reads_ok and ok_rest)
     row["note"] = "; ".join(notes)
     say(f"  {'PASS' if row['pass'] else 'FAIL'} {row['case']}: heartbeat {ratio:.4f}, 100 link reads {'ok' if reads_ok else 'FAILED'}, Scope 2 "
-        f"{('%.2f' % fps) if fps is not None else 'n/a'} frames/s, restored {ok_rest}" + (f"; {row['note']}" if row["note"] else ""))
+        f"{(f'{fps:.2f}') if fps is not None else 'n/a'} frames/s, restored {ok_rest}" + (f"; {row['note']}" if row["note"] else ""))
     return row
 
 

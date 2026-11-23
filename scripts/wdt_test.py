@@ -28,6 +28,8 @@ from typing import ClassVar
 import isostamp
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
+import itertools
+
 import rtd_crash as C
 from _repo import ROOT
 
@@ -1127,7 +1129,7 @@ class Runner:
         dt = (self.fired[0][1] - self.armed[0]) % 65536 if self.fired and self.armed else None
         t.unwatch("SysTimerIntProc2")
         per = 1.0 if dw else 0x10000 - (t.sfr(0xCB) << 8 | t.sfr(0xCA))
-        gaps = [b - a for a, b in zip(ticks, ticks[1:])]
+        gaps = [b - a for a, b in itertools.pairwise(ticks)]
         mx = max(gaps) / per if gaps else None
         ok = dt is not None and 9.0 <= dt <= (15.5 if dw else 13.0 * 1.1) and mx is not None and mx <= 1.1
         self.row("prio_t0_vs_exint", "PASS" if ok else "FAIL",

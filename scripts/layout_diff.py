@@ -29,7 +29,7 @@ def main():
     ap.add_argument("--names", default="", help="comma list: report only these symbols")
     a = ap.parse_args()
     old, new = load(a.old), load(a.new)
-    want = set(n for n in a.names.split(",") if n)
+    want = {n for n in a.names.split(",") if n}
     out = []
     for n in sorted(set(old) | set(new)):
         if want and n not in want:

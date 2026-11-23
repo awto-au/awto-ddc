@@ -45,7 +45,7 @@ PORTS = {0x0025: (0x24,), 0x002B: (0x2A,), 0x0031: (0x30,), 0x0034: (0x33,), 0x0
          0x72CA: (0x72C9,), 0xB7C4: (0xB7C1, 0xB7C2, 0xB7C3), 0xBAC4: (0xBAC1, 0xBAC2, 0xBAC3), 0x0069: (0x68,), 0x006D: (0x6C,)}
 INDEX_REGS = {a for al in PORTS.values() for a in al}
 SFR_STATE = {0x80, 0x90, 0xA0, 0xB0}             # port pins: state compared; other SFRs (IE/TCON/T2CON/...) may differ
-COL = dict(seq=0, instr=1, ms=2, func=5, kind=6, addr=7, reg=8, idx=9, val=10, phase=11)
+COL = {"seq": 0, "instr": 1, "ms": 2, "func": 5, "kind": 6, "addr": 7, "reg": 8, "idx": 9, "val": 10, "phase": 11}
 
 
 class Rules:
@@ -158,7 +158,7 @@ def is_barrier(ev, rules: Rules) -> bool:
 def per_phase(evs, rules: Rules, reset: dict):
     """-> phase -> dict(state={key: value at phase end}, written, barriers, ports={addr: [(idx, v)]}, actions={addr: [v]}, may)."""
     shadow = {}
-    res = {ph: dict(written=set(), barriers=[], ports=defaultdict(list), actions=defaultdict(list), may=defaultdict(int))
+    res = {ph: {"written": set(), "barriers": [], "ports": defaultdict(list), "actions": defaultdict(list), "may": defaultdict(int)}
            for ph in PHASES}
     cur = "boot"
     for ph, kind, key, v, _, cls, _ in evs:

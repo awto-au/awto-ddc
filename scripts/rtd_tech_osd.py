@@ -146,8 +146,8 @@ def fmt_lines(info: dict) -> list:
     fwv = fw.get("current") if isinstance(fw, dict) else None
     ct = d.get("controller_type", {}) if isinstance(d, dict) else {}
     ctv = ct.get("current") if isinstance(ct, dict) else None
-    L.append(("kv", f"FIRMWARE|{('0X%04X' % fwv) if fwv is not None else '?'}"))
-    L.append(("kv", f"CONTROLLER|{('0X%04X' % ctv) if ctv is not None else '?'}"))
+    L.append(("kv", f"FIRMWARE|{(f'0X{fwv:04X}') if fwv is not None else '?'}"))
+    L.append(("kv", f"CONTROLLER|{(f'0X{ctv:04X}') if ctv is not None else '?'}"))
     scaler = isp.get("scaler", {}) if isinstance(isp, dict) else {}
     if scaler:
         L.append(("kv", f"SCALER|{scaler.get('name', '?')[:24]}"))

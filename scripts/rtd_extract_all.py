@@ -102,10 +102,10 @@ def main():
         rel = os.path.relpath(f, root)
         try:
             r = rtd_gate.gate(f, warn_only=True, tool_version=tv, reg=reg)
-            rows.append(dict(file=rel, kind=r.kind, version=r.version, state=r.state,
-                             msg=r.message() if r.state != "ok" else ""))
+            rows.append({"file": rel, "kind": r.kind, "version": r.version, "state": r.state,
+                             "msg": r.message() if r.state != "ok" else ""})
         except rtd_gate.GateError as e:  # unknown kind
-            rows.append(dict(file=rel, kind="?", version="?", state="fail", msg=str(e)))
+            rows.append({"file": rel, "kind": "?", "version": "?", "state": "fail", "msg": str(e)})
     w = max(len(r["file"]) for r in rows) if rows else 10
     logging.info("%-*s  %-12s %-13s %s", w, "file", "kind", "version", "state")
     for r in rows:
@@ -117,7 +117,7 @@ def main():
     logging.info("gate summary: %s", counts)
     os.makedirs(a.out, exist_ok=True)
     with open(os.path.join(a.out, "gate_report.json"), "w", encoding="utf-8") as fo:
-        json.dump(dict(root=root, tool_version=tv, counts=counts, files=rows), fo, indent=1)
+        json.dump({"root": root, "tool_version": tv, "counts": counts, "files": rows}, fo, indent=1)
         fo.write("\n")
 
     bad = [r for r in rows if r["state"] == "fail" or (a.strict and r["state"] == "warn")]
