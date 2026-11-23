@@ -1,0 +1,13 @@
+id	site	bit	scenario	static_us	sim_us	hw_us	proposed_budget_us	starves	condition_for_stage3
+M057-a	ScalerTMDSRx{2,3}PhySetDeferred -> SetPhy (1 try)	EX0	DCDR <= 200 MHz (1080p60)	1200	1101-1123		1300	DP AUX reply, LT status	none: shorter than any source AUX timeout
+M057-b	same	EX0	ACDR 200-340 MHz	2900	2608-2656		2900	DP AUX reply, LT status	not while a DP LT is running
+M057-c	same	EX0	ACDR > 340 MHz (4K60), first CDR check passes	4300	3137-3156	3000-4000 (unit 3 D2, 10 locks), longest masked 4475 (25 locks, tmds-ex0-shared arm 4)	3300	DP AUX reply, LT status	not while a DP LT is running
+M057-d	same	EX0	ACDR > 340 MHz, first CDR check fails: 2nd SetPhy with the 2.9 ms long block	8803	9125	not seen in 35 locks	9300 (static 8803 under-reads this path)	DP AUX, LT status; fails a DP LT in progress	not while a DP LT is running; one try per pass, EX0 open between the two SetPhy calls (prerequisite: #256 open windows, not provable for register runs)
+M057-e	Rx2 then Rx3 back to back	EX0	two set-ups, no main pass between	= sum of a + b ... d	= sum of two rows		per row, not summed: EX0 is restored at each return, a pending request is taken at the gap	DP AUX	run at most one set-up per main pass
+M043	ScalerDpRx1PhyCTS	EX0	CTS mode only	742			800	AUX	unchanged
+F1	flash page program (halt, not a mask)	all	NV flush, 16 B items	3000 (datasheet max)		5000 for 2 programs (docs/nvram-settings.md burst test)	3000	AUX, Timer2, TMDS ISR, CEC	NV gate input: idle-port PHY set-up / DP LT / HPD event
+F2	flash sector erase (halt)	all	EEPROM-emulation page move, about every 239 item writes	200000 (datasheet max)			200000	same, fails a DP LT, drops CEC frames	same, plus no idle-port bring-up started while an erase is pending
+F3	flash WRSR (halt)	all	status register write	40000 (datasheet max)			40000	same	same
+D1	ScalerDpRx1Tp2SetPhy_EXINT0 (ISR spin)	EX0 serviced by ISR	DP LT EQ phase	710			710	TMDS clock IRQ latency only	ok: TMDS ISR only sets pending flags
+D2	ScalerDpRx1RebuildPhy_WDINT (ISR spin)	WDINT	DP PHY rebuild	850			850	TMDS clock IRQ latency only	ok
+C1	CEC receive (EXINT0 per frame)	-	byte period 24 ms, bit 2.4 ms	-			-	tolerates every mask <= 9.1 ms; a flash erase (200 ms) drops frames, CEC initiator retransmits	none
