@@ -2222,6 +2222,7 @@ fn	_ScalerTMDSRxPowerSavingProc	6
 fn	_ScalerTMDSRxReadRequestProc_EXINT0	5
 fn	_ScalerTMDSRxReadRequestTimerEventEnable_WDINT	11
 fn	_ScalerTMDSRxSetDFEInitial_EXINT0	10
+fn	_ScalerTMDSRxSetInputClk	5
 fn	_ScalerTMDSRxSetPhy_EXINT0	10
 fn	_ScalerTMDSRxSetPorchColor	8
 fn	_ScalerTMDSRxSwitchSlaveAddr	8

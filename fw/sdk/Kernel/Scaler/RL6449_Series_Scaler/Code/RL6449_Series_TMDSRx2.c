@@ -57,7 +57,7 @@ volatile bit d_isr_g_bTMDSRx2TMDSPhySet = _FALSE;
 volatile bit d_isr_g_bTMDSRx2TMDSDdcDetected = _FALSE;
 volatile WORD isr_g_usTMDSRxClkCount[2];
 volatile WORD isr_g_usTMDSRxPhyCount[2];
-volatile WORD isr_g_usTMDSRxPhyClk[2];
+volatile WORD isr_g_usTMDSRxPixClk[2];
 volatile BYTE isr_g_ucTMDSRxPhyPend[2];
 
 volatile BYTE g_pucTMDSRxLEMax[2][3];
@@ -453,7 +453,7 @@ void ScalerTMDSRx2InterruptInitial(void)
 //--------------------------------------------------
 void ScalerTMDSRxSetDFEInitial_EXINT0(void)
 {
-    WORD usPixClk = isr_g_usInputPixelClk;   // one read: EX0 is masked / we are in EXINT0, nothing else writes it here
+    WORD usPixClk = RX_PIXCLK;   // one read: EX0 is masked / we are in EXINT0
 
     // [6] Enable Timer Control DFE Loop
     // [5:4] Reduce Gain to 1/4
@@ -762,7 +762,7 @@ void ScalerTMDSRxFLDBandFineTune_EXINT0(void)
     // For 3 Lane Cal Best Band
     for(ucLaneCount = 0; ucLaneCount < 3; ucLaneCount++)
     {
-        if(pusLaneFreq[ucLaneCount] < GET_INPUT_PIXEL_CLK())
+        if(pusLaneFreq[ucLaneCount] < RX_PIXCLK)
         {
             pucBestVCOBand[ucLaneCount] = pucAutoVCOBand[ucLaneCount] + 1;
         }
@@ -800,13 +800,24 @@ void ScalerTMDSRxFLDBandFineTune_EXINT0(void)
     RxSetBit(P71_E6_HDMI_FREQDET_CTRL, ~_BIT2, _BIT2);
 }
 //--------------------------------------------------
+// Description  : Main-thread update of this port's pixel clock and the scaler-wide one
+// Input Value  : Pixel clock (0.1 MHz)
+// Output Value : None
+//--------------------------------------------------
+static void ScalerTMDSRxSetInputClk(WORD usClk)
+{
+    RX_PIXCLK = usClk;
+    SET_INPUT_PIXEL_CLK(usClk);
+}
+
+//--------------------------------------------------
 // Description  : TMDS Set PHY Function (EXINT0 Only)
 // Input Value  : Measured Clk Count for PHY Setting
 // Output Value : None
 //--------------------------------------------------
 void ScalerTMDSRxSetPhy_EXINT0(void)
 {
-    WORD usPixClk = isr_g_usInputPixelClk;   // one read: EX0 is masked / we are in EXINT0, nothing else writes it here
+    WORD usPixClk = RX_PIXCLK;   // one read: EX0 is masked / we are in EXINT0
 
     BYTE ucIcp = 0;
 
@@ -2048,9 +2059,6 @@ void ScalerTMDSRxPhySetDeferred(void)
     ucApc = RxGetByte(P71_C8_HDMI_APC);
     RxSetBit(P71_C8_HDMI_APC, ~_BIT0, 0x00);
 
-    // The other port's handler may have overwritten the shared pixel clock since
-    SET_INPUT_PIXEL_CLK(isr_g_usTMDSRxPhyClk[RX_CUR]);
-
     // Enable Freq unstable IRQ
     RxSetBit(P71_E6_HDMI_FREQDET_CTRL, ~(_BIT2 | _BIT1), (_BIT2 | _BIT1));
 
@@ -2091,13 +2099,13 @@ void ScalerTMDSRxPhySetDeferred(void)
             RxSetBit(P71_CA_HDMI_DP, ~(_BIT7 | _BIT6 | _BIT3 | _BIT2), (_BIT3 | _BIT2));
 #endif
 
-            if((GET_INPUT_PIXEL_CLK() >= 730) && (GET_INPUT_PIXEL_CLK() <= 770))
+            if((RX_PIXCLK >= 730) && (RX_PIXCLK <= 770))
             {
                 RXSEL((SET_TMDS_RX2_CLK_MODE(_TMDS_MHL_PPMODE_PHY_SETTING)), (SET_TMDS_RX3_CLK_MODE(_TMDS_MHL_PPMODE_PHY_SETTING)));
 
-                SET_INPUT_PIXEL_CLK(GET_INPUT_PIXEL_CLK() * 4);
+                RX_PIXCLK = RX_PIXCLK * 4;
                 ScalerTMDSRxSetPhy_EXINT0();
-                SET_INPUT_PIXEL_CLK(GET_INPUT_PIXEL_CLK() / 4);
+                RX_PIXCLK = RX_PIXCLK / 4;
 
                 // Enable Packed Pixel Mode
                 RxSetBit(P76_A0_MHL_CTRL_00, ~_BIT1, _BIT1);
@@ -2108,9 +2116,9 @@ void ScalerTMDSRxPhySetDeferred(void)
                     RXSEL((SET_TMDS_RX2_CLK_MODE(_TMDS_24BIT_PHY_SETTING)), (SET_TMDS_RX3_CLK_MODE(_TMDS_24BIT_PHY_SETTING)));
 
                     // TMDS_FREQ(MHz) = GDI_CLK(MHz) * 1024 / CLK_COUNT = GDI_CLK(KHz) * 1024 / (CLK_COUNT * 1024)
-                    SET_INPUT_PIXEL_CLK(GET_INPUT_PIXEL_CLK() * 3);
+                    RX_PIXCLK = RX_PIXCLK * 3;
                     ScalerTMDSRxSetPhy_EXINT0();
-                    SET_INPUT_PIXEL_CLK(GET_INPUT_PIXEL_CLK() / 3);
+                    RX_PIXCLK = RX_PIXCLK / 3;
 
                     // Disable Packed Pixel Mode
                     RxSetBit(P76_A0_MHL_CTRL_00, ~_BIT1, 0x00);
@@ -2126,9 +2134,9 @@ void ScalerTMDSRxPhySetDeferred(void)
                 RXSEL((SET_TMDS_RX2_CLK_MODE(_TMDS_24BIT_PHY_SETTING)), (SET_TMDS_RX3_CLK_MODE(_TMDS_24BIT_PHY_SETTING)));
 
                 // TMDS_FREQ(MHz) = GDI_CLK(MHz) * 1024 / CLK_COUNT = GDI_CLK(KHz) * 1024 / (CLK_COUNT * 1024)
-                SET_INPUT_PIXEL_CLK(GET_INPUT_PIXEL_CLK() * 3);
+                RX_PIXCLK = RX_PIXCLK * 3;
                 ScalerTMDSRxSetPhy_EXINT0();
-                SET_INPUT_PIXEL_CLK(GET_INPUT_PIXEL_CLK() / 3);
+                RX_PIXCLK = RX_PIXCLK / 3;
 
                 // Disable Packed Pixel Mode
                 RxSetBit(P76_A0_MHL_CTRL_00, ~_BIT1, 0x00);
@@ -2186,8 +2194,8 @@ void ScalerTMDSRxPhySetDeferred(void)
     RxSetBit(P71_17_HDMI_CTRL_17, ~(_BIT2 | _BIT1 | _BIT0), (_BIT2 | _BIT1 | _BIT0));
 
     // Set HDMI 2.0 Character Error Detection Function Lock Transition Error Boundary
-    RxSetBit(P71_14_HDMI_CTRL_14, ~(_BIT3 | _BIT2 | _BIT1 | _BIT0), (GET_INPUT_PIXEL_CLK() / 10) >> 8);
-    RxSetByte(P71_15_HDMI_CTRL_15, (GET_INPUT_PIXEL_CLK() / 10));
+    RxSetBit(P71_14_HDMI_CTRL_14, ~(_BIT3 | _BIT2 | _BIT1 | _BIT0), (RX_PIXCLK / 10) >> 8);
+    RxSetByte(P71_15_HDMI_CTRL_15, (RX_PIXCLK / 10));
 
     // Enable Character Error Detection Function & Valid Flag
     RxSetBit(P71_0B_HDMI_CTRL_0B, ~(_BIT7 | _BIT6 | _BIT5 | _BIT4 | _BIT3 | _BIT2), (_BIT7 | _BIT6 | _BIT5 | _BIT4 | _BIT3 | _BIT2));
@@ -2278,8 +2286,8 @@ void ScalerTMDSRxIntHandler_EXINT0(void)
         usCount = (WORD)(((RxGetByte(P71_ED_HDMI_FREQDET_RESULT_M) & 0x7F) << 8) | RxGetByte(P71_EE_HDMI_FREQDET_RESULT_L));
 
         // TMDS_FREQ(MHz) = GDI_CLK(MHz) * CLK_COUNT * _TMDS_MEASURE_CLOCK_DIVIDER / _TMDS_MEASURE_CLOCK_COUNTER
-        usPixClk = (((DWORD)_GDI_CLK_KHZ * usCount + 50000) / 100000);   // snapshot: the handlers run one at a time
-        SET_INPUT_PIXEL_CLK(usPixClk);
+        usPixClk = (((DWORD)_GDI_CLK_KHZ * usCount + 50000) / 100000);
+        RX_PIXCLK = usPixClk;
 
 #if(_D2_HDMI_2_0_SUPPORT == _ON)
 
@@ -2297,7 +2305,7 @@ void ScalerTMDSRxIntHandler_EXINT0(void)
         if(RXSEL((GET_TMDS_RX2_HIGH_SPEED_MODE()), (GET_TMDS_RX3_HIGH_SPEED_MODE())) == _TRUE)
         {
             usPixClk *= 4;
-            SET_INPUT_PIXEL_CLK(usPixClk);
+            RX_PIXCLK = usPixClk;
         }
 #endif
 
@@ -2316,7 +2324,6 @@ void ScalerTMDSRxIntHandler_EXINT0(void)
 
         // Deferred to ScalerTMDSRx2PhySetDeferred(): the 5.5 ms PHY set-up runs from the main loop
         isr_g_usTMDSRxPhyCount[RX_CUR] = usCount;
-        isr_g_usTMDSRxPhyClk[RX_CUR] = usPixClk;
         isr_g_ucTMDSRxPhyPend[RX_CUR] = _TRUE;
     }
 
@@ -2327,7 +2334,7 @@ void ScalerTMDSRxIntHandler_EXINT0(void)
         RxSetBit(P71_E6_HDMI_FREQDET_CTRL, ~_BIT2, _BIT2);
 
         // Ensure Freq really unstable
-        usPixClk = isr_g_usInputPixelClk;
+        usPixClk = RX_PIXCLK;
         if((abs(isr_g_usTMDSRxClkCount[RX_CUR] - ScalerTMDSRxMeasureClk_EXINT0(_CLK_SOURCE_TMDS)) > (isr_g_usTMDSRxClkCount[RX_CUR] >> 6)) ||
            (abs(usPixClk - ((GET_TMDS_OFFLINE_MEASURE_CLK() << 3) / GET_COLOR_DEPTH())) > (usPixClk >> 6)))
         {
@@ -3823,6 +3830,9 @@ BYTE ScalerTMDSRxTMDSScanInputPort(BYTE ucInputType)
 
     if(RXSEL((GET_TMDS_RX2_PHY_SET()), (GET_TMDS_RX3_PHY_SET())) == _TRUE)
     {
+        // This port feeds the scaler from here on
+        SET_INPUT_PIXEL_CLK(RX_PIXCLK);
+
 #if(_D2_INPUT_PORT_TYPE == _D2_MHL_PORT)
         if(RXSEL((GET_D2_TMDS_MODE()), (GET_D3_TMDS_MODE())) == _TMDS_MHL_MODE)
         {
@@ -4065,12 +4075,12 @@ BYTE ScalerTMDSRxTMDSScanInputPort(BYTE ucInputType)
                 // Backup Input Pixel clk
                 usInputPixelClk = GET_INPUT_PIXEL_CLK();
 
-                SET_INPUT_PIXEL_CLK((GET_INPUT_PIXEL_CLK() << 3) / GET_COLOR_DEPTH());
+                ScalerTMDSRxSetInputClk((GET_INPUT_PIXEL_CLK() << 3) / GET_COLOR_DEPTH());
 
                 if(ScalerTMDSRxHdmiDeepColorProc(isr_g_usTMDSRxClkCount[RX_CUR]) == _FALSE)
                 {
                     // Restore Input Pixel clk
-                    SET_INPUT_PIXEL_CLK(usInputPixelClk);
+                    ScalerTMDSRxSetInputClk(usInputPixelClk);
                     AWTO_SCAN_STAGE(AWTO_SCAN_TMDS_DEEP);
 
                     return _SOURCE_NONE;

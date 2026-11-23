@@ -5,7 +5,7 @@
 - No firmware change, no flash, no hardware run in this study.
 
 ## 1. EX0-masked time of a TMDS PHY set-up (sim)
-- Call: `ScalerTMDSRx{2,3}PhySetDeferred` alone, pending set, `isr_g_usTMDSRxPhyClk` preset; delay loops are real instructions. `CheckCDRStable_EXINT0`, `MeasureClk_EXINT0`, `CheckDataDFE` are stubbed (hardware waits, MeasureClk <= 9 x 5 us): add <= 0.1 ms.
+- Call: `ScalerTMDSRx{2,3}PhySetDeferred` alone, pending set, `isr_g_usTMDSRxPixClk` preset; delay loops are real instructions. `CheckCDRStable_EXINT0`, `MeasureClk_EXINT0`, `CheckDataDFE` are stubbed (hardware waits, MeasureClk <= 9 x 5 us): add <= 0.1 ms.
 - Median of 4 reps after a warm-up rep.
 
 | path | Rx2 us | Rx3 us | static (docs/delays.md) | hardware |

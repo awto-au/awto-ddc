@@ -47,7 +47,7 @@ def globals_(m) -> dict:
     return {"IHF": w(ind, 1), "IHT": w(ind, 3), "IHW": w(ind, 5), "IVF": w(ind, 11), "IVT": w(ind, 13), "IVH": w(ind, 15),
             "IVS": w(ind, 17), "DHT": w(out, 0), "DHW": w(out, 4), "DVT": w(out, 10), "DVS": w(out, 12), "DVH": w(out, 14),
             "DVBH": w(out, 18), "dclk": be(m.rd(m.addr("g_ulDClkFreq"), 4)), "DVF": be(m.rd(m.addr("g_usDVFreq"), 2)),
-            "pclk": be(m.rd(m.addr("isr_g_usInputPixelClk"), 2)), "memsel": m.rd(m.addr("g_stMDomainInfo"))[0] & 7,
+            "pclk": be(m.rd(m.addr("g_usInputPixelClk"), 2)), "memsel": m.rd(m.addr("g_stMDomainInfo"))[0] & 7,
             "iact": be(m.rd(m.addr("g_ulInputActiveRegionBackUp"), 4))}
 
 

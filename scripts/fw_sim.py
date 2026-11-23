@@ -785,7 +785,7 @@ def video_stubs(m: "Machine", hdmi: HdmiInput, port: str = "D2"):
     def scan(m, r):
         if (r["a1"] & 255) != src or not hdmi.present:
             return {"val": SOURCE_NONE}
-        m.wr(m.addr("isr_g_usInputPixelClk"), hdmi.PCLK.to_bytes(2, "big"))        # SET_INPUT_PIXEL_CLK (0.1 MHz)
+        m.wr(m.addr("g_usInputPixelClk"), hdmi.PCLK.to_bytes(2, "big"))        # SET_INPUT_PIXEL_CLK (0.1 MHz)
         return {"val": SOURCE_HDMI}
     m.stub("ScalerTMDSScanInputPort", scan)
 
@@ -1325,7 +1325,7 @@ def decision_stubs(m: "Machine") -> dict:
             od = m_.rd(m_.addr("g_stMDomainOutputData"), 20)
             c[1] = {"P0_02": m_.rd(0x0002)[0], "P0_0C": m_.rd(0x000C)[0], "P0_0D": m_.rd(0x000D)[0], "P0_28": m_.rd(0x0028)[0],
                     "P30_00": m_.rd(0x3000)[0], "P31_05": m_.rd(0x3105)[0], "P31_06": m_.rd(0x3106)[0],
-                    "pixclk": be("isr_g_usInputPixelClk", 2), "dclk": be("g_ulDClkFreq", 4), "dvf": be("g_usDVFreq", 2),
+                    "pixclk": be("g_usInputPixelClk", 2), "dclk": be("g_ulDClkFreq", 4), "dvf": be("g_usDVFreq", 2),
                     "info": m_.rd(m_.addr("g_stMDomainInfo"), 3).hex(), "out": [int.from_bytes(od[i:i + 2], "big") for i in range(0, 20, 2)],
                     "in": m_.rd(m_.addr("g_stMDomainInputData"), 17).hex(), "tin": m_.rd(m_.addr("g_stInputTimingData"), 17).hex()}
         return f

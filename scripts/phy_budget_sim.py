@@ -3,7 +3,7 @@
 
 usage: phy_budget_sim.py BIN MAP [--tree DIR] [--label L]
   Boots the image to ACTIVE, then calls ScalerTMDSRx2PhySetDeferred / Rx3 alone (return pad as isr_call_cycles.py):
-  pending flag set, isr_g_usTMDSRxPhyClk preset to the path's pixel clock (0.1 MHz), interrupts off (EX0 is masked inside anyway).
+  pending flag set, isr_g_usTMDSRxPixClk preset to the path's pixel clock (0.1 MHz), interrupts off (EX0 is masked inside anyway).
   Register pages read back what firmware wrote (xram model); CheckCDRStable_EXINT0 / MeasureClk_EXINT0 / CheckDataDFE are HLE stubs
   (hardware waits, counted per call and costed from docs/delays.md static rows, not run).
   Cycles = clk of the sim at the image's running CPU clock; delay loops are real instructions, so the delay sum is in the number.
@@ -114,7 +114,7 @@ def main() -> int:
 
         m.stubs.setdefault(sp_pc, []).append((sp_bank, "probe", on_setphy))
         m.core.pch[sp_pc] |= 0xFFFF if sp_bank is None else 1 << sp_bank
-        pend, clk = m.addr("isr_g_ucTMDSRxPhyPend"), m.addr("isr_g_usTMDSRxPhyClk")
+        pend, clk = m.addr("isr_g_ucTMDSRxPhyPend"), m.addr("isr_g_usTMDSRxPixClk")
         for port in (2, 3):
             ch = chunks[f"ScalerTMDSRx{port}PhySetDeferred"]
             for name, pclk, cdrs in PATHS:

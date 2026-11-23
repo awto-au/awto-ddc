@@ -50,7 +50,7 @@
 // VARIABLE DECLARATIONS
 //****************************************************************************
 __xdata _Bool g_bPsWakeupHpd;
-volatile WORD isr_g_usInputPixelClk;
+volatile WORD g_usInputPixelClk;
 WORD isr_g_usTmdsOffLineMeasureClk [[awto::isr_shared("main writes it with EX0 masked (TMDS Rx2/Rx3 PhySetDeferred); EXINT0 only reads")]];
 
 BYTE g_ucDpRx0LTStatus = _DP_LINK_TRAINING_NONE;
@@ -79,7 +79,7 @@ StructDpCableStatus g_stDpCableStatus;
 #if(_DIGITAL_PORT_SUPPORT == _ON)
 
 __xdata _Bool g_bDpDCOffHPDHigh = 0;
-BYTE isr_g_ucDigitalSwitch [[awto::isr_shared("main sets the switch bits at port change; EXINT1 only reads them")]];
+BYTE g_ucDigitalSwitch;
 BYTE g_ucHDMIHotPlug;
 
 #if(_DP_HDMI_COMPATIBLE_MODE == _ON)
@@ -2802,10 +2802,7 @@ BYTE ScalerSyncDdcDetect_EXINT1(void)
                 SET_TMDS_RX1_DDC_DETECTED();
             }
 #elif((_D2_TMDS_SUPPORT == _ON) && (_D2_DDC_CHANNEL_SEL == _DDC0))
-            if(GET_DIGITAL_PORT_SWITCH_TO_D2() == _TRUE)
-            {
-                SET_TMDS_RX2_DDC_DETECTED();
-            }
+            SET_TMDS_RX2_DDC_DETECTED();   // per port, not gated to the selected one (#325)
 #endif
 
             return _TRUE;
@@ -2846,10 +2843,7 @@ BYTE ScalerSyncDdcDetect_EXINT1(void)
                 SET_TMDS_RX1_DDC_DETECTED();
             }
 #elif((_D2_TMDS_SUPPORT == _ON) && (_D2_DDC_CHANNEL_SEL == _DDC1))
-            if(GET_DIGITAL_PORT_SWITCH_TO_D2() == _TRUE)
-            {
-                SET_TMDS_RX2_DDC_DETECTED();
-            }
+            SET_TMDS_RX2_DDC_DETECTED();   // per port, not gated to the selected one (#325)
 #endif
             return _TRUE;
         }
@@ -2889,10 +2883,7 @@ BYTE ScalerSyncDdcDetect_EXINT1(void)
                 SET_TMDS_RX1_DDC_DETECTED();
             }
 #elif((_D2_TMDS_SUPPORT == _ON) && (_D2_DDC_CHANNEL_SEL == _DDC2))
-            if(GET_DIGITAL_PORT_SWITCH_TO_D2() == _TRUE)
-            {
-                SET_TMDS_RX2_DDC_DETECTED();
-            }
+            SET_TMDS_RX2_DDC_DETECTED();   // per port, not gated to the selected one (#325)
 #endif
             return _TRUE;
         }
@@ -2921,10 +2912,7 @@ BYTE ScalerSyncDdcDetect_EXINT1(void)
             // Clear SCL Toggle
             MCU_FE72_DDC3_EDID_IRQ |= _BIT2;
 
-            if(GET_DIGITAL_PORT_SWITCH_TO_D3() == _TRUE)
-            {
-                SET_TMDS_RX3_DDC_DETECTED();
-            }
+            SET_TMDS_RX3_DDC_DETECTED();
 
             return _TRUE;
         }

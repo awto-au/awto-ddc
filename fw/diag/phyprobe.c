@@ -126,7 +126,7 @@ void AwtoPhyProbeFld(unsigned char ucLoop, unsigned char ucCount)
 void AwtoPhyProbeEnd(unsigned char ucCdrOk)
 {
     ScalerSetBit_EXINT(s_usRegWd, ~_BIT0, (s_ucWdOld != 0) ? _BIT0 : 0x00);
-    AwtoSyncPush(AWTO_SYNC_EV_PHYT, s_ucPort, ((unsigned long)s_usTot << 16) | ((unsigned int)(s_ucSeq & 7) << 13) | isr_g_usInputPixelClk);
+    AwtoSyncPush(AWTO_SYNC_EV_PHYT, s_ucPort, ((unsigned long)s_usTot << 16) | ((unsigned int)(s_ucSeq & 7) << 13) | isr_g_usTMDSRxPixClk[s_ucPort - 2]);
     AwtoSyncPush(AWTO_SYNC_EV_PHYT, 0x10 | s_ucPort, ((unsigned long)s_usAdp << 16) | s_usCk);
     AwtoSyncPush(AWTO_SYNC_EV_PHYT, 0x40 | s_ucPort, ((unsigned long)s_ucFld[0] << 24) | ((unsigned long)s_ucFld[1] << 16) | ((unsigned int)s_ucFld[2] << 8) | s_ucFld[3]);
     AwtoSyncPush(AWTO_SYNC_EV_PHYT, 0x50 | s_ucPort, ((unsigned long)s_usStamp[0] << 16) | s_usStamp[1]);

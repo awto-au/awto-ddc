@@ -98,7 +98,7 @@ typedef enum { _POWER_ACTION_OFF_TO_NORMAL = 0, _POWER_ACTION_OFF_TO_FAKE_OFF, _
 #include "@REGS@"
 static uint32_t crc[2] = {0xFFFFFFFFu, 0xFFFFFFFFu}; static int cur;
 static void feed(unsigned b) { uint32_t *c = &crc[cur]; *c ^= b & 0xFF; for (int i = 0; i < 8; i++) *c = (*c >> 1) ^ (0xEDB88320u & -(*c & 1)); }
-static BYTE reg[65536], xreg[65536], isr_g_ucDigitalSwitch, z0[2], ddc[2];
+static BYTE reg[65536], xreg[65536], g_ucDigitalSwitch, z0[2], ddc[2];
 #define MCU_FE69_DDC2_EDID_IRQ (*(volatile BYTE *)(xreg + 0xFE69))
 #define MCU_FE72_DDC3_EDID_IRQ (*(volatile BYTE *)(xreg + 0xFE72))
 static BYTE d_isr_g_ucTMDSRxPort;
@@ -109,10 +109,10 @@ static void RxSetByte(WORD a, BYTE v) { a += (WORD)RX_CUR << 8; feed('W'); feed(
 static void ScalerSetBit(WORD a, BYTE an, BYTE o) { feed('S'); feed(a >> 8); feed(a); feed(an); feed(o); reg[a] = (reg[a] & an) | o; }
 static BYTE ScalerGetBit(WORD a, BYTE m) { BYTE v = reg[a] & m; feed('B'); feed(a >> 8); feed(a); feed(m); feed(v); return v; }
 static void ScalerSetByte(WORD a, BYTE v) { feed('W'); feed(a >> 8); feed(a); feed(v); reg[a] = v; }
-#define SET_DIGITAL_PORT_SWITCH_TO_D2() (feed('2'), isr_g_ucDigitalSwitch |= _BIT3)
-#define CLR_DIGITAL_PORT_SWITCH_TO_D2() (feed('3'), isr_g_ucDigitalSwitch &= ~_BIT3)
-#define SET_DIGITAL_PORT_SWITCH_TO_D3() (feed('4'), isr_g_ucDigitalSwitch |= _BIT2)
-#define CLR_DIGITAL_PORT_SWITCH_TO_D3() (feed('5'), isr_g_ucDigitalSwitch &= ~_BIT2)
+#define SET_DIGITAL_PORT_SWITCH_TO_D2() (feed('2'), g_ucDigitalSwitch |= _BIT3)
+#define CLR_DIGITAL_PORT_SWITCH_TO_D2() (feed('3'), g_ucDigitalSwitch &= ~_BIT3)
+#define SET_DIGITAL_PORT_SWITCH_TO_D3() (feed('4'), g_ucDigitalSwitch |= _BIT2)
+#define CLR_DIGITAL_PORT_SWITCH_TO_D3() (feed('5'), g_ucDigitalSwitch &= ~_BIT2)
 #define SET_TMDS_RX2_Z0_ASSERTED() (feed('a'), z0[0] = 1)
 #define SET_TMDS_RX3_Z0_ASSERTED() (feed('A'), z0[1] = 1)
 #define CLR_TMDS_RX2_DDC_DETECTED() (feed('d'), ddc[0] = 0)
@@ -141,11 +141,11 @@ int main(void) {
         BYTE sw = rnd(), z0a = rnd() & 1, ddca = rnd() & 1;
         for (unsigned a = 0; a < sizeof acts / sizeof acts[0]; a++) for (int sel = 0; sel < 2; sel++) for (int kind = 0; kind < 3; kind++) {
             for (int p = 0; p < 2; p++) {
-                cur = p; d_isr_g_ucTMDSRxPort = sw & 1; isr_g_ucDigitalSwitch = sw; z0[0] = z0[1] = z0a; ddc[0] = ddc[1] = ddca;
+                cur = p; d_isr_g_ucTMDSRxPort = sw & 1; g_ucDigitalSwitch = sw; z0[0] = z0[1] = z0a; ddc[0] = ddc[1] = ddca;
                 static BYTE sreg[0xE00], sx[0x100];
                 memcpy(sreg, reg + 0x7000, 0xE00); memcpy(sx, xreg + 0xFE00, 0x100);
                 CALL(kind, p, acts[a], sel);
-                feed(d_isr_g_ucTMDSRxPort); feed(isr_g_ucDigitalSwitch); feed(z0[p]); feed(ddc[p]); feed(z0[p ^ 1]); feed(ddc[p ^ 1]);
+                feed(d_isr_g_ucTMDSRxPort); feed(g_ucDigitalSwitch); feed(z0[p]); feed(ddc[p]); feed(z0[p ^ 1]); feed(ddc[p ^ 1]);
                 for (unsigned k = 0x7000; k < 0x7E00; k++) feed(reg[k]);
                 feed(xreg[0xFE69]); feed(xreg[0xFE72]);
                 memcpy(reg + 0x7000, sreg, 0xE00); memcpy(xreg + 0xFE00, sx, 0x100);

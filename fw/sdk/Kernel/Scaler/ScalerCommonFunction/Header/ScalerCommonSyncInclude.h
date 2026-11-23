@@ -270,9 +270,9 @@
 //--------------------------------------------------
 // Macro of Input Pixel Clk (Unit in 0.1MHz)
 //--------------------------------------------------
-#define GET_INPUT_PIXEL_CLK()                               (isr_g_usInputPixelClk)
-#define SET_INPUT_PIXEL_CLK(x)                              (isr_g_usInputPixelClk = (x))
-#define CLR_INPUT_PIXEL_CLK()                               (isr_g_usInputPixelClk = 0)
+#define GET_INPUT_PIXEL_CLK()                               (g_usInputPixelClk)
+#define SET_INPUT_PIXEL_CLK(x)                              (g_usInputPixelClk = (x))
+#define CLR_INPUT_PIXEL_CLK()                               (g_usInputPixelClk = 0)
 
 //--------------------------------------------------
 // Macro of Input Pixel Clk (Unit in 0.1MHz)
@@ -285,33 +285,33 @@
 //--------------------------------------------------
 // Macro of Digital Input Port Switch
 //--------------------------------------------------
-#define GET_DIGITAL_PORT_SWITCH_TO_D0()                     ((isr_g_ucDigitalSwitch & _BIT5) >> 5)
-#define SET_DIGITAL_PORT_SWITCH_TO_D0()                     (isr_g_ucDigitalSwitch |= _BIT5)
-#define CLR_DIGITAL_PORT_SWITCH_TO_D0()                     (isr_g_ucDigitalSwitch &= ~_BIT5)
+#define GET_DIGITAL_PORT_SWITCH_TO_D0()                     ((g_ucDigitalSwitch & _BIT5) >> 5)
+#define SET_DIGITAL_PORT_SWITCH_TO_D0()                     (g_ucDigitalSwitch |= _BIT5)
+#define CLR_DIGITAL_PORT_SWITCH_TO_D0()                     (g_ucDigitalSwitch &= ~_BIT5)
 
-#define GET_DIGITAL_PORT_SWITCH_TO_D1()                     ((isr_g_ucDigitalSwitch & _BIT4) >> 4)
-#define SET_DIGITAL_PORT_SWITCH_TO_D1()                     (isr_g_ucDigitalSwitch |= _BIT4)
-#define CLR_DIGITAL_PORT_SWITCH_TO_D1()                     (isr_g_ucDigitalSwitch &= ~_BIT4)
+#define GET_DIGITAL_PORT_SWITCH_TO_D1()                     ((g_ucDigitalSwitch & _BIT4) >> 4)
+#define SET_DIGITAL_PORT_SWITCH_TO_D1()                     (g_ucDigitalSwitch |= _BIT4)
+#define CLR_DIGITAL_PORT_SWITCH_TO_D1()                     (g_ucDigitalSwitch &= ~_BIT4)
 
-#define GET_DIGITAL_PORT_SWITCH_TO_D2()                     ((isr_g_ucDigitalSwitch & _BIT3) >> 3)
-#define SET_DIGITAL_PORT_SWITCH_TO_D2()                     (isr_g_ucDigitalSwitch |= _BIT3)
-#define CLR_DIGITAL_PORT_SWITCH_TO_D2()                     (isr_g_ucDigitalSwitch &= ~_BIT3)
+#define GET_DIGITAL_PORT_SWITCH_TO_D2()                     ((g_ucDigitalSwitch & _BIT3) >> 3)
+#define SET_DIGITAL_PORT_SWITCH_TO_D2()                     (g_ucDigitalSwitch |= _BIT3)
+#define CLR_DIGITAL_PORT_SWITCH_TO_D2()                     (g_ucDigitalSwitch &= ~_BIT3)
 
-#define GET_DIGITAL_PORT_SWITCH_TO_D3()                     ((isr_g_ucDigitalSwitch & _BIT2) >> 2)
-#define SET_DIGITAL_PORT_SWITCH_TO_D3()                     (isr_g_ucDigitalSwitch |= _BIT2)
-#define CLR_DIGITAL_PORT_SWITCH_TO_D3()                     (isr_g_ucDigitalSwitch &= ~_BIT2)
+#define GET_DIGITAL_PORT_SWITCH_TO_D3()                     ((g_ucDigitalSwitch & _BIT2) >> 2)
+#define SET_DIGITAL_PORT_SWITCH_TO_D3()                     (g_ucDigitalSwitch |= _BIT2)
+#define CLR_DIGITAL_PORT_SWITCH_TO_D3()                     (g_ucDigitalSwitch &= ~_BIT2)
 
-#define GET_DIGITAL_PORT_SWITCH_TO_D4()                     ((isr_g_ucDigitalSwitch & _BIT1) >> 1)
-#define SET_DIGITAL_PORT_SWITCH_TO_D4()                     (isr_g_ucDigitalSwitch |= _BIT1)
-#define CLR_DIGITAL_PORT_SWITCH_TO_D4()                     (isr_g_ucDigitalSwitch &= ~_BIT1)
+#define GET_DIGITAL_PORT_SWITCH_TO_D4()                     ((g_ucDigitalSwitch & _BIT1) >> 1)
+#define SET_DIGITAL_PORT_SWITCH_TO_D4()                     (g_ucDigitalSwitch |= _BIT1)
+#define CLR_DIGITAL_PORT_SWITCH_TO_D4()                     (g_ucDigitalSwitch &= ~_BIT1)
 
-#define GET_DIGITAL_PORT_SWITCH_TO_D5()                     ((isr_g_ucDigitalSwitch & _BIT0) >> 0)
-#define SET_DIGITAL_PORT_SWITCH_TO_D5()                     (isr_g_ucDigitalSwitch |= _BIT0)
-#define CLR_DIGITAL_PORT_SWITCH_TO_D5()                     (isr_g_ucDigitalSwitch &= ~_BIT0)
+#define GET_DIGITAL_PORT_SWITCH_TO_D5()                     ((g_ucDigitalSwitch & _BIT0) >> 0)
+#define SET_DIGITAL_PORT_SWITCH_TO_D5()                     (g_ucDigitalSwitch |= _BIT0)
+#define CLR_DIGITAL_PORT_SWITCH_TO_D5()                     (g_ucDigitalSwitch &= ~_BIT0)
 
-#define GET_DIGITAL_PORT_SWITCH_TO_D6()                     ((isr_g_ucDigitalSwitch & _BIT6) >> 6)
-#define SET_DIGITAL_PORT_SWITCH_TO_D6()                     (isr_g_ucDigitalSwitch |= _BIT6)
-#define CLR_DIGITAL_PORT_SWITCH_TO_D6()                     (isr_g_ucDigitalSwitch &= ~_BIT6)
+#define GET_DIGITAL_PORT_SWITCH_TO_D6()                     ((g_ucDigitalSwitch & _BIT6) >> 6)
+#define SET_DIGITAL_PORT_SWITCH_TO_D6()                     (g_ucDigitalSwitch |= _BIT6)
+#define CLR_DIGITAL_PORT_SWITCH_TO_D6()                     (g_ucDigitalSwitch &= ~_BIT6)
 
 #define GET_DP_DC_OFF_HPD_HIGH()                            (g_bDpDCOffHPDHigh)
 #define SET_DP_DC_OFF_HPD_HIGH()                            (g_bDpDCOffHPDHigh = _TRUE)
@@ -1878,11 +1878,11 @@ typedef struct
 //****************************************************************************
 // VARIABLE EXTERN
 //****************************************************************************
-extern volatile WORD isr_g_usInputPixelClk;
+extern volatile WORD g_usInputPixelClk;
 extern WORD isr_g_usTmdsOffLineMeasureClk [[awto::isr_shared("main writes it with EX0 masked (TMDS Rx2/Rx3 PhySetDeferred); EXINT0 only reads")]];
 
 #if(_DIGITAL_PORT_SUPPORT == _ON)
-extern BYTE isr_g_ucDigitalSwitch [[awto::isr_shared("main sets the switch bits at port change; EXINT1 only reads them")]];
+extern BYTE g_ucDigitalSwitch [[awto::isr_shared("main sets the switch bits at port change; EXINT1 only reads them")]];
 extern __xdata _Bool g_bDpDCOffHPDHigh;
 extern BYTE g_ucHDMIHotPlug;
 extern __xdata _Bool g_bDigitalColorInfoChangeReset;

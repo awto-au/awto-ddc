@@ -88,7 +88,7 @@ def vendor_stubs(m, hdmi):
     def scan(m, r):
         if r["r"][7] != D2 or (m.rd(m.addr("isr_g_stPowerInfo"))[0] >> 4) != POWER_NORMAL:     # PS: no scan, SysSourceJudge wakes the power
             return {"r7": S.SOURCE_NONE}
-        m.wr(m.addr("isr_g_usInputPixelClk"), hdmi.PCLK.to_bytes(2, "big"))        # Keil: big-endian
+        m.wr(m.addr("g_usInputPixelClk"), hdmi.PCLK.to_bytes(2, "big"))        # Keil: big-endian
         return {"r7": S.SOURCE_HDMI}
     stub_at(m, 5, 0xF97B, "ScalerTMDSScanInputPort", scan)
     stub_at(m, 5, 0xF85F, "ScalerTMDSStableDetect", lambda m, r: {"carry": r["r"][7] == D2, "r7": int(r["r"][7] == D2)})   # (port R7, source type R5)

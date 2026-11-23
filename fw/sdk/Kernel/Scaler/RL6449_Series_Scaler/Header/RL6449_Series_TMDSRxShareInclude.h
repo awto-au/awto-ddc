@@ -30,10 +30,12 @@ extern volatile BYTE __data d_isr_g_ucTMDSRxPort;
 
 //--------------------------------------------------
 // Per-port state of the shared body, index = port
+// RX_PIXCLK = this port's input pixel clock (ISR side); the scaler-wide g_usInputPixelClk follows it only from the main-thread scan
 //--------------------------------------------------
+#define RX_PIXCLK                                       (isr_g_usTMDSRxPixClk[RX_CUR])
 extern volatile WORD isr_g_usTMDSRxClkCount[2];
 extern volatile WORD isr_g_usTMDSRxPhyCount[2];
-extern volatile WORD isr_g_usTMDSRxPhyClk[2];
+extern volatile WORD isr_g_usTMDSRxPixClk[2];
 extern volatile BYTE isr_g_ucTMDSRxPhyPend[2];
 extern volatile BYTE g_pucTMDSRxLEMax[2][3];
 extern volatile BYTE g_pucTMDSRxLEMin[2][3];
