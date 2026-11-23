@@ -58,9 +58,6 @@ extern void ScalerAudioDpAudioEnable(bit bEnable, BYTE ucInputPort);
 extern void ScalerAudioDpAudioEnable_EXINT0(bit bEnable, BYTE ucInputPort);
 
 #if(_D0_DP_EXIST == _ON)
-extern void ScalerAudioD0DPAudioInitial(void);
-extern void ScalerAudioD0DPDigitalOutputProc(bit bEnable);
-extern void ScalerAudioD0DPSetDVCWindowSize(bit bAdjustType, EnumAudioSamplingFreqPacket enumSamplingFreqPacket);
 #endif
 
 #if(_D1_DP_EXIST == _ON)

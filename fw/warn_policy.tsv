@@ -62,9 +62,9 @@
 ^unreachable code$	Kernel/Scaler/ScalerCommonFunction/Code/ScalerCommonNVRam.c	559	ok	OK-CONFIG: MCU_SET_BYTE_WITH_CKCON(...,_CKCON_MCU_SLOW_CYCLE): _CKCON_MCU_SLOW_CYCLE==_CKCON_MOVX_DEFAULT_CYCLE (0) because _LOCAL_DIMMING_SUPPORT is off, so the CKCON-slowing else arm is dead (same as Keil build with this config)
 ^unreachable code$	Kernel/Scaler/ScalerCommonFunction/Code/ScalerCommonNVRam.c	564	ok	OK-CONFIG: MCU_SET_BYTE_WITH_CKCON(...,_CKCON_MCU_SLOW_CYCLE): _CKCON_MCU_SLOW_CYCLE==_CKCON_MOVX_DEFAULT_CYCLE (0) because _LOCAL_DIMMING_SUPPORT is off, so the CKCON-slowing else arm is dead (same as Keil build with this config)
 ^conditional flow changed by optimizer	Kernel/Scaler/ScalerCommonFunction/Code/ScalerCommonSync.c	4187	ok	OK-HARMLESS: switch(ucSourceType) cases empty for this config and merge into default
-^unreachable code$	Kernel/Scaler/ScalerFunction/Code/ScalerDisplayDPTx.c	244	ok	OK-CONFIG: _PANEL_DPTX_LT_TPS3 / 0x14>=0x14 constant (HBR2 panel) so outer else dead
-^unreachable code$	Kernel/Scaler/ScalerFunction/Code/ScalerDisplayDPTx.c	257	ok	OK-CONFIG: _PANEL_DPTX_LANE_NUMBER==4 constant; 2- and 1-lane arms dead
-^unreachable code$	Kernel/Scaler/ScalerFunction/Code/ScalerDisplayDPTx.c	261	ok	OK-CONFIG: _PANEL_DPTX_LANE_NUMBER==4 constant; 2- and 1-lane arms dead
+^unreachable code$	Kernel/Scaler/ScalerFunction/Code/ScalerDisplayDPTx.c	210	ok	OK-CONFIG: _PANEL_DPTX_LT_TPS3 / 0x14>=0x14 constant (HBR2 panel) so outer else dead
+^unreachable code$	Kernel/Scaler/ScalerFunction/Code/ScalerDisplayDPTx.c	223	ok	OK-CONFIG: _PANEL_DPTX_LANE_NUMBER==4 constant; 2- and 1-lane arms dead
+^unreachable code$	Kernel/Scaler/ScalerFunction/Code/ScalerDisplayDPTx.c	227	ok	OK-CONFIG: _PANEL_DPTX_LANE_NUMBER==4 constant; 2- and 1-lane arms dead
 ^conditional flow changed by optimizer	Kernel/Scaler/ScalerFunction/Code/ScalerDPRx1_INT_SeptPhy.c	1567	ok	OK-HARMLESS: lane-count switch: _DP_FOUR_LANE shares body with default; compare dropped, same dispatch
 ^conditional flow changed by optimizer	Kernel/Scaler/ScalerFunction/Code/ScalerDPRx1_INT_SeptPhy.c	1618	ok	OK-HARMLESS: lane-count switch: _DP_FOUR_LANE shares body with default; compare dropped, same dispatch
 ^conditional flow changed by optimizer	Kernel/Scaler/ScalerFunction/Code/ScalerDPRx1_INT_SeptPhy.c	234	ok	OK-CONFIG: if body empty because _DP_HBR_RBR_LT_FORCE_MARGINAL_LINK!=_OFF compiled out the Tp1SetPhy call; condition on g_ucDpRx1LinkRate removed

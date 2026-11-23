@@ -455,18 +455,10 @@ extern bit ScalerDisplayDPTx1NativeAuxWrite(BYTE ucAddrH, BYTE ucAddrM, BYTE ucA
 #endif
 
 #if(_DISPLAY_DP_TX_PORT_2 == _ON)
-extern void ScalerDisplayDPTx2Initial(void);
-extern bit ScalerDisplayDPTx2LinkConfig(void);
-extern void ScalerDisplayDPTx2VideoStreamOutput(bit bOutput);
-extern void ScalerDisplayDPTx2LinkTraining(void);
-extern void ScalerDisplayDPTx2TPInitialSet(void);
 
 #if(_PANEL_DPTX_FORCE_OUTPUT_SUPPORT == _ON)
-extern void ScalerDisplayDPTx2LinkForceOutput(void);
 #endif
 
-extern bit ScalerDisplayDPTx2NativeAuxWrite(BYTE ucAddrH, BYTE ucAddrM, BYTE ucAddrL, BYTE ucLength, BYTE *pucWriteArray);
-extern void ScalerDisplayDPTx2SetTps3PatternMux(bit bAphyMux);
 #endif
 
 extern void ScalerDisplayDPTxAnalogPhyConrol(bit bEnable);

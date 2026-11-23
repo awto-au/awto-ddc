@@ -109,7 +109,6 @@ extern EnumSourceSearchPort ScalerAudioGetDigitalAudioPortMapping(void);
 #if(_DP_SUPPORT == _ON)
 
 #if(_D0_DP_EXIST == _ON)
-extern void ScalerAudioD0SetAudioPLL(void);
 #endif
 
 #if(_D1_DP_EXIST == _ON)
