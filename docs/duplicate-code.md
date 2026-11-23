@@ -29,7 +29,7 @@ Flash = recoverable bytes (measured copies minus the largest unless `est`). Risk
 | 4 | `ScalerDisplayDPTx1TP1/TP2Lane0..3Adjust` | 260 x 4 lanes | ~1.6 KB (tool bound 1839) | none | medium (per-lane state bits -> byte fields) | link training, main loop | 9 | #295 |
 | 5 | `ScalerFlashWREN` / `WRDis` per-chip blocks | 3270-line function, 48 distinct bodies in 77 `case _FLASH_` labels | est 3-4 KB of 7.5 KB | none | medium (table, exhaustive host proof) | flash write path (CPU halts) | 5 | #296 |
 | 6 | `ScalerPowerGroupD0..D3PowerCut/Isolation` | 37 x 4 | 612 B (before table cost) | none | low | power sequencing | 9 | #297 |
-| 7 | `ScalerGDIPhyRx2/Rx3 Power/PowerProc/Z0Switch` | 337 x 2 | 429 B | real: `ABC0` value differs Rx2 vs Rx3 | medium (decide the right value first) | impedance at hot plug | 9 | #298 |
+| 7 | `ScalerGDIPhyRx2/Rx3 Power/PowerProc/Z0Switch` | 337 x 2 | done: map -186 B (858 -> 672), image -139 B, XDATA +3 B | real: `ABC0` flag-clear differs Rx2 vs Rx3, kept per port (constant, as the Dahua firmware) | medium | impedance at hot plug | 9 | #298, `scripts/gdiphy_equiv.py` |
 | 8 | `ScalerDpRx1Tp1/Tp2Check_EXINT0` lane blocks (7 per function, 4 distinct) | 7 x 52 lines per function | est 3.5 KB of 10 KB | none | high | ISR, link training | 7 | #299 |
 | 9 | ISR / main twins of DpRx1 (`DFECheck`, `AdjustLaneFLDBand`, ...) | 15 pairs | 1.1 KB (up to 5.0 KB) | none | high (non-reentrant) | ISR, #281 | 2, 7 | #300 |
 | 10 | Own fw: get-VCP reply builder x4, T2 snapshot x3, mirrored rect x2 | 4-12 lines x 2-4 | est < 200 B | none | trivial | T2 snapshot is ISR-safe by `EA` | C, 1 | #301 |
