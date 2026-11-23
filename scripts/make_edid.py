@@ -1,21 +1,24 @@
 #!/usr/bin/env python3
 """Build the awto-identity EDIDs (256 B = base + CTA-861 ext) for the JXC 4K monitor (Innolux M280DCA-E3B 28" panel).
 
-usage: make_edid.py [--out DIR] [--serial AWT26110001] [--no-decode]
-  writes DIR/awto-dp.bin and DIR/awto-hdmi.bin (default DIR: $VENDORS/realtek/analysis/edid)
-  then runs `edid-decode -c` on each if installed and prints the result.
-  --serial sets the per-unit serial text in the 0xFF descriptor (default AWT26110001).
-  Also writes DIR/awto-hdmi-d3.bin: = awto-hdmi.bin except the port tag (PORT_VSDB). Name + serial are the same on every
-  port (the host keys monitor identity on them: mutter layout, dev.py serial guard); only the tag tells D1/D2/D3 apart.
+usage: make_edid.py [--out DIR] [--serial AWT26110001] [--no-decode]   (--help)
+  writes DIR/awto-dp.bin, awto-hdmi.bin, awto-hdmi-d3.bin (default DIR: ./tmp/edid) and runs `edid-decode -c` on each.
+  d3 = hdmi except the port tag (PORT_VSDB). Name + serial are the same on every port (the host keys monitor
+  identity on them: mutter layout, dev.py serial guard); only the tag tells D1/D2/D3 apart.
+  Warning allow-list + gate: scripts/edid_gate.py.
 Design + per-port rationale: docs/edid-fix.md.  Log: ./tmp/logs/make_edid.log
 """
+import argparse
 import os
 import shutil
 import subprocess
 import sys
 from pathlib import Path
 
-OUT_DEFAULT = Path("/mnt/2tb/vendors/realtek/analysis/edid")
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from sdcc_overlay import repo_root
+
+OUT_DEFAULT = repo_root() / "tmp/edid"
 MFR, PRODUCT, SERIAL32 = "AWT", 0x0001, 0   # serial text lives in the 0xFF descriptor
 SERIAL_TXT, MODEL_TXT = "AWT26110001", "awto-mon"
 WEEK, YEAR = 44, 2026
@@ -97,8 +100,9 @@ def base_block(port, serial=SERIAL_TXT):
     b[54:72] = DTD_4K
     b[72:90] = text_desc(0xFC, MODEL_TXT)
     b[90:108] = text_desc(0xFF, serial)
-    # range limits (type 0x01 = range limits only; GTF is deprecated in 1.4): 48-60 Hz V, 15-135 kHz H, <=600 MHz pixel clock (byte = MHz/10)
-    b[108:126] = bytes([0, 0, 0, 0xFD, 0, 48, 60, 15, 135, 60, 0x01 if port == "dp" else 0x00, 0x0A] + [0x20] * 6)
+    # range limits (0x01 = range limits only; GTF deprecated in 1.4): 24-61 Hz V (VIC 93 = 24 Hz, DMT 800x600 = 60.317 Hz;
+    # the kernel adds no DMT/GTF mode for the wider range), 15-135 kHz H, <=600 MHz pixel clock (byte = MHz/10)
+    b[108:126] = bytes([0, 0, 0, 0xFD, 0, 24, 61, 15, 135, 60, 0x01 if port == "dp" else 0x00, 0x0A] + [0x20] * 6)
     b[126] = 1
     b[127] = cksum(b[:127])
     return bytes(b)
@@ -171,22 +175,22 @@ def build(port, serial=SERIAL_TXT):
 
 
 def main():
-    out = OUT_DEFAULT
-    if "--out" in sys.argv:
-        out = Path(sys.argv[sys.argv.index("--out") + 1])
-    serial = SERIAL_TXT
-    if "--serial" in sys.argv:
-        serial = sys.argv[sys.argv.index("--serial") + 1]
-    assert len(serial) <= 13, "serial text must fit the 13-byte 0xFF descriptor"
-    out.mkdir(parents=True, exist_ok=True)
+    ap = argparse.ArgumentParser(description=__doc__.splitlines()[0], formatter_class=argparse.RawDescriptionHelpFormatter,
+                                 epilog="\n".join(__doc__.splitlines()[1:]))
+    ap.add_argument("--out", type=Path, default=OUT_DEFAULT, help="output directory (default ./tmp/edid)")
+    ap.add_argument("--serial", default=SERIAL_TXT, help="per-unit serial text of the 0xFF descriptor")
+    ap.add_argument("--no-decode", action="store_true", help="skip edid-decode -c")
+    a = ap.parse_args()
+    assert len(a.serial) <= 13, "serial text must fit the 13-byte 0xFF descriptor"
+    a.out.mkdir(parents=True, exist_ok=True)
     rc = 0
     for port in ("dp", "hdmi", "hdmi-d3"):
-        e = build(port, serial)
+        e = build(port, a.serial)
         assert len(e) == 256 and sum(e[:128]) % 256 == 0 and sum(e[128:]) % 256 == 0
-        p = out / f"awto-{port}.bin"
+        p = a.out / f"awto-{port}.bin"
         p.write_bytes(e)
         print(f"== {p} ({len(e)} B)")
-        if "--no-decode" not in sys.argv and shutil.which("edid-decode"):
+        if not a.no_decode and shutil.which("edid-decode"):
             r = subprocess.run(["edid-decode", "-c", str(p)], capture_output=True, text=True, check=False)
             print(r.stdout, r.stderr)
             rc |= r.returncode

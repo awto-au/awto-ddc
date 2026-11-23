@@ -1,0 +1,6 @@
+# edid-decode -c warnings accepted by scripts/edid_gate.py (regex per line, matched against the message; digits as in edid-decode).
+# Unknown OUI A7-70-D0 = AWTO_OUI, our port-tag VSDB (#28), unregistered on purpose.
+Vendor-Specific Data Block, OUI A7-70-D0: Unknown OUI A7-70-D0\.
+# 16:10 DTDs keep the panel's physical size 621x341: 621x388 fails ("DTD max image size larger than the display size"),
+# and a 62x39 cm base size would change the host-visible physical size / DPI (#321).
+Detailed Timing Descriptor #[24]: Image size is 621x341 mm, but based on the picture AR it should be 621x388 mm\.

@@ -68,6 +68,7 @@ NORMAL/EXTENSIVE columns: the variant that runs in that tier (wall s / CPU s, si
 | regmap | register database current | stale regmap | PASS 10 | 3.6 | 3.6 / 3.6 | same | normal | | none |
 | iram | IRAM names and placement | a variable in the wrong IRAM space | PASS 4 | 1.4 | 1.4 / 1.3 | same | normal | | none |
 | rules | SDK is not patched by the build | a build step editing SDK source | PASS 0 | 0.1 | 0.1 / 0.1 | same | normal | | none |
+| edid | the 3 EDID tables pass `edid-decode -c`, warnings only from the allow-list | a new edid-decode warning or failure | not yet run | ~0.3 | | | normal | | static (#321) |
 | gensync, geninputs, gensavers, dwmodel | generated tables / model current | a stale generated table | PASS 0-2 | 0-0.6 | 0-0.6 | same | normal | | none |
 
 ## Totals per tier (gates only, build and flash excluded)

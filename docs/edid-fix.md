@@ -8,6 +8,15 @@
 
 Status: flashed to units 1-3 (2026-11-04, table below). `make_edid.py` now emits a 594 MHz VIC 97 DTD1 (ab8c4c9, not flashed); decided to go back to the vendor DTD1 3840x2160@59.982, 533.12 MHz and drop VIC 97 (#26, 2026-11-07).
 
+## Current EDID tables (2026-11-23, #321; `scripts/make_edid.py`, all 3 ports)
+- Modes: DTD1 3840x2160@60.000 (594 MHz, VIC 97 timing, preferred); CTA DTD2 2560x1600@59.97 CVT-RB, DTD3 2560x1440@59.95 CVT-RB, DTD4 1920x1200@59.95 CVT-RB; VICs 97 96 95 94 93 16 31 34 33 4 19 62 61 60 1 2 3; est. + std timings as in the base block. Nothing else.
+- Range limits: 24-61 Hz V (VIC 93 = 24 Hz; DMT 800x600 = 60.317 Hz), 15-135 kHz H, 600 MHz. Was 48-60: edid-decode warned. Linux `drm_edid.c` adds no inferred mode for the wider range (no DMT mode below 48 Hz or rounding to 61 Hz; GTF extra modes are all 60 Hz), so the host mode list is byte-for-byte the DTD/VIC/std/est. list.
+- 16:10 DTD image size stays 621x341 (panel size): edid-decode warns "should be 621x388", but 621x388 FAILS (DTD max image size larger than the 62x34 cm base size), and a 62x39 cm base size would change the host's physical size / DPI. Dropping the DTDs would remove host modes. Warning is allow-listed.
+- VSDB OUI A7-70-D0 = `AWTO_OUI`, our port tag (#28), intentionally unregistered; edid-decode says "Unknown OUI", allow-listed.
+- Gate `edid` (`scripts/edid_gate.py`, normal tier): builds the 3 tables, `edid-decode -c`, fails on any failure, any warning not in `scripts/edid_allow.txt`, or an allow-list entry that matches nothing.
+- `make_edid.py --help`; `--out` default `./tmp/edid`. Firmware tables: `scripts/fw_edid_tables.py` (run by `./dev.py build`), never hand-merged.
+- Sections below are history; their mode lists (DTD2 1080p / DTD3 1440p, "all other modes removed") are superseded by this one.
+
 ## Current: panel size + primaries from the datasheet (2026-11-13, #3, branch `wb-p14ui-panel`)
 - Panel = Innolux M280DCA-E3B rev C1 (label photo, Dan 2026-11-13): 28.0", active 620.928 x 341.28 mm (`docs/monitors/panel-innolux-m280dca-e3b.md`).
 - The 597 x 336 mm (27") size in every EDID below was **ours and wrong**: copied from the panel TCON's template EDID (`docs/monitors/panel-edid.md`) and a glass measurement (336 mm) that does not match the datasheet.
@@ -17,7 +26,7 @@ Status: flashed to units 1-3 (2026-11-04, table below). `make_edid.py` now emits
 
 ## Files
 - Builder: `scripts/make_edid.py` (stdlib; runs `edid-decode -c` on its output)
-- EDIDs: `~/vendors/realtek/analysis/edid/awto-dp.bin`, `awto-hdmi.bin` (256 B each)
+- EDIDs (old ISP-flash build): `~/vendors/realtek/analysis/edid/awto-dp.bin`, `awto-hdmi.bin` (256 B each); current output: `./tmp/edid/`
 - Sectors: `.../edid/orig_sector_13000.bin` (from `dumps/jxc-4k-flash-bus20.bin`), `patched_sector_13000.bin`, `sector_13000.diff.txt` (all 372 changed offsets)
 - Writer: `scripts/rtd_flash_sector.py` (dry-run default; `--write` required to modify)
 

@@ -94,7 +94,7 @@ EXTENSIVE = {
 }
 SIM_CPU = os.environ.get("AWTO_SIM_CPU", "dw8051")   # fast-core CPU model of the sims (#162 step 1); results are comparable only at the same model
 CPU_OF = {}      # per-gate CPU model override; wdt runs on dw8051 since the Timer0 cases use wall ms (the 8052 model has no clock: the 350.8 MHz boot never reaches stage 8 in wdt_test)
-NO_SIM = {"link", "xlayout", "pokes", "speed", "magic", "regs", "regmap", "rules"}   # every other gate runs a sim on the in-process DW8051 core (fw_sim default; ucsim is a cross-check only)
+NO_SIM = {"link", "xlayout", "pokes", "speed", "magic", "regs", "regmap", "rules", "edid"}   # every other gate runs a sim on the in-process DW8051 core (fw_sim default; ucsim is a cross-check only)
 SKIP_IF_MISSING = {      # gate -> map symbols the image must define, else SKIP (the script would FAIL on an older image)
     "keys": ("_AwtoSourceOpen",),
     "crash": ("_AwtoWdtHang",),
@@ -229,6 +229,7 @@ def gates(b: Path, m: Path, ref, tree):
         for nm, sc in (("gensync", "gen_awto_sync.py"), ("geninputs", "gen_awto_inputs.py"), ("gensavers", "gen_awto_savers.py")):      # #162: generated C tables current
             if (Path(tree) / "scripts" / sc).is_file():
                 g[nm] = [*PY, f"{tree}/scripts/{sc}", "--check"]
+    g["edid"] = [*PY, f"{s}/edid_gate.py"]                                             # #321: edid-decode -c on the 3 tables, warnings only from scripts/edid_allow.txt
     g["dwmodel"] = [*PY, f"{s}/dw8051_model.py", "--check"]                            # #162: CPU timing tables current
     return {
         **g,
