@@ -31,6 +31,7 @@ def main() -> int:
     ap.add_argument("--n", type=int, default=20)
     ap.add_argument("--clear", action="store_true")
     a = ap.parse_args()
+    (ROOT / "tmp/logs/ddr_flags_probe.log").parent.mkdir(parents=True, exist_ok=True)
     lf = (ROOT / "tmp/logs/ddr_flags_probe.log").open("a")
 
     def log(s):

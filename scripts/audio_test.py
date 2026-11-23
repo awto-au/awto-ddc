@@ -37,6 +37,7 @@ import time
 import wave
 from pathlib import Path
 
+import isostamp
 from _log import log_line as _log_line
 from _repo import repo_root
 
@@ -303,7 +304,7 @@ def tones(a, u: Unit) -> int:
     files = [(nm, hz, tone_wav(nm, hz, ch, a.secs)) for nm, hz, ch in TONES]
     u.session(lambda rio: u.regs(rio, "before tones"))
     for nm, hz, p in files:
-        t0 = time.strftime("%H:%M:%S")
+        t0 = isostamp.now()
         say(f"TONE {nm.upper()} {hz} Hz START {t0} ({a.secs:.0f} s) -> {dev}")
         pr = subprocess.Popen(["aplay", "-q", "-D", dev, str(p)], stderr=subprocess.PIPE, text=True)
         if nm == "both":
@@ -315,7 +316,7 @@ def tones(a, u: Unit) -> int:
             pr.kill()
             say(f"TONE {nm}: aplay still running after {a.secs * APLAY_LIMIT_S + 2:.1f} s: killed")
             return 1
-        say(f"TONE {nm.upper()} {hz} Hz END {time.strftime('%H:%M:%S')} rc {pr.returncode} {err.strip()[:160]}")
+        say(f"TONE {nm.upper()} {hz} Hz END {isostamp.now()} rc {pr.returncode} {err.strip()[:160]}")
     return 0
 
 
@@ -345,9 +346,9 @@ def main() -> int:
         dev = host(True)
         ch = {"left": (1, 0), "right": (0, 1), "both": (1, 1), "silence": (0, 0)}[a.chan]
         p = tone_wav(a.chan, a.hz, ch, a.secs)
-        say(f"TONE {a.chan.upper()} {a.hz} Hz START {time.strftime('%H:%M:%S')} ({a.secs:.0f} s) -> {dev}")
+        say(f"TONE {a.chan.upper()} {a.hz} Hz START {isostamp.now()} ({a.secs:.0f} s) -> {dev}")
         r = subprocess.run(["aplay", "-q", "-D", dev, str(p)], capture_output=True, text=True, timeout=a.secs * APLAY_LIMIT_S + 2, check=False)
-        say(f"TONE {a.chan.upper()} {a.hz} Hz END {time.strftime('%H:%M:%S')} rc {r.returncode} {r.stderr.strip()[:160]}")
+        say(f"TONE {a.chan.upper()} {a.hz} Hz END {isostamp.now()} rc {r.returncode} {r.stderr.strip()[:160]}")
         return r.returncode
     if not a.map:
         raise SystemExit("--map required")
@@ -424,7 +425,7 @@ def main() -> int:
         with dbg_link.linked(BUS, 2):
             r = subprocess.run(osd + ["debug"], capture_output=True, text=True, timeout=DDC_LIMIT_S, check=False)
         say(f"console open (test cmd 0x26, held): rc {r.returncode} {r.stderr.strip()[:120]}")
-        say(f"STEPS START {time.strftime('%H:%M:%S')}: steps {','.join(map(str, only))} of {STEPS}, tones {freqs} Hz, "
+        say(f"STEPS START {isostamp.now()}: steps {','.join(map(str, only))} of {STEPS}, tones {freqs} Hz, "
             f"{a.secs:g} s each, {GEN_GAP_S:.0f} s gap between steps")
         bad, held = 0, None
         try:
@@ -433,19 +434,19 @@ def main() -> int:
                     time.sleep(GEN_GAP_S)
                 held = n
                 ddc_vcp(GEN_VCP, STEP_START + n, f"step {n} set up")
-                say(f"STEP {n}/{STEPS} START {time.strftime('%H:%M:%S')}: {STEP_WHAT[n - 1]} (console 'audio test {n}/{STEPS}: ...'); "
+                say(f"STEP {n}/{STEPS} START {isostamp.now()}: {STEP_WHAT[n - 1]} (console 'audio test {n}/{STEPS}: ...'); "
                     f"{STEP_SETTLE_S} s settle")
                 time.sleep(STEP_SETTLE_S)
                 for hz, p in waves:
                     ddc_vcp(GEN_VCP, HZ_FLAG | hz, f"announce {hz} Hz")
-                    say(f"  STEP {n} TONE {hz} Hz START {time.strftime('%H:%M:%S')} (console 'audio test {n}: {hz} Hz')")
+                    say(f"  STEP {n} TONE {hz} Hz START {isostamp.now()} (console 'audio test {n}: {hz} Hz')")
                     r = subprocess.run(["aplay", "-q", "-D", dev, str(p)], capture_output=True, text=True,
                                        timeout=a.secs * APLAY_LIMIT_S + 2, check=False)
                     bad += r.returncode != 0
-                    say(f"  STEP {n} TONE {hz} Hz END {time.strftime('%H:%M:%S')} aplay rc {r.returncode} {r.stderr.strip()[:120]}")
+                    say(f"  STEP {n} TONE {hz} Hz END {isostamp.now()} aplay rc {r.returncode} {r.stderr.strip()[:120]}")
                 ddc_vcp(GEN_VCP, STEP_DONE + n, f"step {n} done")
                 held = None
-                say(f"STEP {n}/{STEPS} END {time.strftime('%H:%M:%S')}")
+                say(f"STEP {n}/{STEPS} END {isostamp.now()}")
         finally:
             if held is not None:                # stopped inside a step: release it (amp, user volume)
                 ddc_vcp(GEN_VCP, STEP_DONE + held, f"step {held} done (run stopped inside it)")
@@ -454,7 +455,7 @@ def main() -> int:
                 ddc_vcp(VCP_VOLUME, vol0, f"volume back to {vol0} % (read {vol1})")
             else:
                 say(f"volume {vol1} % unchanged (before {vol0} %)")
-        say(f"STEPS END {time.strftime('%H:%M:%S')}: {bad} aplay failure(s); console stays open (clear: ./dev.py diag-clear --unit N)")
+        say(f"STEPS END {isostamp.now()}: {bad} aplay failure(s); console stays open (clear: ./dev.py diag-clear --unit N)")
         return 1 if bad else 0
     if a.cmd == "outs":
         dev = host(True)
@@ -466,10 +467,10 @@ def main() -> int:
                     time.sleep(GEN_GAP_S)
                 u.session(lambda rio, ao=ao, hp=hp, en=en: (u.wr(rio, AOUT_CTRL, ao), u.wr(rio, HPOUT_CTRL, hp), u.wr(rio, amp, en)))
                 rb = u.session(lambda rio: [u.rd(rio, x) for x in (AOUT_CTRL, HPOUT_CTRL, amp)])
-                say(f"OUT {k + 1} START {time.strftime('%H:%M:%S')} ({a.secs:.0f} s, {a.hz} Hz both channels): {what}; "
+                say(f"OUT {k + 1} START {isostamp.now()} ({a.secs:.0f} s, {a.hz} Hz both channels): {what}; "
                     f"read back 06C6 {rb[0].hex() if rb[0] else '?'} 06C7 {rb[1].hex() if rb[1] else '?'} P7.4 {rb[2][0] & 1 if rb[2] else '?'}")
                 r = subprocess.run(["aplay", "-q", "-D", dev, str(p)], capture_output=True, text=True, timeout=a.secs * APLAY_LIMIT_S + 2, check=False)
-                say(f"OUT {k + 1} END {time.strftime('%H:%M:%S')} rc {r.returncode}")
+                say(f"OUT {k + 1} END {isostamp.now()} rc {r.returncode}")
         finally:
             u.session(lambda rio: (u.wr(rio, AOUT_CTRL, OUT_ON), u.wr(rio, HPOUT_CTRL, OUT_ON), u.wr(rio, amp, 1)))
             say("outputs restored: 06C6 = 08, 06C7 = 08, P7.4 = 1")
@@ -488,12 +489,12 @@ def main() -> int:
                     ok = u.session(lambda rio: u.wr(rio, PORTS["P7.4 (amp enable, pin 161)"], 1) and
                                    (u.rd(rio, PORTS["P7.4 (amp enable, pin 161)"]) or b"\0")[0] & 1)
                     note = f"amp NOT on within {AMP_WAIT_S} s: P7.4 forced 1 by debug poke ({'ok' if ok else 'FAILED'})"
-                say(f"GEN sine (chip generator) START {time.strftime('%H:%M:%S')}, 06E0 = {x.upper()} ({a.secs:.0f} s), {note}")
+                say(f"GEN sine (chip generator) START {isostamp.now()}, 06E0 = {x.upper()} ({a.secs:.0f} s), {note}")
                 time.sleep(min(1.0, a.secs / 3))
                 u.session(lambda rio, x=x: u.regs(rio, f"generator on, 06E0 = {x}"))
                 time.sleep(max(0.0, a.secs - min(1.0, a.secs / 3) - REGS_READ_S))
                 ddc_vcp(GEN_VCP, 0)
-                say(f"GEN sine END {time.strftime('%H:%M:%S')}")
+                say(f"GEN sine END {isostamp.now()}")
         finally:
             ddc_vcp(GEN_VCP, 0)
             if mux0:

@@ -32,6 +32,7 @@ def main() -> int:
     ap.add_argument("--secs", type=float, default=10)
     ap.add_argument("--mode", default="2160p60")
     a = ap.parse_args()
+    (S.ROOT / "tmp/logs/hold_sim.log").parent.mkdir(parents=True, exist_ok=True)
     log = (S.ROOT / "tmp/logs/hold_sim.log").open("a", buffering=1)
 
     def say(s):

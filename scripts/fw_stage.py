@@ -31,6 +31,7 @@ def main() -> int:
     r = subprocess.run([sys.executable, str(REPO / "scripts/fw_gates.py"), str(stem), "--tree", str(tree),
                         "--only", "boot,isr,link"], capture_output=True, text=True, timeout=GATES_LIMIT_S, check=False)
     out = r.stdout.strip().splitlines()[-4:]
+    (REPO / "tmp/logs/fw_stage.log").parent.mkdir(parents=True, exist_ok=True)
     with (REPO / "tmp/logs/fw_stage.log").open("a") as f:
         f.write(f"{isostamp.now()} {stem.name} gates rc={r.returncode}\n" + "\n".join(out) + "\n")
     print(f"{stem}.bin", *out, sep="\n")

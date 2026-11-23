@@ -45,6 +45,7 @@ def main() -> int:
     F.log(f"saved 009F/FFF4/FFF3 = {saved}")
     failed = None
     try:
+        (S.ROOT / "tmp/logs/reg_behind_cause.log").parent.mkdir(parents=True, exist_ok=True)
         with (S.ROOT / "tmp/logs/reg_behind_cause.log").open("a") as lf:
             r = C.Rd(io, lf)
             for ps in a.pages.split(","):

@@ -30,4 +30,5 @@ for b in range(7):
     p.write_text("\n".join(out) + "\n")
     log.append(f"bank{b}: {len(new)} lib names, {len(take)} merged ({len(new)-len(take)} blocked by hand names)")
 print("\n".join(log))
+(ROOT / "tmp/logs/ghidra_merge_lib_names.log").parent.mkdir(parents=True, exist_ok=True)
 (ROOT / "tmp/logs/ghidra_merge_lib_names.log").write_text("\n".join(log) + "\n")

@@ -20,6 +20,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import ddr_frame_test as T
 import ddr_freeze_test as F
+import isostamp
 from p037_test import rd as prd
 
 ROOT = T.ROOT
@@ -110,7 +111,7 @@ def run(d, x0: int, y0: int) -> None:
     rel = ROOT / "tmp/scratch/ddr_release"
     if rel.exists():
         rel.unlink()
-    T.log(f"FIGURE UP at {time.strftime('%H:%M:%S')}; holding until {rel} exists (backstop {F.HOLD_MAX_S:.0f} s)")
+    T.log(f"FIGURE UP at {isostamp.now()}; holding until {rel} exists (backstop {F.HOLD_MAX_S:.0f} s)")
     t_h = time.monotonic()
     while not rel.exists() and time.monotonic() - t_h < F.HOLD_MAX_S:
         prd(d.io, F.OVERLAY)

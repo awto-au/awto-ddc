@@ -29,6 +29,7 @@ def main() -> int:
     a = ap.parse_args()
     root = P.repo_root()
     P.LOG = rtd_proto.setup_logs("isp_write_probe").main
+    (root / f"tmp/logs/unit-{a.serial}.log").parent.mkdir(parents=True, exist_ok=True)
     ulog = (root / f"tmp/logs/unit-{a.serial}.log").open("a")
 
     def unit(s):

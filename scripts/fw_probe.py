@@ -63,6 +63,7 @@ def main() -> int:
     ap.add_argument("--scan", action="store_true")
     ap.add_argument("--max", type=int, default=R.SCAN_MAX)
     a = ap.parse_args()
+    (unit_lock.repo_root() / "tmp/logs/fw_probe.log").parent.mkdir(parents=True, exist_ok=True)
     log = (unit_lock.repo_root() / "tmp/logs/fw_probe.log").open("a", buffering=1)
 
     def say(s: str) -> None:

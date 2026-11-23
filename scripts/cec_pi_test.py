@@ -18,6 +18,7 @@ import subprocess
 import sys
 import time
 
+import isostamp
 from _repo import ROOT
 
 LOGDIR = ROOT / "tmp/logs"
@@ -76,7 +77,7 @@ def main():
     a = ap.parse_args()
     LOGDIR.mkdir(parents=True, exist_ok=True)
     log, raw = (LOGDIR / "cec_pi_test.log").open("a"), (LOGDIR / "cec_pi_test.raw.log").open("a")
-    say(f"{time.strftime('%Y-%m-%dT%H:%M:%S%z')} cec_pi_test {a.dev}", log)
+    say(f"{isostamp.now()} cec_pi_test {a.dev}", log)
     if shutil.which("cec-ctl") is None:
         say("FAIL cec-ctl not installed (apt install v4l-utils)", log)
         return 2

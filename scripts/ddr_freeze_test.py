@@ -23,6 +23,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import ddr_frame_test as T
+import isostamp
 from p037_test import rd as prd
 from p037_test import wr as pwr
 
@@ -316,7 +317,7 @@ def do_bar(d, w_px: int, h_px: int, dry: bool = False) -> None:
         rel = ROOT / "tmp/scratch/ddr_release"
         if rel.exists():
             rel.unlink()
-        T.log(f"BAR UP at {time.strftime('%H:%M:%S')}: frozen black frame, white bar x {x0}..{x0 + w_px - 1} y {y0}..{y0 + h_px - 1}; "
+        T.log(f"BAR UP at {isostamp.now()}: frozen black frame, white bar x {x0}..{x0 + w_px - 1} y {y0}..{y0 + h_px - 1}; "
               f"holding until {rel} exists (backstop {HOLD_MAX_S:.0f} s)")
         t_h = time.monotonic()
         while not rel.exists() and time.monotonic() - t_h < HOLD_MAX_S:   # register read = ~10 ms pacing, keeps the link alive
@@ -430,7 +431,7 @@ def do_figure(d, fig=None, swap: bool = False) -> None:
     rel = ROOT / "tmp/scratch/ddr_release"
     if rel.exists():
         rel.unlink()
-    T.log(f"FIGURE UP at {time.strftime('%H:%M:%S')}; holding until {rel} exists (backstop {HOLD_MAX_S:.0f} s)")
+    T.log(f"FIGURE UP at {isostamp.now()}; holding until {rel} exists (backstop {HOLD_MAX_S:.0f} s)")
     t_h = time.monotonic()
     while not rel.exists() and time.monotonic() - t_h < HOLD_MAX_S:
         prd(d.io, OVERLAY)

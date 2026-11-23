@@ -31,6 +31,7 @@ def main() -> int:
     ap.add_argument("--serial", required=True)
     ap.add_argument("--pages", default="vendor")
     a = ap.parse_args()
+    (ROOT / "tmp/logs/freeze_dump.log").parent.mkdir(parents=True, exist_ok=True)
     lf = (ROOT / "tmp/logs/freeze_dump.log").open("a")
 
     def log(s):

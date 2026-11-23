@@ -40,6 +40,7 @@ def run(binp, mapp, enable_early: bool):
 
 def main() -> int:
     binp, mapp = Path(sys.argv[1]), Path(sys.argv[2])
+    (repo_root() / "tmp/logs/msg_nohost_sim.log").parent.mkdir(parents=True, exist_ok=True)
     lg = (repo_root() / "tmp/logs/msg_nohost_sim.log").open("a")
     rc = 0
     for name, early in (("A no host", False), ("B silent host", True)):

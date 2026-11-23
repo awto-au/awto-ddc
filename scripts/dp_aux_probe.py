@@ -13,6 +13,7 @@ import sys
 import time
 from pathlib import Path
 
+import isostamp
 from _repo import ROOT
 
 LOGD = ROOT / "tmp" / "logs"
@@ -22,7 +23,7 @@ RAW = (LOGD / "dp_aux_probe.raw.log").open("a")
 
 
 def now() -> str:
-    return time.strftime("%Y-%m-%dT%H:%M:%S%z")
+    return isostamp.now()
 
 
 def out(s: str) -> None:

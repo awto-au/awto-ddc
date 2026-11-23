@@ -201,6 +201,7 @@ def main():
     from collections import Counter
     c = Counter(r[4] for r in vrows)
     msg = f"{len(vrows)} rows verified: {dict(c)} -> {out}"
+    (ROOT / "tmp/logs/ghidra_verify_names.log").parent.mkdir(parents=True, exist_ok=True)
     (ROOT / "tmp/logs/ghidra_verify_names.log").write_text(msg + "\n")
     print(msg)
 

@@ -15,6 +15,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import i2cbus
+import isostamp
 import rtd_flash_sector as F
 from rtd_flash_sector import ENGINE_OPS, PAGE, SECTOR, Rtd
 
@@ -23,7 +24,7 @@ LOG = None
 
 
 def log(s: str) -> None:
-    line = f"{time.strftime('%Y-%m-%dT%H:%M:%S%z')} {s}"
+    line = f"{isostamp.now()} {s}"
     print(line, flush=True)
     LOG.write(line + "\n"); LOG.flush()
 

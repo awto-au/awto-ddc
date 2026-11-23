@@ -11,10 +11,10 @@ Log: tmp/logs/mem_mode_sim.log
 """
 import argparse
 import sys
-import time
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
+import isostamp
 import osd_render as R
 import osd_test as T
 import sync_log as S
@@ -27,7 +27,7 @@ STEP_S = 1.0      # one display-setting re-run: 217 ms on hardware (#26 meas4k),
 
 def say(s):
     LOG.parent.mkdir(parents=True, exist_ok=True)
-    line = f"{time.strftime('%Y-%m-%dT%H:%M:%S%z')} {s}"
+    line = f"{isostamp.now()} {s}"
     print(line, flush=True)
     with LOG.open("a") as f:
         f.write(line + "\n")

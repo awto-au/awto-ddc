@@ -18,6 +18,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
+import isostamp
 from _repo import ROOT
 
 HDRH = ROOT / "fw/sdk/Project/Header/RL6449_Project.h"
@@ -41,7 +42,7 @@ C = {n: hdef(n) for n in ("AWTO_DLOG_SLOTS", "AWTO_DLOG_UNITS0", "AWTO_DLOG_HDR_
 def log(s: str) -> None:
     LOG.parent.mkdir(parents=True, exist_ok=True)
     with LOG.open("a") as f:
-        f.write(time.strftime("%Y-%m-%dT%H:%M:%S%z ") + s + "\n")
+        f.write(isostamp.now() + " " + s + "\n")
     print(s, flush=True)
 
 

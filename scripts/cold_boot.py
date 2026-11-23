@@ -52,6 +52,7 @@ def main() -> int:
         a.map = flash_registry.map_for(u["serial"])
     mp = a.map.read_text(errors="replace")
     diag, mode_a, sw = mapsym(mp, "isr_g_stAwtoDiag") or 0xF6D0, mapsym(mp, "isr_g_stModeInfo"), mapsym(mp, "isr_g_stAwtoSw")
+    (ROOT / "tmp/logs/cold_boot.log").parent.mkdir(parents=True, exist_ok=True)
     lf = (ROOT / "tmp/logs/cold_boot.log").open("a", buffering=1)
     tsv = ROOT / "tmp/logs/cold_boot.tsv"
     if not tsv.exists():

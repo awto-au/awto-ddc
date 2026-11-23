@@ -66,6 +66,7 @@ def main() -> int:
     ap.add_argument("--only")
     ap.add_argument("--n", type=int, default=30)
     a = ap.parse_args()
+    (ROOT / "tmp/logs/freeze_trials.log").parent.mkdir(parents=True, exist_ok=True)
     lf = (ROOT / "tmp/logs/freeze_trials.log").open("a")
 
     def log(s):

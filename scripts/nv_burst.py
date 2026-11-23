@@ -15,6 +15,7 @@ import sys
 import threading
 import time
 
+import isostamp
 from _repo import ROOT
 
 LOG = ROOT / "tmp/logs/nv_burst.log"
@@ -24,7 +25,7 @@ WAIT_S = 75.0
 
 def say(s: str) -> None:
     LOG.parent.mkdir(parents=True, exist_ok=True)
-    line = time.strftime("%Y-%m-%dT%H:%M:%S%z ") + s
+    line = isostamp.now() + " " + s
     with LOG.open("a") as f:
         f.write(line + "\n")
     print(line, flush=True)
