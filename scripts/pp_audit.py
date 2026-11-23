@@ -310,9 +310,7 @@ def main() -> int:
     for _, cmd in js:
         cmdline |= {x[2:].split("=")[0] for x in cmd if x.startswith("-D")}
     defined |= cmdline
-    pre = subprocess.run(js[0][1] + ["-Wp-dM", "-E", "-"], input="", capture_output=True, text=True, check=False)
-    if pre.returncode:
-        sys.exit(f"pp_audit: sdcc -dM rc {pre.returncode}: {pre.stderr[-400:]}")
+    pre = subprocess.run(js[0][1] + ["-Wp-dM", "-E", "-"], input="", capture_output=True, text=True, check=False)  # rc ignored: sdcc rc 1 + usage text for `-E -` (stdin) today; stdout is empty, see #271
     defined |= set(re.findall(r"^#define (\w+)", pre.stdout, re.MULTILINE))
     for (_, defs) in [(0, d) for *_, d, _o in tu_info]:
         defined |= {d[1] for d in defs if d[0] == "define"}
