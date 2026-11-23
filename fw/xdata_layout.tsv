@@ -33,7 +33,6 @@ freq	0xd700	2262	34
 ScalerCommonMcu	0xd700	2296	33
 RTD2014UserInterfaceCec	0xd700	2329	28
 SysSource	0xd700	2357	27
-UserCommonInterface	0xd700	2384	27
 delaycal	0xd700	2411	27
 flash_io	0xd700	2438	25
 saver	0xd700	2463	25
@@ -129,6 +128,7 @@ SysAudio	0xe380	182	1
 SysCec	0xe380	183	1
 __ovl	0xe380	184	1
 flash_screen	0xe380	185	1
+UserCommonInterface	0xe380	186	28
 RL6449_Series_GDIPhy	0xe380	252	3
 sync	0xe780	37	733
 asteroids	0xe780	770	515

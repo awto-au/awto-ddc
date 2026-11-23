@@ -363,9 +363,9 @@ const	_tDDITHER_TABLE	11
 const	_tDDITHER_TEMPOFFSET_TABLE	11
 const	_tDDR2_PLL_PHASE	10
 const	_tDISPLAY_DPTX_DRV_HBR2_TABLE	1
+const	_tEDID_PATCH_D3	10
 const	_tEDID_TABLE_D1	10
 const	_tEDID_TABLE_D2	10
-const	_tEDID_TABLE_D3	10
 const	_tFACTORY_PAGE_1_SELECT_ITEM_TABLE	11
 const	_tFACTORY_PAGE_SELECT_ITEM_TABLE	11
 const	_tFONT_FACTORY_EUROPE	2
@@ -2408,6 +2408,7 @@ fn	_UserCommonAdjustRotationDisplaySize	12
 fn	_UserCommonAdjustRotationInputSize	1
 fn	_UserCommonCecReceiveNotify	7
 fn	_UserCommonDdcciHandler	8
+fn	_UserCommonEdidPatchD3	10
 fn	_UserCommonFlashCalculateCheckSumData	7
 fn	_UserCommonFlashErasePage	7
 fn	_UserCommonFlashLoadItem	7

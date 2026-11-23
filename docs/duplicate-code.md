@@ -57,7 +57,7 @@ Normalisation: digits -> `@`; hunks classed cosmetic (name / register page / mac
 - DDC channels: `fw/ddcci` already array-driven (`tAwtoIicBase[ucE]`, one handler per engine loop); no per-channel copy left.
 - HPD / CEC: TMDS HPD shared in #292; one CEC port; DP HPD single. Nothing to merge.
 - MHL Rx2/Rx3, DPRx0: parked (`fw/sdk-parked`), no linked pair.
-- `tEDID_TABLE_D2/D3` (256 B each) differ by the port tag (`awto_edid_hdmi_d3.h`, `scripts/fw_edid_tables.py`): deliberate; a base + patch saves about 200 B, not filed.
+- `tEDID_TABLE_D2/D3` (256 B each) differed by the port tag: D3 is now the D2 table + 3 patch pairs (`awto_edid_hdmi_d3.h`, #317).
 - Tcon0..13: 14 files x 86 lines, 0 bytes linked.
 
 ## Drift found in git history

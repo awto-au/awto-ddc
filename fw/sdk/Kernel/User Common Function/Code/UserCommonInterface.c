@@ -1876,6 +1876,23 @@ bit UserCommonInterfaceGetRunDdcciCommand(void)
 #endif
 
 
+#if((_D3_INPUT_PORT_TYPE != _D3_NO_PORT) && (_D3_EMBEDDED_DDCRAM_MAX_SIZE != _EDID_SIZE_NONE))
+//--------------------------------------------------
+// Description  : D3 EDID = D2 table + patch pairs (index, value)
+// Input Value  : pucDst = copy of the D2 table
+// Output Value : None
+//--------------------------------------------------
+static void UserCommonEdidPatchD3(BYTE __xdata *pucDst)
+{
+    BYTE ucPair;
+
+    for(ucPair = 0; ucPair < sizeof(tEDID_PATCH_D3); ucPair += 2)
+    {
+        pucDst[tEDID_PATCH_D3[ucPair]] = tEDID_PATCH_D3[ucPair + 1];
+    }
+}
+#endif
+
 #if(_WRITE_EDID_TO_SYSTEM_EEPROM == _ON)
 //--------------------------------------------------
 // Description  : Restore default EDID
@@ -1947,7 +1964,7 @@ void UserCommonInterfaceNVRamRestoreEDID(void)
 #if((_D3_INPUT_PORT_TYPE != _D3_NO_PORT) && (_D3_EMBEDDED_DDCRAM_MAX_SIZE != _EDID_SIZE_NONE) && ((_D3_EMBEDDED_DDCRAM_LOCATION == _EDID_TABLE_LOCATION_SYSTEM_EEPROM) || (_D3_EMBEDDED_DDCRAM_LOCATION == _EDID_TABLE_LOCATION_FLASH)))
     for(ucCount = 0; ucCount < (_D3_EMBEDDED_DDCRAM_MAX_SIZE / sizeof(pucBuffer)); ucCount++)
     {
-        memcpy(pucBuffer, tEDID_TABLE_D3 + ucCount * sizeof(pucBuffer), sizeof(pucBuffer));
+#error "D3 EDID is D2 + patch (UserCommonEdidPatchD3): CODE location only"
 #if(_D3_EMBEDDED_DDCRAM_LOCATION == _EDID_TABLE_LOCATION_SYSTEM_EEPROM)
         UserCommonEepromRestoreEDID(_EDID_D3_ADDRESS_EEPROM + ucCount * sizeof(pucBuffer), sizeof(pucBuffer), pucBuffer);
 #elif(_D3_EMBEDDED_DDCRAM_LOCATION == _EDID_TABLE_LOCATION_FLASH)
@@ -2379,7 +2396,8 @@ void UserCommonInterfaceLoadEmbeddedEdidDataByPort(EnumInputPortEdid enumInputPo
 
 #if(_D3_EMBEDDED_DDCRAM_LOCATION == _EDID_TABLE_LOCATION_CODE)
             memset(MCU_DDCRAM_D3, 0, _D3_EMBEDDED_DDCRAM_MAX_SIZE);
-            memcpy(MCU_DDCRAM_D3, tEDID_TABLE_D3, _D3_EMBEDDED_DDCRAM_MAX_SIZE);
+            memcpy(MCU_DDCRAM_D3, tEDID_TABLE_D2, _D3_EMBEDDED_DDCRAM_MAX_SIZE);
+            UserCommonEdidPatchD3(MCU_DDCRAM_D3);
 #elif(_D3_EMBEDDED_DDCRAM_LOCATION == _EDID_TABLE_LOCATION_SYSTEM_EEPROM)
             UserCommonNVRamRead(_EDID_D3_ADDRESS_EEPROM, _D3_EMBEDDED_DDCRAM_MAX_SIZE, MCU_DDCRAM_D3);
 #elif(_D3_EMBEDDED_DDCRAM_LOCATION == _EDID_TABLE_LOCATION_FLASH)
