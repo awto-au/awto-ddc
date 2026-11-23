@@ -551,7 +551,7 @@
  ],
  "flash_fetch": {
   "note": "code is read from the SPI flash: uncached while FDA0[0] cache_en = 0 (reset state; the SDK enables it in ScalerMcuInitial), else through a line cache. Stall = flash clocks x (CPU clk per flash clk = FFE9[3:0] / FFEE[5:2]) minus the base byte cycles.",
-  "common_end": 8192,
+  "common_end": 10240,
   "line_bytes": 16,
   "line_bytes_source": "regdb 0xFDA2..0xFDAF: cache address registers resolve [7:4] = 16 B",
   "cmd_flash_clk": 40,

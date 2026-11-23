@@ -1,6 +1,7 @@
-#common 0x5000
-#resid_end 0xd1c
-#stubs 1102
+#common 0x2800
+#local 1
+#resid_end 0x890
+#stubs 37
 # kind	name	region    (bank map: scripts/sdcc_layout.py; region C = common, n = bank n)
 const	_OperationFactoryTable	6
 const	_UserInterfaceGetOverScanStatus_tusOverscanEnTable_10000_1380	6
@@ -18,29 +19,29 @@ const	___str_107	8
 const	___str_108	8
 const	___str_109	8
 const	___str_11	C
-const	___str_110	C
-const	___str_111	C
-const	___str_112	C
-const	___str_113	C
-const	___str_114	C
-const	___str_115	C
-const	___str_116	C
-const	___str_117	C
-const	___str_118	C
-const	___str_119	C
+const	___str_110	8
+const	___str_111	8
+const	___str_112	8
+const	___str_113	8
+const	___str_114	8
+const	___str_115	8
+const	___str_116	8
+const	___str_117	8
+const	___str_118	8
+const	___str_119	8
 const	___str_12	C
-const	___str_120	C
-const	___str_121	C
-const	___str_122	C
-const	___str_123	C
-const	___str_124	C
-const	___str_125	C
-const	___str_126	C
-const	___str_127	C
-const	___str_128	C
-const	___str_129	C
+const	___str_120	8
+const	___str_121	8
+const	___str_122	1
+const	___str_123	1
+const	___str_124	1
+const	___str_125	1
+const	___str_126	1
+const	___str_127	1
+const	___str_128	1
+const	___str_129	1
 const	___str_13	C
-const	___str_130	C
+const	___str_130	1
 const	___str_131	8
 const	___str_132	8
 const	___str_133	8
@@ -61,7 +62,7 @@ const	___str_146	8
 const	___str_147	8
 const	___str_148	8
 const	___str_149	8
-const	___str_15	C
+const	___str_15	11
 const	___str_150	8
 const	___str_151	8
 const	___str_152	8
@@ -112,14 +113,14 @@ const	___str_192	8
 const	___str_193	8
 const	___str_194	8
 const	___str_195	8
-const	___str_196	C
-const	___str_197	C
-const	___str_198	C
-const	___str_199	C
+const	___str_196	8
+const	___str_197	8
+const	___str_198	8
+const	___str_199	8
 const	___str_2	8
-const	___str_20	C
-const	___str_200	C
-const	___str_201	C
+const	___str_20	11
+const	___str_200	8
+const	___str_201	8
 const	___str_202	11
 const	___str_203	11
 const	___str_204	11
@@ -128,7 +129,7 @@ const	___str_206	11
 const	___str_207	11
 const	___str_208	11
 const	___str_209	11
-const	___str_21	C
+const	___str_21	11
 const	___str_210	11
 const	___str_211	11
 const	___str_212	11
@@ -139,7 +140,7 @@ const	___str_216	11
 const	___str_217	11
 const	___str_218	11
 const	___str_219	11
-const	___str_22	C
+const	___str_22	11
 const	___str_220	11
 const	___str_221	11
 const	___str_222	11
@@ -147,11 +148,11 @@ const	___str_223	11
 const	___str_224	11
 const	___str_225	11
 const	___str_23	C
-const	___str_24	C
-const	___str_25	C
-const	___str_26	C
-const	___str_27	C
-const	___str_28	C
+const	___str_24	11
+const	___str_25	11
+const	___str_26	11
+const	___str_27	11
+const	___str_28	11
 const	___str_29	C
 const	___str_3	8
 const	___str_30	8
@@ -164,7 +165,7 @@ const	___str_36	8
 const	___str_37	8
 const	___str_38	8
 const	___str_39	8
-const	___str_4	C
+const	___str_4	11
 const	___str_40	8
 const	___str_41	8
 const	___str_42	8
@@ -208,7 +209,7 @@ const	___str_76	8
 const	___str_77	8
 const	___str_78	8
 const	___str_79	8
-const	___str_8	C
+const	___str_8	11
 const	___str_80	8
 const	___str_81	8
 const	___str_82	8
@@ -219,7 +220,7 @@ const	___str_86	8
 const	___str_87	8
 const	___str_88	8
 const	___str_89	8
-const	___str_9	C
+const	___str_9	11
 const	___str_90	8
 const	___str_91	8
 const	___str_92	8
@@ -297,7 +298,7 @@ const	_tAwtoCecNameS	8
 const	_tAwtoCecOp	8
 const	_tAwtoDdcCaps	1
 const	_tAwtoDdcReg	8
-const	_tAwtoDemoRgb	C
+const	_tAwtoDemoRgb	1
 const	_tAwtoIicBase	C
 const	_tAwtoInA	10
 const	_tAwtoInAddr	10
@@ -310,7 +311,7 @@ const	_tAwtoInKindS	8
 const	_tAwtoInPinS	8
 const	_tAwtoInSlow	10
 const	_tAwtoInSrc	10
-const	_tAwtoPal	C
+const	_tAwtoPal	1
 const	_tAwtoPanelCol	8
 const	_tAwtoPanelRow	C
 const	_tAwtoPanelW	8

@@ -40,19 +40,7 @@ def test_header_match_and_headerless_accepted(tmp_path):
     L.Layout().check_header(0x6000, 0xC00)           # new layout / no header: nothing to compare
 
 
-def test_sdcc_bank_cli_refuses_mismatched_layout(tmp_path):
-    """sdcc_bank --common-max differing from the layout header exits non-zero before any placement."""
-    import os
-    import subprocess
-    (tmp_path / "asm").mkdir()
-    lay = _file(tmp_path, "#common 0x5000\n#resid_end 0xc00\n")
-    _chip(tmp_path)
-    env = dict(os.environ, AWTO_DDC_REPO=str(tmp_path))
-    r = subprocess.run([sys.executable, str(Path(L.__file__).parent / "sdcc_bank.py"), "--asm", str(tmp_path / "asm"),
-                        "--out", str(tmp_path / "out"), "--common-max", "0x6000", "--layout", str(lay)],
-                       env=env, capture_output=True, text=True, timeout=30, check=False)   # 30 s: stall backstop, run takes ~0.1 s
-    assert r.returncode != 0 and "refusing" in r.stderr
-    assert lay.read_text().startswith("#common 0x5000")
+# A bank map made with another common / resid_end is repacked (offsets are build output): no CLI refusal any more.
 
 
 # --- #51.4: the tracked layout is only replaced by fw_build after link + check ---------------------------------

@@ -669,7 +669,8 @@ def main() -> int:
 
     if reuse:                                                # pass A: re-home fns whose bank has no room left
         its = slot_items(True)
-        for i in range(int(lay.header.get("stubs", "0"))):                # the last build's stubs: common room kept for them
+        stale = a.local_stubs and lay.header.get("local") != "1"          # a map from before local stubs counted every stub as common
+        for i in range(0 if stale else int(lay.header.get("stubs", "0"))):                # the last build's stubs: common room kept for them
             st = L.Item("stub", f"_reserved{i}", STUB_SIZE, "C", "", slot=STUB_SIZE)
             st.fixed = True
             its.append(st)
@@ -858,7 +859,7 @@ def main() -> int:
         apply_placed(placed)
         check_place(place, lambda c: placed[("fn" if c.area == "CSEG" else "const", c.name)][0])
         placed_slot = {("ST" if k[0] == "stub" else "CH") + k[1]: v[2] for k, v in placed.items()}
-        lay.header.update({"common": hex(a.common_max), "resid_end": hex(a.resid_end), "stubs": str(len(stubs) - len(local))})   # common stubs: their room is reserved first next build
+        lay.header.update({"common": hex(a.common_max), "resid_end": hex(a.resid_end), "stubs": str(len(stubs) - len(local)), "local": "1" if a.local_stubs else "0"})   # common stubs: their room is reserved first next build
         lay.header.pop("slot_pad", None)
         for (kind, name), (rid, off, sl) in placed.items():
             an = ("ST" if kind == "stub" else "CH") + name

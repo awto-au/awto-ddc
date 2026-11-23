@@ -61,10 +61,9 @@ Image sectors (4 KiB, of 224) changed by one small edit vs the unedited build of
 - Residual hole: CSEG ends 0x82F, XINIT is pinned at 0xCBC-0xD1C (`resid_end` 0xd1c): 1165 B free in every common copy. A lower `resid_end` (fw/rl6449_memory.toml) is accepted by the layout and moves no slot.
 - Stub = one per banked function called from another bank / common or address-taken (not per call site): moving a function between banks changes the stub count of its callers.
 
-## Common shrink (branch common-shrink, awto-ddc issue "Shrink the common region")
-- `common_end` 0x2000 (was 0x5000), `resid_end` 0x890; image 14 banks, common used 0x1eb4 (unit-3 image).
-- Stubs of fns called only from banks are emitted per caller bank (`--local-stubs`, area `ST<bank>_<fn>`, symbol `__bs<fn>_b<bank>`); only stubs with a common / ISR caller stay in common (38).
-- Hot helpers left common (`--demote-hot`, one-off with `--recompact`); `_ScalerTimerDelayXms` / `_ScalerTimerPollingFlagProc` read SP and stay pinned.
-- CONST handed only to `--ptr-safe` common readers (`_AwtoPutStr`) or to one banked callee (`--const-to-callee`) lives in the user / callee bank.
-- `--inline-consts CUT` (off): emits a CONST after each user fn; fw_link_check needs inline-data awareness first.
+## Common shrink (awto-ddc #333)
+- `common_end` 0x2800 (was 0x5000), `resid_end` 0x890; offsets are build output (compact packing), the tracked `fw/bank_map.tsv` keeps the bank decision.
+- Stubs of fns called only from banks are emitted per caller bank (`--local-stubs`, default on; area `ST<bank>_<fn>`, symbol `__bs<fn>_b<bank>`); only stubs with a common / ISR caller stay in common. Address-taken fns (pointer table in a CONST of the same bank) qualify, address-taken from code does not.
+- CONST handed only to `--ptr-safe` common readers (default `_AwtoPutStr`) or to one banked callee (`--const-to-callee`, default on) lives in the user / callee bank.
+- `--inline-consts CUT` (off): emits a CONST after each user fn; fw_link_check reports false findings (227 at cut 64) until it knows each chunk's code size.
 - Audit: `scripts/common_audit.py` (common chunk classes, stub callers by bank, const classes, helper duplication).

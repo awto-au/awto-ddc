@@ -44,7 +44,7 @@ def load(asm, lay_path):
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--asm", default=str(ROOT / "tmp/sdcc-port/asm_ovl"))
-    ap.add_argument("--layout", default=str(ROOT / "fw/bank_layout.tsv"))
+    ap.add_argument("--layout", default=str(ROOT / "fw/bank_map.tsv"))
     a = ap.parse_args()
     mods, funcs, consts, lay = load(a.asm, a.layout)
     wh = lambda c: getattr(c, "where", None)

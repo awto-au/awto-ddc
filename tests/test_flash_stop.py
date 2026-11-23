@@ -124,7 +124,7 @@ def test_no_time_stop_once_writing(clock, tmp_path):
 
 def test_boot_last_order():
     per = I.BANK // SECTOR
-    c = I.COMMON_END // SECTOR
+    c = -(-I.COMMON_END // SECTOR)                        # first sector with no common byte (a straddling sector counts as common)
     diff = [0, 1, c, c + 1, per, per + c, 2 * per + c, 2 * per]
     got = I.boot_last(diff)
     assert got == [per + c, 2 * per + c, c, c + 1, per, 2 * per, 0, 1]   # banked 1.., bank 0 banked, common 1.., bank 0 common
