@@ -42,7 +42,6 @@ StructSignKeyInfoType g_stSignKeyInfoType;
 
 #if(_HDCP_2_2_FUNCTION_GEN == _HDCP_2_2_GEN_2)
 #if(_HDCP_2_2_SUPPORT == _ON)
-StructHdcp2DownLoadKeyType g_stRxHdcp2DownLoadKeyType;
 
 BYTE g_ucHdcp2AuthActive;
 
@@ -75,14 +74,12 @@ BYTE g_pucDpHdcp2RrxErrta1[8] = {0xE1, 0x7A,0xB0,0xFD, 0x0F, 0x54, 0x40, 0x52};
 #if(_HDCP_2_2_FUNCTION_GEN == _HDCP_2_2_GEN_2)
 #if(_HDCP_2_2_SUPPORT == _ON)
 void ScalerHdcp2DkeyCalculate_EXINT0(BYTE ucDkeyCount, BYTE *pucHdcp2Rtx, BYTE *pucHdcp2Rrx, BYTE *pucHdcp2Km, BYTE *pucHdcp2Rn);
-void ScalerHdcp2DownLoadCalculateKey(WORD usSubAddr, WORD usLength, BYTE *pucReadArray, BYTE ucRSAType);
 BYTE ScalerHdcp2HPrimeCalculate_EXINT0(BYTE *pucHdcp2dKey0, BYTE *pucHdcp2dKey1, BYTE *pucHdcp2Rtx, BYTE *pucHdcp2TxCaps, BYTE *pucHdcp2RxCaps);
 void ScalerHdcp2Handler(void);
 void ScalerHdcp2Initial(void);
 void ScalerHdcp2IntHandler_EXINT0(void);
 BYTE ScalerHdcp2LPrimeCalculate_EXINT0(BYTE *pucHdcp2dKey0, BYTE *pucHdcp2dKey1, BYTE *pucHdcp2Rrx, BYTE *pucHdcp2Rn);
 void ScalerHdcp2RxAesOfflineCtrl_EXINT0(BYTE *pucInputArray, BYTE *pucCipherArray);
-void ScalerHdcp2RxDownLoadCalculateKey(WORD usSubAddr, WORD usLength, BYTE *pucReadArray, BYTE ucRSAType);
 void ScalerHdcp2RxGetRrx_EXINT0(BYTE *pucHdcp2Rrx);
 BYTE ScalerHdcp2RxHmacSha256Calculate_EXINT0(BYTE *pucInputArray1, BYTE *pucInputArray2);
 bit ScalerHdcp2RxPairingCalculate(BYTE *pucHdcp2KPriv, BYTE ucIndex);
@@ -117,6 +114,7 @@ void ScalerHdcp2ResetTMDSProc(BYTE ucInputPort);
 void ScalerHdcp2ReAuthEvent(EnumScalerTimerEventID enumEventID);
 BYTE ScalerHdcp2RxRsaCalculate_EXINT0(BYTE *pucEkpubKmArray);
 BYTE ScalerHdcp2RxRsaOaepCalculate_EXINT0(BYTE *pucKmArray);
+void ScalerHdcp2ClearBytes_EXINT0(BYTE *pucDst, BYTE ucLength);
 #endif
 
 #if((_DP_HDCP_2_2_SUPPORT == _ON) && (_DP_TX_SUPPORT == _ON))
@@ -147,6 +145,7 @@ void ScalerHdcp2ReleaseRsaforSign(void);
 //--------------------------------------------------
 void ScalerHdcp2DkeyCalculate_EXINT0(BYTE ucDkeyCount, BYTE *pucHdcp2Rtx, BYTE *pucHdcp2Rrx, BYTE *pucHdcp2Km, BYTE *pucHdcp2Rn)
 {
+    BYTE pData_EXINT[1];   // per-function scratch (#328)
     switch(ucDkeyCount)
     {
         case _HDCP_2_2_DKEY_0:
@@ -232,16 +231,6 @@ void ScalerHdcp2DkeyCalculate_EXINT0(BYTE ucDkeyCount, BYTE *pucHdcp2Rtx, BYTE *
             break;
     }
 }
-//--------------------------------------------------------------------------------------------------------------------------
-// Description  : HDCP 2.2 Down Load RSA Key
-// Input Value  : usSubAddr == > start address, usLength == > key Length,
-//                pReadArray == > Key Array, ucRSAType == > Key Type
-// Output Value : None
-//--------------------------------------------------------------------------------------------------------------------------
-void ScalerHdcp2DownLoadCalculateKey(WORD usSubAddr, WORD usLength, BYTE *pucReadArray, BYTE ucRSAType)
-{
-    ScalerHdcp2RxDownLoadCalculateKey(usSubAddr, usLength, pucReadArray, ucRSAType);
-}
 //--------------------------------------------------
 // Description  : HDCP 2.2 Hprime Calculate in INT
 // Input Value  : None
@@ -249,6 +238,7 @@ void ScalerHdcp2DownLoadCalculateKey(WORD usSubAddr, WORD usLength, BYTE *pucRea
 //--------------------------------------------------
 BYTE ScalerHdcp2HPrimeCalculate_EXINT0(BYTE *pucHdcp2dKey0, BYTE *pucHdcp2dKey1, BYTE *pucHdcp2Rtx, BYTE *pucHdcp2TxCaps, BYTE *pucHdcp2RxCaps)
 {
+    BYTE pData_EXINT[1];   // per-function scratch (#328)
     // H = HMAC-SHA256(rtx || RxCaps || TxCaps, kd)
     // HMAC(text) = HMAC(K, text) = SHA256((K0 XOR opad) || SHA256((KO XOR ipad) || text))
     // Calculate SHA256((KO XOR ipad) || text)
@@ -424,6 +414,7 @@ void ScalerHdcp2IntHandler_EXINT0(void)
 //--------------------------------------------------
 BYTE ScalerHdcp2LPrimeCalculate_EXINT0(BYTE *pucHdcp2dKey0, BYTE *pucHdcp2dKey1, BYTE *pucHdcp2Rrx, BYTE *pucHdcp2Rn)
 {
+    BYTE pData_EXINT[1];   // per-function scratch (#328)
     for(pData_EXINT[0] = 0; pData_EXINT[0] < 64; pData_EXINT[0]++)
     {
         if(pData_EXINT[0] < 8)
@@ -477,6 +468,7 @@ BYTE ScalerHdcp2LPrimeCalculate_EXINT0(BYTE *pucHdcp2dKey0, BYTE *pucHdcp2dKey1,
 //--------------------------------------------------
 void ScalerHdcp2RxAesOfflineCtrl_EXINT0(BYTE *pucInputArray, BYTE *pucCipherArray)
 {
+    BYTE pData_EXINT[1];   // per-function scratch (#328)
     // HDCP 2.2 Reset
     ScalerSetBit_EXINT(P63_10_HDCP_RSA_CTRL0, ~_BIT3, 0x00);
     ScalerSetBit_EXINT(P63_10_HDCP_RSA_CTRL0, ~_BIT3, _BIT3);
@@ -500,60 +492,6 @@ void ScalerHdcp2RxAesOfflineCtrl_EXINT0(BYTE *pucInputArray, BYTE *pucCipherArra
     while((ScalerGetBit_EXINT(P63_60_HDCP_AES_CTRL, _BIT6) == _BIT6) && (--pData_EXINT[0] != 0))
     {
         DELAY_5US_EXINT();
-    }
-}
-//--------------------------------------------------------------------------------------------------------------------------
-// Description  : HDCP 2.2 Down Load RSA Key for Rx Key
-// Input Value  : usSubAddr == > start address, usLength == > key Length,
-//                pReadArray == > Key Array, ucRSAType == > Key Type
-// Output Value : None
-//--------------------------------------------------------------------------------------------------------------------------
-void ScalerHdcp2RxDownLoadCalculateKey(WORD usSubAddr, WORD usLength, BYTE *pucReadArray, BYTE ucRSAType)
-{
-    switch(ucRSAType)
-    {
-        case _HDCP_2_2_RSA_D_KEY:
-
-            memcpy(&g_stRxHdcp2DownLoadKeyType.pucHdcp2DKey[usSubAddr], pucReadArray, usLength);
-
-            break;
-
-
-        case _HDCP_2_2_RSA_RRMODN_KEY:
-
-            memcpy(&g_stRxHdcp2DownLoadKeyType.pucHdcp2Rrmodn[usSubAddr], pucReadArray, usLength);
-
-            break;
-
-        case _HDCP_2_2_RSA_N_PINV:
-
-            memcpy(&g_stRxHdcp2DownLoadKeyType.pucHdcp2Npinv[usSubAddr], pucReadArray, usLength);
-
-            break;
-
-        case _HDCP_2_2_CERT_RX:
-
-            memcpy(&g_stRxHdcp2DownLoadKeyType.pucHdcp2Certrx[usSubAddr], pucReadArray, usLength);
-
-            break;
-
-        case _HDCP_2_2_LC:
-
-            memcpy(&g_stRxHdcp2DownLoadKeyType.pucHdcp2Lc[usSubAddr], pucReadArray, usLength);
-
-            break;
-
-#if(_HDCP_2_2_ERRATA_TEST_SUPPORT == _ON)
-        case _HDCP_2_2_KPUB_KM:
-
-            memcpy(&g_stRxHdcp2DownLoadKeyType.pucHdcp2KpubKm[usSubAddr], pucReadArray, usLength);
-
-            break;
-#endif
-
-        default:
-
-            break;
     }
 }
 //--------------------------------------------------
@@ -580,6 +518,7 @@ void ScalerHdcp2RxGetRrx_EXINT0(BYTE *pucHdcp2Rrx)
 //--------------------------------------------------
 BYTE ScalerHdcp2RxHmacSha256Calculate_EXINT0(BYTE *pucInputArray1, BYTE *pucInputArray2)
 {
+    BYTE pData_EXINT[2];   // per-function scratch (#328)
     for(pData_EXINT[1] = 0; pData_EXINT[1] < 64; pData_EXINT[1]++)
     {
         // K0 XOR ipad = 512 bit
@@ -715,6 +654,7 @@ bit ScalerHdcp2RxSha256Calculate(BYTE *pucInputArray, BYTE ucCalCount)
 //--------------------------------------------------
 BYTE ScalerHdcp2RxSha256Calculate_EXINT0(BYTE *pucInputArray, BYTE ucCalCount)
 {
+    BYTE pData_EXINT[2];   // per-function scratch (#328)
     // Set 1, Then Set 0 for Reset SHA256 Module
     ScalerSetBit_EXINT(P63_30_HDCP_SHA_CONTRL, ~_BIT3, _BIT3);
 
@@ -833,6 +773,7 @@ void ScalerHdcp2RxGenRrx_EXINT0(BYTE *pucInputArray)
 //--------------------------------------------------
 void ScalerHdcp2DkeyCalculate_WDINT(BYTE ucDkeyCount, BYTE *pucHdcp2Rtx, BYTE *pucHdcp2Rrx, BYTE *pucHdcp2Km, BYTE *pucHdcp2Rn)
 {
+    BYTE pData_EXINT[1];   // per-function scratch (#328)
     switch(ucDkeyCount)
     {
         case _HDCP_2_2_DKEY_0:
@@ -926,6 +867,7 @@ void ScalerHdcp2DkeyCalculate_WDINT(BYTE ucDkeyCount, BYTE *pucHdcp2Rtx, BYTE *p
 //--------------------------------------------------
 void ScalerHdcp2RxAesOfflineCtrl_WDINT(BYTE *pucInputArray, BYTE *pucCipherArray)
 {
+    BYTE pData_EXINT[1];   // per-function scratch (#328)
     // HDCP 2.2 Reset
     ScalerSetBit_EXINT(P63_10_HDCP_RSA_CTRL0, ~_BIT3, 0x00);
     ScalerSetBit_EXINT(P63_10_HDCP_RSA_CTRL0, ~_BIT3, _BIT3);
@@ -1256,7 +1198,7 @@ bit ScalerHdcp2RxRsaCalculate(BYTE *pucEkpubKmArray)
         // Load RRmodN
         ScalerSetByte(P63_16_HDCP_RSA_DATA_ADDR, (BYTE)(0x30 + (15 - pData[0])));
 
-        memcpy((volatile BYTE xdata *)P63_17_HDCP_RSA_DATA_IN_DATA7, &g_stRxHdcp2DownLoadKeyType.pucHdcp2Rrmodn[pData[0] << 3], 8);
+        UserCommonInterfaceGetHdcp2RSARRModN((pData[0] << 3), 8, (BYTE xdata *)P63_17_HDCP_RSA_DATA_IN_DATA7);
     }
 
     for(pData[0] = 0; pData[0] < 16; pData[0]++)
@@ -1266,7 +1208,7 @@ bit ScalerHdcp2RxRsaCalculate(BYTE *pucEkpubKmArray)
         // Load N Key
         ScalerSetByte(P63_16_HDCP_RSA_DATA_ADDR, (BYTE)(0x90 + (15 - pData[0])));
 
-        memcpy((volatile BYTE xdata *)P63_17_HDCP_RSA_DATA_IN_DATA7, &g_stRxHdcp2DownLoadKeyType.pucHdcp2Certrx[(pData[0] << 3) + 5], 8);
+        UserCommonInterfaceGetHdcp2Certrx(((pData[0] << 3) + 5), 8, (BYTE xdata *)P63_17_HDCP_RSA_DATA_IN_DATA7);
     }
 
     for(pData[0] = 0; pData[0] < 16; pData[0]++)
@@ -1276,11 +1218,11 @@ bit ScalerHdcp2RxRsaCalculate(BYTE *pucEkpubKmArray)
         // Load D Key
         ScalerSetByte(P63_16_HDCP_RSA_DATA_ADDR, (BYTE)(0xC0 + (15 - pData[0])));
 
-        memcpy((volatile BYTE xdata *)P63_17_HDCP_RSA_DATA_IN_DATA7, &g_stRxHdcp2DownLoadKeyType.pucHdcp2DKey[pData[0] << 3], 8);
+        UserCommonInterfaceGetHdcp2RSADkey((pData[0] << 3), 8, (BYTE xdata *)P63_17_HDCP_RSA_DATA_IN_DATA7);
     }
 
     // Load Npinv to RSA Module
-    memcpy((volatile BYTE xdata *)P63_12_HDCP_RSA_NP_INV_3, &g_stRxHdcp2DownLoadKeyType.pucHdcp2Npinv, 4);
+    UserCommonInterfaceGetHdcp2RSANpinv(0, 4, (BYTE xdata *)P63_12_HDCP_RSA_NP_INV_3);
 
     // Set RSA Write key done
     ScalerSetBit(P63_10_HDCP_RSA_CTRL0, ~_BIT0, _BIT0);
@@ -1556,6 +1498,7 @@ void ScalerHdcp2ReAuthEvent(EnumScalerTimerEventID enumEventID)
 //--------------------------------------------------
 BYTE ScalerHdcp2RxRsaCalculate_EXINT0(BYTE *pucEkpubKmArray)
 {
+    BYTE pData_EXINT[1];   // per-function scratch (#328)
     // Enable HDCP 2.2 RSA Module
     ScalerSetBit_EXINT(P63_10_HDCP_RSA_CTRL0, ~(_BIT7 | _BIT6 | _BIT5), (_BIT7 | _BIT5));
 
@@ -1583,7 +1526,7 @@ BYTE ScalerHdcp2RxRsaCalculate_EXINT0(BYTE *pucEkpubKmArray)
         // Load RRmodN
         ScalerSetByte_EXINT(P63_16_HDCP_RSA_DATA_ADDR, (BYTE)(0x30 + (15 - pData_EXINT[0])));
 
-        memcpy((volatile BYTE xdata *)P63_17_HDCP_RSA_DATA_IN_DATA7, &g_stRxHdcp2DownLoadKeyType.pucHdcp2Rrmodn[pData_EXINT[0] << 3], 8);
+        UserCommonInterfaceGetHdcp2RSARRModN_EXINT0((pData_EXINT[0] << 3), 8, (BYTE xdata *)P63_17_HDCP_RSA_DATA_IN_DATA7);
     }
 
     for(pData_EXINT[0] = 0; pData_EXINT[0] < 16; pData_EXINT[0]++)
@@ -1593,7 +1536,7 @@ BYTE ScalerHdcp2RxRsaCalculate_EXINT0(BYTE *pucEkpubKmArray)
         // Load N Key
         ScalerSetByte_EXINT(P63_16_HDCP_RSA_DATA_ADDR, (BYTE)(0x90 + (15 - pData_EXINT[0])));
 
-        memcpy((volatile BYTE xdata *)P63_17_HDCP_RSA_DATA_IN_DATA7, &g_stRxHdcp2DownLoadKeyType.pucHdcp2Certrx[(pData_EXINT[0] << 3) + 5], 8);
+        UserCommonInterfaceGetHdcp2Certrx_EXINT0(((pData_EXINT[0] << 3) + 5), 8, (BYTE xdata *)P63_17_HDCP_RSA_DATA_IN_DATA7);
     }
 
     for(pData_EXINT[0] = 0; pData_EXINT[0] < 16; pData_EXINT[0]++)
@@ -1603,11 +1546,11 @@ BYTE ScalerHdcp2RxRsaCalculate_EXINT0(BYTE *pucEkpubKmArray)
         // Load D Key
         ScalerSetByte_EXINT(P63_16_HDCP_RSA_DATA_ADDR, (BYTE)(0xC0 + (15 - pData_EXINT[0])));
 
-        memcpy((volatile BYTE xdata *)P63_17_HDCP_RSA_DATA_IN_DATA7, &g_stRxHdcp2DownLoadKeyType.pucHdcp2DKey[pData_EXINT[0] << 3], 8);
+        UserCommonInterfaceGetHdcp2RSADkey_EXINT0((pData_EXINT[0] << 3), 8, (BYTE xdata *)P63_17_HDCP_RSA_DATA_IN_DATA7);
     }
 
     // Load Npinv to RSA Module
-    memcpy((volatile BYTE xdata *)P63_12_HDCP_RSA_NP_INV_3, &g_stRxHdcp2DownLoadKeyType.pucHdcp2Npinv, 4);
+    UserCommonInterfaceGetHdcp2RSANpinv_EXINT0(0, 4, (BYTE xdata *)P63_12_HDCP_RSA_NP_INV_3);
 
     // Set RSA Write key done
     ScalerSetBit_EXINT(P63_10_HDCP_RSA_CTRL0, ~_BIT0, _BIT0);
@@ -1630,12 +1573,26 @@ BYTE ScalerHdcp2RxRsaCalculate_EXINT0(BYTE *pucEkpubKmArray)
     return _FALSE;
 }
 //--------------------------------------------------
+// Description  : Zero a buffer (the library memset is an asm helper that cannot be cloned for an ISR, #44)
+// Input Value  : pucDst, ucLength
+// Output Value : None
+//--------------------------------------------------
+void ScalerHdcp2ClearBytes_EXINT0(BYTE *pucDst, BYTE ucLength)
+{
+    while(ucLength-- != 0)
+    {
+        *pucDst++ = 0;
+    }
+}
+
+//--------------------------------------------------
 // Description  : HDCP 2.2 RSA Oaep Calculate in INT
 // Input Value  : None
 // Output Value : None
 //--------------------------------------------------
 BYTE ScalerHdcp2RxRsaOaepCalculate_EXINT0(BYTE *pucKmArray)
 {
+    BYTE pData_EXINT[1];   // per-function scratch (#328)
     BYTE pucHdcp2RsaOaepInput[128];
 
     // Read Out RSA Message
@@ -1664,7 +1621,7 @@ BYTE ScalerHdcp2RxRsaOaepCalculate_EXINT0(BYTE *pucKmArray)
     {
         // Load Second Block 512 Bit Data
         memcpy(g_pucHdcp2SHA256Input, &pucHdcp2RsaOaepInput[97], 31);
-        memset(&g_pucHdcp2SHA256Input[31], 0, 33);
+        ScalerHdcp2ClearBytes_EXINT0(&g_pucHdcp2SHA256Input[31], 33);
         g_pucHdcp2SHA256Input[35] = 0x80;
         g_pucHdcp2SHA256Input[62] = 0x03;
         g_pucHdcp2SHA256Input[63] = 0x18;
@@ -1677,7 +1634,7 @@ BYTE ScalerHdcp2RxRsaOaepCalculate_EXINT0(BYTE *pucKmArray)
                 g_pucHdcp2SHA256Input[pData_EXINT[0]] = pucHdcp2RsaOaepInput[1 + pData_EXINT[0]] ^ ScalerGetByte_EXINT((P63_35_HDCP_SHA_0 + pData_EXINT[0]));
             }
 
-            memset(&g_pucHdcp2SHA256Input[32], 0, 32);
+            ScalerHdcp2ClearBytes_EXINT0(&g_pucHdcp2SHA256Input[32], 32);
             g_pucHdcp2SHA256Input[36] = 0x80;
             g_pucHdcp2SHA256Input[62] = 0x01;
             g_pucHdcp2SHA256Input[63] = 0x20;

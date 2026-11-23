@@ -159,7 +159,7 @@ def assign(items, layout, common_lo, common_hi, nbanks, bank_cap, log=print, fil
             pending.append(it)
     moved, repacked = {}, set()
     if pending:
-        pending.sort(key=lambda it: (not it.fixed,) + order(it))
+        pending.sort(key=lambda it: (not it.fixed, it.is_const is False, 0 if it.is_const or it.key in layout.rows else -it.slot, it.module, it.key[1]))   # new fns largest first (first-fit decreasing)
     for it in pending:
         if it.region == "C" or it.fixed:     # a fixed const whose bank is full falls back to common (reachable from every bank)
             cands = [it.region] + (["C"] if it.is_const and it.region != "C" else [])
@@ -193,7 +193,7 @@ def assign(items, layout, common_lo, common_hi, nbanks, bank_cap, log=print, fil
             raise SystemExit(f"{labels[it.key]}: no room for {it.key[1]} ({it.slot} B) in "
                              f"{'common' if it.region == 'C' else 'bank %s' % it.region}: {regs[it.region].free()} B free")
         if done is None:
-            raise SystemExit(f"layout: no room for {it.key} ({it.slot} B) in any region; free: "
+            raise SystemExit(f"layout: no room for {it.key} ({it.slot} B) in {cands}; free: "
                              f"{ {k: v.free() for k, v in regs.items()} }")
         if done != it.region:
             moved[it.key] = done

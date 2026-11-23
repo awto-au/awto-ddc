@@ -268,7 +268,7 @@ def render(mod, area_of, stubs_needed, extra_globl, stub_area=lambda f: "CSEG"):
         out.append(f"\t.globl {g}")
     groups = defaultdict(list)
     for c in mod.chunks:
-        lines = []
+        lines = [f";@place group={c.group}"] if c.group else ([f";@place bank={c.pin}"] if c.pin is not None else [])   # a re-rendered module keeps its #pragma place pins
         for l in c.lines:
             m = CALL.match(l.split(";", 1)[0]) if not l.startswith(";") else None
             if m and m.group(4) in stubs_needed and stubs_needed[m.group(4)][1] != c.bank:

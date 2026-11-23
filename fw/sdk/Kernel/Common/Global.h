@@ -1080,6 +1080,8 @@ typedef enum
 //--------------------------------------------------
 #define PDATA_WORD(x)                           (((WORD *)pData)[x])
 #define PDATA_DWORD(x)                          (((DWORD *)pData)[x])
+#define PDATA_WORD_EXINT(x)                     (((WORD *)pData_EXINT)[x])   // pData_EXINT = per-function local (#328)
+#define PDATA_DWORD_EXINT(x)                    (((DWORD *)pData_EXINT)[x])
 
 //--------------------------------------------------
 // Macro of BYTE Pointer

@@ -2607,7 +2607,7 @@ extern bit SysMachineOffOrGoing(void);
 #define _HDMI_FREESYNC_SUPPORT                                  _OFF
 #define _HDMI_HDR10_SUPPORT                                     _OFF
 #define _HDMI_FREESYNC_II_SUPPORT                               _OFF
-#define _TMDS_HDCP_2_2_SUPPORT                                  _OFF
+#define _TMDS_HDCP_2_2_SUPPORT                                  _ON
 
 //--------------------------------------------------
 // HDMI CTS Option
@@ -2628,7 +2628,7 @@ extern bit SysMachineOffOrGoing(void);
 #define _DP_FREESYNC_SUPPORT                                    _OFF
 #define _DP_FREESYNC_II_SUPPORT                                 _OFF
 #define _DP_HDR10_SUPPORT                                       _OFF
-#define _DP_HDCP_2_2_SUPPORT                                    _OFF
+#define _DP_HDCP_2_2_SUPPORT                                    _ON
 
 #if((_AWTO_HDCP == _OFF) && ((_TMDS_HDCP_2_2_SUPPORT == _ON) || (_DP_HDCP_2_2_SUPPORT == _ON)))
 #error "HDCP 2.2 needs _AWTO_HDCP _ON (#44)"

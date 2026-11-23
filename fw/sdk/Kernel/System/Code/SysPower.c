@@ -995,85 +995,13 @@ void SysPowerLoadHDCPKey(void)
     ScalerSyncHdcpDownLoadBKsv(0, 5, pucTemp);
 
 #if(_HDCP_2_2_SUPPORT == _ON)
-
-#if(_HDCP_2_2_TX_RSA3072_MODE == _ON)
-
-    for(ucI = 0; ucI < 24; ucI++)
-    {
-        // Load HDCP 2.2 Key Certrx
-        UserCommonInterfaceGetHdcp2Certrx((ucI * 16), 16, pucTemp);
-        ScalerHdcp2DownLoadCalculateKey((ucI * 16), 16, pucTemp, _HDCP_2_2_CERT_RX);
-
-        UserCommonInterfaceGetHdcp2RSADkey((ucI * 16), 16, pucTemp);
-        ScalerHdcp2DownLoadCalculateKey((ucI * 16), 16, pucTemp, _HDCP_2_2_RSA_D_KEY);
-
-        UserCommonInterfaceGetHdcp2RSARRModN((ucI * 16), 16, pucTemp);
-        ScalerHdcp2DownLoadCalculateKey((ucI * 16), 16, pucTemp, _HDCP_2_2_RSA_RRMODN_KEY);
-
-#if(_HDCP_2_2_ERRATA_TEST_SUPPORT == _ON)
-        UserCommonInterfaceGetHdcp2KpubKm((ucI * 16), 16, pucTemp);
-        ScalerHdcp2DownLoadCalculateKey((ucI * 16), 16, pucTemp, _HDCP_2_2_KPUB_KM);
-#endif
-    }
-
-    UserCommonInterfaceGetHdcp2RSANpinv(0, 4, pucTemp);
-    ScalerHdcp2DownLoadCalculateKey(0, 4, pucTemp, _HDCP_2_2_RSA_N_PINV);
-
-    UserCommonInterfaceGetHdcp2LCKey(0, 16, pucTemp);
-    ScalerHdcp2DownLoadCalculateKey(0, 16, pucTemp, _HDCP_2_2_LC);
-
+    // awto: Certrx / d / RRmodN / Npinv / Lc are read from code when used (#44); only the Kh seed from KPriv is computed here
     for(ucI = 0; ucI < 5; ucI++)
     {
         UserCommonInterfaceGetHdcp2RSAKPriv(ucI * 64, 64, pucTemp);
         ScalerHdcp2RxPairingCalculate(pucTemp, ucI);
     }
     ScalerHdcp2RxPairingCalculate(pucTemp, 5);
-
-#else   // #if(_HDCP_2_2_TX_RSA3072_MODE == _OFF)
-
-    for(ucI = 0; ucI < 33; ucI++)
-    {
-        // Load HDCP 2.2 Key Certrx
-        if(ucI < 32)
-        {
-            UserCommonInterfaceGetHdcp2Certrx((ucI * 16), 16, pucTemp);
-            ScalerHdcp2DownLoadCalculateKey((ucI * 16), 16, pucTemp, _HDCP_2_2_CERT_RX);
-        }
-        else
-        {
-            UserCommonInterfaceGetHdcp2Certrx((ucI * 16), 10, pucTemp);
-            ScalerHdcp2DownLoadCalculateKey((ucI * 16), 10, pucTemp, _HDCP_2_2_CERT_RX);
-        }
-    }
-
-    for(ucI = 0; ucI < 8; ucI++)
-    {
-        // d key, Npinv, RRmodN, public key n
-        UserCommonInterfaceGetHdcp2RSADkey((ucI * 16), 16, pucTemp);
-        ScalerHdcp2DownLoadCalculateKey((ucI * 16), 16, pucTemp, _HDCP_2_2_RSA_D_KEY);
-
-        UserCommonInterfaceGetHdcp2RSARRModN((ucI * 16), 16, pucTemp);
-        ScalerHdcp2DownLoadCalculateKey((ucI * 16), 16, pucTemp, _HDCP_2_2_RSA_RRMODN_KEY);
-
-#if(_HDCP_2_2_ERRATA_TEST_SUPPORT == _ON)
-        UserCommonInterfaceGetHdcp2KpubKm((ucI * 16), 16, pucTemp);
-        ScalerHdcp2DownLoadCalculateKey((ucI * 16), 16, pucTemp, _HDCP_2_2_KPUB_KM);
-#endif
-    }
-
-    UserCommonInterfaceGetHdcp2RSANpinv(0, 4, pucTemp);
-    ScalerHdcp2DownLoadCalculateKey(0, 4, pucTemp, _HDCP_2_2_RSA_N_PINV);
-
-    UserCommonInterfaceGetHdcp2LCKey(0, 16, pucTemp);
-    ScalerHdcp2DownLoadCalculateKey(0, 16, pucTemp, _HDCP_2_2_LC);
-
-    for(ucI = 0; ucI < 5; ucI++)
-    {
-        UserCommonInterfaceGetHdcp2RSAKPriv(ucI * 64, 64, pucTemp);
-        ScalerHdcp2RxPairingCalculate(pucTemp, ucI);
-    }
-    ScalerHdcp2RxPairingCalculate(pucTemp, 5);
-#endif
 #endif
 
     ScalerSyncHdcpEnableDownLoadKey(_DISABLE);

@@ -269,9 +269,10 @@ void ScalerDpRx1Hdcp2Handler(void)
         ScalerSetBit(PB0_1B_HDCP_INTGT_VRF, ~_BIT7, _BIT7);
 
         // Enable Decryption
+        UserCommonInterfaceGetHdcp2LCKey(0, 16, pucInputCipher);   // Lc from code, no RAM copy (#44)
         for(pData[0] = 0; pData[0] < 16; ++pData[0])
         {
-            pucInputCipher[pData[0]] = pucKs[pData[0]] ^ g_stRxHdcp2DownLoadKeyType.pucHdcp2Lc[pData[0]];
+            pucInputCipher[pData[0]] ^= pucKs[pData[0]];
         }
 
         // Enable AES Decryption Cipher
@@ -323,6 +324,7 @@ void ScalerDpRx1Hdcp2Handler(void)
 //--------------------------------------------------
 void ScalerDpRx1Hdcp2Handler_EXINT0(void)
 {
+    BYTE pData_EXINT[1];   // per-function scratch (#328)
     BYTE ucMessageId = 0;
 
     // DP Global IRQ Flag
@@ -744,6 +746,7 @@ void ScalerDpRx1Hdcp2AesOnlineCtrlErrata(BYTE *pucInputArray, BYTE *pucCipherArr
 //--------------------------------------------------
 void ScalerDpRx1Hdcp2SkeProc_WDINT(void)
 {
+    BYTE pData_EXINT[1];   // per-function scratch (#328)
     // Calculate Dkey 2
     ScalerHdcp2DkeyCalculate_WDINT(_HDCP_2_2_DKEY_2, g_pucDpRx1Hdcp2Rtx, g_pucDpRx1Hdcp2Rrx, g_pucDpRx1Hdcp2Km, g_pucDpRx1Hdcp2Rn);
 
@@ -768,9 +771,10 @@ void ScalerDpRx1Hdcp2SkeProc_WDINT(void)
     ScalerSetBit_EXINT(PB0_1B_HDCP_INTGT_VRF, ~_BIT7, _BIT7);
 
     // Enable Decryption
+    UserCommonInterfaceGetHdcp2LCKey_WDINT(0, 16, g_pucHdcp2InputCipher);   // Lc from code, no RAM copy (#44)
     for(pData_EXINT[0] = 0; pData_EXINT[0] < 16; pData_EXINT[0]++)
     {
-        g_pucHdcp2InputCipher[pData_EXINT[0]] = g_pucHdcp2Ks[pData_EXINT[0]] ^ g_stRxHdcp2DownLoadKeyType.pucHdcp2Lc[pData_EXINT[0]];
+        g_pucHdcp2InputCipher[pData_EXINT[0]] ^= g_pucHdcp2Ks[pData_EXINT[0]];
 
         ScalerSetByte_EXINT(PB0_81_HDCP_AES_CIPHER_KEY_15 + pData_EXINT[0], g_pucHdcp2InputCipher[pData_EXINT[0]]);
     }

@@ -31,7 +31,6 @@
 //****************************************************************************
 #if(_HDCP_2_2_FUNCTION_GEN == _HDCP_2_2_GEN_2)
 #if(_HDCP_2_2_SUPPORT == _ON)
-extern void ScalerHdcp2DownLoadCalculateKey(WORD usSubAddr, WORD usLength, BYTE *pucReadArray, BYTE ucRSAType);
 extern void ScalerHdcp2Handler(void);
 extern void ScalerHdcp2IntHandler_EXINT0(void);
 #if((_TMDS_HDCP_2_2_SUPPORT == _ON) && (_HDMI_PORT_EXIST == _ON))

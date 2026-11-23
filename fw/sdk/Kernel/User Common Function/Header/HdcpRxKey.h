@@ -51,6 +51,7 @@ BYTE __code tHDCP_KEY_TABLE[] =
 
 #if(_HDCP_2_2_SUPPORT == _ON)
 
+#pragma place bank(0)   // awto: bank with room (#44)
 BYTE __code tHDCP2_Certrx[] =
 {
 #if(_HDCP_2_2_ERRATA_TEST_SUPPORT == _ON)
@@ -244,6 +245,7 @@ BYTE __code tHDCP2_Certrx[] =
 #endif
 };
 
+#pragma place bank(0)   // awto: bank with room (#44)
 BYTE __code tHDCP2_KPriv[] =
 {
 #if(_HDCP_2_2_ERRATA_TEST_SUPPORT == _ON)
@@ -333,6 +335,7 @@ BYTE __code tHDCP2_KPriv[] =
 #endif
 };
 
+#pragma place bank(0)   // awto: bank with room (#44)
 BYTE __code tHDCP2_NPINV[] =
 {
 #if(_HDCP_2_2_ERRATA_TEST_SUPPORT == _ON)
@@ -350,6 +353,7 @@ BYTE __code tHDCP2_NPINV[] =
 };
 
 #if(_HDCP_2_2_ERRATA_TEST_SUPPORT == _ON)
+#pragma place bank(0)   // awto: bank with room (#44)
 BYTE __code tHDCP2_KpubKm[] =
 {
 #if(_HDCP_2_2_TX_RSA3072_MODE == _ON)
@@ -424,6 +428,7 @@ BYTE __code tHDCP2_KpubKm[] =
 };
 #endif
 
+#pragma place bank(0)   // awto: bank with room (#44)
 BYTE __code tHDCP2_DKey[] =
 {
 #if(_HDCP_2_2_ERRATA_TEST_SUPPORT == _ON)
@@ -569,6 +574,7 @@ BYTE __code tHDCP2_DKey[] =
 #endif
 };
 
+#pragma place bank(0)   // awto: bank with room (#44)
 BYTE __code tHDCP2_RRMODN[] =
 {
 #if(_HDCP_2_2_ERRATA_TEST_SUPPORT == _ON)
@@ -713,6 +719,7 @@ BYTE __code tHDCP2_RRMODN[] =
 #endif
 };
 
+#pragma place bank(0)   // awto: bank with room (#44)
 BYTE __code tHDCP2_LCKey[] =
 {
 #if(_HDCP_2_2_ERRATA_TEST_SUPPORT == _ON)

@@ -3029,6 +3029,7 @@ void UserCommonInterfaceGetHDCPKey(WORD usSubAddr, WORD usLength, BYTE *pucReadA
 // Input Value  : None
 // Output Value : None
 //--------------------------------------------------
+#pragma place bank(0)   // leaf reader in the key const's bank (#44)
 void UserCommonInterfaceGetHdcp2Certrx(WORD usSubAddr, WORD usLength, BYTE *pucReadArray)
 {
     usSubAddr = usSubAddr;
@@ -3049,6 +3050,7 @@ void UserCommonInterfaceGetHdcp2Certrx(WORD usSubAddr, WORD usLength, BYTE *pucR
 // Input Value  : None
 // Output Value : None
 //--------------------------------------------------
+#pragma place bank(0)   // leaf reader in the key const's bank (#44)
 void UserCommonInterfaceGetHdcp2RSADkey(WORD usSubAddr, WORD usLength, BYTE *pucReadArray)
 {
     usSubAddr = usSubAddr;
@@ -3069,6 +3071,7 @@ void UserCommonInterfaceGetHdcp2RSADkey(WORD usSubAddr, WORD usLength, BYTE *puc
 // Input Value  : None
 // Output Value : None
 //--------------------------------------------------
+#pragma place bank(0)   // leaf reader in the key const's bank (#44)
 void UserCommonInterfaceGetHdcp2RSARRModN(WORD usSubAddr, WORD usLength, BYTE *pucReadArray)
 {
     usSubAddr = usSubAddr;
@@ -3090,6 +3093,7 @@ void UserCommonInterfaceGetHdcp2RSARRModN(WORD usSubAddr, WORD usLength, BYTE *p
 // Input Value  : None
 // Output Value : None
 //--------------------------------------------------
+#pragma place bank(0)   // leaf reader in the key const's bank (#44)
 void UserCommonInterfaceGetHdcp2KpubKm(WORD usSubAddr, WORD usLength, BYTE *pucReadArray)
 {
     usSubAddr = usSubAddr;
@@ -3107,6 +3111,7 @@ void UserCommonInterfaceGetHdcp2KpubKm(WORD usSubAddr, WORD usLength, BYTE *pucR
 // Input Value  : None
 // Output Value : None
 //--------------------------------------------------
+#pragma place bank(0)   // leaf reader in the key const's bank (#44)
 void UserCommonInterfaceGetHdcp2RSAKPriv(WORD usSubAddr, WORD usLength, BYTE *pucReadArray)
 {
     usSubAddr = usSubAddr;
@@ -3127,6 +3132,7 @@ void UserCommonInterfaceGetHdcp2RSAKPriv(WORD usSubAddr, WORD usLength, BYTE *pu
 // Input Value  : None
 // Output Value : None
 //--------------------------------------------------
+#pragma place bank(0)   // leaf reader in the key const's bank (#44)
 void UserCommonInterfaceGetHdcp2RSANpinv(WORD usSubAddr, WORD usLength, BYTE *pucReadArray)
 {
     usSubAddr = usSubAddr;
@@ -3147,6 +3153,7 @@ void UserCommonInterfaceGetHdcp2RSANpinv(WORD usSubAddr, WORD usLength, BYTE *pu
 // Input Value  : None
 // Output Value : None
 //--------------------------------------------------
+#pragma place bank(0)   // leaf reader in the key const's bank (#44)
 void UserCommonInterfaceGetHdcp2LCKey(WORD usSubAddr, WORD usLength, BYTE *pucReadArray)
 {
     usSubAddr = usSubAddr;
@@ -3160,6 +3167,77 @@ void UserCommonInterfaceGetHdcp2LCKey(WORD usSubAddr, WORD usLength, BYTE *pucRe
 #elif(_HDCP_2_2_KEY_LOCATION == _TABLE_LOCATION_USER)
     UserInterfaceGetHdcp2LCKeyByUser(usSubAddr, usLength, pucReadArray);
 #endif
+}
+
+//--------------------------------------------------
+// Description  : ISR-private copies of the key readers: the library memcpy and the getters' locals are not shared with the main loop or another ISR class (#44)
+// Input Value  : usSubAddr, usLength, pucReadArray
+// Output Value : None
+//--------------------------------------------------
+#pragma place bank(0)   // leaf reader in the key const's bank (#44)
+void UserCommonInterfaceGetHdcp2Certrx_EXINT0(WORD usSubAddr, WORD usLength, BYTE *pucReadArray)
+{
+    WORD usIndex;
+
+    for(usIndex = 0; usIndex < usLength; usIndex++)
+    {
+        pucReadArray[usIndex] = tHDCP2_Certrx[usSubAddr + usIndex];
+    }
+}
+
+#pragma place bank(0)   // leaf reader in the key const's bank (#44)
+void UserCommonInterfaceGetHdcp2RSADkey_EXINT0(WORD usSubAddr, WORD usLength, BYTE *pucReadArray)
+{
+    WORD usIndex;
+
+    for(usIndex = 0; usIndex < usLength; usIndex++)
+    {
+        pucReadArray[usIndex] = tHDCP2_DKey[usSubAddr + usIndex];
+    }
+}
+
+#pragma place bank(0)   // leaf reader in the key const's bank (#44)
+void UserCommonInterfaceGetHdcp2RSARRModN_EXINT0(WORD usSubAddr, WORD usLength, BYTE *pucReadArray)
+{
+    WORD usIndex;
+
+    for(usIndex = 0; usIndex < usLength; usIndex++)
+    {
+        pucReadArray[usIndex] = tHDCP2_RRMODN[usSubAddr + usIndex];
+    }
+}
+
+#pragma place bank(0)   // leaf reader in the key const's bank (#44)
+void UserCommonInterfaceGetHdcp2RSANpinv_EXINT0(WORD usSubAddr, WORD usLength, BYTE *pucReadArray)
+{
+    WORD usIndex;
+
+    for(usIndex = 0; usIndex < usLength; usIndex++)
+    {
+        pucReadArray[usIndex] = tHDCP2_NPINV[usSubAddr + usIndex];
+    }
+}
+
+#pragma place bank(0)   // leaf reader in the key const's bank (#44)
+void UserCommonInterfaceGetHdcp2LCKey_EXINT0(WORD usSubAddr, WORD usLength, BYTE *pucReadArray)
+{
+    WORD usIndex;
+
+    for(usIndex = 0; usIndex < usLength; usIndex++)
+    {
+        pucReadArray[usIndex] = tHDCP2_LCKey[usSubAddr + usIndex];
+    }
+}
+
+#pragma place bank(0)   // leaf reader in the key const's bank (#44)
+void UserCommonInterfaceGetHdcp2LCKey_WDINT(WORD usSubAddr, WORD usLength, BYTE *pucReadArray)
+{
+    WORD usIndex;
+
+    for(usIndex = 0; usIndex < usLength; usIndex++)
+    {
+        pucReadArray[usIndex] = tHDCP2_LCKey[usSubAddr + usIndex];
+    }
 }
 
 #if((_DP_HDCP_2_2_SUPPORT == _ON) && (_DP_TX_SUPPORT == _ON))

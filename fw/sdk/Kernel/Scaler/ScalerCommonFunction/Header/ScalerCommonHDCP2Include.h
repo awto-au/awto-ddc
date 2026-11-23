@@ -132,26 +132,6 @@ typedef struct
     BYTE b4AuthState : 4;
 } StructHdcp2HDCPAuthInfo;
 
-typedef struct
-{
-#if(_HDCP_2_2_TX_RSA3072_MODE == _ON)
-    BYTE pucHdcp2Certrx[384];
-    BYTE pucHdcp2DKey[384];
-    BYTE pucHdcp2Rrmodn[384];
-    BYTE pucHdcp2Lc[16];
-    BYTE pucHdcp2Npinv[4];
-    BYTE pucHdcp2KpubKm[384];
-#else
-    BYTE pucHdcp2Certrx[522];
-    BYTE pucHdcp2DKey[128];
-    BYTE pucHdcp2Rrmodn[128];
-    BYTE pucHdcp2Lc[16];
-    BYTE pucHdcp2Npinv[4];
-#if(_HDCP_2_2_ERRATA_TEST_SUPPORT == _ON)
-    BYTE pucHdcp2KpubKm[128];
-#endif
-#endif
-} StructHdcp2DownLoadKeyType;
 #endif
 
 #if((_CODE_DIGITAL_SIGNATURE_SUPPORT == _SIGNATURE_TYPE_INTERNAL) && (_FLASH_PARTITION_TYPE == _FLASH_PARTITION_BOOT))
@@ -170,8 +150,6 @@ typedef struct
 //****************************************************************************
 #if(_HDCP_2_2_FUNCTION_GEN == _HDCP_2_2_GEN_2)
 #if(_HDCP_2_2_SUPPORT == _ON)
-extern StructHdcp2DownLoadKeyType g_stRxHdcp2DownLoadKeyType;
-
 extern BYTE g_ucHdcp2AuthActive;
 
 extern BYTE g_pucHdcp2HmacSha256Input[64];
@@ -233,6 +211,21 @@ extern void ScalerHdcp2ResetTMDSProc(BYTE ucInputPort);
 extern void ScalerHdcp2ReAuthEvent(EnumScalerTimerEventID enumEventID);
 extern BYTE ScalerHdcp2RxRsaCalculate_EXINT0(BYTE *pucEkpubKmArray);
 extern BYTE ScalerHdcp2RxRsaOaepCalculate_EXINT0(BYTE *pucKmArray);
+extern void ScalerHdcp2ClearBytes_EXINT0(BYTE *pucDst, BYTE ucLength);
+extern void UserCommonInterfaceGetHdcp2Certrx(WORD usSubAddr, WORD usLength, BYTE *pucReadArray);   // key const readers, User layer (#44)
+extern void UserCommonInterfaceGetHdcp2RSADkey(WORD usSubAddr, WORD usLength, BYTE *pucReadArray);   // key const readers, User layer (#44)
+extern void UserCommonInterfaceGetHdcp2RSARRModN(WORD usSubAddr, WORD usLength, BYTE *pucReadArray);   // key const readers, User layer (#44)
+extern void UserCommonInterfaceGetHdcp2RSANpinv(WORD usSubAddr, WORD usLength, BYTE *pucReadArray);   // key const readers, User layer (#44)
+extern void UserCommonInterfaceGetHdcp2LCKey(WORD usSubAddr, WORD usLength, BYTE *pucReadArray);   // key const readers, User layer (#44)
+extern void UserCommonInterfaceGetHdcp2Certrx_EXINT0(WORD usSubAddr, WORD usLength, BYTE *pucReadArray);
+extern void UserCommonInterfaceGetHdcp2RSADkey_EXINT0(WORD usSubAddr, WORD usLength, BYTE *pucReadArray);
+extern void UserCommonInterfaceGetHdcp2RSARRModN_EXINT0(WORD usSubAddr, WORD usLength, BYTE *pucReadArray);
+extern void UserCommonInterfaceGetHdcp2RSANpinv_EXINT0(WORD usSubAddr, WORD usLength, BYTE *pucReadArray);
+extern void UserCommonInterfaceGetHdcp2LCKey_EXINT0(WORD usSubAddr, WORD usLength, BYTE *pucReadArray);
+extern void UserCommonInterfaceGetHdcp2LCKey_WDINT(WORD usSubAddr, WORD usLength, BYTE *pucReadArray);
+#if(_HDCP_2_2_ERRATA_TEST_SUPPORT == _ON)
+extern void UserCommonInterfaceGetHdcp2KpubKm(WORD usSubAddr, WORD usLength, BYTE *pucReadArray);   // key const readers, User layer (#44)
+#endif
 #endif
 
 #if(_DP_TX_SUPPORT == _ON)

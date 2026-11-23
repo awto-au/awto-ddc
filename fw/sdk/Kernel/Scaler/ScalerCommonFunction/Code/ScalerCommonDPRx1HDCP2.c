@@ -182,7 +182,8 @@ void ScalerDpRx1Hdcp2LoadCertRrxKey(void)
     {
         PDATA_WORD(1) = 0x900B + PDATA_WORD(0);
 
-        ScalerDpRx1SetDpcdValue(0x06, pData[2], pData[3], g_stRxHdcp2DownLoadKeyType.pucHdcp2Certrx[PDATA_WORD(0)]);
+        UserCommonInterfaceGetHdcp2Certrx(PDATA_WORD(0), 1, &pData[4]);
+        ScalerDpRx1SetDpcdValue(0x06, pData[2], pData[3], pData[4]);
     }
 }
 //--------------------------------------------------
@@ -196,6 +197,7 @@ void ScalerDpRx1Hdcp2LoadCertRrxKey(void)
 //--------------------------------------------------
 void ScalerDpRx1Hdcp2LoadDpcdValue_EXINT0(BYTE ucDpcdAccessPortH, BYTE ucDpcdAccessPortM, BYTE ucDpcdAccessPortL, BYTE ucLength, BYTE *pucReadArray)
 {
+    BYTE pData_EXINT[4];   // per-function scratch (#328)
     pData_EXINT[2] = ucDpcdAccessPortM;
     pData_EXINT[3] = ucDpcdAccessPortL;
 
@@ -214,8 +216,9 @@ void ScalerDpRx1Hdcp2LoadDpcdValue_EXINT0(BYTE ucDpcdAccessPortH, BYTE ucDpcdAcc
 //--------------------------------------------------
 BYTE ScalerDpRx1Hdcp2MPrimeCalculate_EXINT0(void)
 {
+    BYTE pData_EXINT[4];   // per-function scratch (#328)
     BYTE pucSHA256Input[64];
-    memset(pucSHA256Input, 0, sizeof(pucSHA256Input));
+    ScalerHdcp2ClearBytes_EXINT0(pucSHA256Input, sizeof(pucSHA256Input));
 
     // Get kd
     for(pData_EXINT[0] = 0; pData_EXINT[0] < 64; pData_EXINT[0]++)
@@ -350,6 +353,7 @@ void ScalerDpRx1Hdcp2SetAESType_EXINT0(void)
 //--------------------------------------------------
 void ScalerDpRx1Hdcp2SetDpcdReadValue_EXINT0(BYTE ucRSAType, BYTE *pucReadArray, WORD usLength)
 {
+    BYTE pData_EXINT[4];   // per-function scratch (#328)
     switch(ucRSAType)
     {
         case _HDCP_2_2_RRX:
@@ -403,6 +407,7 @@ void ScalerDpRx1Hdcp2SetDpcdReadValue_EXINT0(BYTE ucRSAType, BYTE *pucReadArray,
 //--------------------------------------------------
 void ScalerDpRx1Hdcp2ClearDpcdReadValue_EXINT0(BYTE ucRSAType, WORD usLength)
 {
+    BYTE pData_EXINT[4];   // per-function scratch (#328)
     switch(ucRSAType)
     {
         case _HDCP_2_2_RRX:
@@ -599,7 +604,7 @@ bit ScalerDpRx1Hdcp2CaptureKpubKm(void)
 #if(_HDCP_2_2_ERRATA_TEST_SUPPORT == _ON)
     for(pData[0] = 0; pData[0] < 128; pData[0]++)
     {
-        pucKpubKm[pData[0]] = g_stRxHdcp2DownLoadKeyType.pucHdcp2KpubKm[pData[0]];
+        UserCommonInterfaceGetHdcp2KpubKm(pData[0], 1, &pucKpubKm[pData[0]]);
 
         DebugMessageHDCP2("[D1]Ekpub(km)", pucKpubKm[pData[0]]);
     }

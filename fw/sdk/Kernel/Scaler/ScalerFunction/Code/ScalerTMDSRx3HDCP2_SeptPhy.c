@@ -70,6 +70,7 @@ void ScalerTMDSRx3Hdcp2ResetProc(void);
 void ScalerTMDSRx3Hdcp2ResetProc_EXINT0(void);
 void ScalerTMDSRx3Hdcp2SetRdMsgIDCode_EXINT0(BYTE ucValue);
 void ScalerTMDSRx3Hdcp2SetRdMsgValue_EXINT0(WORD usAddress, BYTE *pucReadArray, WORD usLength);
+void ScalerTMDSRx3Hdcp2SetRdMsgCertrx_EXINT0(void);
 
 #if(_HDCP_2_2_ERRATA_TEST_SUPPORT == _ON)
 void ScalerTMDSRx3Hdcp2AesOnlineCtrl(BYTE *pucInputArray, BYTE *pucCipherArray);
@@ -112,6 +113,7 @@ void ScalerTMDSRx3Hdcp2AesOnlineCtrl_EXINT0(BYTE *pucInputArray, BYTE *pucCipher
 //--------------------------------------------------
 void ScalerTMDSRx3Hdcp2DownLoadWriteSRAMValue_EXINT0(BYTE ucSubAddr, BYTE ucLength, BYTE *pucReadArray)
 {
+    BYTE pData_EXINT[1];   // per-function scratch (#328)
     ScalerSetByte_EXINT(P2E_21_HDCP_MSGWAP, ucSubAddr);
 
     // Load Value To FW
@@ -127,6 +129,7 @@ void ScalerTMDSRx3Hdcp2DownLoadWriteSRAMValue_EXINT0(BYTE ucSubAddr, BYTE ucLeng
 //--------------------------------------------------
 void ScalerTMDSRx3Hdcp2Enable_EXINT0(void)
 {
+    BYTE pData_EXINT[1];   // per-function scratch (#328)
     MCU_FE72_DDC3_EDID_IRQ |= _BIT2;
 
     // set a check duration = 2ms for cover max time(=500us)of Tx read RxStatus (offset address = 0x70)
@@ -199,7 +202,7 @@ void ScalerTMDSRx3Hdcp2Handler(void)
         g_pucTmdsRx3Caps[2] = 0x01;
 
         // Load Certrx to Read SRAM
-        ScalerTMDSRx3Hdcp2SetRdMsgValue(0x01, g_stRxHdcp2DownLoadKeyType.pucHdcp2Certrx, 522);
+        ScalerTMDSRx3Hdcp2SetRdMsgCertrx_EXINT0();
 
 #endif
     }
@@ -373,9 +376,10 @@ void ScalerTMDSRx3Hdcp2Handler(void)
         SET_TMDS_RX3_HDCP2_AUTH_STATE(_HDCP_2_2_STATE_AUTHENTICATED);
 
         // Enable Decryption
+        UserCommonInterfaceGetHdcp2LCKey(0, 16, pucInputCipher);   // Lc from code, no RAM copy (#44)
         for(pData[0] = 0; pData[0] < 16; ++pData[0])
         {
-            pucInputCipher[pData[0]] = pucKs[pData[0]] ^ g_stRxHdcp2DownLoadKeyType.pucHdcp2Lc[pData[0]];
+            pucInputCipher[pData[0]] ^= pucKs[pData[0]];
         }
 
         // Enable AES Decryption Cipher
@@ -456,6 +460,7 @@ BYTE ScalerTMDSRx3Hdcp2RxRsaCalculate_EXINT0(void)
 //--------------------------------------------------
 void ScalerTMDSRx3Hdcp2IntHandler_EXINT0(void)
 {
+    BYTE pData_EXINT[3];   // per-function scratch (#328)
     // Backup W/R Sram & HDCP Port Addr.
     g_pucHdcp2BackUp[0] = ScalerGetByte_EXINT(P2E_21_HDCP_MSGWAP);
     g_pucHdcp2BackUp[1] = ScalerGetByte_EXINT(P2E_23_HDCP_MSGRAP_H);
@@ -494,7 +499,7 @@ void ScalerTMDSRx3Hdcp2IntHandler_EXINT0(void)
                 ScalerHdcp2RxGenRrx_EXINT0(g_pucTmdsRx3Hdcp2Rrx);
 
                 // Load Certrx to Read SRAM
-                ScalerTMDSRx3Hdcp2SetRdMsgValue_EXINT0(0x01, g_stRxHdcp2DownLoadKeyType.pucHdcp2Certrx, 522);
+                ScalerTMDSRx3Hdcp2SetRdMsgCertrx_EXINT0();
 
                 // Load Rrx to Read SRAM
                 ScalerTMDSRx3Hdcp2SetRdMsgValue_EXINT0(0x020B, g_pucTmdsRx3Hdcp2Rrx, 8);
@@ -538,7 +543,7 @@ void ScalerTMDSRx3Hdcp2IntHandler_EXINT0(void)
 
                         if(ScalerHdcp2HPrimeCalculate_EXINT0(g_pucTmdsRx3Hdcp2dKey0, g_pucTmdsRx3Hdcp2dKey1, g_pucTmdsRx3Hdcp2Rtx, g_pucTmdsRx3Hdcp2TxCaps, g_pucTmdsRx3Caps) == _TRUE)
                         {
-                            memset(g_pucHdcp2Sha256, 0, sizeof(g_pucHdcp2Sha256));
+                            ScalerHdcp2ClearBytes_EXINT0(g_pucHdcp2Sha256, sizeof(g_pucHdcp2Sha256));
 
                             // Load H prime to Read SRAM, AKE Send H PRIME Message ID = 0x07
                             ScalerTMDSRx3Hdcp2SetRdMsgIDCode_EXINT0(_HDCP_2_2_AKE_SEND_H_PRIME);
@@ -695,9 +700,10 @@ void ScalerTMDSRx3Hdcp2IntHandler_EXINT0(void)
                 SET_TMDS_RX3_HDCP2_AUTH_STATE(_HDCP_2_2_STATE_AUTHENTICATED);
 
                 // Enable Decryption
+                UserCommonInterfaceGetHdcp2LCKey_EXINT0(0, 16, g_pucHdcp2InputCipher);   // Lc from code, no RAM copy (#44)
                 for(pData_EXINT[0] = 0; pData_EXINT[0] < 16; ++pData_EXINT[0])
                 {
-                    g_pucHdcp2InputCipher[pData_EXINT[0]] = g_pucHdcp2Ks[pData_EXINT[0]] ^ g_stRxHdcp2DownLoadKeyType.pucHdcp2Lc[pData_EXINT[0]];
+                    g_pucHdcp2InputCipher[pData_EXINT[0]] ^= g_pucHdcp2Ks[pData_EXINT[0]];
                 }
 
                 // Enable AES Decryption Cipher
@@ -893,6 +899,26 @@ void ScalerTMDSRx3Hdcp2SetRdMsgValue_EXINT0(WORD usAddress, BYTE *pucReadArray, 
     }
 }
 
+//--------------------------------------------------
+// Description  : Load Certrx (522 B, read from code in 16 B chunks) to the Read SRAM in INT (#44)
+// Input Value  : None
+// Output Value : None
+//--------------------------------------------------
+void ScalerTMDSRx3Hdcp2SetRdMsgCertrx_EXINT0(void)
+{
+    BYTE pucChunk[16];
+    WORD usOffset = 0;
+
+    while(usOffset < 522)
+    {
+        BYTE ucLength = ((522 - usOffset) < 16) ? (BYTE)(522 - usOffset) : 16;
+
+        UserCommonInterfaceGetHdcp2Certrx_EXINT0(usOffset, ucLength, pucChunk);
+        ScalerTMDSRx3Hdcp2SetRdMsgValue_EXINT0((0x01 + usOffset), pucChunk, ucLength);
+        usOffset += 16;
+    }
+}
+
 #if(_HDCP_2_2_ERRATA_TEST_SUPPORT == _ON)
 //--------------------------------------------------
 // Description  : HDCP 2.2 On-Line AES Ctrl for Rx3
@@ -960,12 +986,12 @@ bit ScalerTMDSRx3Hdcp2CaptureKpubKm(void)
 #if(_HDCP_2_2_TX_RSA3072_MODE == _ON)
     for(usCount = 0; usCount < 384; ++usCount)
     {
-        DebugMessageHDCP2("[D3]DCP LLC Signature", g_stRxHdcp2DownLoadKeyType.pucHdcp2KpubKm[usCount]);
+        DebugMessageHDCP2("[D3]DCP LLC Signature", 0x00);
     }
 #else
     for(pData[0] = 0; pData[0] < 128; ++pData[0])
     {
-        pucKpubKm[pData[0]] = g_stRxHdcp2DownLoadKeyType.pucHdcp2KpubKm[pData[0]];
+        UserCommonInterfaceGetHdcp2KpubKm(pData[0], 1, &pucKpubKm[pData[0]]);
 
         DebugMessageHDCP2("[D3]Ekpub(km)", pucKpubKm[pData[0]]);
     }
