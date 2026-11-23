@@ -18,6 +18,7 @@ usage: fw_gates.py IMAGE_STEM [--tier normal|extensive] [--build-inputs] [--tree
     wall ms, Timer2 / wall = 1, every executed DELAY_5US / DELAY_XUS loop >= nominal, loop counts = AWTO_DELAY_CNT, DDC debounce wall time equal at both clocks; --audit:
     delay_audit.py --check (every linked delay site is in docs/delay-audit.tsv, no FIX / UNKNOWN row).
   flashclk: flash_clk_sim.py (FF6C read tune / FFE9 F2 order at boot, flash write sessions F2 5 and back, only proven (F2, tune) pairs on the M2PLL).
+  rxports: dp_rx_port_cutline.py --check (#326: Rx1 globals classified in docs/dp-rx-port-state.tsv, link-training state through NAME_P accessors).
   magic: magic_lint.py TREE (#161: no raw register address / palette value in our code; allow-list scripts/magic_allow.tsv).
   regs: gen_regnames.py --check (AwtoRegs.h matches the names our code uses).
   regmap: regmap_build.py --check (re/regmap register knowledge base current, hand columns valid; ~4 s; re/regmap/README.md).
@@ -250,6 +251,7 @@ def gates(b: Path, m: Path, ref, tree):
     if tree and Path(tree).is_dir():
         g["pokes"] = [*PY, f"{s}/poke_loops.py", tree, "--out", out / "poke_loops.tsv"]
         g["magic"] = [*PY, f"{s}/magic_lint.py", "--tree", tree]
+        g["rxports"] = [*PY, f"{s}/dp_rx_port_cutline.py", "--check", "--tree", tree]     # #326: every Rx1 global classified, lt-hot state only through the per-port accessors
         g["regs"] = [*PY, f"{s}/gen_regnames.py", "--tree", tree, "--check"]
         if (Path(tree) / "scripts/regmap_build.py").is_file():                       # register knowledge base (re/regmap)
             g["regmap"] = [*PY, f"{tree}/scripts/regmap_build.py", "--check"]
