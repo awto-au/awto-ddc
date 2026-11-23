@@ -8,6 +8,7 @@ Search 2026-11-21 on origin/main 30b070a0 (Rx2/Rx3 TMDS already shared, #292). T
   - `--functions`: C functions grouped by name with digits -> `#`; min similarity of the copies to the first (1.00 = identical after digit normalisation); recoverable bytes = linked copies minus the largest, from a linker map (`CH_<name>` areas) or `fw/bank_layout.tsv` slots.
   - `--asm DIR`: compiled functions identical after symbol digits -> `#` (object-level clones).
 - Scope: tracked `fw/` (sdk, rtdfw, our dirs), `scripts/`, `tools/`, `tests/`, `dev.py`. Skipped: `fw/sdk-parked`, generated files (`*_gen*`, `set_table.c`, `fw/log/sync.c`, `bank_layout.tsv`, regs), `fw/sdk/Panel`, other-chip `Pcb`/`Project`/`Common` defaults, gamma / HDCP key / font tables.
+- HDCP removed Dan 2026-11-23: restore = revert d14689a6, see #44; the DP Rx1 HDCP 1.4 checks are gated out under `_AWTO_HDCP` (proof: `scripts/hdcp_off_equiv.py`).
 - Sizes: map of 30b070a0 (unit-3 image, `AWT26110003-30b070a0-be.map`, exact `CH_` sizes). `bank_layout.tsv` slots are sticky (still list pre-#292 Rx3 sizes), not used for sizes here.
 - Drift: `git log -L:<fn>:<file>` per copy, `git log` over the per-port file pairs.
 - Estimates marked `est` are line-share x function size, not measured.

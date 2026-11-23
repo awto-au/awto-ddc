@@ -342,7 +342,9 @@ void ScalerSyncHdcpDownLoadDPTxAKsv(BYTE ucSubAddr, BYTE ucLength, BYTE *pucRead
 void ScalerSyncHdcpDownLoadDPTxAKey(WORD usLength, BYTE *pucReadArray);
 #endif
 
+#if(_AWTO_HDCP == _ON)
 EnumHDCPType ScalerSyncHdcpCheckEnabled(BYTE ucInputPort);
+#endif
 void ScalerSyncGDIPowerProc(EnumPowerAction enumPowerAction);
 #endif
 
@@ -1803,11 +1805,13 @@ void ScalerSyncDpCheckHdcpEnable(void)
 
 #if(_D1_DP_EXIST == _ON)
     // Check HDCP Enable Status
+#if(_AWTO_HDCP == _ON)
     if(ScalerDpRx1HdcpCheckEnabled() == _TRUE)
     {
         SET_DP_RX1_HDCP_CHECK_ENABLE();
     }
     else
+#endif
     {
         CLR_DP_RX1_HDCP_CHECK_ENABLE();
     }
@@ -2318,6 +2322,7 @@ void ScalerSyncHdcpDownLoadDPTxAKey(WORD usLength, BYTE *pucReadArray)
 }
 #endif
 
+#if(_AWTO_HDCP == _ON)
 //--------------------------------------------------
 // Description  : Check whether HDCP is enabled
 // Input Value  : Input Port
@@ -2624,6 +2629,7 @@ EnumHDCPType ScalerSyncHdcpCheckEnabled(BYTE ucInputPort)
 
     return _FALSE;
 }
+#endif // End of #if(_AWTO_HDCP == _ON)
 
 //--------------------------------------------------
 // Description  : GDI Power Proc

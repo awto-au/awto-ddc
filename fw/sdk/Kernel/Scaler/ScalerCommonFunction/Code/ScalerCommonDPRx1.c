@@ -2158,6 +2158,7 @@ bit ScalerDpRx1MSACheck(void)
                 if(GET_REG_DP_RX_MST_ENABLE() == _FALSE)
 #endif
                 {
+#if(_AWTO_HDCP == _ON)    // awto: HDCP out: never valid, falls to the return below (#44)
                     if(ScalerDpRx1HdcpCheckValid() == _TRUE)
                     {
                         if(GET_DP_RX1_MSA_FAIL_MAC_RESET_COUNT() < 10)
@@ -2182,6 +2183,7 @@ bit ScalerDpRx1MSACheck(void)
                     {
                         return _FALSE;
                     }
+#endif
                 }
             }
 

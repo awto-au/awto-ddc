@@ -191,7 +191,7 @@
 | 48 | dp_version | Signal | DP version - D1 capability; HBR2 needs 1.2 [sdk-ui] | 0..2; def 1.2 (1) | 1.2 (1) | 0xF1 |  | SDK field | OSD.b2OsdDpD1PortVersion |
 | 49 | dp_edid | Signal | DP EDID - Realtek SDK DP resolution list [sdk-ui] | 0..2; def 1080p (0) | 1080p (0) | 0xFD |  | SDK field | SYS.b3EdidD1 |
 | 50 | edid_pref | Signal | EDID preferred - owner: EDID tables (fw-edid) | 0..2; def 3840x2160@60 (0) | 3840x2160@60 (0) |  | inert | AUX item 0x40-0x43 |  |
-| 51 | hdcp | Signal | HDCP - owner: HDCP (#65 step 13) | 0..1; def 1 | on |  | inert | AUX item 0x40-0x43 |  |
+| 51 | hdcp | Signal | HDCP - owner: HDCP (#65 step 13) | 0..1; def 1 | on |  | inert | AUX item 0x40-0x43 | no HDCP in the image (#44) |
 | 52 | colour_depth | Signal | Colour depth - EDID deep-colour advert (#59); owner: EDID tables | 0..2; def Auto (0) | Auto (0) |  | inert | AUX item 0x40-0x43 |  |
 | 53 | hdmi_420 | Signal | HDMI 4:2:0 - 4K60 YCbCr 4:2:0 10 bpc advert (#59); owner: EDID tables | 0..1; def 0 | off |  | inert | AUX item 0x40-0x43 |  |
 | 54 | colour_format | Signal | Colour format - Realtek SDK: VGA/DVI only [sdk-ui] | 0..1; def RGB (0) | RGB (0) |  | inert | SDK field | OSD.b3VGARGBYUV, OSD.b3DVIRGBYUV |
@@ -263,7 +263,7 @@
 | 101 | info_schema | int | ro |  |
 | 107 | info_hfreq | int | ro | measured horizontal frequency, 0.1 kHz (shown as kHz); was on the Realtek menu Information page (awto-ddc#120) |
 | 108 | info_pclk | int | ro | input pixel clock, 0.1 MHz (shown as MHz); was on the Realtek menu Information page (awto-ddc#120) |
-| 109 | info_hdcp | enum | ro | HDCP active on the current input; was on the Realtek menu Information page (awto-ddc#120) |
+| 109 | info_hdcp | enum | ro | HDCP active on the current input; was on the Realtek menu Information page (awto-ddc#120); always Off, HDCP removed (#44) |
 
 ## Registry rows on SDK fields (one RAM copy since #151; registry live = the field in registry units)
 

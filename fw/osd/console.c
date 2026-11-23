@@ -2430,6 +2430,7 @@ static void AwtoInfoCard(void)
         AwtoCardTxt(AWTO_CT_HZ + 2);
         AwtoTextLine(ucRow++, AWTO_T_STYLE_TEXT);
         AwtoInfoLabel(AWTO_CT_HDCP);
+#if(_AWTO_HDCP == _ON)
         ucV = ScalerSyncHdcpCheckEnabled(ucPort);          // 0 = off, else version 0x14 / 0x22 | 0x80 = repeater
         if(ucV == 0)
         {
@@ -2442,6 +2443,9 @@ static void AwtoInfoCard(void)
             AwtoPutNum(ucV & 0x0F, 1);
             AwtoCardTxt(AWTO_CT_SINK + (((ucV & 0x80) != 0) ? 1 : 0));
         }
+#else
+        AwtoCardTxt(AWTO_CT_OFF);                          // HDCP out (#44)
+#endif
         AwtoTextLine(ucRow++, AWTO_T_STYLE_TEXT);
     }
 #if(_DP_SUPPORT == _ON)

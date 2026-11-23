@@ -113,6 +113,7 @@ RTD2014Ddcci	0xe380	158	2
 ScalerIDomain	0xe380	160	2
 ScalerRotation	0xe380	162	2
 SysInt	0xe380	164	2
+SysPower	0xe380	166	2
 dpframe	0xe380	168	2
 osd_rot	0xe380	170	2
 osd_screen	0xe380	172	2
@@ -128,7 +129,6 @@ SysAudio	0xe380	182	1
 SysCec	0xe380	183	1
 __ovl	0xe380	184	1
 flash_screen	0xe380	185	1
-SysPower	0xe380	186	66
 RL6449_Series_GDIPhy	0xe380	252	3
 sync	0xe780	37	733
 asteroids	0xe780	770	515

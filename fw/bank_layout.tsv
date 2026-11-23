@@ -30,10 +30,6 @@ stub	_osd_tc_place_corner	C	0x0e40	8
 stub	_osd_tc_viewport	C	0x0e48	8
 stub	_AwtoFastScalerStatus	C	0x0e50	8
 stub	_AwtoPortSearchSkip	C	0x0e58	8
-fn	_ScalerWrite	C	0x0e60	40
-stub	_UserCommonInterfaceGetHDCPKey	C	0x0e88	8
-stub	_UserCommonInterfaceGetHDCPKeyBKsv	C	0x0e90	8
-stub	_reg_wr_n	C	0x0e98	8
 const	___str_127	C	0x0ed4	12
 const	___str_128	C	0x0ee0	20
 const	___str_120	C	0x0ef4	8
@@ -896,7 +892,6 @@ stub	_ScalerSyncDigitalClrQuantizationChanged	C	0x2aac	8
 stub	_ScalerSyncDpAuxManualModeSetting_EXINT	C	0x2ab4	8
 stub	_ScalerSyncDpSetCableStatus	C	0x2abc	8
 stub	_ScalerSyncGetInputPixelClk	C	0x2ac4	8
-stub	_ScalerSyncHdcpCheckEnabled	C	0x2acc	8
 stub	_ScalerSyncInterfaceSwitch	C	0x2ad4	8
 stub	_ScalerSyncPowerProc	C	0x2adc	8
 stub	_ScalerSyncTMDSHPDToggleProc	C	0x2ae4	8
@@ -932,7 +927,6 @@ stub	_ScalerTMDSRxFLDBandFineTune_EXINT0	C	0x2bcc	8
 stub	_ScalerTMDSRxFormatDetect	C	0x2bd4	8
 stub	_ScalerTMDSRxFreqDetectDisable	C	0x2bdc	8
 stub	_ScalerTMDSRxHdcp1p4AksvClear	C	0x2be4	8
-stub	_ScalerTMDSRxHdcpEnabled	C	0x2bec	8
 stub	_ScalerTMDSRxHdmi2FormatResetEvent	C	0x2bf4	8
 stub	_ScalerTMDSRxHdmiAviPixelRepInfoChanged	C	0x2bfc	8
 stub	_ScalerTMDSRxHdmiDeepColorProc	C	0x2c04	8
@@ -1246,7 +1240,6 @@ fn	_ScalerFRCControl	0	0x0590	924
 fn	_ScalerFRCInitial	0	0x135c	252
 fn	_ScalerFRCInputCtrl	0	0x1458	2144
 fn	_AwtoSyncDisplay	0	0x1cb8	456
-const	_tHDCP_KEY_TABLE	0	0x1e80	336
 fn	_ScalerMDomainControlDBApply	0	0x236c	728
 fn	_ScalerMemoryCalculateLineStepAndBlockStep	0	0x2644	148
 fn	_ScalerMemoryFrameSyncSetDt	0	0x26d8	2652
@@ -1284,7 +1277,6 @@ fn	_ScalerMemoryAddressConversion	0	0x65f4	84
 fn	_ScalerMemoryCalculateFrameLineTotalPixel	0	0x6648	628
 fn	_ScalerFRCOneFrameCtrl	0	0x68bc	2000
 fn	_ScalerOsdPositionCorrectSupport	0	0x708c	8
-const	_tHDCP_KEY_BKSV	0	0x7094	12
 fn	_ScalerMemoryFrameTracking	0	0x70b0	1652
 fn	_ScalerMemoryGetDtMaxMin	0	0x7724	1928
 fn	_ScalerMemoryGetMNRatio	0	0x7eac	64
@@ -1301,8 +1293,6 @@ fn	_ScalerPLLGetNewCount	0	0x9734	168
 fn	_ScalerPLLSetDPLLOffset	0	0x97dc	40
 fn	_AwtoFbRegCount	0	0x9804	40
 fn	_AwtoSyncFormat	0	0x982c	52
-fn	_UserCommonInterfaceGetHDCPKey	0	0x9860	36
-fn	_UserCommonInterfaceGetHDCPKeyBKsv	0	0x9884	52
 fn	_ScalerVgipGetCaptureVDelay	0	0x98c4	84
 fn	_ScalerVgipGetCaptureVStartPosition	0	0x9918	84
 fn	_ScalerVgipGetDigitalCaptureStatus	0	0x996c	28
@@ -1628,12 +1618,10 @@ fn	_ScalerDebugSetRegisters	2	0x56fc	300
 fn	_AwtoDpRx1LtBusy	2	0x637c	16
 fn	_ScalerDpRx1AdjustLaneFLDBand	2	0x638c	520
 fn	_ScalerDpRx1AlignCheck	2	0x6594	80
-fn	_ScalerDpRx1CheckHdcpCpirqStatus	2	0x65e4	80
 fn	_ScalerDpRx1CrcCalculate	2	0x6634	240
 fn	_ScalerDpRx1DFECheck	2	0x6724	664
 fn	_ScalerDpRx1DecodeCheck	2	0x69bc	544
 fn	_ScalerDpRx1GetDpcdBitInfo	2	0x6bdc	44
-fn	_ScalerDpRx1HdcpMeasureCheck	2	0x6c08	952
 fn	_ScalerDpRx1MarginLinkCheck	2	0x6fc0	20
 fn	_ScalerDpRx1NormalPreDetect	2	0x6fd4	868
 fn	_SysSourceSearchLastPort	2	0x7338	28
@@ -1696,7 +1684,6 @@ const	_tAwtoWakeDdc	3	0x004c	12
 fn	_ScalerDDomainBackgroundEnable	3	0x0058	28
 fn	_ScalerDDomainBackgroundSetColor	3	0x0074	48
 fn	_ScalerDpFirstActiveProc	3	0x00a4	20
-fn	_ScalerDpHdcpCheckValid	3	0x00b8	20
 fn	_ScalerDpRx1SignalDetectInitial	3	0x00cc	284
 fn	_ScalerDisplayDPTxPLL	3	0x01e8	48
 fn	_ScalerDisplayDPTxPhy	3	0x0218	44
@@ -1711,14 +1698,11 @@ fn	_ScalerGlobalDoubleBufferEnable	3	0x045c	52
 fn	_ScalerGlobalWatchDog	3	0x0490	336
 fn	_ScalerMcuDdcRamEnable	3	0x05e0	108
 fn	_ScalerMcuGpioInitial	3	0x064c	220
-fn	_ScalerTMDSHdcpEnabled	3	0x0728	28
 fn	_ScalerTMDSHdmi2FormatResetEvent	3	0x0744	20
 fn	_ScalerTMDSHdmiPacketDetectEvent	3	0x0758	20
 fn	_ScalerTMDSHdmiWatchDog	3	0x076c	24
 fn	_ScalerTMDSResetProc	3	0x0784	36
 fn	_ScalerTMDSVideoDetectEvent	3	0x07a8	20
-fn	_ScalerTMDSRx2HdcpEnabled	3	0x07bc	156
-fn	_ScalerTMDSRx3HdcpEnabled	3	0x0858	156
 fn	_RTDOsdEventMsgProc	3	0x08f4	364
 fn	_OsdFuncEnableOsd	3	0x0a60	8
 fn	_UserInterfaceAdjustOsdActiveProc	3	0x0a68	128
@@ -1743,7 +1727,6 @@ fn	_ScalerSyncDpCableStatus	3	0x2078	20
 fn	_ScalerSyncDpCapabilitySwitchProc	3	0x208c	152
 fn	_ScalerSyncDpFakeLTProtect	3	0x2124	8
 fn	_ScalerSyncDpVersionChange	3	0x212c	64
-fn	_ScalerSyncHdcpCheckEnabled	3	0x216c	84
 fn	_ScalerSyncResetProc	3	0x21c0	48
 fn	_ScalerTimerActiveTimerEvent	3	0x21f0	180
 fn	_ScalerTimerCheckEventValid	3	0x22a4	28
@@ -1765,8 +1748,6 @@ fn	_ScalerDpRx1DpcdLinkStatusReset	3	0x31f4	172
 fn	_ScalerDpRx1FifoCheck	3	0x32a0	176
 fn	_ScalerDpRx1GetBStoVSDelay	3	0x3350	1240
 fn	_ScalerDpRx1HDCPBlockReset	3	0x3828	272
-fn	_ScalerDpRx1HdcpCheckValid	3	0x3938	60
-fn	_ScalerDpRx1HdcpReAuthStatusCheck	3	0x3974	108
 fn	_ScalerDpRx1LinkStatusIRQ	3	0x39e0	120
 fn	_ScalerDpRx1MacInitial	3	0x3a58	72
 fn	_ScalerDpRx1ScanInputPort	3	0x3aa0	264
@@ -2012,7 +1993,6 @@ fn	_ScalerTMDSRxFLDBandFineTune_EXINT0	4	0x4e2c	644
 fn	_ScalerTMDSRxFormatDetect	4	0x50b0	312
 fn	_ScalerTMDSRxFreqDetectDisable	4	0x51e8	156
 fn	_ScalerTMDSRxHdcp1p4AksvClear	4	0x5284	16
-fn	_ScalerTMDSRxHdcpEnabled	4	0x5294	200
 fn	_ScalerTMDSRxHdmiAVMuteProc	4	0x535c	128
 fn	_ScalerTMDSRxHdmiPacketDetect	4	0x53dc	676
 fn	_ScalerTMDSRx3AfterHotPlugEventProc	4	0x5680	92
@@ -2364,7 +2344,7 @@ const	_tLUTGAMMA_18_TABLE	6	0x0164	6352
 const	_tLUTGAMMA_20_TABLE	6	0x1a34	6352
 const	_tLUTGAMMA_22_TABLE	6	0x3304	6352
 const	_tLUTGAMMA_24_TABLE	6	0x4bd4	6352
-const	_UserInterfaceGetOverScanStatus_tusOverscanEnTable_10000_1384	6	0x64a4	92
+const	_UserInterfaceGetOverScanStatus_tusOverscanEnTable_10000_1380	6	0x64a4	92
 const	_OperationFactoryTable	6	0x6500	756
 const	_tCOLOR_CONV_RGB2YUV_ITU709	6	0x67f4	32
 const	_tCOLOR_CONV_YUV2RGB_ITU601	6	0x6814	32
@@ -2876,9 +2856,8 @@ const	_tDISPLAY_DPTX_DRV_HBR2_TABLE	9	0x0000	56
 const	_tEDID_TABLE_D1	9	0x0038	268
 const	_tEDID_TABLE_D2	9	0x0144	268
 const	_tEDID_TABLE_D3	9	0x0250	268
-const	_set_ap_rotate_tFlipToSdk_10000_1408	9	0x035c	8
+const	_set_ap_rotate_tFlipToSdk_10000_1404	9	0x035c	8
 fn	_ScalerColor420To422D2D3Enable	9	0x0364	60
-fn	_ScalerSyncHdcpDownLoadKey	9	0x03a0	112
 fn	_ScalerDpRx1AuxIntInitial	9	0x0418	116
 fn	_ScalerDpRx1AuxPowerOnInitial	9	0x048c	240
 fn	_ScalerDpRx1RebuildPhy_WDINT	9	0x057c	2316
@@ -2939,9 +2918,6 @@ fn	_ScalerPowerGroupAIsolation	9	0x3864	96
 fn	_ScalerPowerGroupAPowerCut	9	0x38c4	32
 fn	_ScalerPowerGroupBIsolation	9	0x38e4	28
 fn	_ScalerPowerGroupDPowerCut	9	0x3900	372
-fn	_ScalerSyncHdcpDownLoadBKsv	9	0x3a74	376
-fn	_ScalerSyncHdcpEnableDownLoadKey	9	0x3bec	252
-fn	_SysPowerLoadHDCPKey	9	0x3ce8	120
 fn	_ScalerSyncGetInputPixelClk	9	0x3d88	56
 fn	_ScalerTMDSHdmiReadRequestTimerEnable_WDINT	9	0x3dc0	20
 fn	_ScalerTMDSInterruptInitial	9	0x3dd4	20
@@ -2977,7 +2953,6 @@ fn	_ScalerTimerSearchActiveTimerEvent	9	0x4d0c	56
 fn	_ScalerTimerSetTimerCount	9	0x4d44	284
 fn	_ScalerDpRx1AuxSet	9	0x4e78	108
 fn	_ScalerDpRx1CheckVgipVsBypass	9	0x4ee4	128
-fn	_ScalerDpRx1HdcpCheckEnabled	9	0x4f64	120
 fn	_ScalerDpRx1Initial	9	0x4fdc	108
 fn	_ScalerDpRx1SetDpLaneMapping	9	0x5048	196
 fn	_ScalerDpInitial	9	0x510c	32
@@ -3625,7 +3600,6 @@ fn	_AwtoPassSlow	10	0xa9cc	308
 fn	_AwtoDemoLog	10	0xab00	228
 fn	_AwtoPortMonClock	10	0xabe4	236
 fn	_AwtoPortMonPoll	10	0xacd0	408
-fn	_reg_wr_n	10	0xae68	96
 const	_g_aucPsData	11	0x0000	740
 const	___str_202	11	0x02e4	20
 const	___str_203	11	0x02f8	20

@@ -402,7 +402,11 @@ extern void ScalerSyncHdcpDownLoadDPTxAKsv(BYTE ucSubAddr, BYTE ucLength, BYTE *
 extern void ScalerSyncHdcpDownLoadDPTxAKey(WORD usLength, BYTE *pucReadArray);
 #endif
 
+#if(_AWTO_HDCP == _ON)
 extern EnumHDCPType ScalerSyncHdcpCheckEnabled(BYTE ucInputPort);
+#else
+#define ScalerSyncHdcpCheckEnabled(p)                   (((void)(p)), _HDCP_NONE)   // awto: HDCP out (#44)
+#endif
 #endif // End of #if(_DIGITAL_PORT_SUPPORT == _ON)
 
 #if(_URGENT_EVENT_CHECK_MODE == _ON)

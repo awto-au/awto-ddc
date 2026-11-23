@@ -66,7 +66,9 @@ void ScalerDpRx1ScrambleSetting(void);
 bit ScalerDpRx1LaneValidCheck(void);
 #endif
 
+#if(_AWTO_HDCP == _ON)
 void ScalerDpRx1CheckHdcpCpirqStatus(void);
+#endif
 
 #if(_FORMAT_CONVERSION_SUPPORT == _ON)
 bit ScalerDpRx1CheckVgipVsBypass(void);
@@ -163,10 +165,12 @@ bit ScalerDpRx1DecodeCheck(void);
 bit ScalerDpRx1DisplayFormatSetting(void);
 bit ScalerDpRx1FifoCheck(EnumDpFifoCheckCondition enumFifoCheckCondition);
 void ScalerDpRx1HDCPBlockReset(void);
+#if(_AWTO_HDCP == _ON)
 bit ScalerDpRx1HdcpCheckValid(void);
 bit ScalerDpRx1HdcpCheckEnabled(void);
 bit ScalerDpRx1HdcpMeasureCheck(void);
 bit ScalerDpRx1HdcpReAuthStatusCheck(void);
+#endif
 void ScalerDpRx1MacInitial(void);
 bit ScalerDpRx1MeasureLaneCDRClk(BYTE ucDpLinkRate, BYTE ucDpRx1LaneNumber);
 
@@ -519,6 +523,7 @@ bit ScalerDpRx1LaneValidCheck(void)
 }
 #endif
 
+#if(_AWTO_HDCP == _ON)
 //--------------------------------------------------
 // Description  : Clear CPIRQ Flag
 // Input Value  : None
@@ -552,6 +557,8 @@ void ScalerDpRx1CheckHdcpCpirqStatus(void)
         }
     }
 }
+
+#endif
 
 #if(_FORMAT_CONVERSION_SUPPORT == _ON)
 //--------------------------------------------------
@@ -1935,6 +1942,10 @@ void ScalerDpRx1SinkStatusSet(EnumDpSinkReceivePort enumReceiverPort, EnumDpSink
 //--------------------------------------------------
 void ScalerDpRx1ChangeHdcpDpcdCapability(bit bEn)
 {
+#if(_AWTO_HDCP == _OFF)
+    bEn = bEn;    // awto: only _DISABLE is called without HDCP (#44)
+#endif
+#if(_AWTO_HDCP == _ON)    // awto: enable branch only with HDCP (#44)
     if(bEn == _ENABLE)
     {
         // Clear flag for write 68xxx int
@@ -1973,6 +1984,7 @@ void ScalerDpRx1ChangeHdcpDpcdCapability(bit bEn)
 #endif
     }
     else
+#endif
     {
         // Disable Write 68xxx int
         ScalerSetBit(PBA_DA_AUX_FIFO_RST, ~_BIT2, 0x00);
@@ -2914,6 +2926,7 @@ void ScalerDpRx1HDCPBlockReset(void)
     ScalerSetBit(PB0_01_PHY_DIG_RESET_CTRL, ~_BIT0, _BIT0);
     ScalerSetBit(PB0_01_PHY_DIG_RESET_CTRL, ~_BIT0, 0x00);
 
+#if(_AWTO_HDCP == _ON)    // awto: HDCP DPCD space is idle-zero without HDCP (#44)
     ScalerDpRx1SetDpcdValue(0x06, 0x80, 0x29, 0x00);
     ScalerDpRx1SetDpcdValue(0x06, 0x80, 0x2A, 0x00);
     ScalerDpRx1SetDpcdValue(0x06, 0x80, 0x2B, 0x00);
@@ -2938,12 +2951,26 @@ void ScalerDpRx1HDCPBlockReset(void)
     ScalerDpRx1SetDpcdValue(0x06, 0x80, 0x0B, 0x00);
 
     SET_DP_RX1_AUX_AUTO_MODE();
+#else
+    // awto: only the source-written Aksv is cleared; V' / RxStatus / KSV FIFO are written by HDCP code only (#44)
+    SET_DP_RX1_AUX_MANUAL_MODE();
+
+    // Clear Aksv
+    ScalerDpRx1SetDpcdValue(0x06, 0x80, 0x07, 0x00);
+    ScalerDpRx1SetDpcdValue(0x06, 0x80, 0x08, 0x00);
+    ScalerDpRx1SetDpcdValue(0x06, 0x80, 0x09, 0x00);
+    ScalerDpRx1SetDpcdValue(0x06, 0x80, 0x0A, 0x00);
+    ScalerDpRx1SetDpcdValue(0x06, 0x80, 0x0B, 0x00);
+
+    SET_DP_RX1_AUX_AUTO_MODE();
+#endif
 
 #if((_DP_TX_SUPPORT == _ON) && (_DP_MST_SUPPORT == _ON))
     ScalerDpRx1HDCPChangeAuthState(_DP_RX_HDCP_STATE_IDLE);
 #endif
 }
 
+#if(_AWTO_HDCP == _ON)
 //--------------------------------------------------
 // Description  : Check whether HDCP is valid
 // Input Value  : None
@@ -3144,6 +3171,8 @@ bit ScalerDpRx1HdcpReAuthStatusCheck(void)
         return _TRUE;
     }
 }
+
+#endif // End of #if(_AWTO_HDCP == _ON)
 
 //--------------------------------------------------
 // Description  : Dp Mac Initial Setting

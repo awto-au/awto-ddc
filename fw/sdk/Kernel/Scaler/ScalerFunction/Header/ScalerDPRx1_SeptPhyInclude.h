@@ -159,7 +159,11 @@ extern void ScalerDpRx1ScrambleSetting(void);
 extern bit ScalerDpRx1LaneValidCheck(void);
 #endif
 
+#if(_AWTO_HDCP == _ON)
 extern void ScalerDpRx1CheckHdcpCpirqStatus(void);
+#else
+#define ScalerDpRx1CheckHdcpCpirqStatus()               ((void)0)   // awto: HDCP out (#44), no HDCP2 answer regs
+#endif
 
 #if(_FORMAT_CONVERSION_SUPPORT == _ON)
 extern bit ScalerDpRx1CheckVgipVsBypass(void);
@@ -236,10 +240,17 @@ extern bit ScalerDpRx1DecodeCheck(void);
 extern bit ScalerDpRx1DisplayFormatSetting(void);
 extern bit ScalerDpRx1FifoCheck(EnumDpFifoCheckCondition enumFifoCheckCondition);
 extern void ScalerDpRx1HDCPBlockReset(void);
+#if(_AWTO_HDCP == _ON)
 extern bit ScalerDpRx1HdcpCheckValid(void);
 extern bit ScalerDpRx1HdcpCheckEnabled(void);
 extern bit ScalerDpRx1HdcpMeasureCheck(void);
 extern bit ScalerDpRx1HdcpReAuthStatusCheck(void);
+#else
+// awto: HDCP out (#44): never valid / enabled / re-authenticating
+#define ScalerDpRx1HdcpCheckValid()                     (_FALSE)
+#define ScalerDpRx1HdcpCheckEnabled()                   (_FALSE)
+#define ScalerDpRx1HdcpReAuthStatusCheck()              (_FALSE)
+#endif
 extern void ScalerDpRx1MacInitial(void);
 extern bit ScalerDpRx1NormalPreDetect(void);
 extern bit ScalerDpRx1PhyCtsTp1Check(void);

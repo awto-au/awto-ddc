@@ -2557,10 +2557,12 @@ bit ScalerDpRx1HdcpCheck(void)
         return _FALSE;
     }
 
+#if(_AWTO_HDCP == _ON)    // awto: unreachable without HDCP (Aksv zero returns above) (#44)
     if((GET_DP_RX1_HDCP_MODE() == _HDCP_14) && (ScalerDpRx1HdcpMeasureCheck() == _TRUE))
     {
         return _TRUE;
     }
+#endif
 
     return _FALSE;
 }
