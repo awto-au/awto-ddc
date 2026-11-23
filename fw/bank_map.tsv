@@ -1,9 +1,9 @@
 #common 0x5000
 #resid_end 0xd1c
-#stubs 1107
+#stubs 1102
 # kind	name	region    (bank map: scripts/sdcc_layout.py; region C = common, n = bank n)
 const	_OperationFactoryTable	6
-const	_UserInterfaceGetOverScanStatus_tusOverscanEnTable_10000_1384	6
+const	_UserInterfaceGetOverScanStatus_tusOverscanEnTable_10000_1380	6
 const	___str_0	8
 const	___str_1	8
 const	___str_10	C
@@ -288,7 +288,7 @@ const	_s_tS2Base	12
 const	_s_tS2Cell	12
 const	_s_tS2Font	11
 const	_s_tS2Pulse	12
-const	_set_ap_rotate_tFlipToSdk_10000_1408	9
+const	_set_ap_rotate_tFlipToSdk_10000_1404	9
 const	_tAwtoAudioTestAmp	4
 const	_tAwtoAudioTestGain	4
 const	_tAwtoAudioTestMute	4
@@ -374,8 +374,6 @@ const	_tFlashWrenFirst	5
 const	_tFlashWrenKind	5
 const	_tFlashWrenRow	5
 const	_tGAMMA_TABLE	6
-const	_tHDCP_KEY_BKSV	0
-const	_tHDCP_KEY_TABLE	0
 const	_tIDITHER_SEQ_TABLE	6
 const	_tIDITHER_TABLE_FIFO10	6
 const	_tIDITHER_TABLE_FIFO8	6
@@ -1664,7 +1662,6 @@ fn	_ScalerDpGetLanePreEmpLv	8
 fn	_ScalerDpGetLaneVoltageSwingLv	8
 fn	_ScalerDpGetLinkRate	3
 fn	_ScalerDpHDCPUnplugReset	3
-fn	_ScalerDpHdcpCheckValid	3
 fn	_ScalerDpHotPlugHandler	3
 fn	_ScalerDpInitial	9
 fn	_ScalerDpIntHandler_EXINT0	7
@@ -1689,7 +1686,6 @@ fn	_ScalerDpRx1CDRCheck	10
 fn	_ScalerDpRx1ChangeDpcdVersion	2
 fn	_ScalerDpRx1ChangeHdcpDpcdCapability	4
 fn	_ScalerDpRx1ChangeSrambleSeed	2
-fn	_ScalerDpRx1CheckHdcpCpirqStatus	2
 fn	_ScalerDpRx1CheckSourceOUI_EXINT0	7
 fn	_ScalerDpRx1CheckVgipVsBypass	9
 fn	_ScalerDpRx1ColorimetrySetting	10
@@ -1722,10 +1718,6 @@ fn	_ScalerDpRx1HDCPBlockReset	3
 fn	_ScalerDpRx1HDCPUnplugReset	3
 fn	_ScalerDpRx1HSActiveTrackingMode	10
 fn	_ScalerDpRx1HdcpCheck	2
-fn	_ScalerDpRx1HdcpCheckEnabled	9
-fn	_ScalerDpRx1HdcpCheckValid	3
-fn	_ScalerDpRx1HdcpMeasureCheck	2
-fn	_ScalerDpRx1HdcpReAuthStatusCheck	3
 fn	_ScalerDpRx1HpdIrqAssert	3
 fn	_ScalerDpRx1Initial	9
 fn	_ScalerDpRx1IntHandler_EXINT0	7
@@ -2113,10 +2105,6 @@ fn	_ScalerSyncDpVersionChange	3
 fn	_ScalerSyncGDIPowerProc	9
 fn	_ScalerSyncGetInputPixelClk	9
 fn	_ScalerSyncGetUrgentEventFlg	9
-fn	_ScalerSyncHdcpCheckEnabled	3
-fn	_ScalerSyncHdcpDownLoadBKsv	9
-fn	_ScalerSyncHdcpDownLoadKey	9
-fn	_ScalerSyncHdcpEnableDownLoadKey	9
 fn	_ScalerSyncInterfaceSwitch	9
 fn	_ScalerSyncPowerProc	9
 fn	_ScalerSyncResetProc	3
@@ -2132,7 +2120,6 @@ fn	_ScalerTMDSAfterHotPlugEventProc	4
 fn	_ScalerTMDSBeforeHotPlugEventProc	4
 fn	_ScalerTMDSFirstActiveProc	10
 fn	_ScalerTMDSHdcp1p4AksvClear	2
-fn	_ScalerTMDSHdcpEnabled	3
 fn	_ScalerTMDSHdmi2FormatResetEvent	3
 fn	_ScalerTMDSHdmiAVMuteProc	4
 fn	_ScalerTMDSHdmiPacketDetectEvent	3
@@ -2153,7 +2140,6 @@ fn	_ScalerTMDSRx2AfterHotPlugEventProc	4
 fn	_ScalerTMDSRx2BeforeHotPlugEventProc	4
 fn	_ScalerTMDSRx2FirstActiveProc	10
 fn	_ScalerTMDSRx2Hdcp1p4AksvClear	10
-fn	_ScalerTMDSRx2HdcpEnabled	3
 fn	_ScalerTMDSRx2Hdmi2FormatResetEvent	3
 fn	_ScalerTMDSRx2HdmiAVMuteProc	4
 fn	_ScalerTMDSRx2HdmiPacketDetectEvent	10
@@ -2178,7 +2164,6 @@ fn	_ScalerTMDSRx3AfterHotPlugEventProc	4
 fn	_ScalerTMDSRx3BeforeHotPlugEventProc	4
 fn	_ScalerTMDSRx3FirstActiveProc	10
 fn	_ScalerTMDSRx3Hdcp1p4AksvClear	2
-fn	_ScalerTMDSRx3HdcpEnabled	3
 fn	_ScalerTMDSRx3Hdmi2FormatResetEvent	3
 fn	_ScalerTMDSRx3HdmiAVMuteProc	4
 fn	_ScalerTMDSRx3HdmiPacketDetectEvent	3
@@ -2210,7 +2195,6 @@ fn	_ScalerTMDSRxFirstActiveProc	10
 fn	_ScalerTMDSRxFormatDetect	4
 fn	_ScalerTMDSRxFreqDetectDisable	4
 fn	_ScalerTMDSRxHdcp1p4AksvClear	4
-fn	_ScalerTMDSRxHdcpEnabled	4
 fn	_ScalerTMDSRxHdmi2FormatResetEvent	10
 fn	_ScalerTMDSRxHdmiAVMuteProc	4
 fn	_ScalerTMDSRxHdmiAviPixelRepInfoChanged	10
@@ -2294,7 +2278,6 @@ fn	_ScalerVgipSetCaptureVStartPosition	0
 fn	_ScalerVgipSetDigitalCaptureStatus	10
 fn	_ScalerVgipVgipDoubleBufferApply	C
 fn	_ScalerVgipVsBypassEnable	9
-fn	_ScalerWrite	C
 fn	_SplashEnd	8
 fn	_SysAudioAnalogAudioHandler	4
 fn	_SysAudioChangeAudioState	4
@@ -2357,7 +2340,6 @@ fn	_SysPowerCheckFakeSaving	3
 fn	_SysPowerGetPowerStatus	C
 fn	_SysPowerInitial	9
 fn	_SysPowerIsolation	9
-fn	_SysPowerLoadHDCPKey	9
 fn	_SysPowerMcuClock	9
 fn	_SysPowerRecoverIsolationAreaData	10
 fn	_SysPowerSwitch	3
@@ -2448,8 +2430,6 @@ fn	_UserCommonInterfaceGetColorFormat	6
 fn	_UserCommonInterfaceGetDVMaxMinFreq	10
 fn	_UserCommonInterfaceGetDisplaySettingBacklightAction	0
 fn	_UserCommonInterfaceGetDpMstCapablePort	3
-fn	_UserCommonInterfaceGetHDCPKey	0
-fn	_UserCommonInterfaceGetHDCPKeyBKsv	0
 fn	_UserCommonInterfaceGetRGBQuantizationLimitRangeStatus	6
 fn	_UserCommonInterfaceInitial	6
 fn	_UserCommonInterfaceLoadEmbeddedEdidData	9
@@ -2618,7 +2598,6 @@ fn	_osd_tc_win_draw	1
 fn	_pi_at	10
 fn	_put_dec	1
 fn	_reg_rd_n	10
-fn	_reg_wr_n	10
 fn	_rnd_shl	10
 fn	_set_action	1
 fn	_set_ap_aspect	10
