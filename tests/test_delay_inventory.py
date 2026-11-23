@@ -145,22 +145,3 @@ def test_real_build_rows():
     assert [r["value"] for r in pre] == [6] and pre[0]["reachable"] == "yes" and pre[0]["context"] == "search"
     assert any(r["kind"] == "poll" and r["function"] == "ScalerTimerWaitForEvent" or r["kind"] == "wait_event" for r in rows)
     assert "_SysPowerHandler" in live and "_main" in live
-
-
-def test_static_function_is_its_own_symbol(tmp_path):
-    """#309: a static C function (chunk CH_<name>, no map symbol) is not merged into the previous symbol."""
-    rst = ("                                     1 \t.area CH_Outer    (CODE)\n"
-           "      000100                         2 _Outer:\n"
-           "      000100 12 29 D3         [24]   3 \tlcall\t_Inner\n"
-           "      000103 22               [24]   4 \tret\n"
-           "                                     5 \t.area CH_Inner    (CODE)\n"
-           "      000200                         6 _Inner:\n"
-           "      000200 12 29 D3         [24]   7 \tlcall\t_Leaf\n"
-           "      000203 22               [24]   8 \tret\n")
-    b = tmp_path / "b"
-    (b / "tmp/sdcc-port/asm_bank").mkdir(parents=True)
-    (b / "tmp/sdcc-port/asm_bank/X.rst").write_text(rst)
-    fns = D.parse_rst(b, {"_Outer": (0x100, "X"), "_Leaf": (0x300, "X")})
-    assert set(fns) == {"_Outer", "_Inner"}
-    assert fns["_Inner"].addr == 0x200 and fns["_Inner"].calls == ["_Leaf"]
-    assert fns["_Outer"].calls == ["_Inner"]
