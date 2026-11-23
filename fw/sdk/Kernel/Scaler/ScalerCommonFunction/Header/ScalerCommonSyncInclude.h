@@ -1878,7 +1878,6 @@ typedef struct
 //****************************************************************************
 // VARIABLE EXTERN
 //****************************************************************************
-extern BYTE xdata pData_EXINT[6];
 extern volatile WORD isr_g_usInputPixelClk;
 extern WORD isr_g_usTmdsOffLineMeasureClk [[awto::isr_shared("main writes it with EX0 masked (TMDS Rx2/Rx3 PhySetDeferred); EXINT0 only reads")]];
 

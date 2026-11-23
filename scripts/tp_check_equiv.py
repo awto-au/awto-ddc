@@ -164,6 +164,11 @@ def func(text, name):
     return m.group(0)
 
 
+def with_helpers(ref, helpers, fn):
+    src = git_show(ref, SRC)
+    return [h for h in helpers if re.search(r"^static \w+ " + h + r"\(", src, re.MULTILINE)] + [fn]
+
+
 def run(ref, names, call, tag, n):
     src = git_show(ref, SRC)
     body = "".join(func(src, x) for x in names)
@@ -191,10 +196,8 @@ def main() -> int:
     for k, (fn, helpers) in cases.items():
         if a.fn not in (k, "both"):
             continue
-        old = run(a.old_ref, [fn], fn, f"{k}_old", a.n)
-        src = git_show("WORK", SRC)
-        hs = [h for h in helpers if re.search(r"^static \w+ " + h + r"\(", src, re.MULTILINE)]
-        new = run("WORK", hs + [fn], fn, f"{k}_new", a.n)
+        old = run(a.old_ref, with_helpers(a.old_ref, helpers, fn), fn, f"{k}_old", a.n)
+        new = run("WORK", with_helpers("WORK", helpers, fn), fn, f"{k}_new", a.n)
         ok = old == new
         say(f"{k}: {'EQUAL' if ok else 'MISMATCH'}")
         bad += not ok

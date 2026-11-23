@@ -2254,10 +2254,11 @@ void ScalerDpRx1MstReset(void)
 //--------------------------------------------------
 void ScalerDpRx1MstReset_EXINT0(void)
 {
+    BYTE ucIndex;
     // Reset GUID
-    for(pData_EXINT[0] = 0; pData_EXINT[0] < 16; pData_EXINT[0]++)
+    for(ucIndex = 0; ucIndex < 16; ucIndex++)
     {
-        ScalerDpRx1SetDpcdValue_EXINT0(0x00, 0x00, (0x30 + pData_EXINT[0]), 0x00);
+        ScalerDpRx1SetDpcdValue_EXINT0(0x00, 0x00, (0x30 + ucIndex), 0x00);
     }
 
     // Disable 0x111/1C2 IRQ
@@ -2297,23 +2298,23 @@ void ScalerDpRx1MstReset_EXINT0(void)
     ScalerSetBit_EXINT(PBA_B0_AUX_PAYLOAD_CLEAR, ~_BIT6, 0x00);
 
     // Reset ST1 ~ ST5
-    for(pData_EXINT[0] = 0; pData_EXINT[0] < 5; pData_EXINT[0]++)
+    for(ucIndex = 0; ucIndex < 5; ucIndex++)
     {
         // Reset Start Position
-        ScalerSetByte_EXINT(PB8_03_STHD_CTRL_2 + (pData_EXINT[0] << 1), 0x00);
+        ScalerSetByte_EXINT(PB8_03_STHD_CTRL_2 + (ucIndex << 1), 0x00);
 
         // Reset End Position
-        ScalerSetByte_EXINT(PB8_04_STHD_CTRL_3 + (pData_EXINT[0] << 1), 0x00);
+        ScalerSetByte_EXINT(PB8_04_STHD_CTRL_3 + (ucIndex << 1), 0x00);
     }
 
     // Reset Daisy Chain ST3 ~ ST5
-    for(pData_EXINT[0] = 0; pData_EXINT[0] < 3; pData_EXINT[0]++)
+    for(ucIndex = 0; ucIndex < 3; ucIndex++)
     {
         // Reset Start Position
-        ScalerSetByte_EXINT(RET_REG_ADDR_DP_RX1_DAIZY_ST3_START() + (pData_EXINT[0] << 1), 0x00);
+        ScalerSetByte_EXINT(RET_REG_ADDR_DP_RX1_DAIZY_ST3_START() + (ucIndex << 1), 0x00);
 
         // Reset End Position
-        ScalerSetByte_EXINT(RET_REG_ADDR_DP_RX1_DAIZY_ST3_END() + (pData_EXINT[0] << 1), 0x00);
+        ScalerSetByte_EXINT(RET_REG_ADDR_DP_RX1_DAIZY_ST3_END() + (ucIndex << 1), 0x00);
     }
 
     if((GET_REG_DP_RX_DOWN_REQUEST_BUF0_MSG_FINISH_EXINT() == 0x01) || (GET_REG_DP_RX_DOWN_REQUEST_BUF1_MSG_FINISH_EXINT() == 0x01))

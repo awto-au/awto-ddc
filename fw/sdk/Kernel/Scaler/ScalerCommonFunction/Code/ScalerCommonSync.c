@@ -49,7 +49,6 @@
 //****************************************************************************
 // VARIABLE DECLARATIONS
 //****************************************************************************
-BYTE xdata pData_EXINT[6];
 __xdata _Bool g_bPsWakeupHpd;
 volatile WORD isr_g_usInputPixelClk;
 WORD isr_g_usTmdsOffLineMeasureClk [[awto::isr_shared("main writes it with EX0 masked (TMDS Rx2/Rx3 PhySetDeferred); EXINT0 only reads")]];

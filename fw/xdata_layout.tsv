@@ -3,7 +3,7 @@ ScalerAudio_SeptPhy	0xd700	0	5
 ScalerDisplayDPTx	0xd700	5	77
 _gptrput_isr	0xd700	109	4
 _gptrget_isr	0xd700	113	3
-ScalerDPRx1_INT_SeptPhy	0xd700	116	36
+ScalerDPRx1_INT_SeptPhy	0xd700	116	40
 keytest	0xd700	169	154
 awto_settings_menu	0xd700	323	135
 ScalerMDomain	0xd700	458	132

@@ -1373,6 +1373,7 @@ void ScalerDpMstReset(EnumDPMSTPort enumRxMstPort)
 //--------------------------------------------------
 void ScalerDpMstReset_EXINT0(EnumDPMSTPort enumRxMstPort)
 {
+    BYTE ucIndex;
     if(enumRxMstPort == _DP_MST_NO_PORT)
     {
         return;
@@ -1421,9 +1422,9 @@ void ScalerDpMstReset_EXINT0(EnumDPMSTPort enumRxMstPort)
     ScalerDpRxMstClrStreamMuxBackup_EXINT0();
 
     // Reset Stream ID Mapping Table
-    for(pData_EXINT[0] = 0; pData_EXINT[0] < 5; pData_EXINT[0]++)
+    for(ucIndex = 0; ucIndex < 5; ucIndex++)
     {
-        g_pucDpStreamToIdMapping[pData_EXINT[0]] = 0;
+        g_pucDpStreamToIdMapping[ucIndex] = 0;
     }
 
     // Clear Down Request MSG Proc Flags

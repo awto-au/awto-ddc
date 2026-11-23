@@ -3653,6 +3653,7 @@ void ScalerDpRx1CpIRQ(EnumDpRxBStatusType enumBStatusType)
 //--------------------------------------------------
 void ScalerDpRx1CpIRQ_EXINT0(EnumDpRxBStatusType enumBStatusType)
 {
+    BYTE ucCpIrq;
     BYTE ucBackUp = 0;
 
     ucBackUp = ScalerGetByte_EXINT(PBA_D0_AUX_MODE_SET);
@@ -3672,12 +3673,12 @@ void ScalerDpRx1CpIRQ_EXINT0(EnumDpRxBStatusType enumBStatusType)
     }
 
     // Link Status CPIRQ Flag
-    pData_EXINT[0] = (ScalerDpRx1GetDpcdInfo_EXINT0(0x00, 0x02, 0x01) | _BIT2);
+    ucCpIrq = (ScalerDpRx1GetDpcdInfo_EXINT0(0x00, 0x02, 0x01) | _BIT2);
 
     // SET AUX AUTO MODE
     SET_DP_RX1_AUX_AUTO_MODE_EXINT();
 
-    ScalerDpRx1SetDpcdValue_EXINT0(0x00, 0x02, 0x01, pData_EXINT[0]);
+    ScalerDpRx1SetDpcdValue_EXINT0(0x00, 0x02, 0x01, ucCpIrq);
 
     if((ucBackUp & _BIT1) == 0x00)
     {
