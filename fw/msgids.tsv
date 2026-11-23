@@ -136,8 +136,8 @@
 3aab	FRC	Kernel/Scaler/RL6449_Series_Scaler/Code/RL6449_Series_Scaling.c:588	ulHSDSpace	1
 3b83	Rx2	Kernel/Scaler/RL6449_Series_Scaler/Code/RL6449_Series_TMDSRx2.c:3382	4. reset Icp	0
 3b9b	Mst	Kernel/System/Code/SysPower.c:1214	SysPower Check Fake Saving	0
-3bef	FRC	Kernel/Scaler/RL6449_Series_Scaler/Code/RL6449_Series_FRC.c:1049	Error4-input faster/slower mis-match: DHF'	1
-3bef	FRC	Kernel/Scaler/RL6449_Series_Scaler/Code/RL6449_Series_FRC.c:1060	Error4-input faster/slower mis-match: DHF'	1
+3bef	FRC	Kernel/Scaler/RL6449_Series_Scaler/Code/RL6449_Series_FRC.c:1046	Error4-input faster/slower mis-match: DHF'	1
+3bef	FRC	Kernel/Scaler/RL6449_Series_Scaler/Code/RL6449_Series_FRC.c:1057	Error4-input faster/slower mis-match: DHF'	1
 3c14	Measure	Kernel/Scaler/RL6449_Series_Scaler/Code/RL6449_Series_Measure.c:524	Digital check V height fail	1
 3c15	Measure	Kernel/Scaler/RL6449_Series_Scaler/Code/RL6449_Series_Measure.c:446	Digital off-line measure fail	1
 3c5c	System	Kernel/System/Code/SysSource.c:2064	7. wuanne test : Search Initial : 3	1
@@ -321,8 +321,8 @@
 8f78	Scaler	Kernel/Scaler/ScalerFunction/Code/ScalerIDomain.c:182	9. Set Capture usVStart	0
 9116	Scaler	Kernel/Scaler/ScalerFunction/Code/ScalerIDomain.c:181	9. Set Capture usVHeight	0
 91bf	System	Kernel/System/Code/SysSource.c:494	TMDS Measure Fail	1
-92b7	FRC	Kernel/Scaler/RL6449_Series_Scaler/Code/RL6449_Series_FRC.c:1048	Error3-input faster/slower mis-match: IHF'	1
-92b7	FRC	Kernel/Scaler/RL6449_Series_Scaler/Code/RL6449_Series_FRC.c:1059	Error3-input faster/slower mis-match: IHF'	1
+92b7	FRC	Kernel/Scaler/RL6449_Series_Scaler/Code/RL6449_Series_FRC.c:1045	Error3-input faster/slower mis-match: IHF'	1
+92b7	FRC	Kernel/Scaler/RL6449_Series_Scaler/Code/RL6449_Series_FRC.c:1056	Error3-input faster/slower mis-match: IHF'	1
 93bc	Measure	Kernel/Scaler/ScalerFunction/Code/ScalerMeasure.c:222	Interlace: detect by half line	0
 9442	CEC	Kernel/Scaler/ScalerFunction/Code/ScalerCec.c:682	CEC TX has been Ack	0
 9530	Audio	Kernel/Scaler/ScalerFunction/Code/ScalerAudio_SeptPhy.c:954	HDMI Aduio Test Off	0
@@ -538,8 +538,8 @@ e4bb	Rx1	Kernel/Scaler/ScalerCommonFunction/Code/ScalerCommonDPRx1.c:1442	_COLOR
 e52f	FS	Kernel/Scaler/ScalerFunction/Code/ScalerIDomain.c:253	IVDelay step step	1
 e549	Measure	Kernel/Scaler/RL6449_Series_Scaler/Code/RL6449_Series_Measure.c:597	Digital format conversion fail	1
 e58c	Check	Kernel/Scaler/ScalerFunction/Code/ScalerDisplayDPTx.c:641	eDP Tx1 LT1 Freq Fail	1
-e5ce	FRC	Kernel/Scaler/RL6449_Series_Scaler/Code/RL6449_Series_FRC.c:1046	Error1-input faster/slower mis-match: IDEN	1
-e5ce	FRC	Kernel/Scaler/RL6449_Series_Scaler/Code/RL6449_Series_FRC.c:1057	Error1-input faster/slower mis-match: IDEN	1
+e5ce	FRC	Kernel/Scaler/RL6449_Series_Scaler/Code/RL6449_Series_FRC.c:1043	Error1-input faster/slower mis-match: IDEN	1
+e5ce	FRC	Kernel/Scaler/RL6449_Series_Scaler/Code/RL6449_Series_FRC.c:1054	Error1-input faster/slower mis-match: IDEN	1
 e624	System	Kernel/System/Code/SysSource.c:379	bH_Select == 1,bP_Select ==0	1
 e6da	Rx1	Kernel/Scaler/ScalerCommonFunction/Code/ScalerCommonDPRx1.c:1124	Fake Interlace	0
 e810	Rx1	Kernel/Scaler/ScalerFunction/Code/ScalerDPRx1_SeptPhy.c:4429	7. DP Misc Change	0
@@ -571,7 +571,7 @@ f37c	CEC	Kernel/Scaler/ScalerFunction/Code/ScalerCec.c:150	CEC Initial	0
 f389	FRC	Kernel/Scaler/ScalerFunction/Code/ScalerFRC.c:674	-I_addr2 FRC	1
 f395	Check	Kernel/Scaler/ScalerFunction/Code/ScalerDisplayDPTx.c:692	eDP Tx1 Link Config Fail	1
 f3b3	Rx2	Kernel/Scaler/ScalerCommonFunction/Code/ScalerCommonSync.c:6178	Colorimetry Changed	0
-f3d2	FRC	Kernel/Scaler/RL6449_Series_Scaler/Code/RL6449_Series_FRC.c:450	FRC-V	1
+f3d2	FRC	Kernel/Scaler/RL6449_Series_Scaler/Code/RL6449_Series_FRC.c:447	FRC-V	1
 f4b9	Rx2	Kernel/Scaler/RL6449_Series_Scaler/Code/RL6449_Series_TMDSRx2.c:4430	TMDS Format Changed	0
 f4b9	Rx2	Kernel/Scaler/RL6449_Series_Scaler/Code/RL6449_Series_TMDSRx2.c:4451	TMDS Format Changed	0
 f4b9	Rx2	Kernel/Scaler/RL6449_Series_Scaler/Code/RL6449_Series_TMDSRx2.c:4468	TMDS Format Changed	0
@@ -587,8 +587,8 @@ f7d5	Rx2	Kernel/Scaler/RL6449_Series_Scaler/Code/RL6449_Series_TMDSRx2.c:4507	7.
 f7f3	Rx1	Kernel/Scaler/ScalerCommonFunction/Code/ScalerCommonSync.c:1673	Flag Clear_Hotplug Event_D1	0
 f7f3	Rx1	Kernel/Scaler/ScalerFunction/Code/ScalerDPRx1_SeptPhy.c:1047	Flag Clear_Hotplug Event_D1	0
 f841	Rx2	Kernel/Scaler/RL6449_Series_Scaler/Code/RL6449_Series_TMDSRx2.c:3942	9. Freq Check Pass => Pixel Clock	0
-f868	FRC	Kernel/Scaler/RL6449_Series_Scaler/Code/RL6449_Series_FRC.c:1047	Error2-input faster/slower mis-match: DDEN	1
-f868	FRC	Kernel/Scaler/RL6449_Series_Scaler/Code/RL6449_Series_FRC.c:1058	Error2-input faster/slower mis-match: DDEN	1
+f868	FRC	Kernel/Scaler/RL6449_Series_Scaler/Code/RL6449_Series_FRC.c:1044	Error2-input faster/slower mis-match: DDEN	1
+f868	FRC	Kernel/Scaler/RL6449_Series_Scaler/Code/RL6449_Series_FRC.c:1055	Error2-input faster/slower mis-match: DDEN	1
 f8c0	System	Kernel/System/Code/SysDP.c:208	HPD - Low	1
 f8c0	System	Kernel/System/Code/SysDP.c:292	HPD - Low	1
 f8c0	System	Kernel/System/Code/SysDP.c:422	HPD - Low	1
@@ -603,7 +603,7 @@ fbdb	System	Kernel/System/Code/SysSource.c:2220	7. wuzanee test : Search Times	1
 fbdb	System	Kernel/System/Code/SysSource.c:2476	7. wuzanee test : Search Times	1
 fbdb	System	Kernel/System/Code/SysSource.c:2896	7. wuzanee test : Search Times	1
 fbdb	System	Kernel/System/Code/SysSource.c:2963	7. wuzanee test : Search Times	1
-fd23	FRC	Kernel/Scaler/RL6449_Series_Scaler/Code/RL6449_Series_FRC.c:449	FRC-H	1
+fd23	FRC	Kernel/Scaler/RL6449_Series_Scaler/Code/RL6449_Series_FRC.c:446	FRC-H	1
 fd28	MemoryPhaseCal	Kernel/Scaler/ScalerFunction/Code/ScalerSync.c:607	CRC FAIL	0
 fd5d	Rx1	Kernel/Scaler/ScalerFunction/Code/ScalerDPRx1_SeptPhy.c:2225	7. wuzanne test : DP CDR Unlock	0
 fd6c	FS	Kernel/Scaler/ScalerFunction/Code/ScalerMemory.c:536	7. DtMax	1

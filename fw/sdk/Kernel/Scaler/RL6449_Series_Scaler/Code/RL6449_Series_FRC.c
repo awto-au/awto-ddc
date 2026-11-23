@@ -335,11 +335,9 @@ void ScalerFRCControl(const StructSDRAMDataInfo *pstFIFOSize)
     else
 #endif
     {
-        // Wait I-domain Stable Before FRC enable
+        // Wait I-domain Stable Before FRC enable: 1 IVS puts the capture enable on a frame start (#314)
         if(ScalerGetBit(P31_A0_I_DB_CTRL0, _BIT7) == 0x00)
         {
-            ScalerTimerWaitForEvent(_EVENT_IVS);
-            ScalerTimerWaitForEvent(_EVENT_IVS);
             ScalerTimerWaitForEvent(_EVENT_IVS);
         }
 
@@ -366,10 +364,9 @@ void ScalerFRCControl(const StructSDRAMDataInfo *pstFIFOSize)
         ScalerSetBit(P5_AD_DISP_STATUS, ~_BIT4, _BIT4);
         ScalerSetBit(P45_AD_DISP_STATUS, ~_BIT4, _BIT4);
 
-        // Wait _EVENT_IVS For FRC Run In Single Frame Buffer
+        // Wait _EVENT_IVS For FRC Run In Single Frame Buffer: 1 frame (#314)
         if(ScalerGetBit(P31_A0_I_DB_CTRL0, _BIT7) == 0x00)
         {
-            ScalerTimerWaitForEvent(_EVENT_IVS);
             ScalerTimerWaitForEvent(_EVENT_IVS);
         }
 
