@@ -26,6 +26,8 @@ import re
 import sys
 from pathlib import Path
 
+import chip_mem as CM
+
 SECTOR = 4096
 BANK = 65536
 
@@ -98,7 +100,7 @@ def main(argv=None) -> int:
     ap.add_argument("new", type=Path)
     ap.add_argument("--old-map", type=Path)
     ap.add_argument("--new-map", type=Path)
-    ap.add_argument("--common-sectors", type=int, default=5, help="common area per bank (build.json common_max 0x5000)")
+    ap.add_argument("--common-sectors", type=int, default=-(-CM.COMMON_END // 4096), help="common area per bank in sectors (fw/rl6449_memory.toml common_end)")
     ap.add_argument("--grid", action="store_true")
     ap.add_argument("--moves", type=int, default=6, help="moved symbols to list")
     ap.add_argument("--json", action="store_true")
