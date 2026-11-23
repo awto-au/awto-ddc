@@ -13,7 +13,7 @@ Code: `scripts/make_logo.py` (awto encoder + pattern-gen), `scripts/rtd_osd.py` 
 `scripts/rtd_flash_sector.py` (flash write, EDID flow). Renders: `~/vendors/realtek/analysis/logo/`.
 
 ## TL;DR
-- Bank 14 (0xE0000) is NOT the logo — it is three 14-bit gamma LUTs + a config blob [fw, this session]. Corrects the earlier "prime candidate" note.
+- Bank 14 (0xE0000) is NOT the logo (and since #44 it may hold our code: the gamma there is the Dahua firmware's, our build compiles its own) — it is three 14-bit gamma LUTs + a config blob [fw, this session]. Corrects the earlier "prime candidate" note.
 - Whole 1 MiB flash has only 3 used regions: `0x00000-0x67000` (code + bank 0-6 overlays), `0xE0000-0xE3000` (gamma), `0xFB000-0xFD000` (settings). So any logo data is in `0x00000-0x67000` [fw].
 - The logo is drawn by the SAME table-driven OSD glyph composer as the menus, and its glyph bitmaps are **VLC-compressed, downloaded from flash at run time via a banked pointer computed at run time** — not a fixed byte-slot [fw]. No raw uncompressed logo bitmap exists in range [fw, forensic sweep].
 - Logo glyph atlas located + decoded: blob D `0x23B41` (586 tiles). Placement char-map is built at run time and not yet pinned → persistent patch still gated on it (awto-ddc#5). Reversible routes meanwhile: **volatile OSD RAM** (`rtd_osd.py`) and the **hardware pattern generator**.

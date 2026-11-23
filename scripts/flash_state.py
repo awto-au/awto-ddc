@@ -24,8 +24,8 @@ FLASH_SECTORS = 256            # 1 MiB (JEDEC c22014)
 SAVE_EVERY = 16                # sectors between manifest saves while writing (~2 s of flashing each)
 VERSION = 1
 # Sectors the firmware / tools write at runtime: never skipped on the manifest's word, read and compared every flash.
-# NVRAM store 0xFB000-0xFCFFF, gamma 0xE0000-0xE2FFF, spare 0xFE000 (the manifest sector 0xFD000 is its own rule).
-VOLATILE_RANGES = ((0xE0000, 0xE3000, "gamma"), (0xFB000, 0xFD000, "nvram settings"), (0xFE000, 0xFF000, "spare sector"))
+# NVRAM store 0xFB000-0xFCFFF, spare 0xFE000 (the manifest sector 0xFD000 is its own rule). Bank 14 is image code, not volatile (#44).
+VOLATILE_RANGES = ((0xFB000, 0xFD000, "nvram settings"), (0xFE000, 0xFF000, "spare sector"))
 
 
 class Stats:

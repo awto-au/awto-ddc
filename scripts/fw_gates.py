@@ -452,6 +452,13 @@ def previous_red(b: Path, tier: str):
     return None, set()
 
 
+def common_record(b: Path):
+    """Common-region numbers of this image (scripts/common_metrics.py); None without a map. No threshold."""
+    import common_metrics
+    m = b.with_suffix(".map")
+    return common_metrics.measure(m, ROOT / "fw/bank_layout.tsv") if m.is_file() else None
+
+
 def write_record(b: Path, rec: dict, tree, complete: bool, tier: str = "normal") -> None:
     """tmp/fw/<stem>.gates.json: what `dev.py flash` checks (SHA-256 of the .bin, complete, no FAIL); red = FAIL gates, new_red = red and not red in the previous record of the tier."""
     red = sorted(k for k, v in rec.items() if v["result"] == "FAIL")
@@ -462,7 +469,7 @@ def write_record(b: Path, rec: dict, tree, complete: bool, tier: str = "normal")
            "date": isostamp.now(), "complete": complete, "tier": tier, "tree": str(tree or ""),
            "fw_gates_commit": git("rev-parse", "HEAD") + ("+dirty" if git("status", "--porcelain", "--", "scripts/fw_gates.py") else ""),
            "xdata": (json.loads(xj.read_text()) if (xj := b.with_suffix(".xdata.json")).is_file() else None),
-           "red": red, "prev_record": prev, "new_red": sorted(set(red) - prev_red) if prev else red, "gates": rec}
+           "common": common_record(b), "red": red, "prev_record": prev, "new_red": sorted(set(red) - prev_red) if prev else red, "gates": rec}
     out = b.with_suffix(".gates.json")
     tmp = out.with_suffix(".json.tmp")
     tmp.write_text(json.dumps(doc, indent=1) + "\n")

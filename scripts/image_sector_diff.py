@@ -3,7 +3,7 @@
 
 usage: scripts/image_sector_diff.py OLD.bin NEW.bin [--old-map M] [--new-map M] [--grid] [--moves N] [--json]
 (maps default to the .bin name with .map; images are tmp/fw/<serial>-<tag>-be.bin from ./dev.py build)
-- Per 4 KiB sector (the flasher's erase/program unit): same / changed, bank grid (14 banks x 16 sectors, common = first
+- Per 4 KiB sector (the flasher's erase/program unit): same / changed, bank grid (14-15 banks x 16 sectors, common = first
   --common-sectors of each bank).
 - Each changed sector is classified from its differing bytes:
   - stamp : build-tag string (found by the tag in the file name)
