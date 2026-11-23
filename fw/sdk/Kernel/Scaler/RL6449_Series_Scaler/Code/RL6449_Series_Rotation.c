@@ -111,7 +111,7 @@ void ScalerRotationReset(void)
 
             if(GET_MEMORY_FRAME_BUFFER() != _MEMORY_3_FRAME_BUFFER)
             {
-                ScalerTimerWaitForEvent(_EVENT_IVS);
+                // One frame boundary with the reset low is enough (#314)
                 ScalerTimerWaitForEvent(_EVENT_IVS);
                 ScalerSetBit(P5_49_CAP_M1_ROTATION, ~_BIT0, _BIT0);
                 ScalerSetBit(P45_49_CAP_M2_ROTATION, ~_BIT0, _BIT0);
