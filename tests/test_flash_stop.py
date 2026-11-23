@@ -38,7 +38,7 @@ class Clock:
 def clock(monkeypatch):
     c = Clock()
     monkeypatch.setattr(I, "time", types.SimpleNamespace(monotonic=c.monotonic, strftime=I.time.strftime))
-    F.LOG = open(os.devnull, "w")
+    F.LOG = open(os.devnull, "w")  # noqa: SIM115 - test-lifetime null sink
     return c
 
 

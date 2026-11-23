@@ -13,7 +13,7 @@ import regdb_query as Q
 
 
 def main() -> int:
-    a, b = (json.load(open(x))["pages"] for x in sys.argv[1:3])
+    a, b = (json.loads(Path(x).read_text())["pages"] for x in sys.argv[1:3])
     opt = lambda k, d: sys.argv[sys.argv.index(k) + 1] if k in sys.argv else d
     only = opt("--pages", "")
     skip = set(opt("--skip-pages", "FD,FE,FF,9F").upper().split(","))

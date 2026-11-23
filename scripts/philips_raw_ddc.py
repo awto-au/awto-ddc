@@ -75,12 +75,14 @@ def main():
         lines.append("{} | req {} | rep {}".format(label, req.hex(" "), rep.hex(" ")))
         time.sleep(REPLY_DELAY_S)  # spacing between requests
     dev.close()
-    open(os.path.join(root, f"tmp/philips/{day}-rawddc.txt"), "a").write(
-        "\n".join(lines) + "\n"
-    )
-    open(os.path.join(root, "tmp/logs/philips_raw_ddc.log"), "a").write(
-        "\n".join(lines) + "\n"
-    )
+    with open(os.path.join(root, f"tmp/philips/{day}-rawddc.txt"), "a") as _f:
+        _f.write(
+            "\n".join(lines) + "\n"
+        )
+    with open(os.path.join(root, "tmp/logs/philips_raw_ddc.log"), "a") as _f:
+        _f.write(
+            "\n".join(lines) + "\n"
+        )
     print("\n".join(lines))
 
 

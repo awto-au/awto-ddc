@@ -24,7 +24,8 @@ def main():
     bpp, w, h = opt("--bpp", 2), opt("--w", 12), opt("--h", 9)
     cols, sc = opt("--cols", 30), opt("--scale", 2)
     stride = opt("--stride", w*h*bpp//8)
-    d = open(dump, "rb").read()
+    with open(dump, "rb") as _f:
+        d = _f.read()
     rows = (count + cols - 1)//cols
     im = Image.new("L", (cols*(w+2), rows*(h+2)), 100)
     for n in range(count):

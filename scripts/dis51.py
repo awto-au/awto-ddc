@@ -82,7 +82,8 @@ def dis(buf, pc, base=0):
 def main():
     if len(sys.argv) < 3:
         print(__doc__); return 2
-    buf = open(sys.argv[1], "rb").read()
+    with open(sys.argv[1], "rb") as _f:
+        buf = _f.read()
     base = int(sys.argv[sys.argv.index("--base")+1], 16) if "--base" in sys.argv else 0
     if sys.argv[2] == "--find-dptr":
         v = int(sys.argv[3], 16)

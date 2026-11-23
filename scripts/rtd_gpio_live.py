@@ -37,7 +37,8 @@ def pins():
 
 
 def diff(a: str, b: str) -> int:
-    A, B = json.load(open(a)), json.load(open(b))
+    with open(a) as _f0, open(b) as _f1:
+        A, B = json.load(_f0), json.load(_f1)
     print(f"{'pin':8} {'port':6} {'mode':>5} {A['label']:>8}(as/rc0) {B['label']:>8}(as/rc0)")
     for k in A["pins"]:
         x, y = A["pins"][k], B["pins"][k]

@@ -65,7 +65,8 @@ def load_live(root: Path) -> dict[str, dict[int, int | None]]:
     """column '<unit><label>' -> {addr: value}; newest file per column."""
     cols: dict[str, tuple[str, dict[int, int | None]]] = {}
     for fn in sorted(glob.glob(str(root / "tmp/regs/live/*.json"))):
-        d = json.load(open(fn))
+        with open(fn) as _f:
+            d = json.load(_f)
         if d.get("label") == "probe" or d.get("result") != "ok" or "pages" not in d:
             continue
         col = f"{d['unit']}{d['label']}"
@@ -81,7 +82,8 @@ def load_isp(root: Path) -> tuple[dict[int, list[int]], set[int]]:
     pages: set[int] = set()
     for fn in sorted(glob.glob(str(root / "tmp/regs/*.json"))):
         try:
-            d = json.load(open(fn))
+            with open(fn) as _f:
+                d = json.load(_f)
         except ValueError:
             continue
         for p, arr in (d.get("pages") or {}).items():

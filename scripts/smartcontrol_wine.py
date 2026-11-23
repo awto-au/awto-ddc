@@ -82,25 +82,27 @@ def env():
 
 def inject_edid():
     """Put the measured 288E2 EDID where DDCHelperLib looks (Enum\\DISPLAY\\*\\Device Parameters\\EDID)."""
-    edid = (
-        open(os.path.join(ROOT, "tmp/wine/monitor_profile.txt"))
-        .read()
-        .split("edid ")[1]
-        .split()[0]
-    )
+    with open(os.path.join(ROOT, "tmp/wine/monitor_profile.txt")) as _f:
+        edid = (
+            _f
+            .read()
+            .split("edid ")[1]
+            .split()[0]
+        )
     hexs = ",".join(edid[i : i + 2] for i in range(0, len(edid), 2))
     base = "HKEY_LOCAL_MACHINE\\System\\CurrentControlSet\\Enum\\DISPLAY\\Default_Monitor\\%s\\Device Parameters"
     reg = "Windows Registry Editor Version 5.00\n\n"
     for inst in ("0000&0000", "0001&0000"):
         reg += f'[{base % inst}]\n"EDID"=hex:{hexs}\n\n'
     p = os.path.join(WINE, "edid.reg")
-    open(p, "w").write(reg)
+    with open(p, "w") as _f:
+        _f.write(reg)
     sh(["wine", "regedit", "/S", "Z:" + p.replace("/", "\\")], env=env(), check=True)
 
 
 def run(exe, args):
     os.makedirs(LOGS, exist_ok=True)
-    log = open(os.path.join(LOGS, "smartcontrol_wine.log"), "a")
+    log = open(os.path.join(LOGS, "smartcontrol_wine.log"), "a")  # noqa: SIM115 - handle kept open for the process (module log)
     p = sh(
         ["wine", exe] + args,
         env=env(),

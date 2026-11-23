@@ -289,7 +289,8 @@ def main() -> int:
     ap.add_argument("--calls", action="store_true", help="count cross-bank calls by caller -> callee (hooks every stub)")
     ap.add_argument("--tsv", type=Path)
     a = ap.parse_args()
-    mdl = json.load(open(Path(__file__).resolve().parent / "dw8051_model.json"))
+    with open(Path(__file__).resolve().parent / "dw8051_model.json") as _f:
+        mdl = json.load(_f)
     a.oplen = mdl["oplen"]
     if a.sets:
         os.environ["AWTO_SIM_FETCH_SETS"] = str(a.sets)

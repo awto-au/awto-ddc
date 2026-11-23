@@ -12,6 +12,7 @@ import glob
 import os
 import re
 import sys
+from pathlib import Path
 
 
 def repo():
@@ -29,26 +30,27 @@ def latest(root, suffix):
 def vcp_values(scan):
     """code -> (type, cur, max) with cur = sh<<8|sl, max = mh<<8|ml."""
     out = {}
-    for ln in open(scan):
-        m = re.match(r"([0-9A-F]{2}) rc=0 (.*)", ln)
-        if not m:
-            continue
-        code, rest = int(m.group(1), 16), m.group(2)
-        cv = re.search(r"current value =\s*(\d+), max value =\s*(\d+)", rest)
-        mh = re.search(r"mh=0x(\w\w), ml=0x(\w\w), sh=0x(\w\w), sl=0x(\w\w)", rest)
-        sl = re.search(r"sl=0x(\w\w)", rest)
-        sh = re.search(r"sh=0x(\w\w)", rest)
-        if cv:
-            out[code] = (0, int(cv.group(1)), int(cv.group(2)))
-        elif mh:
-            a = [int(x, 16) for x in mh.groups()]
-            out[code] = (1, a[2] << 8 | a[3], a[0] << 8 | a[1])
-        elif sl:
-            out[code] = (
-                1,
-                (int(sh.group(1), 16) if sh else 0) << 8 | int(sl.group(1), 16),
-                0xFF,
-            )
+    with open(scan) as _f:
+        for ln in _f:
+            m = re.match(r"([0-9A-F]{2}) rc=0 (.*)", ln)
+            if not m:
+                continue
+            code, rest = int(m.group(1), 16), m.group(2)
+            cv = re.search(r"current value =\s*(\d+), max value =\s*(\d+)", rest)
+            mh = re.search(r"mh=0x(\w\w), ml=0x(\w\w), sh=0x(\w\w), sl=0x(\w\w)", rest)
+            sl = re.search(r"sl=0x(\w\w)", rest)
+            sh = re.search(r"sh=0x(\w\w)", rest)
+            if cv:
+                out[code] = (0, int(cv.group(1)), int(cv.group(2)))
+            elif mh:
+                a = [int(x, 16) for x in mh.groups()]
+                out[code] = (1, a[2] << 8 | a[3], a[0] << 8 | a[1])
+            elif sl:
+                out[code] = (
+                    1,
+                    (int(sh.group(1), 16) if sh else 0) << 8 | int(sl.group(1), 16),
+                    0xFF,
+                )
     # text-only replies, values read off the same scan lines
     over = {
         0x02: (1, 0x02, 0xFF),
@@ -100,11 +102,12 @@ def main():
     root = repo()
     caps = [
         ln
-        for ln in open(latest(root, "caps-verbose.txt"))
+        for ln in Path(latest(root, "caps-verbose.txt")).read_text().splitlines(keepends=True)
         if ln.startswith("Unparsed capabilities string:")
     ]
     capstr = caps[0].split(":", 1)[1].strip()
-    raw = open(latest(root, "edid.bin"), "rb").read()
+    with open(latest(root, "edid.bin"), "rb") as _f:
+        raw = _f.read()
     if len(sys.argv) > 2 and sys.argv[1] == "--model":
         raw, capstr = patch_model(raw, capstr, sys.argv[2])
     edid = binascii.hexlify(raw).decode()
@@ -124,7 +127,8 @@ def main():
         len(edid) // 2,
         len(vals),
     )
-    open(os.path.join(root, "tmp/logs/smartcontrol_profile.log"), "a").write(msg + "\n")
+    with open(os.path.join(root, "tmp/logs/smartcontrol_profile.log"), "a") as _f:
+        _f.write(msg + "\n")
     print(msg)
 
 

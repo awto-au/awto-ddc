@@ -153,9 +153,10 @@ def load_regnames(chip="RTD2795T-CG"):
     for d in (REPO / "re/regdb", Path.home() / "vendors/realtek/analysis/regdb"):
         p = d / f"{chip}.tsv.gz"
         if p.exists():
-            for r in csv.DictReader(gzip.open(p, "rt", newline=""), delimiter="\t"):
-                if r["kind"] == "REG":
-                    names[int(r["address"], 16)] = r["register"]
+            with gzip.open(p, "rt", newline="") as _f:
+                for r in csv.DictReader(_f, delimiter="\t"):
+                    if r["kind"] == "REG":
+                        names[int(r["address"], 16)] = r["register"]
             return names
     return names
 
@@ -163,7 +164,8 @@ def load_regnames(chip="RTD2795T-CG"):
 def main():
     if len(sys.argv) < 4:
         print(__doc__); return 2
-    buf = open(sys.argv[1], "rb").read()
+    with open(sys.argv[1], "rb") as _f:
+        buf = _f.read()
     base = int(sys.argv[sys.argv.index("--base") + 1], 16) if "--base" in sys.argv else 0
     s, ln = int(sys.argv[2], 16), int(sys.argv[3], 16)
     for i in disasm(buf, base, load_regnames(), start=s, end=min(len(buf), s + ln)):

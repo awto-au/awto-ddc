@@ -32,7 +32,8 @@ CLASS = [("line buffer / FIFO / M-domain", r"FIFO|LINE_?BUF|\bM1\b|_M1|M1_|M2_|M
 
 
 def load(p):
-    rows = [l.split("\t") for l in gzip.open(p, "rt").read().splitlines()]
+    with gzip.open(p, "rt") as f:
+        rows = [l.split("\t") for l in f.read().splitlines()]
     return rows[0], rows[1:]
 
 
@@ -120,7 +121,7 @@ def main() -> int:
     P(f"vendor {Path(a.vendor).name}: {len(rv)} rows, {len(V)} registers written reset->ACTIVE (ACTIVE at fw_ms {endv})")
     P(f"ours   {Path(a.ours).name}: {len(ro)} rows, {len(O)} registers written reset->ACTIVE (ACTIVE at fw_ms {endo})")
     import json
-    HW = [json.load(open(x)) if x else None for x in (a.hw_vendor, a.hw_ours)]
+    HW = [json.loads(Path(x).read_text()) if x else None for x in (a.hw_vendor, a.hw_ours)]
 
     def hw(k, w):
         d = HW[w]

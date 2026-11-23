@@ -431,7 +431,7 @@ def _diag_mod():
 @pytest.fixture()
 def D(monkeypatch):
     d = _diag_mod()
-    monkeypatch.setattr(d, "LOG", open(os.devnull, "w"))
+    monkeypatch.setattr(d, "LOG", open(os.devnull, "w"))  # noqa: SIM115 - test-lifetime null sink
     monkeypatch.setattr(d.time, "sleep", lambda s: None)
     return d
 
@@ -501,7 +501,7 @@ def test_messages_mode_installs_sighup_handler(D, monkeypatch, tmp_path):
     seen = {}
     monkeypatch.setattr(D.signal, "signal", lambda sig, h: seen.__setitem__(sig, h))
     monkeypatch.setattr(D.B, "Real", lambda *a, **k: type("R", (), {"close": lambda s: None})())
-    monkeypatch.setattr(D.B, "setup_logs", lambda name: type("L", (), {"main": open(os.devnull, "w")})())
+    monkeypatch.setattr(D.B, "setup_logs", lambda name: type("L", (), {"main": open(os.devnull, "w")})())  # noqa: SIM115 - test-lifetime null sink
     monkeypatch.setattr(D, "repo_root", lambda: tmp_path)
     monkeypatch.setattr(D, "messages", lambda io, root, secs=None, *a: seen.__setitem__("secs", secs) or 0)
     monkeypatch.setattr(sys, "argv", ["rtd_diag.py", "11", "--messages", "--secs", "7"])

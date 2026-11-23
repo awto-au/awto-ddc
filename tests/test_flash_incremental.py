@@ -24,7 +24,7 @@ SENTINEL = b"\xa5" * SECTOR      # contents of sectors beyond the image (setting
 
 @pytest.fixture(autouse=True)
 def _log():
-    F.LOG = open(os.devnull, "w")
+    F.LOG = open(os.devnull, "w")  # noqa: SIM115 - test-lifetime null sink
     yield
 
 

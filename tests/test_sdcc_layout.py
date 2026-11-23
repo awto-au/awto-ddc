@@ -64,7 +64,7 @@ def test_sdcc_bank_writes_layout_out_not_tracked_file(tmp_path):
 
 def test_fw_build_promote_layout(tmp_path, monkeypatch):
     import fw_build
-    monkeypatch.setattr(fw_build, "LOG", open(tmp_path / "log", "w"))
+    monkeypatch.setattr(fw_build, "LOG", open(tmp_path / "log", "w"))  # noqa: SIM115 - test-lifetime log
     new, tracked = tmp_path / "new.tsv", tmp_path / "bank_map.tsv"
     (tmp_path / "bank_map.new.tsv").write_text("#common 0x5000\nfn\tA\tC\n")
     tracked.write_text("old\n")

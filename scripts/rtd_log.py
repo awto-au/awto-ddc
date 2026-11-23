@@ -7,6 +7,7 @@ usage: rtd_log.py FILE [FILE ...] [--map fw.map] [--chip RTD2795T-CG] [--merge-p
   `-` reads stdin. Output: stdout, or -o OUT (e.g. tmp/logs/<name>.decoded.log). Reads files only, no bus access.
 """
 import argparse
+import contextlib
 import sys
 from pathlib import Path
 
@@ -33,10 +34,11 @@ def main() -> int:
     ap.add_argument("--merge-pages", action="store_true", help="merge contiguous page programs into one line")
     ap.add_argument("-o", "--out")
     a = ap.parse_args()
-    out = open(a.out, "w") if a.out else sys.stdout
-    for f in a.files:
-        src = sys.stdin if f == "-" else open(f, errors="replace")
-        decode_lines(src, out, a.map, a.chip, a.merge_pages)
+    with contextlib.ExitStack() as stack:
+        out = stack.enter_context(open(a.out, "w")) if a.out else sys.stdout
+        for f in a.files:
+            src = sys.stdin if f == "-" else stack.enter_context(open(f, errors="replace"))
+            decode_lines(src, out, a.map, a.chip, a.merge_pages)
     return 0
 
 

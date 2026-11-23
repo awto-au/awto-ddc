@@ -24,7 +24,8 @@ def decode(buf):
     return out
 
 if __name__ == "__main__":
-    d = open(sys.argv[1], "rb").read()
+    with open(sys.argv[1], "rb") as _f:
+        d = _f.read()
     s, n = int(sys.argv[2], 16), int(sys.argv[3], 16)
     for k, g in enumerate(decode(d[s:s+n])):
         print(k, len(g), "".join(f"{v:x}" for v in g))

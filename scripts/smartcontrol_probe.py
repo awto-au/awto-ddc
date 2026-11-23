@@ -76,12 +76,13 @@ def main():
         say("Rescan(2) %d bytes; EDID name present: %s" % (len(r), "PHL 288E2" in r))
         for c in calls:
             r = get(c, 90)
-            open(
+            with open(
                 os.path.join(
                     ROOT, "tmp/logs/smartcontrol_reply_{}.json".format(c.split("?")[0])
                 ),
                 "w",
-            ).write(r)
+            ) as _f:
+                _f.write(r)
             say("CALL {} -> {}".format(c, r[:300].replace("\n", " ")))
             if r.startswith("ERR"):
                 say("call timed out/failed; stopping (backend may be spinning)")

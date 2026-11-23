@@ -29,30 +29,31 @@ def main():
     os.makedirs(out, exist_ok=True); os.makedirs(os.path.join(R, "tmp/logs"), exist_ok=True)
     users, answers, asst, summ = [], [], [], []
     seen = set(); n = 0
-    for line in open(src, errors="replace"):
-        n += 1
-        try: e = json.loads(line)
-        except json.JSONDecodeError: continue
-        t = e.get("type"); ts = e.get("timestamp", "")
-        if t == "user" and not e.get("isSidechain"):
-            m = e.get("message", {})
-            for b in blocks(m):
-                if b.get("type") == "text":
-                    tx = b["text"].strip()
-                    if not tx: continue
-                    if tx.startswith(SKIP): continue
-                    if e.get("isCompactSummary") or tx.startswith("This session is being continued"):
-                        summ.append((ts, tx)); continue
-                    k = (e.get("uuid"), tx)
-                    if k in seen: continue
-                    seen.add(k); users.append((ts, tx))
-                elif b.get("type") == "tool_result":
-                    c = b.get("content"); tx = c if isinstance(c, str) else " ".join(x.get("text", "") for x in (c or []) if isinstance(x, dict))
-                    if re.search(r"User has answered|The user answered|user answered your question", tx or ""):
-                        answers.append((ts, tx.strip()))
-        elif t == "assistant" and not e.get("isSidechain"):
-            tx = "\n".join(b.get("text", "") for b in blocks(e.get("message", {})) if b.get("type") == "text").strip()
-            if tx: asst.append((ts, tx))
+    with open(src, errors="replace") as _f:
+        for line in _f:
+            n += 1
+            try: e = json.loads(line)
+            except json.JSONDecodeError: continue
+            t = e.get("type"); ts = e.get("timestamp", "")
+            if t == "user" and not e.get("isSidechain"):
+                m = e.get("message", {})
+                for b in blocks(m):
+                    if b.get("type") == "text":
+                        tx = b["text"].strip()
+                        if not tx: continue
+                        if tx.startswith(SKIP): continue
+                        if e.get("isCompactSummary") or tx.startswith("This session is being continued"):
+                            summ.append((ts, tx)); continue
+                        k = (e.get("uuid"), tx)
+                        if k in seen: continue
+                        seen.add(k); users.append((ts, tx))
+                    elif b.get("type") == "tool_result":
+                        c = b.get("content"); tx = c if isinstance(c, str) else " ".join(x.get("text", "") for x in (c or []) if isinstance(x, dict))
+                        if re.search(r"User has answered|The user answered|user answered your question", tx or ""):
+                            answers.append((ts, tx.strip()))
+            elif t == "assistant" and not e.get("isSidechain"):
+                tx = "\n".join(b.get("text", "") for b in blocks(e.get("message", {})) if b.get("type") == "text").strip()
+                if tx: asst.append((ts, tx))
     # dedupe consecutive identical (resumed sessions replay)
     def dd(l):
         o = []; s = set()
@@ -72,6 +73,8 @@ def main():
     with open(os.path.join(out, "chat-compaction-summaries.md"), "w") as f:
         for ts, tx in summ: f.write(f"## {ts}\n{tx}\n\n")
     msg = f"lines={n} users={len(users)} answers={len(answers)} assistant={len(asst)} summaries={len(summ)}"
-    print(msg); open(os.path.join(R, "tmp/logs/audit_chat.log"), "a").write(msg + "\n")
+    print(msg)
+    with open(os.path.join(R, "tmp/logs/audit_chat.log"), "a") as lf:
+        lf.write(msg + "\n")
 
 if __name__ == "__main__": main()

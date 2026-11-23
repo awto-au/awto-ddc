@@ -354,7 +354,8 @@ def main():
     chip = os.path.basename(os.path.dirname(os.path.abspath(a.gpio)))
     rdb = a.regdb or os.path.join(os.path.dirname(os.path.abspath(a.out)), chip + ".tsv")
     db = Db(rdb)
-    g = parse(open(a.gpio, "rb").read(), db)
+    with open(a.gpio, "rb") as _f:
+        g = parse(_f.read(), db)
     rows, st = build_rows(g, db)
     with open(a.out, "w", encoding="utf-8", newline="") as fo:
         fo.write("\t".join(COLS) + "\n")

@@ -84,7 +84,7 @@ def known_pages(root: Path) -> set[int]:
     pages: set[int] = set()
     for fn in glob.glob(str(root / "tmp/regs/*.json")):
         try:
-            pages |= {int(k, 16) for k in json.load(open(fn)).get("pages", {})}
+            pages |= {int(k, 16) for k in json.loads(Path(fn).read_text()).get("pages", {})}
         except (OSError, ValueError, AttributeError):
             pass
     try:

@@ -93,7 +93,8 @@ def grid(by, cols, rows, skip=0):
 
 if __name__ == "__main__":
     a = sys.argv[1:]
-    d = open(a[0], "rb").read()
+    with open(a[0], "rb") as _f:
+        d = _f.read()
     off = int(a[1], 16)
     out = Path(a[2]).expanduser() if len(a) > 2 and not a[2].startswith("--") else Path(".")
     out.mkdir(parents=True, exist_ok=True)

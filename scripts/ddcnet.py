@@ -578,7 +578,8 @@ def daemon(a) -> int:
         p.reset(0)
         fd = tap_open(tap)
         mon_mac = bytes.fromhex(f"0241570000{int(u):02x}")
-        host_mac = bytes.fromhex(open(f"/sys/class/net/{tap}/address").read().strip().replace(":", ""))
+        with open(f"/sys/class/net/{tap}/address") as _f:
+            host_mac = bytes.fromhex(_f.read().strip().replace(":", ""))
         links.append({"u": u, "tap": tap, "fd": fd, "p": p, "peer": Peer(p, a.poll_s), "mon_ip": mon_ip, "mon_mac": mon_mac, "host_mac": host_mac,
                           "cfg_t": -1e9, "frames": 0, "back": 0})
         say(f"unit {u}: {tap} {'on ' + BRIDGE if a.bridge else 'routed'}, monitor {mon_ip} {mac_s(mon_mac)} via {p.link.name}")

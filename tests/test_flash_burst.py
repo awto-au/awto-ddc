@@ -25,7 +25,7 @@ BASE = 0x13000
 
 @pytest.fixture(autouse=True)
 def _log():
-    F.LOG = open(os.devnull, "w")
+    F.LOG = open(os.devnull, "w")  # noqa: SIM115 - test-lifetime null sink
     yield
 
 

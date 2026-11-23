@@ -220,11 +220,12 @@ def unsourced():
     fns = lib_functions()
     defs = sdk_defs()
     match = {}
-    for ln in open(sig.ANALYSIS / "lib_match.tsv").read().splitlines()[1:]:
-        c = ln.split("\t")
-        old = match.get(c[0])
-        if old is None or c[2].endswith("FunctionLib"):  # prefer the FunctionLib row (module is from that .LIB)
-            match[c[0]] = (c[4], c[5], c[6])
+    with open(sig.ANALYSIS / "lib_match.tsv") as _f:
+        for ln in _f.read().splitlines()[1:]:
+            c = ln.split("\t")
+            old = match.get(c[0])
+            if old is None or c[2].endswith("FunctionLib"):  # prefer the FunctionLib row (module is from that .LIB)
+                match[c[0]] = (c[4], c[5], c[6])
     nosrc = sorted(n for n in fns if not any(f.startswith(PRIMARY) for f in defs.get(n, [])))
     refs = refs_in_build(nosrc)
     rows = []

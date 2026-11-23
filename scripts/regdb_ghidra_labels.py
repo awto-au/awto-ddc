@@ -27,14 +27,15 @@ MAX_COMMENT = 240
 def load(path):
     """addr -> (register, reset, fields[(hi, lo, name)])"""
     regs, fields = {}, defaultdict(list)
-    for r in csv.DictReader(gzip.open(path, "rt", newline=""), delimiter="\t"):
-        a = int(r["address"], 0)
-        if a in RAM or r["port_idx"]:
-            continue
-        if r["kind"] == "REG":
-            regs.setdefault(a, [r["register"], r["reset"]])
-        elif r["kind"] == "FIELD":
-            fields[(a, r["register"])].append((int(r["bit_high"]), int(r["bit_low"]), r["field"]))
+    with gzip.open(path, "rt", newline="") as _f:
+        for r in csv.DictReader(_f, delimiter="\t"):
+            a = int(r["address"], 0)
+            if a in RAM or r["port_idx"]:
+                continue
+            if r["kind"] == "REG":
+                regs.setdefault(a, [r["register"], r["reset"]])
+            elif r["kind"] == "FIELD":
+                fields[(a, r["register"])].append((int(r["bit_high"]), int(r["bit_low"]), r["field"]))
     return {a: (n, rst, tuple(fields.get((a, n), ()))) for a, (n, rst) in regs.items()}
 
 
@@ -71,11 +72,12 @@ def port_rows(chip):
     rows = None
     for p in paths_for(chip):
         cur = set()
-        for r in csv.DictReader(gzip.open(p, "rt", newline=""), delimiter="\t"):
-            if r["kind"] == "REG" and r["port_idx"]:
-                a = int(r["address"], 0)
-                if a not in RAM:
-                    cur.add((a - 1, a, int(r["port_idx"], 0), r["register"], r["reg_type"]))
+        with gzip.open(p, "rt", newline="") as _f:
+            for r in csv.DictReader(_f, delimiter="\t"):
+                if r["kind"] == "REG" and r["port_idx"]:
+                    a = int(r["address"], 0)
+                    if a not in RAM:
+                        cur.add((a - 1, a, int(r["port_idx"], 0), r["register"], r["reg_type"]))
         rows = cur if rows is None else rows & cur
     return sorted(rows)
 

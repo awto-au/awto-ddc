@@ -84,38 +84,39 @@ def parse_rst(build: Path, syms) -> dict[str, Fn]:
     parse_rst.stubs = {}                                  # bank stub address -> function name (for tail calls seen in the sim)
     for f in sorted(glob.glob(str(build / "tmp/sdcc-port/asm_bank/*.rst"))):
         cur, st = None, None
-        for l in open(f, errors="replace"):
-            m = LAB.match(l)
-            if m:
-                if m.group(2).startswith("__bs_"):
-                    parse_rst.stubs[int(m.group(1), 16)] = "_" + m.group(2)[5:]
-                    cur, st = None, None
-                elif m.group(2)[:32] in syms and not m.group(2)[0].isdigit():     # the map cuts names at 32 characters
-                    cur = fns.setdefault(m.group(2), Fn(m.group(2), int(m.group(1), 16), syms[m.group(2)[:32]][1]))
-                    st = None
-                elif cur:
-                    cur.labels[m.group(2)] = int(m.group(1), 16)
-                continue
-            m = SRC.match(l)
-            if m:
-                if cur:
-                    st = [m.group(1), int(m.group(2)), m.group(3).strip(), []]
-                    cur.stmts.append(st)
-                continue
-            m = ASM.match(l)
-            if m and cur:
-                t = m.group(4).strip()
-                a = int(m.group(1), 16)
-                cur.ins.append((a, t))
-                if st is None:
-                    st = ["", 0, "", []]
-                    cur.stmts.append(st)
-                st[3].append((a, t))
-                mm = re.match(r"(lcall|ljmp|acall|ajmp)\s+([A-Za-z_]\w*)", t)
-                if mm:
-                    cur.calls.append(mm.group(2))
-                elif t.startswith("reti"):
-                    cur.reti = True
+        with open(f, errors="replace") as _f:
+            for l in _f:
+                m = LAB.match(l)
+                if m:
+                    if m.group(2).startswith("__bs_"):
+                        parse_rst.stubs[int(m.group(1), 16)] = "_" + m.group(2)[5:]
+                        cur, st = None, None
+                    elif m.group(2)[:32] in syms and not m.group(2)[0].isdigit():     # the map cuts names at 32 characters
+                        cur = fns.setdefault(m.group(2), Fn(m.group(2), int(m.group(1), 16), syms[m.group(2)[:32]][1]))
+                        st = None
+                    elif cur:
+                        cur.labels[m.group(2)] = int(m.group(1), 16)
+                    continue
+                m = SRC.match(l)
+                if m:
+                    if cur:
+                        st = [m.group(1), int(m.group(2)), m.group(3).strip(), []]
+                        cur.stmts.append(st)
+                    continue
+                m = ASM.match(l)
+                if m and cur:
+                    t = m.group(4).strip()
+                    a = int(m.group(1), 16)
+                    cur.ins.append((a, t))
+                    if st is None:
+                        st = ["", 0, "", []]
+                        cur.stmts.append(st)
+                    st[3].append((a, t))
+                    mm = re.match(r"(lcall|ljmp|acall|ajmp)\s+([A-Za-z_]\w*)", t)
+                    if mm:
+                        cur.calls.append(mm.group(2))
+                    elif t.startswith("reti"):
+                        cur.reti = True
     return {k: v for k, v in fns.items() if not k.startswith("__bs_")}
 
 

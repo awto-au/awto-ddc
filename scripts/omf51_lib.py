@@ -79,7 +79,8 @@ def _name(b, i):
 
 
 def parse_lib(path):
-    d = open(path, "rb").read()
+    with open(path, "rb") as _f:
+        d = _f.read()
     mods, m, pend = [], None, []
     for t, b in _records(d):
         if t == 0x02:

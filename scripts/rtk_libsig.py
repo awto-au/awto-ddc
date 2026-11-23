@@ -37,7 +37,7 @@ SHORT_BYTES, SHORT_FIXED, NEAR_MIN, RUN_MIN = 12, 8, 0.90, 6
 class Tee:
     def __init__(self):
         LOG.parent.mkdir(parents=True, exist_ok=True)
-        self.f = open(LOG, "a")
+        self.f = open(LOG, "a")  # noqa: SIM115 - handle kept open for the process (module log)
 
     def __call__(self, *a):
         s = " ".join(str(x) for x in a)
@@ -64,7 +64,8 @@ def build(lib, label):
             fns.append({"name": omf.display_name(m, pub), "sym": pub, "module": m.name, "size": size,
                             "hex": data.hex(), "mask": mask.hex()})
     SIGDIR.mkdir(parents=True, exist_ok=True)
-    json.dump({"label": label, "lib": str(lib), "functions": fns}, open(sigfile(label), "w"), indent=0)
+    with open(sigfile(label), "w") as _f:
+        json.dump({"label": label, "lib": str(lib), "functions": fns}, _f, indent=0)
     log(f"build {label}: {len(fns)} functions -> {sigfile(label)}")
 
 
@@ -136,7 +137,8 @@ def match(image, labels, outdir):
     files = sorted(SIGDIR.glob("*.json")) if labels == "all" else [sigfile(l) for l in labels.split(",")]
     rows, names = [], {}
     for sf in files:
-        db = json.load(open(sf))
+        with open(sf) as _f:
+            db = json.load(_f)
         for f in db["functions"]:
             cls, hits, sc, best = classify(f, banks)
             bank = ";".join(f"{b}:{a:04x}" for b, a in hits[:4]) + (f";+{len(hits)-4}" if len(hits) > 4 else "")
@@ -227,7 +229,8 @@ def main():
         srccheck(a.lib, a.srcdirs)
     else:
         for f in sorted(SIGDIR.glob("*.json")):
-            print(json.load(open(f))["label"], len(json.load(open(f))["functions"]))
+            with open(f) as _f0, open(f) as _f1:
+                print(json.load(_f0)["label"], len(json.load(_f1)["functions"]))
 
 
 if __name__ == "__main__":

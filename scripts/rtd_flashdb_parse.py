@@ -74,7 +74,8 @@ def decode_script(s):
 def load_swren_names(path):
     """SWREN.dat: 50 B records { u16 offset into the script blob, wchar_t name[24] } (tail = uninitialised fill) [fw]."""
     out = {}
-    d = open(path, "rb").read()
+    with open(path, "rb") as _f:
+        d = _f.read()
     for p in range(0, len(d) - 49, 50):
         off = struct.unpack_from("<H", d, p)[0]
         raw = d[p + 2:p + 50]
@@ -202,7 +203,8 @@ def infer_version(path):
 
 
 def cmd_parse(src, out, swren_path, tool_version):
-    d = open(src, "rb").read()
+    with open(src, "rb") as _f:
+        d = _f.read()
     sha = hashlib.sha256(d).hexdigest()
     base = os.path.basename(src)
     swren_names = {}
@@ -237,21 +239,24 @@ def cmd_scalers(root, out, tool_version):
             continue
         files = {}
         for fn in sorted(os.listdir(dp)):
-            b = open(os.path.join(dp, fn), "rb").read()
+            with open(os.path.join(dp, fn), "rb") as _f:
+                b = _f.read()
             files[fn] = {"size": len(b), "sha256": hashlib.sha256(b).hexdigest()}
         info, ver = {}, {}
         ra = os.path.join(dp, "ReadAll.txt")
         if os.path.exists(ra):
             cp = configparser.ConfigParser(interpolation=None, strict=False)
             cp.optionxform = str
-            cp.read_string(open(ra, encoding="latin1").read())
+            with open(ra, encoding="latin1") as _f:
+                cp.read_string(_f.read())
             if cp.has_section("ScalerInfor"):
                 info = dict(cp["ScalerInfor"])
         for fn in files:
             if fn.lower() == "version.txt":
                 cp = configparser.ConfigParser(interpolation=None, strict=False)
                 cp.optionxform = str
-                cp.read_string(open(os.path.join(dp, fn), encoding="latin1").read())
+                with open(os.path.join(dp, fn), encoding="latin1") as _f:
+                    cp.read_string(_f.read())
                 ver = {k: dict(cp[k]) for k in cp.sections()}
         scalers.append({"dir": name, "scaler_name": info.get("ScalerName"),
                         "scaler_id": int(info["ScalerID"]) if "ScalerID" in info else None,
@@ -289,7 +294,8 @@ def _keyed(doc):
 
 
 def cmd_diff(a, b):
-    da, db = json.load(open(a)), json.load(open(b))
+    with open(a) as _f0, open(b) as _f1:
+        da, db = json.load(_f0), json.load(_f1)
     kind, ka = _keyed(da)
     kind2, kb = _keyed(db)
     if kind != kind2:

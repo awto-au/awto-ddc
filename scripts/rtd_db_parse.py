@@ -133,10 +133,11 @@ def read_readall(path):
     out = {}
     if not path or not os.path.exists(path):
         return out
-    for line in open(path, encoding="latin1"):
-        m = re.match(r"PG([0-9A-Fa-f]{2})_Name=(.*)", line.rstrip("\r\n"))
-        if m:
-            out[int(m.group(1), 16)] = [x.strip() for x in m.group(2).split(" / ")]
+    with open(path, encoding="latin1") as _f:
+        for line in _f:
+            m = re.match(r"PG([0-9A-Fa-f]{2})_Name=(.*)", line.rstrip("\r\n"))
+            if m:
+                out[int(m.group(1), 16)] = [x.strip() for x in m.group(2).split(" / ")]
     return out
 
 
@@ -155,7 +156,8 @@ def main():
     setup_log()
     rtd_gate.gate_or_exit(a.db, "DB.bin", warn_only=a.gate_warn_only or None, log=logging.info)
     logging.info("parse %s -> %s", a.db, a.out)
-    db = Db(open(a.db, "rb").read())
+    with open(a.db, "rb") as _f:
+        db = Db(_f.read())
     regs = db.parse()
     d = db.d
 

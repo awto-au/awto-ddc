@@ -131,7 +131,8 @@ def ddc_report(bus):
 
 # ---------------- flash DB ----------------
 def flashdb(jedec: bytes):
-    db = json.load(open(P.repo_root() / "re" / "flashdb" / "FlashSet_v3.8.json"))
+    with open(P.repo_root() / "re" / "flashdb" / "FlashSet_v3.8.json") as _f:
+        db = json.load(_f)
     return [c for c in db["chips"] if c["jedec"] == jedec.hex()]
 
 

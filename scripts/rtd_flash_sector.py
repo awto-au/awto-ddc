@@ -654,7 +654,7 @@ class FakeRtd(Rtd):
 
 def selftest():
     global LOG
-    LOG = open(os.devnull, "w")
+    LOG = open(os.devnull, "w")  # noqa: SIM115 - handle kept open for the process (module log)
     for name, kw in (("WP# low, SRWD=1 (monitor as found; fix releases WP# first)", {}),):
         print(f"== {name}")
         f = FakeRtd(**kw)

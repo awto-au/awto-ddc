@@ -57,13 +57,14 @@ def load_regdb():
     sets = {}
     for p in sorted((ROOT / "re/regdb").glob("*.tsv.gz")):
         s = set()
-        for l in gzip.open(p, "rt"):
-            f = l.split("\t")
-            if len(f) > 5 and f[4] == "REG":
-                try:
-                    s.add(int(f[1], 16))
-                except ValueError:
-                    pass
+        with gzip.open(p, "rt") as _f:
+            for l in _f:
+                f = l.split("\t")
+                if len(f) > 5 and f[4] == "REG":
+                    try:
+                        s.add(int(f[1], 16))
+                    except ValueError:
+                        pass
         sets[p.name.split(".")[0]] = s
     return sets
 

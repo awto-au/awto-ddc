@@ -38,7 +38,7 @@ def log(msg):
     global _log_fh
     if _log_fh is None:
         LOG.parent.mkdir(parents=True, exist_ok=True)
-        _log_fh = open(LOG, "w")
+        _log_fh = open(LOG, "w")  # noqa: SIM115 - handle kept open for the process (module log)
     print(msg)
     _log_fh.write(msg + "\n")
     _log_fh.flush()
@@ -46,12 +46,13 @@ def log(msg):
 
 def load_db():
     regs, fields = {}, defaultdict(list)
-    for r in csv.DictReader(gzip.open(DBF, "rt", newline=""), delimiter="\t"):
-        a = int(r["address"], 0)
-        if r["kind"] == "REG":
-            regs.setdefault(a, r["register"])
-        else:
-            fields[a].append((int(r["bit_high"]), int(r["bit_low"]), r["field"]))
+    with gzip.open(DBF, "rt", newline="") as _f:
+        for r in csv.DictReader(_f, delimiter="\t"):
+            a = int(r["address"], 0)
+            if r["kind"] == "REG":
+                regs.setdefault(a, r["register"])
+            else:
+                fields[a].append((int(r["bit_high"]), int(r["bit_low"]), r["field"]))
     return regs, fields
 
 
@@ -79,9 +80,10 @@ def rsv_bits(fields, a):
 def function_entries(src, b):
     """every Ghidra function entry of one bank program (disassembly.asm headers)"""
     out = set()
-    for line in open(src / f"bank{b}" / "disassembly.asm", errors="replace"):
-        if line.startswith("; ==== ") and " @ CODE:" in line:
-            out.add(int(line.split(" @ CODE:")[1].split()[0], 16))
+    with open(src / f"bank{b}" / "disassembly.asm", errors="replace") as _f:
+        for line in _f:
+            if line.startswith("; ==== ") and " @ CODE:" in line:
+                out.add(int(line.split(" @ CODE:")[1].split()[0], 16))
     return out
 
 
@@ -184,18 +186,20 @@ def main():
                 e["rsv"] += 1
     ours = Counter()
     if Path(a.ours).exists():
-        for r in csv.DictReader(gzip.open(a.ours, "rt", newline=""), delimiter="\t"):
-            if r["kind"] == "W":
-                ours[int(r["addr"], 16)] += 1
+        with gzip.open(a.ours, "rt", newline="") as _f:
+            for r in csv.DictReader(_f, delimiter="\t"):
+                if r["kind"] == "W":
+                    ours[int(r["addr"], 16)] += 1
     dyn = Counter()
     dynpc = defaultdict(set)
     for f in a.dahua_trace:
         if Path(f).exists():
-            for r in csv.DictReader(gzip.open(f, "rt", newline=""), delimiter="\t"):
-                if r["kind"] == "W":
-                    dyn[int(r["addr"], 16)] += 1
-                    pc = int(r["pc"], 16) - 1          # trace pc = next insn; MOVX is 1 byte
-                    dynpc[pc if pc < COMMON else (int(r["bank"]), pc)].add(int(r["addr"], 16))
+            with gzip.open(f, "rt", newline="") as _f:
+                for r in csv.DictReader(_f, delimiter="\t"):
+                    if r["kind"] == "W":
+                        dyn[int(r["addr"], 16)] += 1
+                        pc = int(r["pc"], 16) - 1          # trace pc = next insn; MOVX is 1 byte
+                        dynpc[pc if pc < COMMON else (int(r["bank"]), pc)].add(int(r["addr"], 16))
     stat, left = resolve_pending(pend, acc, dynpc, src)
     out = Path(a.out)
     out.parent.mkdir(parents=True, exist_ok=True)

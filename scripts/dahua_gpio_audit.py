@@ -67,7 +67,7 @@ def log(msg):
     global _log_fh
     if _log_fh is None:
         LOG.parent.mkdir(parents=True, exist_ok=True)
-        _log_fh = open(LOG, "w")
+        _log_fh = open(LOG, "w")  # noqa: SIM115 - handle kept open for the process (module log)
     print(msg)
     _log_fh.write(msg + "\n")
     _log_fh.flush()

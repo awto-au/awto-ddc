@@ -25,7 +25,7 @@ SECTOR, PAGE, BASE = F.SECTOR, F.PAGE, 0x13000
 
 @pytest.fixture(autouse=True)
 def _log(monkeypatch):
-    F.LOG = open(os.devnull, "w")
+    F.LOG = open(os.devnull, "w")  # noqa: SIM115 - test-lifetime null sink
     monkeypatch.setattr(i2cbus, "adapter_name", lambda bus: "AUX USBC2/DDI TC2/PHY C")
     yield
 

@@ -18,7 +18,8 @@ from _repo import ROOT
 
 
 def load(p, until_ms):
-    rows = [l.split("\t") for l in gzip.open(p, "rt").read().splitlines()][1:]
+    with gzip.open(p, "rt") as f:
+        rows = [l.split("\t") for l in f.read().splitlines()][1:]
     seq, cur = [], None
     for r in rows:
         ms = float(r[2])
