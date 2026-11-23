@@ -44,6 +44,7 @@ KEY_WAKE_MS = 250                           # one main-loop pass in power saving
 PWR_NORMAL, PWR_SAVING, MODE_NOSIGNAL = 2, 3, 5     # Global.h EnumPowerStatus, MODE_NAMES
 D2_PIN, D3_PIN, DDC_D2, AUX_RX1, DPCD_600 = 0xFE32, 0xFE2C, 0xFE69, 0xBADC, 0x000600
 D1_PINS = (0xFE33,)    # FE33..FE35: D1 cable-status cells (deadport_sim.py NOCABLE_D1)
+SET_ID_CONSOLE_MODE, CON_ALWAYS = 110, 2     # registry console_mode Always: Until signal draws the console only after a picture (#216), the host is asleep here
 PS_POLL_MS = 5          # RL6449_Project.h AWTO_PS_POLL_MS
 IOSC_KHZ = 28_000       # freq-detect reference in power saving (_INTERNAL_OSC_XTAL)
 # Event -> wake line (firmware ms). PS pass 16 ms: sim 13.2..15.9 (dw8051 model, #162), unit 2 15.6 (2026-11-12, ps_probe).
@@ -128,6 +129,8 @@ class Run:
         self.fd = FreqDet()
         self.bus = S.SimBus(a.bin, a.map, "wake-" + a.bin.stem, None, boot=False, devs=[self.model, w1c, self.fd], video=a.mode)
         self.m = self.bus.m
+        self.m.stub("set_get", lambda m_, r: {"val": CON_ALWAYS} if (r["a1"] & 0xFF) == SET_ID_CONSOLE_MODE else None)   # as boot_sim --console always
+        self.bus.ddc = None                         # test mailbox on any DDC channel: D3 fixed / the search move the engine off the host's D2 channel
         self.diag = T.diag_addr(a.map)
         self.pwr = self.m.addr("isr_g_stPowerInfo")
         self.ring = L.sym(a.map, "g_stAwtoSync")
@@ -215,6 +218,7 @@ class Run:
         if not re.search(r"\s_g_usAwtoPsGap\b", self.m.map_text):     # XDATA symbol: in the map, not in m.sym (code)
             say("  SKIP poll period: image without g_usAwtoPsGap (pre-tmds image)")
             return
+        self.cmd(0x42, 0.2)                     # console closed (Always mode keeps it open after a wake; its draws in PS stretch a poll gap)
         self.check(self.sleep(), "poll period: power saving reached")
         pa, ga = self.m.addr("g_usAwtoPsPolls"), self.m.addr("g_usAwtoPsGap")
         n0, t0 = int.from_bytes(self.m.rd(pa, 2), "big"), self.t2()
@@ -340,6 +344,7 @@ def main():
         if not r.bus.run_until_mode(3):
             r.check(False, "boot to ACTIVE"); return 1
         r.bus.dbg_link_on()
+        r.bus.hdmi.present = False                  # host asleep: a wake finds no source (#290: the wake search starts on the last used port, D2)
         r.m.wr(D3_PIN, b"\x00")                     # D3 cabled, its source asleep: a fixed port WITHOUT cable wakes to auto search (#84)
         r.cmd(0x33, 0.2)                            # D3, fixed port: no source there
         t0 = r.t2()

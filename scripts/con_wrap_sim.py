@@ -57,6 +57,7 @@ def norm(s: str) -> str:
 
 class Sim:
     def __init__(self, binp: Path, mapp: Path):
+        self.seen = set()                               # normalised text of every ring line read so far (phase checks in power saving)
         self.model = M.OsdModel()
         self.model.img = binp.read_bytes()
         self.eng = D.DdcEngine()
@@ -99,6 +100,7 @@ class Sim:
 
     def ring(self) -> list[str]:
         _, lines = SL.decode(bytes(SL.read_ring(self.m.rd, self.a_sync)), self.rows, whole=True)
+        self.seen |= {norm(x.split(":", 1)[1]) for x in lines}
         return lines
 
     def inject(self, evs):
@@ -114,7 +116,8 @@ class Sim:
         say(f"  long lines: {[len(x.rstrip()) for x in txt]} chars, row {ROW_W} cells: {n} must wrap")
         return n
 
-    def phase(self, name: str, out: Path, want_wraps: int = 0):
+    def phase(self, name: str, out: Path, want_wraps: int = 0, live: bool = True):
+        """live=False (power saving): the console is not redrawn, so it may hold lines the 88-line ring has since rolled past (checked against every line seen) and lack the newest"""
         t = self.text()
         if not t or "AWTO DIAGNOSTICS" not in t[0]:
             say(f"  {name}: console not open (title {t[0].strip()[:40] if t else '-'!r}), nothing to compare")
@@ -135,6 +138,7 @@ class Sim:
             else:
                 cur = None
         ring = [norm(x.split(":", 1)[1]) for x in self.ring()]   # host line: "nnnnn:" then the text
+        known = set(ring) | self.seen
         bad, wraps = [], 0
         for g in groups:
             if len(g) > 2:
@@ -147,7 +151,7 @@ class Sim:
                 cands = (body + " " + cont, body + cont)     # break at a space (dropped) / at the edge (no space)
             else:
                 cands = (body,)
-            if not any(norm(c) in ring for c in cands):
+            if not any(norm(c) in known for c in cands):
                 bad.append(f"not a ring line (clipped?): {' | '.join(x.rstrip() for x in g)}")
         say(f"  {name}: {len(groups)} console lines ({wraps} on two rows), {len(t) - 1} rows shown")
         for g in groups:
@@ -158,6 +162,8 @@ class Sim:
         shown |= {norm(head(g) + g[1][TXT0:].rstrip()) for g in groups if len(g) == 2}
         newest = ring[-min(len(groups), 20):] if groups else []
         miss = [x for x in newest if x not in shown and not x.startswith("(fw +")]   # D8 sits on the host time row
+        if not live:
+            return
         self.check(groups and not miss, f"{name}: the newest {len(newest)} ring lines are on the console", "; ".join(miss[:3]))
         if want_wraps:
             self.check(wraps >= want_wraps, f"{name}: the widest lines on two rows", f"{wraps} of {want_wraps}")
@@ -197,7 +203,7 @@ def main() -> int:
         s.mccs.set(0xD6, 4)
         s.check(s.until(lambda: s.power() == PWR_SAVING, PS_S), "VCP D6 = 4: power saving")
         s.bus.wait(0.3)
-        s.phase("4-power-saving", out)
+        s.phase("4-power-saving", out, live=False)
         s.cmd(K_SOURCE)
         s.check(s.until(lambda: s.power() == PWR_NORMAL, WAKE_S), "SOURCE key: woke (power NORMAL)", f"mode {s.bus.mode_state()}")
         s.bus.wait(DRAW_S)

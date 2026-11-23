@@ -159,6 +159,7 @@ class SimTarget:
         self.S, self.say = S, say
         self.bus = S.SimBus(binp, mapp, video="1080p60")
         self.m = self.bus.m
+        self.bus.ddc = None                      # debug slave on any DDC channel: a switch to D1 / D3 moves the engine off the host's D2 channel
         self.cr = next(d for d in self.m.devs if type(d).__name__ == "ChipReset")
         self.map_text = mapp.read_text(errors="replace")
         self.diag = T.diag_addr(mapp)

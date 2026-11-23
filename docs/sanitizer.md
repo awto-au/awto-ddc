@@ -41,7 +41,7 @@ Design: awto-sdcc#176. Self-test: `./dev.py san` (`scripts/san_test.py`, snippet
 - Normal build: no sanitizer code (`#ifdef SDCC_SAN`); `bit_read` / `bit_write` / `@Ri` accesses go through equivalent inline helpers.
 - Measured 2026-11-21 (`scripts/san_bench.py`, raw core, dw8051 model + flash fetch, 20 M instr from reset, shared box at load ~12): origin/main core vs this core, normal build, alternating runs: 59..124 vs 59..124 Minstr/s, no difference outside the load noise.
 - Sanitizer build, off: 0.98x of the normal build. On: 0.33x (35.8 vs 109 Minstr/s, same run).
-- fw_gates `--tier extensive` of one image under the sanitizer: same PASS / FAIL set as without it (keys_full, sync fail on both in a bare worktree).
+- fw_gates `--tier extensive` of one image under the sanitizer: same PASS / FAIL set as without it.
 
 ## Limits
 - The sim runs what the scenarios drive: a race that no scenario provokes is `could` at best, and only if the ISR ran once.

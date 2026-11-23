@@ -17,11 +17,23 @@ import xdata_layout as XL
 
 
 def test_parse_defines():
-    assert IV.parse_defines([]) == {"hwtest": False, "clock": IV.DEFAULT_CLOCK_MHZ, "variant": False}
-    assert IV.parse_defines(["_AWTO_OSD_HWTEST", "-DAWTO_CLOCK_MHZ=175"]) == {"hwtest": True, "clock": 175, "variant": True}
+    assert IV.parse_defines([]) == {"hwtest": False, "t0ev": False, "clock": IV.DEFAULT_CLOCK_MHZ, "variant": False}
+    assert IV.parse_defines(["_AWTO_OSD_HWTEST", "-DAWTO_CLOCK_MHZ=175"]) == {"hwtest": True, "t0ev": False, "clock": 175, "variant": True}
     assert IV.parse_defines(["AWTO_CLOCK_MHZ=87"])["variant"] and not IV.parse_defines(["AWTO_CLOCK_MHZ=350"])["variant"]
     assert IV.parse_defines(["_AWTO_OSD_HWTEST=_ON"])["hwtest"] is True
     assert IV.parse_defines(["AWTO_CLOCK_MHZ=abc"])["clock"] == IV.DEFAULT_CLOCK_MHZ
+    assert IV.parse_defines(["_AWTO_T0EV_TEST"]) == {"hwtest": False, "t0ev": True, "clock": IV.DEFAULT_CLOCK_MHZ, "variant": True}
+
+
+def test_new_red_against_previous_record(tmp_path):
+    old, new = tmp_path / "a-be.bin", tmp_path / "b-be.bin"
+    for b in (old, new):
+        b.write_bytes(b"x")
+    rec = lambda *red: {k: {"result": "FAIL" if k in red else "PASS"} for k in ("keys_full", "sync", "link")}
+    G.write_record(old, rec("sync"), None, complete=True, tier="extensive")
+    G.write_record(new, rec("sync", "link"), None, complete=True, tier="extensive")
+    d = json.loads(new.with_suffix(".gates.json").read_text())
+    assert d["red"] == ["link", "sync"] and d["new_red"] == ["link"] and d["prev_record"] == "a-be.gates.json"
 
 
 def _image(tmp_path, defines=None, sym=""):

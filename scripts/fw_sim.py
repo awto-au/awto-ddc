@@ -607,6 +607,7 @@ class HdmiInput(Dev):
         doubles them back) and 1/2 scaling down (P31_05 bit7 = 0 with P31_06 bit7 = 0: auto-function H start/end in half
         pixels, the code doubles them) until ScalerFmtCnvFinalSetting switches to F-to-P."""
         self.mode = mode
+        self.present = True        # False = source asleep: pre-detect and scan find nothing (wake_sim: host asleep)
         self.HTOT, self.HACT, self.HSTART, self.VTOT, self.VACT, self.VSTART, pclk = self.MODES[mode]
         self.pclk_hz = pclk * 1e5 * self.RATE.get(mode, 1)
         self.PCLK = round(self.pclk_hz / 1e5)                           # SET_INPUT_PIXEL_CLK (0.1 MHz, TMDS clock measure)
@@ -771,7 +772,7 @@ def video_stubs(m: "Machine", hdmi: HdmiInput, port: str = "D2"):
     """Functions replaced because they poll the HDMI Rx PHY (CDR/DFE lock, TMDS clock count, packet SRAM) that is not modelled:
     pre-detect and scan on D2 succeed, stability check passes, scan sets the input pixel clock like the SDK does."""
     src = PORTS[port]
-    m.stub("ScalerTMDSNormalPreDetect", lambda m, r: {"carry": (r["a1"] & 255) == src})
+    m.stub("ScalerTMDSNormalPreDetect", lambda m, r: {"carry": (r["a1"] & 255) == src and hdmi.present})
     if getattr(m, "hle", True):                          # constant results: patched code, no breakpoint (--no-hle: stubs)
         m.patch_const("ScalerTMDSStableDetect", 1)
         # Some optimized builds omit this DP-only helper entirely.
@@ -782,7 +783,7 @@ def video_stubs(m: "Machine", hdmi: HdmiInput, port: str = "D2"):
         m.stub("ScalerSyncDpCheckUrgentHotPlugEventExist", lambda m, r: {"carry": 0})
 
     def scan(m, r):
-        if (r["a1"] & 255) != src:
+        if (r["a1"] & 255) != src or not hdmi.present:
             return {"val": SOURCE_NONE}
         m.wr(m.addr("isr_g_usInputPixelClk"), hdmi.PCLK.to_bytes(2, "big"))        # SET_INPUT_PIXEL_CLK (0.1 MHz)
         return {"val": SOURCE_HDMI}

@@ -4,6 +4,7 @@
 usage: image_variant.py IMAGE_STEM      prints the variant as JSON
 Source: tmp/fw/<stem>.build.json ("defines", written by scripts/fwimage.py); an image without one: map symbols (hwtest), default clock.
   hwtest   -D _AWTO_OSD_HWTEST (test ops; never promotes the tracked layouts, #268)
+  t0ev     -D _AWTO_T0EV_TEST (Timer0 event test hooks, wdt_test t0_* / prio_*; never promotes the tracked layouts)
   clock    MCU MHz of the image (-D AWTO_CLOCK_MHZ=N, default DEFAULT_CLOCK_MHZ)
   variant  hwtest or clock != default: the build never promotes the tracked bank / XDATA layouts (#268); the XDATA layout it linked with is
            tmp/fw/<stem>.xdata_layout.tsv (layout), which the xlayout gate checks instead of the tracked file
@@ -21,8 +22,9 @@ def parse_defines(defines) -> dict:
     """['_AWTO_OSD_HWTEST', 'AWTO_CLOCK_MHZ=175'] -> {'hwtest': True, 'clock': 175}."""
     d = {str(x).removeprefix("-D").split("=")[0]: (str(x).removeprefix("-D").split("=", 1) + [""])[1] for x in defines}
     v = {"hwtest": "_AWTO_OSD_HWTEST" in d,
+         "t0ev": "_AWTO_T0EV_TEST" in d,
          "clock": int(d["AWTO_CLOCK_MHZ"]) if re.fullmatch(r"\d+", d.get("AWTO_CLOCK_MHZ", "")) else DEFAULT_CLOCK_MHZ}
-    return {**v, "variant": v["hwtest"] or v["clock"] != DEFAULT_CLOCK_MHZ}
+    return {**v, "variant": v["hwtest"] or v["t0ev"] or v["clock"] != DEFAULT_CLOCK_MHZ}
 
 
 def of_image(bin_path: Path) -> dict:

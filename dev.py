@@ -244,11 +244,11 @@ def cmd_gate(extra: list[str]) -> int:
             log(f"GATE FAILED at {name} (rc={rc})", "FATAL")
             return rc
     if _flag(extra, "--extensive"):
-        imgs = sorted(FW.glob("*-be.bin"), key=lambda p: p.stat().st_mtime)
+        imgs = sorted((p for p in FW.glob("*-be.bin") if not re.search(r"-(t0ev|clk\d+)-be\.bin$", p.name)), key=lambda p: p.stat().st_mtime)   # base images, not siblings
         if not imgs:
             log("GATE: --extensive needs a built image in tmp/fw", "FATAL")
             return 1
-        rc = subprocess.run([sys.executable, str(REPO / "scripts/fw_gates.py"), str(imgs[-1].with_suffix("")), "--tier", "extensive"], check=False).returncode
+        rc = subprocess.run([sys.executable, str(REPO / "scripts/fw_gates.py"), str(imgs[-1].with_suffix("")), "--tier", "extensive", "--build-inputs"], check=False).returncode
         if rc:
             log(f"GATE FAILED at fw_gates --tier extensive ({imgs[-1].name})", "FATAL")
             return rc

@@ -521,6 +521,16 @@ def ring(k):
     return lines
 
 
+def fresh(old, new):
+    """lines of `new` after the last 3 lines of `old`: compared by text, the ring's times are relative to the current episode"""
+    txt = lambda ls: [ln.split(":", 1)[-1] for ln in ls]
+    o, n = txt(old)[-3:], txt(new)
+    for i in range(len(n) - len(o), -1, -1):
+        if o and n[i:i + len(o)] == o:
+            return new[i + len(o):]
+    return new
+
+
 def take(k, frm, to, how):
     """Selector switch frm -> to: SOURCE opens it on frm, SOURCE steps to `to`, the idle commit or AUTO takes it.
     D1 is DP: no DP source in the sim, so a switch to D1 ends in no signal ON D1 (the switch itself is what is checked)."""
@@ -550,7 +560,7 @@ def take(k, frm, to, how):
         k.wait(200)
     k.wait(1000)                                                # a reopen would show within this
     new = ring(k)
-    new = new[len(k.ring0):] if new[:len(k.ring0)] == k.ring0 else new[-20:]
+    new = fresh(k.ring0, new)
     k.ring0 = ring(k)
     say("  ring:\n" + "\n".join("    " + ln for ln in new))
     by = "no key for" if how == "idle" else "by input selector (accepted)"
@@ -600,7 +610,7 @@ def quick(k):
     while k.s.ms() - t0 < (SRC_IDLE_MS + SWITCH_S * 1000) and not (port_now(k) == PORT["D3"] and k.s.bus.mode_state() == MODE_ACTIVE):
         k.wait(200)
     new = ring(k)
-    new = new[len(k.ring0):] if new[:len(k.ring0)] == k.ring0 else new[-30:]
+    new = fresh(k.ring0, new)
     k.ring0 = ring(k)
     say("  ring:\n" + "\n".join("    " + ln for ln in new))
     k.check("selector opened during a switch: its choice (D3) is taken, opened twice (no reopen), no second search",

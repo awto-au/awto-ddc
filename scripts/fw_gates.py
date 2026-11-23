@@ -2,7 +2,7 @@
 """Offline gates for one firmware image (sims in parallel): boot-check, isr-check, link check, health --sim 1080p60 + 2160p60,
 menu, ddc, keys, crash, wdt, sync, bootsim, wake, panel, delays, sysm, pokes, htime, magic, regs, regmap, nvlog, monitor.
 
-usage: fw_gates.py IMAGE_STEM [--tier normal|extensive] [--tree WORKTREE] [--speed LABEL] [--only boot,isr,link,h1080,h2160,menu,ddc,keys,crash,wdt,sync,bootsim,wake,pokes,htime,magic,regs]
+usage: fw_gates.py IMAGE_STEM [--tier normal|extensive] [--build-inputs] [--tree WORKTREE] [--speed LABEL] [--only boot,isr,link,h1080,h2160,menu,ddc,keys,crash,wdt,sync,bootsim,wake,pokes,htime,magic,regs]
   menu, ddc: only for images with the settings registry (#67): menu_cli walk + ddc_sim (MCCS) in fw_sim.
   keys: key_sim_test (#129). crash: crash_sim_test --header TREE/... (#131, #138). wdt: wdt_test --sim, all cases.
   htime: host_time_sim (#157: DDC/CI host time, console title row, ring lines).
@@ -28,7 +28,8 @@ SKIP (counted, printed): the image lacks the feature (SKIP_IF_MISSING: map symbo
   wdt cases the image does not implement report SKIP inside wdt_test; they are counted in the gate's note.
 Tiers: normal (default) skips the EXTENSIVE gates (table in this file); --tier extensive runs all. Record: tier + complete.
   A complete normal record is what `dev.py flash` needs; `dev.py merge-check` (merge to main) needs tier extensive.
-Record: tmp/fw/<stem>.gates.json = image SHA-256, date, tier, per-gate result + seconds, fw_gates git commit, complete (no --only).
+Record: tmp/fw/<stem>.gates.json = image SHA-256, date, tier, per-gate result + seconds, fw_gates git commit, complete (no --only), red (FAIL gates), new_red (red now, not in the previous
+  complete record of the tier; logged as NEW RED).
   `dev.py flash` refuses an image without a record whose SHA-256 matches, complete, and with no FAIL (--force-ungated overrides).
 Stall guard (awto-dan#53): waits for a gate's next output line or CPU progress of its process tree; expected: output at least
   every few s, 3x margin at 60 s (STALL_S). A gate with neither for STALL_S is hung: killed. Backstop LIMIT_S per gate (3x the cold
@@ -129,6 +130,34 @@ LIMIT_OF["delays_full"] = LIMIT_OF["delays_sim"] = LIMIT_OF["delays"]
 SKIP_IF_MISSING = {k: v for k, v in SKIP_IF_MISSING.items() if v}
 
 
+SIBLINGS = {"t0ev": ["_AWTO_T0EV_TEST"], "clk87": ["AWTO_CLOCK_MHZ=87"]}     # extensive-tier inputs: image tag suffix -> build -D defines
+
+
+def sibling(b: Path, kind: str) -> Path:
+    return b.with_name(b.name.replace("-be.bin", f"-{kind}-be.bin"))
+
+
+def build_inputs(b: Path, log) -> None:
+    """Build the sibling images the extensive tier measures (one dev.py build at a time; a missing one is a SKIP / narrower gate otherwise).
+    Every build rewrites tmp/sdcc-port (the link / iram gates read its asm of the LAST build): the base image is rebuilt last."""
+    serial, rest = b.name.split("-", 1)
+    tag = rest[:-len("-be.bin")]
+    bj = b.with_name(b.stem + ".build.json")
+    base_defs = json.loads(bj.read_text()).get("defines", []) if bj.is_file() else []
+
+    def build(name, defs):
+        cmd = [sys.executable, str(ROOT / "dev.py"), "build", "--serial", serial, "--tag", name, *[x for d in defs for x in ("-D", str(d).removeprefix("-D"))]]
+        log(f"build input {name}: {' '.join(cmd[2:])}")
+        rc = subprocess.run(cmd, cwd=ROOT, capture_output=True, text=True, check=False)
+        if rc.returncode:
+            log(f"build input {name} FAILED rc={rc.returncode}: {(rc.stdout.strip().splitlines() or rc.stderr.strip().splitlines() or [''])[-1][:200]}")
+        return rc.returncode == 0
+
+    built = [k for k, d in SIBLINGS.items() if not sibling(b, k).is_file() and build(f"{tag}-{k}", d)]
+    if built:
+        build(tag, base_defs)
+
+
 def header(tree):
     h = Path(tree) / "fw/sdk/Project/Header/RL6449_Project.h" if tree else None
     return h if h and h.is_file() else None
@@ -175,7 +204,9 @@ def gates(b: Path, m: Path, ref, tree):
     out = ROOT / "tmp/fw_gates" / b.stem             # own PNG/json dir per image (gates run in parallel)
     g["keys"] = [*PY, f"{s}/key_sim_test.py", b, m, "--only", "switch"]             # NORMAL: the selector takes another input; keys_full = every screen (extensive)
     g["keys_full"] = [*PY, f"{s}/key_sim_test.py", b, m]
-    g["wdt_full"] = [*PY, f"{s}/wdt_test.py", "--sim", b, m, *(["--header", hdr] if (hdr := header(tree)) else [])]
+    t0 = sibling(b, "t0ev")                                                           # the Timer0 event cases need the test hooks (-D _AWTO_T0EV_TEST)
+    wb = t0 if t0.is_file() and t0 != b else b
+    g["wdt_full"] = [*PY, f"{s}/wdt_test.py", "--sim", wb, wb.with_suffix(".map"), *(["--header", hdr] if (hdr := header(tree)) else [])]
     g["wdt"] = [*g["wdt_full"], "--cases", WDT_NORMAL_CASES]                          # NORMAL: bite + no false reset + reason line + Timer0 timing
     g["sync"] = [*PY, f"{s}/sync_sim.py", b, m, "--out", out / "sync"]
     g["bootsim"] = [*PY, f"{s}/boot_sim.py", b, m, "--out", out / "boot"]
@@ -184,7 +215,7 @@ def gates(b: Path, m: Path, ref, tree):
     g["wake"] = [*g["wake_full"], "--quick"]                                          # NORMAL: cable / EDID / AUX / SOURCE-key wakes
     g["panel"] = [*PY, f"{s}/panel_sim.py", b, m, *(["--tree", tree] if tree else [])]
     g["sysm"] = [*PY, f"{s}/sysm_sim.py", b, m, *(["--tree", tree] if tree else [])]
-    fast = b.with_name(b.name.replace("-be.bin", "-clk87-be.bin"))    # `dev.py build --tag <tag>-clk87 -D AWTO_CLOCK_MHZ=87` (stock clock): measured too when present
+    fast = sibling(b, "clk87")                                        # `--build-inputs`: dev.py build --tag <tag>-clk87 -D AWTO_CLOCK_MHZ=87 (stock clock): measured too when present
     base = [*PY, f"{s}/delay_sim.py", b, m, *(["--tree", tree, "--audit", *(["--variant", "hwtest"] if V["hwtest"] else [])] if tree else [])]
     if tree:
         g["delays"] = [*PY, f"{s}/delay_audit.py", "--check", "--tree", tree, "--map", m,
@@ -335,6 +366,7 @@ def main() -> int:
     ap.add_argument("--only", default="")
     ap.add_argument("--tier", choices=("normal", "extensive"), default="normal",
                     help="normal (default, the flash gate): all gates but EXTENSIVE; extensive: every gate (normal + the long sweeps)")
+    ap.add_argument("--build-inputs", action="store_true", help="extensive tier: build the missing sibling images first (-t0ev for wdt_full, -clk87 for delays_full)")
     # default = this repo: without a tree, wdt / conwrap use stale built-in constants and the static gates drop out
     ap.add_argument("--tree", default=str(ROOT), help="worktree the image was built in (its bank_layout.tsv + asm_bank); default this repo")
     a = ap.parse_args()
@@ -352,6 +384,8 @@ def main() -> int:
     if st.is_file():
         os.environ["AWTO_SETTINGS_TABLE"] = str(st.resolve())
         log(f"settings table {st.name}")
+    if a.build_inputs and a.tier == "extensive":
+        build_inputs(b, log)
     g = gates(b, m, a.against, a.tree)
     sk = skips(b, m, a.tree)
     if a.only:
@@ -394,19 +428,37 @@ def main() -> int:
         rec[k] = {"result": "SKIP", "rc": None, "seconds": 0, "note": why}
         log(f"SKIP {k:6s} {why}")
     write_record(b, rec, a.tree, complete=not a.only, tier=a.tier)
+    nr = json.loads(b.with_suffix(".gates.json").read_text()).get("new_red")
+    if nr:
+        log(f"NEW RED vs {json.loads(b.with_suffix('.gates.json').read_text())['prev_record']}: {', '.join(nr)}")
     log(f"=== {b.name}: {'ALL PASS' if not bad else f'{bad} FAIL'}, {len(sk)} SKIP ===")
     return 1 if bad else 0
 
 
+def previous_red(b: Path, tier: str):
+    """(record name, red gates) of the newest other record of the same tier, else (None, set())."""
+    cands = sorted((p for p in b.parent.glob("*.gates.json") if p != b.with_suffix(".gates.json")), key=lambda p: p.stat().st_mtime, reverse=True)
+    for p in cands:
+        try:
+            d = json.loads(p.read_text())
+        except ValueError:
+            continue
+        if d.get("tier") == tier and d.get("complete"):
+            return p.name, set(d.get("red") or [k for k, v in d["gates"].items() if v.get("result") == "FAIL"])
+    return None, set()
+
+
 def write_record(b: Path, rec: dict, tree, complete: bool, tier: str = "normal") -> None:
-    """tmp/fw/<stem>.gates.json: what `dev.py flash` checks (SHA-256 of the .bin, complete, no FAIL)."""
+    """tmp/fw/<stem>.gates.json: what `dev.py flash` checks (SHA-256 of the .bin, complete, no FAIL); red = FAIL gates, new_red = red and not red in the previous record of the tier."""
+    red = sorted(k for k, v in rec.items() if v["result"] == "FAIL")
+    prev, prev_red = previous_red(b, tier)
     def git(*x):
         return subprocess.run(["git", "-C", str(ROOT), *x], capture_output=True, text=True, check=False).stdout.strip()
     doc = {"image": b.name, "sha256": hashlib.sha256(b.read_bytes()).hexdigest(),
            "date": isostamp.now(), "complete": complete, "tier": tier, "tree": str(tree or ""),
            "fw_gates_commit": git("rev-parse", "HEAD") + ("+dirty" if git("status", "--porcelain", "--", "scripts/fw_gates.py") else ""),
            "xdata": (json.loads(xj.read_text()) if (xj := b.with_suffix(".xdata.json")).is_file() else None),
-           "gates": rec}
+           "red": red, "prev_record": prev, "new_red": sorted(set(red) - prev_red) if prev else red, "gates": rec}
     out = b.with_suffix(".gates.json")
     tmp = out.with_suffix(".json.tmp")
     tmp.write_text(json.dumps(doc, indent=1) + "\n")

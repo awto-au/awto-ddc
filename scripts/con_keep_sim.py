@@ -66,6 +66,14 @@ def ring_marks(s: C.Sim) -> list[int]:
     return out
 
 
+def ddr_marks(s: C.Sim) -> list[int]:
+    """marks in the DRAM log history (the XDATA ring holds only the newest 88 lines, a boot episode is ~80 of them)"""
+    import dram_log as D
+    rd = lambda u: s.ddr.mem.get(u)
+    h = D.header(rd)
+    return [e["arg"] for e in D.entries(rd, h, D.newest(rd, h), 4000) if e["id"] == MARK] if h else []
+
+
 def push(s: C.Sim, evs):
     s.inject(evs)
 
@@ -138,7 +146,7 @@ def main() -> int:
     s.check(len(on) >= 45 and on == sorted(on), "keep-flood: at least 45 of the map's 54 rows are log lines (49 measured), in ring order", f"{len(on)} marks")
 
     # keep-warm
-    held = ring_marks(s)
+    held = ddr_marks(s)
     s.cmd(0x4C)                                             # test cmd 0x4C: the main loop hangs, the hardware watchdog resets the chip (warm)
     used = 0
     while s.cr.resets == 0 and used < BITE_INSTR:
@@ -150,8 +158,8 @@ def main() -> int:
         used += 1_000_000
     s.check(s.bus.run_until_mode(MODE_ACTIVE, RESET_S), "keep-warm: ACTIVE again after the reset")
     raw = bytes(SL.read_ring(s.m.rd, s.a_sync))
-    kept = ring_marks(s)
-    s.check(kept[-10:] == held[-10:] and len(kept) > 0, "keep-warm: the ring still holds the previous boot's marks", f"{len(kept)} of {len(held)}")
+    kept = ddr_marks(s)
+    s.check(len(held) > 0 and kept[:len(held)] == held, "keep-warm: the DRAM log still holds the previous boot's marks", f"{len(kept)} kept, {len(held)} held")
     _, lines = SL.decode(raw, s.rows, whole=True)
     boots = [i for i, x in enumerate(lines) if "boot:" in x]
     last_mark = max((i for i, x in enumerate(lines) if "event 01" in x), default=-1)

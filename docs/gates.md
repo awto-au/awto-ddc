@@ -10,6 +10,8 @@ Three separate numbers, never added together (Dan 2026-11-19):
 ## Tiers
 - `scripts/fw_gates.py IMAGE` = **normal** (default). `./dev.py flash` accepts a complete normal record (`tmp/fw/<stem>.gates.json`, `tier: normal`).
 - `scripts/fw_gates.py IMAGE --tier extensive` = normal + the EXTENSIVE gates (`fw_gates.EXTENSIVE`, one line of reason per gate). `./dev.py gate --extensive` runs it on the newest image after test + build.
+- Extensive inputs: `--build-inputs` (also in `./dev.py gate --extensive`) builds the missing sibling images, then the base image again (the link / iram gates read the asm of the last build): `-t0ev` (`-D _AWTO_T0EV_TEST`, `wdt_full` Timer0 cases; without it they SKIP) and `-clk87` (`delays_full`). A fresh worktree needs only `./dev.py build` + this flag (#310).
+- Record `tmp/fw/<stem>.gates.json`: `red` = FAIL gates, `new_red` = red and not red in the previous complete record of the tier (logged `NEW RED`).
 - Merge to main: `./dev.py merge-check IMAGE.bin` passes only for a complete, FAIL-free record with `tier: extensive` for that exact .bin.
 - `--only a,b` writes a partial record (flash refuses it).
 - Normal gate wall time 22 s (24 gates in parallel, load ~15, 2026-11-19; longest bootsim / panel 12 s wall, ~6 s CPU). Budget (Dan): a normal gate ~1 s, a few s at most.
