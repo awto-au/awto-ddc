@@ -147,7 +147,7 @@ Conditions: warm reset (ISP), n = 5 per image, median, console_mode Always, 4K60
 
 - Period = VBs2Bs count / GDI clock + 1 ms, set by `ScalerDpRx1DisplayFormatSetting`; cleared on a failed scan and on an HPD toggle; < 4 ms (bad count) or > 45 ms = the SDK worst case.
 - Sites switched: `RL6449_Series_DPRx1.c` PG-stable wait (45 ms, in the scan), `ScalerDPRx1_SeptPhy.c` post-link wait and vsync adjust, `ScalerCommonDPRx1.c` MSA reset / video info / interlace / HDR waits (error and rare paths too). The 2-frame waits in display format and FIFO check were already derived (#60).
-- Not shortened: the 45 ms wait after link training (no stream to measure yet; a measure-poll variant made the first scan fail MSA and retry, no net gain: dropped); three `PB8_58` measure polls (23 / 32 / 28 ms, hardware needs one frame each); the 6 x 10 ms FIFO watch (60 ms, SDK window, not a frame time).
+- Not shortened: the 45 ms wait after link training (no stream to measure yet; a measure-poll variant made the first scan fail MSA and retry, no net gain: dropped); three `PB8_58` measure polls (23 / 32 / 28 ms, hardware needs one frame each); the 6 x 10 ms FIFO watch: removed, one check after the 2-frame wait (latched `PB8_21` flags, #314).
 
 | unit 2 DP D1, ms | before | after |
 |---|---|---|

@@ -2875,20 +2875,12 @@ bit ScalerDpRx1FifoCheck(EnumDpFifoCheckCondition enumFifoCheckCondition)
         if(GET_AIO_MODERN_STANDBY_MODE() == _FALSE)
 #endif
         {
+            // awto: PB8_21 under/overflow flags are latched (write 1 clears): one check after the 2 frames covers them (#314)
             ScalerTimerDelayXms(AWTO_DP_TWO_FRAMES());
 
-            pData[0] = 0;
-
-            while(pData[0] < 6)
+            if((ScalerGetBit(PB8_21_PG_CTRL_1, _BIT4) == _BIT4) || (ScalerGetBit(PB8_21_PG_CTRL_1, _BIT2) == _BIT2))
             {
-                ScalerTimerDelayXms(10);
-
-                if((ScalerGetBit(PB8_21_PG_CTRL_1, _BIT4) == _BIT4) || (ScalerGetBit(PB8_21_PG_CTRL_1, _BIT2) == _BIT2))
-                {
-                    return _FALSE;
-                }
-
-                pData[0]++;
+                return _FALSE;
             }
         }
     }
