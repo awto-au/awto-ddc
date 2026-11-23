@@ -33,6 +33,14 @@ TWINS = [
 ]
 
 
+STYLE = ("<style>body{font:14px system-ui;margin:24px;max-width:1100px}table{border-collapse:collapse;width:100%}"
+         "td,th{padding:4px 8px;border-bottom:1px solid #ddd;text-align:left;vertical-align:middle}"
+         ".bar{display:flex;height:16px;width:420px;border:1px solid #888}.u{background:#2a6fdb}.p{background:#e0a030}.f{background:#e8e8e8}"
+         ".c{background:#7a4fb5}h2{margin-top:28px}.n{text-align:right;font-variant-numeric:tabular-nums}small{color:#555}</style>")
+LEGEND = ("Legend: <span class=u>&nbsp;&nbsp;&nbsp;</span> code, <span class=p>&nbsp;&nbsp;&nbsp;</span> padding inside the used range, "
+          "<span class=f>&nbsp;&nbsp;&nbsp;</span> free tail.</p>")
+
+
 def log(msg: str) -> None:
     log_line(msg, LOG)
 
@@ -73,14 +81,9 @@ def main() -> int:
                 f'<span class="f" style="width:{w(free)}"></span></div>{extra}')
 
     out = ["<!doctype html><meta charset=utf-8><title>Flash memory map</title>",
-           "<style>body{font:14px system-ui;margin:24px;max-width:1100px}table{border-collapse:collapse;width:100%}"
-           "td,th{padding:4px 8px;border-bottom:1px solid #ddd;text-align:left;vertical-align:middle}"
-           ".bar{display:flex;height:16px;width:420px;border:1px solid #888}.u{background:#2a6fdb}.p{background:#e0a030}.f{background:#e8e8e8}"
-           ".c{background:#7a4fb5}h2{margin-top:28px}.n{text-align:right;font-variant-numeric:tabular-nums}small{color:#555}</style>",
+           STYLE,
            f"<h1>Flash memory map: {html.escape(stem.name)}</h1>",
-           f"<p>{len(img)} B = {n} bank images x 64 KiB (each: {COMMON // 1024} KiB common copy + {(BANK - COMMON) // 1024} KiB banked window). "
-           "Legend: <span class=u>&nbsp;&nbsp;&nbsp;</span> code, <span class=p>&nbsp;&nbsp;&nbsp;</span> padding inside the used range, "
-           "<span class=f>&nbsp;&nbsp;&nbsp;</span> free tail.</p>",
+           f"<p>{len(img)} B = {n} bank images x 64 KiB (each: {COMMON // 1024} KiB common copy + {(BANK - COMMON) // 1024} KiB banked window). " + LEGEND,
            "<h2>Banked window per bank (44 KiB each)</h2><table><tr><th>bank</th><th>map</th><th class=n>code</th><th class=n>padding</th><th class=n>free tail</th></tr>"]
     for i, used, pad, free, total in rows:
         out.append(f"<tr><td>{i}</td><td>{bar(used, pad, free, total)}</td><td class=n>{used}</td><td class=n>{pad}</td><td class=n>{free}</td></tr>")
