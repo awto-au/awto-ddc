@@ -1,12 +1,11 @@
 #!/usr/bin/env python3
 """Input monitor over the running firmware's debug I2C slave 0x35.
 
-`_g_stAwtoGpio` holds the current value of every input in the firmware table (fw/awto/inputs.tsv in awto-ddc-ui, read here for
+`_g_stAwtoGpio` holds the current value of every input in the firmware table (fw/awto/inputs.tsv in this repo, read here for
 names and pins) and a 32-entry change ring (5 B: seq, tick, input id, value). `snapshot` prints all values; `watch` follows the ring,
 reading the 16-byte header and the ring only when its sequence moves. `open`/`close` drive the console through the test-command byte.
 """
 import argparse
-import os
 import re
 import sys
 import time
@@ -18,8 +17,9 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 import dbg_xdata as X
 import i2cbus
 import rtd_i2c_bridge as B
+from _repo import ROOT
 
-INPUTS_TSV = Path(os.environ.get("AWTO_DDC_UI", "/mnt/2tb/git/awto-ddc-ui")) / "fw/awto/inputs.tsv"   # the firmware's input table (same index = ring id)
+INPUTS_TSV = ROOT / "fw/awto/inputs.tsv"   # the firmware's input table (same index = ring id)
 HDR_N, ENTRY_N, LOG_N = 16, 5, 32
 DEV8, TESTCMD_OFF = 0x6A, 0x28
 
@@ -29,7 +29,7 @@ def load_inputs(path: Path = INPUTS_TSV) -> list:
     out = []
     for ln in path.read_text().splitlines():
         if ln.strip() and not ln.startswith("#"):
-            n, pin, kind, _src, _a, _b, text, screen, lg = ln.split("\t")
+            n, pin, kind, _src, _a, _b, text, screen, lg = ln.split("\t")[:9]   # trailing desc/rate columns unused
             out.append((n, int(pin), kind, text, screen == "y", lg == "y"))
     return out
 
