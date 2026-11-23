@@ -64,6 +64,7 @@ def parse_map(path: Path) -> dict[str, tuple[int, str]]:
 ASM = re.compile(r"^\s+([0-9A-F]{6})\s+((?:[0-9A-F]{2}\s)+)\s*\[\d+\]\s*(\d+)\s(.*)$")
 SRC = re.compile(r"^\s+\d+ ;\t(.+?):(\d+): (.*)$")
 LAB = re.compile(r"^\s+([0-9A-F]{6})\s+\d+ (_\w+|\d+\$):\s*$")
+AREA = re.compile(r"^\s+\d+\s+\.area\s+CH_(\w+)\s")      # static C functions: chunk CH_<name>, no `C:` map symbol (#309)
 
 
 class Fn:
@@ -82,8 +83,12 @@ def parse_rst(build: Path, syms) -> dict[str, Fn]:
     fns: dict[str, Fn] = {}
     parse_rst.stubs = {}                                  # bank stub address -> function name (for tail calls seen in the sim)
     for f in sorted(glob.glob(str(build / "tmp/sdcc-port/asm_bank/*.rst"))):
-        cur, st = None, None
+        cur, st, area = None, None, ""
         for l in open(f, errors="replace"):
+            m = AREA.match(l)
+            if m:
+                area = m.group(1)
+                continue
             m = LAB.match(l)
             if m:
                 if m.group(2).startswith("__bs_"):
@@ -91,6 +96,9 @@ def parse_rst(build: Path, syms) -> dict[str, Fn]:
                     cur, st = None, None
                 elif m.group(2)[:32] in syms and not m.group(2)[0].isdigit():     # the map cuts names at 32 characters
                     cur = fns.setdefault(m.group(2), Fn(m.group(2), int(m.group(1), 16), syms[m.group(2)[:32]][1]))
+                    st = None
+                elif m.group(2) == "_" + area:
+                    cur = fns.setdefault(m.group(2), Fn(m.group(2), int(m.group(1), 16), Path(f).stem))
                     st = None
                 elif cur:
                     cur.labels[m.group(2)] = int(m.group(1), 16)
