@@ -74,4 +74,5 @@ Image sectors (4 KiB) changed by one small edit vs its own unedited build (`flas
 - Free reconciliation: 2895 = chunk slot padding 1610 + residual reserve not linked 1225 + slot free 60.
 - CSEG = runtime library, not our code: `__gptrget/put` (+ `_isr` clones), `awto_bank` trampoline (`__bs_call`, `__bs_ret`, return table), `___sdcc_external_startup`, `__div/mod/mul` (int, long), `memcpy`, `memset`, `abs`. Rest of residual: GSINIT* 170, XINIT 96, HOME 56, vectors 20, SSEG 128 (IRAM, not code).
 - Top chunks: ScalerMDomainDHVtotalFinetune 645, ScalerMDomainDHtotalFinetune 520, AwtoDbgIsrCmd_EXINT1 471, AwtoWaitLog 361, ScalerTimerWaitForEvent 323, UserCommonNVRamGetSystemData 308, ScalerTimerPollingFlagProc 281, SysTimerIntProc2 233, AwtoWdtPoke 229, ScalerTimerDelayXms 213.
+- Residual hole: CSEG ends 0x82F, XINIT is pinned at 0xCBC-0xD1C (`resid_end` 0xd1c): 1165 B free in every common copy. A lower `resid_end` (fw/rl6449_memory.toml) is accepted by the layout and moves no slot.
 - Stub = one per banked function called from another bank / common or address-taken (not per call site): moving a function between banks changes the stub count of its callers.
