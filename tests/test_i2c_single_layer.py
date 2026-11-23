@@ -11,7 +11,9 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 ALLOWED = {ROOT / "scripts" / "i2cbus.py",
            ROOT / "scripts" / "aux_probe.py",     # fcntl for /dev/nvidiactl RM ioctls (#71); i2c goes through i2cbus
-           ROOT / "scripts" / "ddcnet.py"}        # fcntl TUNSETIFF on /dev/net/tun (TAP, not i2c)
+           ROOT / "scripts" / "ddcnet.py",        # fcntl TUNSETIFF on /dev/net/tun (TAP, not i2c)
+           ROOT / "scripts" / "build_guard.py",   # fcntl.flock on the build lock (#316)
+           ROOT / "tests" / "test_build_guard.py"}
 NAMES = {"I2C_RDWR", "I2C_SLAVE", "I2C_RETRIES", "I2C_TIMEOUT", "I2C_M_RD_RAW", "fcntl"}
 CODES = {0x0701, 0x0702, 0x0703, 0x0707}          # I2C_RETRIES, I2C_TIMEOUT, I2C_SLAVE, I2C_RDWR
 
