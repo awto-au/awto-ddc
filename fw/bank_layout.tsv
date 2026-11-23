@@ -735,6 +735,7 @@ stub	_ScalerAudioD1SetAudioPLL	C	0x25cc	8
 stub	_ScalerAudioD1WatchDogProc	C	0x25d4	8
 stub	_ScalerAudioHdmiGetAudioDetected	C	0x25dc	8
 stub	_ScalerAudioHdmiLoadStableICodeEvent	C	0x25e4	8
+stub	_ScalerDpRx1DFELaneCheck	C	0x25ec	8
 stub	_ScalerAudioDACInitial	C	0x25f4	8
 stub	_ScalerAudioDACOutputSwitch	C	0x25fc	8
 stub	_ScalerAudioGetAudioDetected	C	0x2604	8
@@ -1934,6 +1935,7 @@ fn	_AwtoTmdsIdleKhz	3	0xaa44	544
 fn	_ScalerTimerWDCancelTimerEvent	3	0xac64	44
 fn	_AwtoSwFastPoll	3	0xac90	672
 fn	_AwtoFastScalerStatus	3	0xaf30	24
+fn	_ScalerDpRx1DFELaneCheck	3	0xaf48	80
 const	_tDDR2_PLL_PHASE	4	0x0000	16
 const	_tAwtoAudioTestAmp	4	0x0010	12
 const	_tAwtoAudioTestGain	4	0x001c	16
@@ -2528,6 +2530,7 @@ fn	_ScalerTMDSRxTMDSScanInputPort	7	0x914c	1792
 fn	_ScalerTMDSRxTMDSStableDetect	7	0x984c	956
 fn	_ScalerDpAuxJudgeHandler_EXINT0	7	0x9c08	1564
 fn	_AwtoSyncPush	7	0xa224	2112
+fn	_ScalerDpRx1DFELaneCheck_EXINT0	7	0xaa64	88
 const	_g_tAstData	8	0x0000	692
 const	_g_tAstOff	8	0x02b4	112
 const	_s_tAstBit	8	0x0324	12

@@ -3694,6 +3694,33 @@ void ScalerDpRx1CpIRQ_EXINT0(EnumDpRxBStatusType enumBStatusType)
 // Input Value  : None
 // Output Value : True --> valid, False --> invalid
 //--------------------------------------------------
+// One lane of the DFE coefficient check: Vth == 0x00 with Tap0 == 0x15 is invalid. ucMap = the lane's scaler lane (_D1_DP_LANEn).
+static bit ScalerDpRx1DFELaneCheck(BYTE ucMap)
+{
+    BYTE ucVth;
+    BYTE ucTap0;
+
+    // Read Lane DFE
+    ScalerSetBit(P7A_F2_COEF_3, ~(_BIT7 | _BIT6), (ucMap << 6));
+
+    // Read Back Vth
+    ScalerSetBit(P7A_F0_COEF_1, ~(_BIT5 | _BIT4 | _BIT3 | _BIT2 | _BIT1 | _BIT0), 0x00);
+    ucVth = (ScalerGetByte(P7A_F1_COEF_2) & 0x0F);
+
+    // Read Back Tap0
+    ScalerSetBit(P7A_F0_COEF_1, ~(_BIT5 | _BIT4 | _BIT3 | _BIT2 | _BIT1 | _BIT0), _BIT0);
+    ucTap0 = (ScalerGetByte(P7A_F1_COEF_2) & 0x1F);
+
+    if((((WORD)ucVth << 8) | ucTap0) == 0x0015)
+    {
+        DebugMessageRx1("7. Lane DFE Fail", ucMap);
+
+        return _FALSE;
+    }
+
+    return _TRUE;
+}
+
 bit ScalerDpRx1DFECheck(void)
 {
     if(ScalerDpRx1GetDpcdInfo(0x00, 0x01, 0x00) == _DP_LINK_HBR2)
@@ -3705,75 +3732,9 @@ bit ScalerDpRx1DFECheck(void)
     {
         case _DP_FOUR_LANE:
 
-            // Read Lane2 DFE
-            ScalerSetBit(P7A_F2_COEF_3, ~(_BIT7 | _BIT6), (_D1_DP_LANE2 << 6));
-
-            // Read Back Vth
-            ScalerSetBit(P7A_F0_COEF_1, ~(_BIT5 | _BIT4 | _BIT3 | _BIT2 | _BIT1 | _BIT0), 0x00);
-            pData[0] = (ScalerGetByte(P7A_F1_COEF_2) & 0x0F);
-
-            // Read Back Tap0
-            ScalerSetBit(P7A_F0_COEF_1, ~(_BIT5 | _BIT4 | _BIT3 | _BIT2 | _BIT1 | _BIT0), _BIT0);
-            pData[1] = (ScalerGetByte(P7A_F1_COEF_2) & 0x1F);
-
-            if(PDATA_WORD(0) == 0x0015)
+            if((ScalerDpRx1DFELaneCheck(_D1_DP_LANE2) == _FALSE) || (ScalerDpRx1DFELaneCheck(_D1_DP_LANE3) == _FALSE) ||
+               (ScalerDpRx1DFELaneCheck(_D1_DP_LANE1) == _FALSE) || (ScalerDpRx1DFELaneCheck(_D1_DP_LANE0) == _FALSE))
             {
-                DebugMessageRx1("7. Lane2 DFE Fail", 0);
-
-                return _FALSE;
-            }
-
-            // Read Lane3 DFE
-            ScalerSetBit(P7A_F2_COEF_3, ~(_BIT7 | _BIT6), (_D1_DP_LANE3 << 6));
-
-            // Read Back Vth
-            ScalerSetBit(P7A_F0_COEF_1, ~(_BIT5 | _BIT4 | _BIT3 | _BIT2 | _BIT1 | _BIT0), 0x00);
-            pData[0] = (ScalerGetByte(P7A_F1_COEF_2) & 0x0F);
-
-            // Read Back Tap0
-            ScalerSetBit(P7A_F0_COEF_1, ~(_BIT5 | _BIT4 | _BIT3 | _BIT2 | _BIT1 | _BIT0), _BIT0);
-            pData[1] = (ScalerGetByte(P7A_F1_COEF_2) & 0x1F);
-
-            if(PDATA_WORD(0) == 0x0015)
-            {
-                DebugMessageRx1("7. Lane3 DFE Fail", 0);
-
-                return _FALSE;
-            }
-
-            // Read Lane1 DFE
-            ScalerSetBit(P7A_F2_COEF_3, ~(_BIT7 | _BIT6), (_D1_DP_LANE1 << 6));
-
-            // Read Back Vth
-            ScalerSetBit(P7A_F0_COEF_1, ~(_BIT5 | _BIT4 | _BIT3 | _BIT2 | _BIT1 | _BIT0), 0x00);
-            pData[0] = (ScalerGetByte(P7A_F1_COEF_2) & 0x0F);
-
-            // Read Back Tap0
-            ScalerSetBit(P7A_F0_COEF_1, ~(_BIT5 | _BIT4 | _BIT3 | _BIT2 | _BIT1 | _BIT0), _BIT0);
-            pData[1] = (ScalerGetByte(P7A_F1_COEF_2) & 0x1F);
-
-            if(PDATA_WORD(0) == 0x0015)
-            {
-                DebugMessageRx1("7. Lane1 DFE Fail", 0);
-
-                return _FALSE;
-            }
-
-            // Read Lane0 DFE
-            ScalerSetBit(P7A_F2_COEF_3, ~(_BIT7 | _BIT6), (_D1_DP_LANE0 << 6));
-
-            // Read Back Vth
-            ScalerSetBit(P7A_F0_COEF_1, ~(_BIT5 | _BIT4 | _BIT3 | _BIT2 | _BIT1 | _BIT0), 0x00);
-            pData[0] = (ScalerGetByte(P7A_F1_COEF_2) & 0x0F);
-
-            // Read Back Tap0
-            ScalerSetBit(P7A_F0_COEF_1, ~(_BIT5 | _BIT4 | _BIT3 | _BIT2 | _BIT1 | _BIT0), _BIT0);
-            pData[1] = (ScalerGetByte(P7A_F1_COEF_2) & 0x1F);
-
-            if(PDATA_WORD(0) == 0x0015)
-            {
-                DebugMessageRx1("7. Lane0 DFE Fail", 0);
-
                 return _FALSE;
             }
 
@@ -3781,39 +3742,8 @@ bit ScalerDpRx1DFECheck(void)
 
         case _DP_TWO_LANE:
 
-            // Read Lane1 DFE
-            ScalerSetBit(P7A_F2_COEF_3, ~(_BIT7 | _BIT6), (_D1_DP_LANE1 << 6));
-
-            // Read Back Vth
-            ScalerSetBit(P7A_F0_COEF_1, ~(_BIT5 | _BIT4 | _BIT3 | _BIT2 | _BIT1 | _BIT0), 0x00);
-            pData[0] = (ScalerGetByte(P7A_F1_COEF_2) & 0x0F);
-
-            // Read Back Tap0
-            ScalerSetBit(P7A_F0_COEF_1, ~(_BIT5 | _BIT4 | _BIT3 | _BIT2 | _BIT1 | _BIT0), _BIT0);
-            pData[1] = (ScalerGetByte(P7A_F1_COEF_2) & 0x1F);
-
-            if(PDATA_WORD(0) == 0x0015)
+            if((ScalerDpRx1DFELaneCheck(_D1_DP_LANE1) == _FALSE) || (ScalerDpRx1DFELaneCheck(_D1_DP_LANE0) == _FALSE))
             {
-                DebugMessageRx1("7. Lane1 DFE Fail", 0);
-
-                return _FALSE;
-            }
-
-            // Read Lane0 DFE
-            ScalerSetBit(P7A_F2_COEF_3, ~(_BIT7 | _BIT6), (_D1_DP_LANE0 << 6));
-
-            // Read Back Vth
-            ScalerSetBit(P7A_F0_COEF_1, ~(_BIT5 | _BIT4 | _BIT3 | _BIT2 | _BIT1 | _BIT0), 0x00);
-            pData[0] = (ScalerGetByte(P7A_F1_COEF_2) & 0x0F);
-
-            // Read Back Tap0
-            ScalerSetBit(P7A_F0_COEF_1, ~(_BIT5 | _BIT4 | _BIT3 | _BIT2 | _BIT1 | _BIT0), _BIT0);
-            pData[1] = (ScalerGetByte(P7A_F1_COEF_2) & 0x1F);
-
-            if(PDATA_WORD(0) == 0x0015)
-            {
-                DebugMessageRx1("7. Lane0 DFE Fail", 0);
-
                 return _FALSE;
             }
 
@@ -3821,30 +3751,15 @@ bit ScalerDpRx1DFECheck(void)
 
         case _DP_ONE_LANE:
 
-            // Read Lane0 DFE
-            ScalerSetBit(P7A_F2_COEF_3, ~(_BIT7 | _BIT6), (_D1_DP_LANE0 << 6));
-
-            // Read Back Vth
-            ScalerSetBit(P7A_F0_COEF_1, ~(_BIT5 | _BIT4 | _BIT3 | _BIT2 | _BIT1 | _BIT0), 0x00);
-            pData[0] = (ScalerGetByte(P7A_F1_COEF_2) & 0x0F);
-
-            // Read Back Tap0
-            ScalerSetBit(P7A_F0_COEF_1, ~(_BIT5 | _BIT4 | _BIT3 | _BIT2 | _BIT1 | _BIT0), _BIT0);
-            pData[1] = (ScalerGetByte(P7A_F1_COEF_2) & 0x1F);
-
-            if(PDATA_WORD(0) == 0x0015)
+            if(ScalerDpRx1DFELaneCheck(_D1_DP_LANE0) == _FALSE)
             {
-                DebugMessageRx1("7. Lane0 DFE Fail", 0);
-
                 return _FALSE;
             }
 
             break;
 
         default:
-
             return _FALSE;
-
             break;
     }
 
