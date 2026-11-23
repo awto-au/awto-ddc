@@ -307,7 +307,14 @@ def main() -> int:
     for _, cmd in js:
         cmdline |= {x[2:].split("=")[0] for x in cmd if x.startswith("-D")}
     defined |= cmdline
-    pre = subprocess.run(js[0][1] + ["-Wp-dM", "-E", "-"], input="", capture_output=True, text=True, check=False)  # rc ignored: sdcc rc 1 + usage text for `-E -` (stdin) today; stdout is empty, see #271
+    empty = ROOT / "tmp/scratch/pp_audit_empty.c"            # sdcc needs a file: `-E -` (stdin) prints usage, rc 1 (#271)
+    empty.parent.mkdir(parents=True, exist_ok=True)
+    empty.write_text("")
+    pre = subprocess.run([*js[0][1], "-Wp-dM", "-E", str(empty)], capture_output=True, text=True, errors="replace",
+                         timeout=FC.COMPILE_TIMEOUT, check=False)
+    if pre.returncode:
+        log(f"predefine scan failed rc={pre.returncode}: {pre.stderr.strip()[-400:]}")
+        return 2
     defined |= set(re.findall(r"^#define (\w+)", pre.stdout, re.MULTILINE))
     for (_, defs) in [(0, d) for *_, d, _o in tu_info]:
         defined |= {d[1] for d in defs if d[0] == "define"}
