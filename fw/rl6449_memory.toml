@@ -7,7 +7,7 @@ banks       = 16           # 1 MB flash
 code_banks  = 15           # banks 0-14 hold code (bank 14 = 0xE0000, the old fw's gamma, unused by us); 15 = NVRAM / manifest / spare (#44)
 common_end  = 0x5000       # [0, common_end) copied into every bank image
 vectors_end = 0x53         # vectors 0..9 (0x03 + 8n, 3 B each)
-resid_end   = 0xd1c        # common bytes kept for vectors / HOME / GSINIT / library / XINIT before pinned areas (#209)
+resid_end   = 0xa00        # residual areas end here; XINIT is pinned to its last bytes (#209, #44)
 bank_reg    = 0xFFFF       # XDATA bank-select register
 
 [[code.reserved]]          # fixed debug-message block, never code (#56)
