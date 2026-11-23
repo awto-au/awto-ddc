@@ -5,7 +5,7 @@ Not the on-device manifest (`docs/flash-registry.md`). Code: `scripts/flash_regi
 ## Layout (main checkout, shared by every worktree)
 
 - Root = `unit_lock.lock_root()` (git common dir's parent), same rule as the unit locks.
-- `tmp/flashed/<serial>.json`: tag, sha256, built (bin mtime), commit, flashing worktree, flashed (ISO), `images_dir`.
+- `tmp/flashed/<serial>.json`: tag, sha256, built (bin mtime), `commit` (the image's build commit from `<stem>.build.json`, `+dirty` if the tree was; `unknown` for an older image), `flasher_commit` + `worktree` (the checkout that ran the flash; a warning prints when they differ), flashed (ISO), `images_dir`.
 - `tmp/flashed/images/<sha12>/<tag>.{bin,map,sync.tsv,settings_table.py,build.json,ids.tsv}`: content-addressed copies. Deleting a worktree loses nothing; no symlinks.
 - Same tag with different bytes -> different `<sha12>` dir, never overwritten.
 - `build-debris/images/` (`fw_archive.py`) unchanged; used as a second place to look up a tag.

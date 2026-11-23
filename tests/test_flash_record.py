@@ -161,3 +161,15 @@ def test_readers_resolve_through_the_registry():
     users = ["dev.py", "scripts/msg_table.py", "scripts/cold_boot.py", "scripts/selector_switch_unit.py", "scripts/disk_guard.py"]
     for u in users:
         assert "flash_registry" in (REPO / u).read_text(), u
+
+
+def test_commit_is_the_images_build_commit(reg, capsys):
+    img = _img(reg / "wt1/tmp/fw", "bbb", b"b")
+    img.with_name(img.name.removesuffix(".bin") + ".build.json").write_text('{"commit": "abc1234", "dirty": true}')
+    rec = R.record(SER, img)
+    assert rec["commit"] == "abc1234+dirty" and "flasher_commit" in rec
+    assert "built from abc1234" in capsys.readouterr().out or rec["flasher_commit"].startswith("abc1234")
+
+
+def test_older_image_without_commit_is_unknown(reg):
+    assert R.record(SER, _img(reg / "wt1/tmp/fw", "ccc", b"c"))["commit"] == "unknown"

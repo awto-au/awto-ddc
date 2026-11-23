@@ -75,11 +75,26 @@ def record(serial: str, image: Path, **extra) -> dict:
     image = Path(image)
     sha, dname = store(image)
     root = unit_lock.repo_root()
+    here = _git(root, "rev-parse", "--short", "HEAD")
+    built = build_commit(image)                     # #285: the image's own commit, not the flashing checkout's
     rec = {"tag": image.name.removesuffix(".bin"), "sha256": sha, "images_dir": dname,
-           "built": _iso(image.stat().st_mtime),
-           "commit": _git(root, "rev-parse", "--short", "HEAD"), "worktree": str(root), "flashed": isostamp.now(), **extra}
+           "built": _iso(image.stat().st_mtime), "commit": built or "unknown", "flasher_commit": here,
+           "worktree": str(root), "flashed": isostamp.now(), **extra}
+    if built and here and not here.startswith(built[:7]) and not built.startswith(here[:7]):
+        print(f"warning: image {rec['tag']} was built from {built}, flashed from a checkout at {here} ({root})")
     _write(_file(serial), rec)
     return rec
+
+
+def build_commit(image: Path) -> str:
+    """Commit the image was built from (fwimage.py writes it into <stem>.build.json); '' for an older image."""
+    bj = image.with_name(image.name.removesuffix(".bin") + ".build.json")
+    try:
+        d = json.loads(bj.read_text())
+    except (OSError, ValueError):
+        return ""
+    c = d.get("commit", "") if isinstance(d, dict) else ""
+    return c + ("+dirty" if c and d.get("dirty") else "")
 
 
 def _iso(t: float) -> str:
@@ -206,7 +221,7 @@ def main(argv: list[str]) -> int:
         if not img.is_file() or not img.with_suffix(".map").is_file():
             raise SystemExit(f"adopt: {img} and its .map beside it are needed; nothing done")
         wt = _git(img.parent, "rev-parse", "--show-toplevel")      # provenance = the tree the image was built in
-        rec = record(argv[1], img, source="adopt (not flashed by this run)", **({"worktree": wt, "commit": _git(Path(wt), "rev-parse", "--short", "HEAD")} if wt else {}))
+        rec = record(argv[1], img, source="adopt (not flashed by this run)", **({"worktree": wt} if wt else {}))
         print(f"{argv[1]}: recorded {rec['tag']} ({rec['sha256'][:12]})")
         return 0
     if argv[:1] == ["list"]:
