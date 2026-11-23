@@ -1599,10 +1599,9 @@ static void AwtoPortMonPoll(void)                   // once per awake pass: chea
         if(ucI == 0)
         {
             ucNew = (AwtoDpRx1Trained() != 0) ? (ucNew | AWTO_PST_LINK) : (ucNew & ~AWTO_PST_LINK);
-            if(ScalerGetBit(AWTO_R_PBA_AUX_IRQ_STATUS, AWTO_F_PBA_AUX_IRQ_STATUS_AUX_RX_INT) != 0)
+            if(AwtoDpRx1LtBusy() != 0)
             {
-                ScalerSetBit(AWTO_R_PBA_AUX_IRQ_STATUS, (_BIT5 | _BIT3 | _BIT2), AWTO_F_PBA_AUX_IRQ_STATUS_AUX_RX_INT);   // W1C this flag only
-                ucNew |= AWTO_PST_AUX;
+                ucNew |= AWTO_PST_AUX;                  // training traffic seen: ISR-set RAM status, no DP register access from main
             }
         }
         else
