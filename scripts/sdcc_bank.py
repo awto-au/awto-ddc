@@ -4,7 +4,7 @@
 usage: sdcc_bank.py [--asm DIR] [--out DIR] [--banks N] [--common-max BYTES]
   --asm  input asm tree (default tmp/sdcc-port/asm_ovl, output of sdcc_overlay.py)
   --out  rewritten tree + rel files (default tmp/sdcc-port/asm_bank)
-  --banks       code banks available (default 14: banks 14-15 hold data, #8)
+  --banks       code banks available (default 15 = fw/rl6449_memory.toml: bank 15 holds data, #44)
   --common-max  fail if common code exceeds this (default 0x6000)
 
 Method (awto-ddc#8):
@@ -363,7 +363,7 @@ def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--asm", default=str(ROOT / "tmp/sdcc-port/asm_ovl"))
     ap.add_argument("--out", default=str(ROOT / "tmp/sdcc-port/asm_bank"))
-    ap.add_argument("--banks", type=int, default=14)
+    ap.add_argument("--banks", type=int, default=L.CM.CODE_BANKS)
     ap.add_argument("--common-max", type=lambda x: int(x, 0), default=0x6000)
     ap.add_argument("--hot-budget", type=lambda x: int(x, 0), default=0xC00,
                     help="common bytes for hot helpers moved out of banks")

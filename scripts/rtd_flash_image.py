@@ -28,7 +28,7 @@ Exit: never sends the scaler reset while the image region is mixed (erased / par
   --serial: must equal the EDID serial on <bus> (i2cbus.require_unit, checked here before ISP is entered, #50.28).
   --identity HOW: only when the EDID is silent (unit held in the safe window): how the caller proved the bus; logged.
   Revert: rerun with the backup (1 MiB) as <image.bin>: only sectors that differ are rewritten.
-  Image sectors beyond its length are never touched (banks 14-15 = settings/gamma data, #8).
+  Image sectors beyond its length are never touched (bank 15 = NVRAM / manifest / spare; bank 14 is code only once the image reaches it, #44).
 Single session = the MCU stays halted throughout, so a half-written image never runs.
 Backups: ~/vendors/realtek/analysis/dumps/ (flash contents = vendor binary store, repo CLAUDE.md).
 Log: ./tmp/logs/rtd_flash_image.log

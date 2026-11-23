@@ -34,7 +34,7 @@ Pre-flash alert tone honours mute (VCP 0x8D) and `AWTO_SOUND=off`: `docs/flash-s
 
 ## Is 0xFD000 unused by firmware? (checked 2026-11-18)
 
-- Flash map (`docs/boot-logo.md`): code `0x00000-0x67000` of bank overlays (image 224 sectors, to `0xDFFFF`), gamma `0xE0000-0xE2FFF`, settings `0xFB000-0xFCFFF`; `0xFD000-0xFEFFF` erased on every unit (measured, `fw/rtdfw/awto/nvram/nvram.c`).
+- Flash map (`docs/boot-logo.md`): code `0x00000-0x67000` of bank overlays (image 224 sectors, to `0xDFFFF`; 240 to `0xEFFFF` once bank 14 holds code, #44), settings `0xFB000-0xFCFFF`; `0xFD000-0xFEFFF` erased on every unit (measured, `fw/rtdfw/awto/nvram/nvram.c`).
 - Live NVRAM store = SDK EEPROM emulation, bank 15 pages 11-12 = `0xFB000-0xFCFFF` (`fw/nvram/nv_gate.c`, `docs/nvram-settings.md`).
 - The retired record log (`nvram.c`, `NV_BASE 0xFD000`) is NEVER written by the firmware: `nv_store` / `nv_wipe` have no caller outside its own tests; the only access is `nv_find` in `settings.c` (`set_load_legacy`), a read at the first boot of the #151 layout when the SDK store is invalid.
 - That read scans 512 B slots for magic byte `0xA7` (+ format + Fletcher check). The manifest layout keeps `0xFF` at every 512 B slot boundary it could touch (`0x000` is `A`, `0x200` skipped), so no slot can look valid.
@@ -42,7 +42,7 @@ Pre-flash alert tone honours mute (VCP 0x8D) and `AWTO_SOUND=off`: `docs/flash-s
 
 ## Volatile sectors (read and compared every flash)
 
-- `flash_state.VOLATILE_RANGES`: gamma `0xE0000-0xE2FFF`, NVRAM store `0xFB000-0xFCFFF`, spare `0xFE000`. The manifest sector has its own rule.
+- `flash_state.VOLATILE_RANGES`: NVRAM store `0xFB000-0xFCFFF`, spare `0xFE000`. The manifest sector has its own rule.
 - Per-unit EDID sector of the image (`build_fw_edid_sector.edid_offsets`, written by `dev.py deploy`): the manifest holds the shared image's CRC32 for it, the device holds the patched sector.
 - Only matter inside the image length; today's image (224 sectors) contains just the EDID sector. It is read, differs, and is rewritten every flash exactly as before.
 

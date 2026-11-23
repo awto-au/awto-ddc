@@ -7,6 +7,7 @@ usage: stats.py [--tree DIR] [--label TEXT] [--no-record] [--no-sim] [--unit N] 
   states; needs tmp/sdcc-port/asm_bank of THAT build, so run right after the build), cycles/pass + work (speed_bench), busy % / worst pass ms /
   passes/s (loop_pacing_sim idle ACTIVE), estimated free-run passes/s = paced passes/s / busy fraction, headroom factor = 1 / busy fraction.
   --unit N: the unit's health `headroom` row (passes/s, busy %, worst pass ms) is printed too (the unit runs whatever is flashed).
+  After the table: the common-region record (scripts/common_metrics.py: areas, slots, stubs, chunks, top 10; no threshold).
   Rows go to docs/speed-bench.tsv through speed_bench / loop_pacing_sim (--no-record: none). Log: tmp/logs/stats.log
 """
 import argparse
@@ -18,11 +19,12 @@ import sys
 from pathlib import Path
 
 import isostamp
+import chip_mem as CM
 
 HERE = Path(__file__).resolve().parent
-COMMON_END = 0x5000
-BANK = 0x10000
-CODE_BANKS = 14
+COMMON_END = CM.COMMON_END
+BANK = CM.BANK_SIZE
+CODE_BANKS = CM.CODE_BANKS
 XDATA_POOL = 6665
 LOG = None
 
@@ -109,6 +111,13 @@ def main():
                 pps, busy, worst = int(m.group(1)), float(m.group(2)), float(m.group(3))
                 free, head = round(pps / (busy / 100)), round(100 / busy, 2)
         say("\t".join(str(x) for x in [b.stem, c, bk, ui, fi, XDATA_POOL - xf if xf is not None else None, xf, sk[0], sk[1], sk[2], cyc, work, busy, worst, pps, free, head]))
+    for s in a.stems:
+        mp = Path(s).with_suffix(".map")
+        mp = mp if mp.is_absolute() else root / mp
+        if mp.is_file():
+            import common_metrics
+            for ln in common_metrics.lines(common_metrics.measure(mp, root / "fw/bank_layout.tsv")):
+                say(ln)
     if a.unit:
         o = sh(root, "./dev.py", "health", "--unit", a.unit, timeout=200)
         for l in o.splitlines():

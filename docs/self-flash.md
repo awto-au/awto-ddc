@@ -12,7 +12,7 @@ Tags (awto-dan `docs/embedded/reversing/README.md`): [confirmed] read in our sou
   - updater pinned at a fixed address and never moved by the sticky layout;
   - per-page CRC + whole-image CRC + a valid-marker written last;
   - `boot_last` order (as the host flasher), running bank and bank 0 common via a second hop.
-- NO-GO: A/B full images (no space: image = 14 of 16 banks, rest is NVRAM / gamma; relocation needs 2 MiB, see section 5).
+- NO-GO: A/B full images (no space: image = 14 of 16 banks, 15 with bank 14 code; rest is NVRAM / spare; relocation needs 2 MiB, see section 5).
 - Value check: host ISP flash is 26 s at 1 MHz and already works on a blank flash; self-update only pays for units with no HDMI DDC access to ISP (DP-only, #177) or remote update.
 - Part 1 (warning screen during the host flash) is done and seen on unit 3 (`docs/flash-screen.md`).
 
@@ -53,11 +53,11 @@ Tags (awto-dan `docs/embedded/reversing/README.md`): [confirmed] read in our sou
 - 1 MiB MX25L8006E = 16 banks x 64 KB; code space 64 KB, bank select = XDATA 0xFFFF (reset value 0), bank_en FFFC[0] [regdb, `mcu-8051.md`].
 - Our image: common area 0x0000-0x4FFF (vectors, startup, bank stubs, hot code) physically copied into every bank 0-13; banked code from 0x5000 [confirmed, `docs/flash-layout.md`].
   - So running in bank N executes bank N's own common copy. Erasing common of the bank you run in kills the CPU; erasing it in another bank does not.
-  - Sticky layout pins chunks to slots (`fw/bank_layout.tsv`); full image 224 sectors = banks 0-13, banks 14-15 = NVRAM / data (never written by the host image flasher).
+  - Sticky layout pins chunks to slots (`fw/bank_layout.tsv`); full image 224 sectors = banks 0-13, bank 14 is the 15th code bank (240 sectors when used, #44), bank 15 = NVRAM / manifest / spare (never written by the host image flasher).
 - Reset: vector at 0x0000 of bank 0 (LJMP to startup) [confirmed, Dahua dump notes; same for ours, bank reset value 0]. There is no mask boot ROM that validates flash: the chip fetches from flash at reset [likely; the ISP slave 0x4A is hardware and answers on blank flash, #167 / #177 recoveries].
 - All interrupt vectors (EXINT0/1, T0, T2, WDT 0x43) are in the current bank's common copy and call banked code (EXINT0: 537 callees) [confirmed, `mcu-8051.md`]. During an update every ISR path may bank-switch into a bank being rewritten: interrupts must be off (EA = 0) while any code bank is incomplete.
 - Realtek's own partition scheme: `_FLASH_PARTITION_TYPE` NONE / BOOT / USER, optional digital signature, `_FLASH_PARTITION_RELOCATABLE_SUPPORT` (`g_ucBankOffset` at IRAM 0x30), `ScalerMcuBootInitial`; USER partition needs `_FLASH_PARTITION_TOTAL_BANKS = 0x20` = 2 MiB [confirmed, `Project_Asm_Option.h`]. Ours is NONE and the flash is 1 MiB: not usable as is. The Realtek boot code itself is not in our SDK tree (BOOT project sources absent) [confirmed absence].
-- Free flash: banks 10-13 have 4-30 KiB free each (`docs/flash-layout.md`); NVRAM / gamma banks hold a few free sectors (retired registry 0xFD000-0xFEFFF = 2 sectors). No room for a second image or a staging area for a whole one.
+- Free flash: banks 10-13 have 4-30 KiB free each (`docs/flash-layout.md`); bank 14 (unused) and the NVRAM bank hold a few free sectors (retired registry 0xFD000-0xFEFFF = 2 sectors). No room for a second image or a staging area for a whole one.
 
 ## 4. What the host flasher does that firmware must copy
 

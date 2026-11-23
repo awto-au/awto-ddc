@@ -15,7 +15,7 @@ Analysis only, no hardware (2026-11-19, Dan's question). Tool: `scripts/image_se
 - A change confined to common costs 14 x (sectors touched); common is 5 x 14 = 70 sectors (31 % of the image is the same 20 KiB, 14 times).
 - Tag/stamp: the `FW <tag>` string sits in 1 sector (0x85000, bank 8 sector 5). A tag-only rebuild changes that sector only (clk2 -> clk3: 2 sectors = tag + one 3-byte `lcall` insert in 0xAE000).
 - No date / git hash in the image; no per-bank CRC; `FF72..FF75` hw CRC is read from the device, not stored. The manifest (`0xFD000`) is outside the image.
-- Gamma 0xE0000-0xE2FFF, settings 0xFB000-0xFCFFF, manifest 0xFD000, spare 0xFE000 are outside the 224 image sectors.
+- Settings 0xFB000-0xFCFFF, manifest 0xFD000, spare 0xFE000 are outside the image (224 sectors = banks 0-13; 240 once bank 14 holds code).
 
 ## Pairs [measured: image_sector_diff.py, same-tree consecutive builds, serial AWT26110003, `tmp/fw` and agent worktrees `tmp/fw`]
 - chg = sectors that differ; floor = still differ after masking address operands that moved with XDATA (all of XDATA frozen); pin = same with one fixed slot per module (only symbols whose offset inside their module run changed still move); data moved = data symbols with a new address.
@@ -61,7 +61,7 @@ Analysis only, no hardware (2026-11-19, Dan's question). Tool: `scripts/image_se
 | 5 | Keep volatile code out of common | an edit to a common chunk costs 14 x sectors touched; put awto main-loop chunks in a bank unless the call graph forces common | low | no |
 | 6 | IRAM / DDOVL base drift (direct + bit operands) | secondary: shows in floor ~100 pairs, not measured separately | medium (overlay tool) | no |
 - Not recommended: padding every module's code to 256 B / 4 KiB (code already pinned; costs the 11 blank sectors / 187 KiB free).
-- Free flash for padding: in-image 11 blank sectors + 187 KiB 0xFF (inside slot gaps); outside the image 0xE3000-0xFAFFF = 24 sectors, but banks 14 / 15 cannot hold code (gamma at 0xE0000, no common copy there).
+- Free flash for padding: in-image 11 blank sectors + 187 KiB 0xFF (inside slot gaps); outside the image 0xE0000-0xFAFFF = 27 sectors; bank 14 (0xE0000-0xEFFFF) can hold code (it takes its own 0x5000 common copy, 44 KiB banked; its old content is the Dahua firmware gamma, which nothing of ours reads, #44), bank 15 holds NVRAM / manifest / spare.
 
 ## Flash time [Dan, 2026-11-19; not re-measured]
 - 100 kHz DP AUX: 190 sectors ~ 100 s+ = ~0.53 s per sector. 1 MHz HDMI DDC: 24 s = ~0.126 s per sector.

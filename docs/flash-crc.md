@@ -13,7 +13,7 @@
 - Written after every verified sector (saved each 16), after any full flash read; a sector is `null` from its erase until its verify passes
 - Plan: hash image locally; `hash == manifest` skip, `differs` write, `null` readback then write only if different
 - Drift guard before skipping: readback+SHA of first, last, 2 random skipped sectors, plus CRC sweep of every other skipped sector; any mismatch -> full readback diff of the image region (authoritative, ~1/5 of a full write) and the manifest is rebuilt from it
-- Sectors beyond the image are never touched or hashed (banks 14-15, #8)
+- Sectors beyond the image are never touched or hashed (bank 15, and bank 14 until the image reaches it, #44)
 - Other flows: `--full` ignores it; no manifest = write all; without `--no-backup` the old dump+readback diff runs and refreshes the manifest
 
 ## Bus speed
