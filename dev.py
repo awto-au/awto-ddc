@@ -679,6 +679,8 @@ def cmd_build(extra: list[str]) -> int:
     n, u = (0, {"serial": serial}) if serial else _unit(extra)
     disk_guard.prune_fw(FW)
     disk_guard.require_free("build", disk_guard.BUILD_FREE_MB)
+    import build_guard
+    build_guard.acquire(Path(_opt(extra, "--tree") or REPO))     # one build at a time, memory check (#316)
     freeze, nofrc = _flag(extra, "--freeze"), _flag(extra, "--no-frc")   # FRC + rotation are the default (#165)
     if freeze and nofrc:
         raise SystemExit("build: --freeze needs the frame buffer, --no-frc removes it; nothing done")
