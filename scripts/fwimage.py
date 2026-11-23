@@ -15,7 +15,6 @@ Log: ./tmp/logs/fwimage.log (+ <tree>/tmp/logs/build_<tag>_<serial>.out = fw_bui
 import argparse
 import json
 import os
-import re
 import shutil
 import subprocess
 import sys
@@ -50,10 +49,8 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--level", default=SDCCCALL)
     ap.add_argument("--expect", default=SDCC_COMMIT, help="install stamp prefix ('' = no check)")
     ap.add_argument("--flags", default="", help="extra sdcc flags")
-    ap.add_argument("--fw-args", default="", help="more fw_build args (fresh layout: '--layout NEW.tsv --cluster fn ...')")
+    ap.add_argument("--fw-args", default="", help="more fw_build args (e.g. '--cluster fn --cluster-weights fw/cluster_weights.json')")
     a = ap.parse_args(argv)
-    if re.search(r"--layout\s+(\./)?tmp/", a.fw_args):
-        ap.error("--layout under tmp/ is refused: the build uses the tracked fw/bank_layout.tsv only")
     root = repo_root()
     (root / "tmp/logs").mkdir(parents=True, exist_ok=True)
     (a.tree / "tmp/logs").mkdir(parents=True, exist_ok=True)
@@ -91,6 +88,7 @@ def main(argv: list[str] | None = None) -> int:
         json.dumps({k: bj.get(k) for k in ("xdata_free", "xdata_pool")}) + "\n")     # shown in the gates record; no build fails on it
     (root / "tmp/fw" / f"{a.serial}-{a.tag}-be.build.json").write_text(            # variant + clock of this image (scripts/image_variant.py)
         json.dumps({"defines": [*a.defs, *(f for f in a.flags.split() if f.startswith("-D"))], "xdata_free": bj.get("xdata_free")}) + "\n")
+    shutil.copy2(a.tree / "tmp/sdcc-port/bank_layout.new.tsv", root / "tmp/fw" / f"{a.serial}-{a.tag}-be.bank_layout.tsv")
     shutil.copy2(a.tree / "tmp/sdcc-port/xdata_layout.new.tsv", root / "tmp/fw" / f"{a.serial}-{a.tag}-be.xdata_layout.tsv")
     for ext in ("bin", "map"):
         dst = root / "tmp/fw" / f"{a.serial}-{a.tag}-be.{ext}"

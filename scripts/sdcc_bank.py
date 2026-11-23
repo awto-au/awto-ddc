@@ -377,7 +377,7 @@ def main() -> int:
     ap.add_argument("--pin-common", default="", help="comma list of fns forced into common (small ISR-called handlers: "
                     "the ISR -> banked call needs a stub otherwise); counted against nothing, common must fit")
     ap.add_argument("--keep-dead", action="store_true", help="keep chunks unreachable from main/ISRs")
-    ap.add_argument("--layout", default="", help="sticky layout file (fw/bank_layout.tsv): fixed slot per chunk, reused "
+    ap.add_argument("--layout", default="", help="tracked bank map (fw/bank_map.tsv): region per chunk, reused "
                     "between builds; missing/empty file = create from the packing below (sdcc_layout.py)")
     ap.add_argument("--layout-out", default=str(ROOT / "tmp/sdcc-port/bank_layout.new.tsv"),
                     help="where the (possibly updated) layout is written; the caller promotes it onto --layout only after "
@@ -539,18 +539,18 @@ def main() -> int:
                 else:                                        # new chunk: bank where its module already lives
                     mb = by_mod[m.name]
                     c.bank = max(mb, key=lambda b: (mb[b], -b)) if mb else min(range(a.banks), key=lambda b: slot_fill[b])
-                    slot_fill[c.bank] += L.pad_slot(c.size)
+                    slot_fill[c.bank] += c.size
                     newc.append(c.name)
         log(f"sticky layout {a.layout}: {len(lay.rows)} rows, {len(newc)} new chunks: {', '.join(sorted(newc)[:20])}")
     elif sticky:
         f = a.fill_target
         while True:
-            fill, fail = first_fit(int(cap * f), lambda c: L.pad_slot(c.size))
+            fill, fail = first_fit(int(cap * f), lambda c: c.size)
             if fill is not None and a.cluster:               # clustered at creation only; reuse keeps the sticky rows
                 log(f"cross-bank calls, first-fit packing: {SC.stats(allc, funcs)}")
                 keep = {id(c): c.bank for m in mods for c in m.chunks}
                 cu = units if a.cluster == "module" else [[c] for u in units for c in u]
-                f2 = SC.assign(cu, funcs, a.banks, int(cap * f), lambda c: L.pad_slot(c.size), consts, dyn)
+                f2 = SC.assign(cu, funcs, a.banks, int(cap * f), lambda c: c.size, consts, dyn)
                 if f2 is None:
                     log(f"cluster: does not fit at fill {f:.2f}")
                     for m in mods:
@@ -596,8 +596,8 @@ def main() -> int:
 
     if reuse:                                                # pass A: re-home fns whose bank has no room left
         its = slot_items(True)
-        for (kind, nm) in [k for k in lay.rows if k[0] == "stub"]:        # keep stub slots reserved
-            st = L.Item("stub", nm, STUB_SIZE, "C", "", slot=STUB_SIZE)
+        for i in range(int(lay.header.get("stubs", "0"))):                # the last build's stubs: common room kept for them
+            st = L.Item("stub", f"_reserved{i}", STUB_SIZE, "C", "", slot=STUB_SIZE)
             st.fixed = True
             its.append(st)
         placed, rehomed = L.assign(its, lay, a.resid_end, a.common_max, a.banks, cap, log, reserve=MSG_RESERVE,
@@ -737,7 +737,8 @@ def main() -> int:
         apply_placed(placed)
         check_place(place, lambda c: placed[("fn" if c.area == "CSEG" else "const", c.name)][0])
         placed_slot = {("ST" if k[0] == "stub" else "CH") + k[1]: v[2] for k, v in placed.items()}
-        lay.header.update({"common": hex(a.common_max), "resid_end": hex(a.resid_end), "slot_pad": "size+4+size/32,4B"})
+        lay.header.update({"common": hex(a.common_max), "resid_end": hex(a.resid_end), "stubs": str(len(stubs))})
+        lay.header.pop("slot_pad", None)
         for (kind, name), (rid, off, sl) in placed.items():
             an = ("ST" if kind == "stub" else "CH") + name
             aname[(kind, name)] = an
@@ -775,7 +776,8 @@ def main() -> int:
     if sticky:
         Path(a.layout_out).parent.mkdir(parents=True, exist_ok=True)
         Path(a.layout_out).write_text(lay.text())
-        log(f"layout written: {a.layout_out} ({len(lay.rows)} rows; not yet promoted onto {a.layout})")
+        Path(a.layout_out).with_name("bank_map.new.tsv").write_text(lay.map_text())
+        log(f"layout written: {a.layout_out} ({len(lay.rows)} rows); bank map {a.layout} promoted by fw_build after the link")
     bank_of = {m.name: sorted({c.bank for c in m.chunks if c.bank is not None}) for m in mods}
     rep = {"banks": {i: f for i, f in enumerate(fill) if f}, "bank_of": bank_of, "stubs": len(stubs),
            "common_fns": sorted(n for n, c in funcs.items() if c.common), "common_bytes_modules": common_size,

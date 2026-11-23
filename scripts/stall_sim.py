@@ -119,7 +119,7 @@ def main():
     ap.add_argument("--scenario", default="panel", choices=["panel", *SCENARIOS, "all"])
     a = ap.parse_args()
     P.panel_times(a.tree)
-    im = L.Image(a.bin, a.map, str(Path(a.tree) / "fw/bank_layout.tsv"), 0x5000)
+    im = L.Image(a.bin, a.map, str(L.layout_of(a.bin, a.tree)), 0x5000)
     worst = collections.defaultdict(float)
     todo = ["panel", *SCENARIOS] if a.scenario == "all" else [a.scenario]
     for sc in todo:

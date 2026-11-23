@@ -4,8 +4,8 @@
 usage: fw_build.py --serial AWT26110003 [--skip-compile] [--common 0x5000]
   output: tmp/fw/<serial>/fw.ihx, fw.map, fw.bin (bank k at file offset k*64 KiB), build.json
   --skip-compile  reuse tmp/sdcc-port/asm (skip port/EDID/compile)
-  --layout FILE   sticky flash layout (fw/bank_layout.tsv, scripts/sdcc_layout.py): fixed slot per chunk, reused
-                  between builds so a small edit rewrites few 4 KiB sectors (#12); missing/empty file = create it
+  --layout FILE   tracked bank map (fw/bank_map.tsv: region per fn / const, scripts/sdcc_layout.py); offsets are packed
+                  compactly every build into tmp/sdcc-port/bank_layout.new.tsv (#44); missing/empty file = create the map
   --src-patch F   JSON [{file, old, new}] applied to tmp/sdcc-port/src after `port` (measurement edits, no SDK change)
 Memory (SDK + board, awto-ddc#8):
 - XDATA window 0xD700-0xF6FF; fixed DDC RAM for D1-D3 at E280/E480/E680 (+256 B each) splits it
@@ -152,8 +152,8 @@ def check_layout(mp: str, pins: dict, layout: str):
 
 
 def promote_layout(new: Path, tracked: Path):
-    """Copy the layout sdcc_bank wrote onto the tracked file, only called after link + check_layout passed (#51.4)."""
-    t = new.read_text()
+    """Copy the bank map sdcc_bank wrote onto the tracked file, only called after link + check_layout passed (#51.4)."""
+    t = new.with_name("bank_map.new.tsv").read_text()
     if not tracked.exists() or tracked.read_text() != t:
         tracked.write_text(t)
         log(f"layout promoted: {tracked}")
@@ -324,8 +324,8 @@ def parse_args(argv=None):
     ap.add_argument("--serial", required=True)
     ap.add_argument("--skip-compile", action="store_true")
     ap.add_argument("--common", type=lambda x: int(x, 0), default=CM.COMMON_END)
-    ap.add_argument("--layout", default="fw/bank_layout.tsv",
-                    help="sticky layout (default: the tracked, proven one); '' = no layout, first-fit packing")
+    ap.add_argument("--layout", default="fw/bank_map.tsv",
+                    help="tracked bank map (default); '' = no map, first-fit packing")
     ap.add_argument("--cluster", choices=["module", "fn"], default="",
                     help="call-graph bank placement; only valid while a layout is being created (missing/empty --layout file)")
     ap.add_argument("--cluster-weights", default="", help="passed to sdcc_bank (measured call counts, fw/cluster_weights.json)")
@@ -339,7 +339,7 @@ def parse_args(argv=None):
                     "the chunk slots; a different value needs a new layout file")
     a = ap.parse_args(argv)
     if a.layout and Path(os.path.normpath(ROOT / a.layout)).is_relative_to(ROOT / "tmp"):
-        sys.exit(f"layout: {a.layout!r} is under tmp/: the build uses only the tracked layout (fw/bank_layout.tsv), "
+        sys.exit(f"layout: {a.layout!r} is under tmp/: the build uses only the tracked bank map (fw/bank_map.tsv), "
                  "so any worktree rebuilds the same image from git")
     if a.cluster:
         import sdcc_layout

@@ -17,7 +17,7 @@ from PIL import Image
 
 W, H = 6 * L.TW, 4 * L.TH          # 72 x 72 px
 SDK_SRC = L.OSD / "RTD2014OsdFontDynamicIcon_1.c"
-SLOT = 388                          # layout slot of _tFONT1_ICON_INFORMATION (fw/bank_layout.tsv)
+SLOT = 388                          # size the icon blob was built for (_tFONT1_ICON_INFORMATION)
 
 
 def sdk_icon(name="INFORMATION"):

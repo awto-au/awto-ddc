@@ -314,13 +314,13 @@ def main() -> int:
     ap.add_argument("--stages", nargs=2, type=Path, metavar=("REF_BIN", "REF_MAP"))
     ap.add_argument("--be", action="store_true", help="diag block big-endian (default: '-be' in the name)")
     ap.add_argument("--common", type=lambda x: int(x, 0), default=0x5000)
-    ap.add_argument("--layout", default=str(ROOT / "fw/bank_layout.tsv"), help="fn/const classification of the chunks (fw_link_check)")
+    ap.add_argument("--layout", default="", help="fn/const classification of the chunks (default: the image's own bank_layout.tsv, fw_link_check.layout_of)")
     a = ap.parse_args()
     (ROOT / "tmp/logs").mkdir(parents=True, exist_ok=True)
     LOG = (ROOT / "tmp/logs/delay_cal_check.log").open("a")
     be = a.be or "-be" in a.bin.name
     log(f"delay_cal_check {a.bin.name} (vendor ref {a.vendor.name if a.vendor and a.vendor.exists() else 'none'})")
-    im = L.Image(a.bin, a.map, a.layout, a.common)
+    im = L.Image(a.bin, a.map, a.layout or str(L.layout_of(a.bin, ROOT)), a.common)
     vend = a.vendor.read_bytes() if a.vendor and a.vendor.exists() else b""
     ok = check_shapes(im, a.bin.read_bytes(), a.map, be, vend, None)
     if a.stages:

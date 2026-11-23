@@ -141,7 +141,7 @@ def functions(path):
 
 
 def layout_sizes(path):
-    """name -> bytes: CH_<name> area sizes of a linker map, or slot bytes (size + padding) of fw/bank_layout.tsv."""
+    """name -> bytes: CH_<name> area sizes of a linker map, or row sizes of a bank_layout.tsv."""
     sz = {}
     txt = Path(path).read_text(errors="replace")
     if str(path).endswith(".map"):
@@ -209,7 +209,7 @@ def main() -> int:
     ap.add_argument("--tsv", type=Path, default=ROOT / "tmp/logs/clone_scan.tsv")
     ap.add_argument("--asm", type=Path, help="compiler .asm directory: object-level clones")
     ap.add_argument("--functions", action="store_true", help="per-instance function families")
-    ap.add_argument("--layout", type=Path, default=ROOT / "fw/bank_layout.tsv", help="sizes for --functions: a linker .map or bank_layout.tsv")
+    ap.add_argument("--layout", type=Path, default=ROOT / "tmp/sdcc-port/bank_layout.new.tsv", help="sizes for --functions: a linker .map or bank_layout.tsv")
     a = ap.parse_args()
     ext = {"c": C_EXT, "py": PY_EXT, "both": C_EXT + PY_EXT}[a.lang]
     ls = subprocess.run(["git", "ls-files", *a.paths], cwd=ROOT, capture_output=True, text=True, check=True)

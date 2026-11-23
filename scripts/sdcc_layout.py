@@ -1,13 +1,11 @@
 #!/usr/bin/env python3
-"""Sticky flash layout for the banked SDCC build (awto-ddc#12): fixed per-chunk slots, reused between builds.
+"""Flash layout for the banked SDCC build (awto-ddc#12, #44): tracked bank map + compact packing every build.
 
-Layout file (fw/bank_layout.tsv): `kind name region offset slot`
-- kind: fn | const | stub (one slot each), area (pinned residual area: name region offset reserve)
+- `fw/bank_map.tsv` (tracked): `kind name region` per fn / const = the bank decision, kept so an edit does not reshuffle banks.
+- build output `tmp/sdcc-port/bank_layout.new.tsv` (frozen as `tmp/fw/<stem>.bank_layout.tsv`): `kind name region offset size`,
+  every region packed back to back in the order fixed / consts / module / name; no padding, no holes, no stored offsets.
 - region: C = common, address = offset; <n> = bank n, address = n*0x10000 + COMMON + offset
-- A chunk keeps (region, offset) while its size fits the slot; a grown chunk first extends into free space
-  after its slot, else moves to a hole (own bank first, other banks by free space); a fragmented bank is
-  compacted, only that bank. Order within a bank at creation: consts first, then by module, then name.
-Used by sdcc_bank.py (--layout); fw_build.py pins every slot with `-a<area>=<addr>` (one area per chunk).
+Used by sdcc_bank.py (--layout = the map); fw_build.py pins every chunk with `-a<area>=<addr>` (one area per chunk).
 """
 from collections import defaultdict
 from pathlib import Path
@@ -15,11 +13,6 @@ from pathlib import Path
 import chip_mem as CM
 
 BANK_SIZE = CM.BANK_SIZE
-
-
-def pad_slot(size, div=32, minpad=4):
-    """Slot size = size + minpad + size/div, rounded up to 4 B (room for a typical small edit)."""
-    return (size + minpad + size // div + 3) & ~3
 
 
 class Layout:
@@ -41,6 +34,8 @@ class Layout:
                     lay.header[f[0]] = f[1]
                 continue
             f = ln.split("\t")
+            if len(f) == 3:                 # tracked bank map: kind name region (offsets are build output)
+                f += ["0", "0"]
             if len(f) != 5:
                 continue
             kind, name, reg, off, slot = f
@@ -71,6 +66,13 @@ class Layout:
             out.append(f"{kind}\t{name}\t{reg}\t0x{off:04x}\t{slot}")
         return "\n".join(out) + "\n"
 
+    def map_text(self):
+        """The tracked part: which region each fn / const lives in (offsets are recomputed every build)."""
+        out = [f"#{k} {v}" for k, v in sorted(self.header.items())]
+        out.append("# kind\tname\tregion    (bank map: scripts/sdcc_layout.py; region C = common, n = bank n)")
+        out += [f"{k}\t{n}\t{r[0]}" for (k, n), r in sorted(self.rows.items(), key=lambda kv: (kv[0][0], kv[0][1])) if k != "stub"]
+        return "\n".join(out) + "\n"
+
     def save(self, path):
         p = Path(path)
         t = self.text()
@@ -81,7 +83,7 @@ class Layout:
 class Item:
     def __init__(self, kind, name, size, region, module, slot=None):
         self.key, self.size, self.region, self.module = (kind, name), size, region, module
-        self.slot = slot if slot is not None else pad_slot(size)
+        self.slot = slot if slot is not None else size
         self.is_const = kind == "const"
         self.fixed = False                  # never re-homed to another region
 
@@ -118,93 +120,40 @@ class Region:
         self.placed[key] = (best[0], slot)
         return best[0]
 
-    def compact(self, order):
-        """Re-pack every slot of this region back to back, in `order` (keys)."""
-        cur = self.lo
-        for k in sorted(self.placed, key=order):
-            self.placed[k] = (cur, self.placed[k][1])
-            cur += self.placed[k][1]
 
-
-def assign(items, layout, common_lo, common_hi, nbanks, bank_cap, log=print, fill_target=0.80, reserve=None, labels=None):
-    """Place every item; returns (placed: key -> (region, offset, slot), moved: key -> new region).
-    items: list[Item] with .region = wanted region (C or bank). A kept row needs the same region.
+def assign(items, layout, common_lo, common_hi, nbanks, bank_cap, log=print, reserve=None, labels=None):
+    """Pack every item back to back; returns (placed: key -> (region, offset, size), moved: key -> new region).
+    items: list[Item] with .region = wanted region (C or bank); `layout` (the tracked bank map) tells which chunks are known.
+    Order: fixed items first (consts, residual-bound), then consts, module, name. No padding, no holes.
+    A non-fixed fn whose region is full goes to the bank with most room; a new chunk to the bank holding most of its module;
+    a fixed const whose bank is full falls back to common (reachable from every bank).
     reserve: {bank: bytes} kept free at the top of that bank (fixed data block, scripts/msg_table.py).
     labels: {key: why it is fixed} (#pragma place rules), named when a fixed item finds no room."""
     regs = {"C": Region("C", common_lo, common_hi)}
     for b in range(nbanks):
         regs[b] = Region(b, 0, bank_cap - (reserve or {}).get(b, 0))
-    order = lambda it: (it.is_const is False, it.module, it.key[1])
     by_key = {it.key: it for it in items}
-    korder = lambda k: (by_key[k].is_const is False, by_key[k].module, k[1])
-    pending, grow, kept = [], [], 0
-    for it in sorted(items, key=order):
-        row = layout.rows.get(it.key)
-        if (row and row[0] == it.region and regs[it.region].lo <= row[1] and row[1] + row[2] <= regs[it.region].hi
-                and all(not (a < row[1] + row[2] and b > row[1]) for a, b in regs[it.region].spans())):
-            regs[it.region].placed[it.key] = (row[1], row[2])
-            if it.size > row[2]:
-                grow.append(it)
-            kept += 1
-        else:
-            pending.append(it)
-    extended = 0
-    for it in grow:                         # grown chunk: extend in place if the bytes after the slot are free
-        r = regs[it.region]
-        off, _slot = r.placed[it.key]
-        del r.placed[it.key]
-        want = it.slot
-        if all(not (a < off + want and b > off) for a, b in r.spans()) and off + want <= r.hi:
-            r.placed[it.key] = (off, want)
-            extended += 1
-        else:
-            pending.append(it)
-    moved, repacked = {}, set()
-    if pending:
-        pending.sort(key=lambda it: (not it.fixed,) + order(it))
-    for it in pending:
-        if it.region == "C" or it.fixed:     # a fixed const whose bank is full falls back to common (reachable from every bank)
+    moved = {}
+    for it in sorted(items, key=lambda it: (not it.fixed, it.is_const is False, it.module, it.key[1])):
+        if it.region == "C" or it.fixed:
             cands = [it.region] + (["C"] if it.is_const and it.region != "C" else [])
-        elif it.key not in layout.rows:      # new chunk: first bank holding its module's code with room, most module code first
-            mb = {}
-            for rid, r in regs.items():
-                if rid != "C":
-                    mb[rid] = sum(by_key[k].size for k in r.placed if k in by_key and by_key[k].module == it.module)
+        elif it.key not in layout.rows:      # new chunk: bank holding most of its module's code first
+            mb = {rid: sum(by_key[k].size for k in r.placed if k in by_key and by_key[k].module == it.module)
+                  for rid, r in regs.items() if rid != "C"}
             home = sorted((b for b in mb if mb[b]), key=lambda b: (-mb[b], b))
             cands = home + sorted((b for b in regs if b != "C" and b not in home), key=lambda b: -regs[b].free())
         else:
             cands = [it.region] + sorted((b for b in regs if b not in ("C", it.region)), key=lambda b: -regs[b].free())
-        done = None
-        for slack in ((False,) if it.key not in layout.rows else (True, False)):   # new chunks: fit only, no slack; others: slack first, then fit (#268)
-            for rid in cands:
-                r = regs[rid]
-                if slack and rid != it.region and rid != "C" and r.free() - it.slot < (1 - fill_target) * bank_cap * 0.25:
-                    continue                # foreign bank: keep some slack there too
-                off = r.place(it.key, it.slot)
-                if off is None and r.free() >= it.slot and rid not in repacked:
-                    r.compact(korder)
-                    repacked.add(rid)
-                    log(f"layout: compacted region {rid} (fragmented) for {it.key[1]} ({it.slot} B)")
-                    off = r.place(it.key, it.slot)
-                if off is not None:
-                    done = rid
-                    break
-            if done is not None:
-                break
-        if done is None and (labels or {}).get(it.key):
-            raise SystemExit(f"{labels[it.key]}: no room for {it.key[1]} ({it.slot} B) in "
-                             f"{'common' if it.region == 'C' else 'bank %s' % it.region}: {regs[it.region].free()} B free")
+        done = next((rid for rid in cands if regs[rid].place(it.key, it.slot) is not None), None)
         if done is None:
-            raise SystemExit(f"layout: no room for {it.key} ({it.slot} B) in any region; free: "
-                             f"{ {k: v.free() for k, v in regs.items()} }")
+            why = (labels or {}).get(it.key)
+            raise SystemExit(f"{why + ': ' if why else 'layout: '}no room for {it.key[1]} ({it.slot} B) in "
+                             f"{'common' if it.region == 'C' else 'bank %s' % it.region}: {regs[it.region].free()} B free; "
+                             f"free per region { {k: v.free() for k, v in regs.items()} }")
         if done != it.region:
             moved[it.key] = done
-    placed = {}
-    for rid, r in regs.items():
-        for k, (o, s) in r.placed.items():
-            placed[k] = (rid, o, s)
-    log(f"layout: {len(items)} slots: kept {kept - len(grow)}, extended {extended}, "
-        f"new/moved {len(pending)} (re-homed to another bank: {len(moved)}); compacted: {sorted(map(str, repacked))}")
+    placed = {k: (rid, o, s) for rid, r in regs.items() for k, (o, s) in r.placed.items()}
+    log(f"layout: {len(items)} chunks packed, {len(moved)} moved to another region")
     return placed, moved
 
 

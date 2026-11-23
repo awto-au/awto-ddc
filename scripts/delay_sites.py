@@ -22,7 +22,7 @@ ROUTINES = ("AwtoDelayXus",)        # the routine with the long-block check
 
 
 def sites(binp: Path, mapp: Path):
-    im = L.Image(binp, mapp, str(ROOT / "fw/bank_layout.tsv"), 0x5000)
+    im = L.Image(binp, mapp, str(L.layout_of(binp, ROOT)), 0x5000)
     text = mapp.read_text(errors="replace")
     out = []
     for r in ROUTINES:

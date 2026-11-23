@@ -291,7 +291,7 @@ def judge(pr, run, fails):
 
 def measure(binp, mapp, tree, mode):
     """One image: the scenario with probes + the replays. Returns (fails, {'mhz', 'ratio', 'debounce_us'})."""
-    im = L.Image(binp, mapp, str(Path(tree) / "fw/bank_layout.tsv"), 0x5000)
+    im = L.Image(binp, mapp, str(L.layout_of(binp, tree)), 0x5000)
     say(f"delay_sim {binp.name}")
     run = P.Run(argparse.Namespace(bin=binp, map=mapp, mode=mode, report=True, tree=tree))
     try:

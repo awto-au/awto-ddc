@@ -6,7 +6,7 @@ from pathlib import Path
 import pytest
 
 ROOT = Path(__file__).resolve().parents[1]
-TRACKED = ("fw/bank_layout.tsv", "fw/xdata_layout.tsv")
+TRACKED = ("fw/bank_map.tsv", "fw/xdata_layout.tsv")
 
 
 @pytest.mark.slow

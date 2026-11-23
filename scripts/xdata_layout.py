@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Pinned XDATA layout: fw/xdata_layout.tsv = one fixed slot per module (module, hole, offset, slot), like fw/bank_layout.tsv for code.
+"""Pinned XDATA layout: fw/xdata_layout.tsv = one fixed slot per module (module, hole, offset, slot), like fw/bank_map.tsv for code banks.
 
 usage (library): place(old, sizes, holes, reserved, compact=False) -> (rows, info)
        xdata_layout.py check --tree T --map fw.map [--layout F]   the tracked file (or the variant image's own layout F) matches the linked map (gate xlayout)

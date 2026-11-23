@@ -131,6 +131,13 @@ class Rst:
             self.by_name[cur[0][:32]].add(cur[1])
 
 
+def layout_of(bin_path, tree=None):
+    """The bank layout this image was linked with: `<stem>.bank_layout.tsv` beside it (fwimage freezes it), else the tree's last build output (#44)."""
+    b = Path(bin_path)
+    own = b.with_name(b.stem + ".bank_layout.tsv")
+    return own if own.exists() else Path(tree or Path(__file__).resolve().parent.parent) / "tmp/sdcc-port/bank_layout.new.tsv"
+
+
 class Image:
     def __init__(self, bin_path, map_path, layout, common, asm_dir=None):
         self.img = Path(bin_path).read_bytes()

@@ -77,11 +77,11 @@ def test_sdcc_bank_writes_layout_out_not_tracked_file(tmp_path):
 def test_fw_build_promote_layout(tmp_path, monkeypatch):
     import fw_build
     monkeypatch.setattr(fw_build, "LOG", open(tmp_path / "log", "w"))
-    new, tracked = tmp_path / "new.tsv", tmp_path / "bank_layout.tsv"
-    new.write_text("#common 0x5000\nfn\tA\tC\t0x0c00\t8\n")
+    new, tracked = tmp_path / "new.tsv", tmp_path / "bank_map.tsv"
+    (tmp_path / "bank_map.new.tsv").write_text("#common 0x5000\nfn\tA\tC\n")
     tracked.write_text("old\n")
     fw_build.promote_layout(new, tracked)
-    assert tracked.read_text() == new.read_text()
+    assert tracked.read_text() == "#common 0x5000\nfn\tA\tC\n"
 
 
 def test_fw_build_promotes_after_link_and_check():
@@ -95,7 +95,7 @@ def test_fw_build_promotes_after_link_and_check():
 
 def test_fw_build_default_layout_is_tracked_file():
     import fw_build
-    assert fw_build.parse_args(["--serial", "X"]).layout == "fw/bank_layout.tsv"
+    assert fw_build.parse_args(["--serial", "X"]).layout == "fw/bank_map.tsv"
     assert fw_build.parse_args(["--serial", "X", "--layout", ""]).layout == ""
 
 
@@ -105,10 +105,10 @@ def test_fw_build_cluster_refused_unless_layout_created(tmp_path, monkeypatch):
     (tmp_path / "fw").mkdir()
     with pytest.raises(SystemExit, match="--cluster"):                         # no layout at all
         fw_build.parse_args(["--serial", "X", "--layout", "", "--cluster", "fn"])
-    (tmp_path / "fw/bank_layout.tsv").write_text(ROW)
+    (tmp_path / "fw/bank_map.tsv").write_text(ROW)
     with pytest.raises(SystemExit, match="existing layout"):                   # layout in use
         fw_build.parse_args(["--serial", "X", "--cluster", "fn"])
-    (tmp_path / "fw/bank_layout.tsv").unlink()                                 # being created: allowed
+    (tmp_path / "fw/bank_map.tsv").unlink()                                 # being created: allowed
     assert fw_build.parse_args(["--serial", "X", "--cluster", "fn"]).cluster == "fn"
 
 
@@ -176,7 +176,23 @@ def test_fixed_const_falls_back_to_common_when_bank_full():
     lay = L.Layout()
     pad = L.Item("const", "Pad", 1, 0, "a", slot=990)
     pad.fixed = True
-    c = L.Item("const", "T", 10, 0, "m")
+    c = L.Item("const", "T", 12, 0, "m")
     c.fixed = True
     placed, _ = L.assign([pad, c], lay, 0, 100, 1, 1000, log=lambda *_: None)
     assert placed[("const", "T")][0] == "C"
+
+
+def test_assign_packs_back_to_back_without_padding():
+    lay = L.Layout()
+    lay.rows[("fn", "A")] = (0, 0, 400)                 # an old row's offset / slot is ignored: packed by size
+    its = [L.Item("fn", "B", 100, 0, "m"), L.Item("fn", "A", 100, 0, "m")]
+    placed, _ = L.assign(its, lay, 0, 0, 1, 1000, log=lambda *_: None)
+    assert placed[("fn", "A")] == (0, 0, 100) and placed[("fn", "B")] == (0, 100, 100)
+
+
+def test_map_text_has_regions_only():
+    lay = L.Layout()
+    lay.rows[("fn", "A")] = (3, 40, 100)
+    lay.rows[("stub", "S")] = ("C", 0, 8)
+    txt = lay.map_text()
+    assert "fn\tA\t3\n" in txt and "stub" not in txt

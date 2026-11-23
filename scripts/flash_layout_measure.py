@@ -1,13 +1,12 @@
 #!/usr/bin/env python3
-"""Measure how many 4 KiB flash sectors a small source edit changes, legacy packing vs sticky layout (awto-ddc#12).
+"""Measure how many 4 KiB flash sectors a small source edit changes with the compact layout (awto-ddc#12, #44).
 
-usage: flash_layout_measure.py [--serial AWT26110003] [--layout fw/bank_layout.tsv] [--edits panel,osd,scaler]
+usage: flash_layout_measure.py [--serial AWT26110003] [--layout fw/bank_map.tsv] [--edits panel,osd,scaler,main]
   Needs AWTO_SDCC_BIN / AWTO_SDCC_BE=1 in the environment (as for fw_build.py).
-  Per edit: build old (no layout) and new (copy of --layout) with the edit applied via fw_build.py --src-patch,
-  diff each against its own unedited baseline image (SHA-256 per sector; shorter image padded with 0xFF).
-  Edits keep the line count of the file (the warning gate keys on file:line, #26).
+  Per edit: build with the edit applied via fw_build.py --src-patch (a copy of the bank map, so the tracked one stays),
+  diff against the unedited build (SHA-256 per sector; shorter image padded with 0xFF).
   Counts: all changed sectors; of which common-area sectors (copied into every bank); banks touched.
-Log: tmp/logs/flash_layout_measure.log, result tmp/meas/result.json, images tmp/meas/<mode>_<edit>.bin
+Log: tmp/logs/flash_layout_measure.log, result tmp/meas/result.json, images tmp/meas/<tag>.bin
 """
 import argparse
 import hashlib
@@ -20,7 +19,6 @@ from pathlib import Path
 import isostamp
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-import sdcc_layout as L
 from sdcc_overlay import repo_root
 
 ROOT = repo_root()
@@ -36,8 +34,8 @@ EDITS = {
                 "old": "        // Select at internal Xtal.\n        ScalerSetBit(P0_09_GA_POWER_CTRL, ~_BIT3, _BIT3);",
                 "new": "        // Select at internal Xtal.\n        ScalerSetBit(P0_09_GA_POWER_CTRL, ~_BIT3, _BIT3); ScalerTimerDelayXms(1);"}],
     "main": [{"file": "Kernel/System/Code/SysMain.c",
-              "old": "        AwtoDiagInit();\n        SysMainSystemInitial();",
-              "new": "        AwtoDiagInit();\n        SysMainSystemInitial(); SysMainSystemInitial();"}],
+              "old": "        AwtoDiagInit();\n        AwtoMeasInit();",
+              "new": "        AwtoDiagInit(); AwtoDiagInit();\n        AwtoMeasInit();"}],
 }
 LOG = None
 
@@ -67,19 +65,6 @@ def build(serial, tag, layout=None, edit=None):
     return img
 
 
-def rows_changed(a: Path, b: Path):
-    ra, rb = L.Layout.load(a).rows, L.Layout.load(b).rows
-    return sum(1 for k in set(ra) | set(rb) if ra.get(k) != rb.get(k))
-
-
-def stack_total(tag):
-    r = subprocess.run([sys.executable, "scripts/fw_stack.py"], cwd=ROOT, capture_output=True, text=True, timeout=120, check=False)
-    try:
-        return json.loads(r.stdout)["total"]
-    except (KeyError, ValueError):
-        return None
-
-
 def sectors(img: bytes, n):
     img = img + b"\xff" * (n * SECTOR - len(img))
     return [hashlib.sha256(img[i:i + SECTOR]).hexdigest() for i in range(0, n * SECTOR, SECTOR)]
@@ -99,9 +84,8 @@ def main() -> int:
     global LOG
     ap = argparse.ArgumentParser()
     ap.add_argument("--serial", default="AWT26110003")
-    ap.add_argument("--layout", default="fw/bank_layout.tsv")
+    ap.add_argument("--layout", default="fw/bank_map.tsv")
     ap.add_argument("--edits", default=",".join(EDITS))
-    ap.add_argument("--reuse-baselines", action="store_true")
     a = ap.parse_args()
     meas = ROOT / "tmp/meas"
     meas.mkdir(parents=True, exist_ok=True)
@@ -111,32 +95,23 @@ def main() -> int:
     res = {}
 
     def newbuild(tag, edit=None):
-        lp = meas / f"layout_{tag}.tsv"
-        shutil.copy(lay0, lp)                                # every run starts from the same committed layout
-        img = build(a.serial, tag, lp, edit)
-        return img, lp
+        lp = ROOT / "fw" / f"bank_map_{tag}.tsv"             # under fw/ (the build refuses tmp/); promoted onto, so a copy
+        shutil.copy(lay0, lp)                                # every run starts from the same committed bank map
+        try:
+            return build(a.serial, tag, lp, edit)
+        finally:
+            lp.unlink(missing_ok=True)
 
-    if a.reuse_baselines and (meas / "base_old.bin").exists():
-        base_old = meas / "base_old.bin"
-    else:
-        base_old = build(a.serial, "base_old")
-    base_new, _ = newbuild("base_new")
-    res["baseline"] = {"old_bytes": base_old.stat().st_size, "new_bytes": base_new.stat().st_size,
-                       "new_vs_creation_build": diff(meas / "new0.bin", base_new) if (meas / "new0.bin").exists() else None}
-    res["stack"] = {"old": None, "new": stack_total("new")}
+    base = newbuild("base")
+    res["baseline"] = {"bytes": base.stat().st_size}
     for e in a.edits.split(","):
-        old_img = build(a.serial, f"old_{e}", None, e)
-        s_old = stack_total("old")
-        new_img, lp = newbuild(f"new_{e}", e)
-        res[e] = {"old": diff(base_old, old_img), "new": diff(base_new, new_img),
-                  "layout_rows_changed": rows_changed(lay0, lp)}
-        log(f"edit {e}: old {res[e]['old']}  new {res[e]['new']}  layout rows changed {res[e]['layout_rows_changed']}")
-        res.setdefault("stack_edit", {})[e] = {"old": s_old, "new": stack_total("new")}
+        res[e] = diff(base, newbuild(f"edit_{e}", e))
+        log(f"edit {e}: {res[e]}")
     (meas / "result.json").write_text(json.dumps(res, indent=1))
-    log("| edit | old sectors | new sectors | old common | new common | new banks touched |")
+    log("| edit | sectors | common sectors | banks touched |")
     for e in a.edits.split(","):
-        o, n = res[e]["old"], res[e]["new"]
-        log(f"| {e} | {o['sectors']}/{o['total']} | {n['sectors']}/{n['total']} | {o['common']} | {n['common']} | {n['banks']} |")
+        r = res[e]
+        log(f"| {e} | {r['sectors']}/{r['total']} | {r['common']} | {r['banks']} |")
     return 0
 
 

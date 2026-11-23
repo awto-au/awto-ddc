@@ -189,7 +189,9 @@ def gates(b: Path, m: Path, ref, tree):
     link = [*PY, f"{s}/fw_link_check.py", "--bin", b, "--map", m,
             "--save", ROOT / "tmp/logs/fw_gates" / f"{b.stem}.link-findings.txt"]
     if tree:
-        link += ["--layout", Path(tree) / "fw/bank_layout.tsv", "--asm", Path(tree) / "tmp/sdcc-port/asm_bank"]
+        link += ["--asm", Path(tree) / "tmp/sdcc-port/asm_bank"]
+        if (lay := b.with_name(b.stem + ".bank_layout.tsv")).is_file():       # the layout this image was linked with (#44)
+            link += ["--layout", lay]
     g = {}
     V = IV.of_image(b)
     mt = Path(m).read_text(errors="replace")
@@ -372,7 +374,7 @@ def main() -> int:
                     help="normal (default, the flash gate): all gates but EXTENSIVE; extensive: every gate (normal + the long sweeps)")
     ap.add_argument("--build-inputs", action="store_true", help="extensive tier: build the missing sibling images first (-t0ev for wdt_full, -clk87 for delays_full)")
     # default = this repo: without a tree, wdt / conwrap use stale built-in constants and the static gates drop out
-    ap.add_argument("--tree", default=str(ROOT), help="worktree the image was built in (its bank_layout.tsv + asm_bank); default this repo")
+    ap.add_argument("--tree", default=str(ROOT), help="worktree the image was built in (its asm_bank); default this repo")
     a = ap.parse_args()
     (ROOT / "tmp/logs/fw_gates").mkdir(parents=True, exist_ok=True)
     lf = (ROOT / "tmp/logs/fw_gates.log").open("a", buffering=1)
@@ -456,7 +458,7 @@ def common_record(b: Path):
     """Common-region numbers of this image (scripts/common_metrics.py); None without a map. No threshold."""
     import common_metrics
     m = b.with_suffix(".map")
-    return common_metrics.measure(m, ROOT / "fw/bank_layout.tsv") if m.is_file() else None
+    return common_metrics.measure(m, b.with_name(b.stem + ".bank_layout.tsv")) if m.is_file() else None
 
 
 def write_record(b: Path, rec: dict, tree, complete: bool, tier: str = "normal") -> None:

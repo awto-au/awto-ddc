@@ -4,7 +4,7 @@
 usage: xdata_churn_probe.py [--unit 3] FILE[:BYTES] ... [--max N]
 - Per FILE (repo-relative C file): `volatile __xdata unsigned char g_ucChurnProbe[BYTES];` appended after its first line, build, diff
   against the clean build with scripts/image_sector_diff.py; FILE edited back after each run. FAIL if changed > --max.
-- Runs ./dev.py builds (~40 s each); fw/xdata_layout.tsv restored after each probe; fw/bank_layout.tsv left as built (git checkout it to discard).
+- Runs ./dev.py builds (~40 s each); fw/xdata_layout.tsv restored after each probe; fw/bank_map.tsv left as built (git checkout it to discard).
 Log: tmp/logs/xdata_churn_probe.log
 """
 import argparse

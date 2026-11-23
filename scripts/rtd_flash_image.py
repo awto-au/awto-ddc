@@ -409,7 +409,7 @@ def _phase(i: int) -> str:
 
 def boot_last(diff: list[int]) -> list[int]:
     """Order for a stop mid-run: banked sectors of banks 1.. first, then bank 0's banked part (DDR/startup init,
-    fw/bank_layout.tsv region 0), then common of banks 1.., bank 0's common (reset vector 0x0000) very last.
+    the image bank layout, region 0), then common of banks 1.., bank 0's common (reset vector 0x0000) very last.
     A relinked image is still unbootable when mixed (calls cross banks): the pre-write budget is the real guard (#177)."""
     per = BANK // SECTOR
     def key(i):

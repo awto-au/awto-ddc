@@ -2,7 +2,7 @@
 """Build the default image + opt-in variants, then run dead_code.py over all maps (#209 recount).
 
 usage: dead_code_maps.py [--serial AWT26110003] [--skip-build]
-  Variants first (no-FRC, audio test, meas4k+net), each on a fresh layout fw/bank_layout.dc-<name>.tsv, deleted after,
+  Variants first (no-FRC, audio test, meas4k+net), each on the tracked bank map (fw/bank_map.tsv, not written by a variant),
   (maps only). Default last, committed layout: tmp/sdcc-port is then the default build (gates read it);
   its compiler output is snapshotted to tmp/dc/asm_default. Freeze variant: keys.c #error, skipped.
   --skip-build: rerun dead_code.py on the maps already in tmp/dc/.
@@ -24,7 +24,6 @@ VARIANTS = {                                           # map name -> -D defines
     "audio": ["_AWTO_AUDIO_TEST"],
     "mn": ["_AWTO_MEAS4K=_ON", "_AWTO_NET=_ON"],
 }
-FRESH = "--cluster fn --cluster-weights fw/cluster_weights.json"  # maps only, never flashed; resid_end from fw/rl6449_memory.toml
 
 
 def say(s):
@@ -55,12 +54,7 @@ def main() -> int:
         shutil.rmtree(DC, ignore_errors=True)
         DC.mkdir(parents=True)
         for name, defs in VARIANTS.items():
-            layout = ROOT / f"fw/bank_layout.dc-{name}.tsv"   # dev.py build refuses tmp/ layouts; deleted after
-            layout.unlink(missing_ok=True)
-            try:
-                m = build(a.serial, f"dc-{name}", defs, f"--layout {layout.relative_to(ROOT)} {FRESH}")
-            finally:
-                layout.unlink(missing_ok=True)
+            m = build(a.serial, f"dc-{name}", defs, None)      # variant images read the tracked bank map and never write it
             shutil.copy(m, DC / f"{name}.map")
         shutil.copy(build(a.serial, "dc-default", [], None), DC / "default.map")   # last: tmp/sdcc-port = default for gates
         shutil.copytree(ROOT / "tmp/sdcc-port/asm", DC / "asm_default")

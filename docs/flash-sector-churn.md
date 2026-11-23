@@ -1,5 +1,7 @@
 # Why a rebuild rewrote ~190 of 224 flash sectors (fixed: recs 1, 2)
 
+Update 2026-11-23 (#44): the code layout is no longer sticky (`docs/flash-layout.md`). The premise "code is already sticky, 1 sector per code edit" below holds for the XDATA-unchanged pairs before that date only; since then a code edit that changes a chunk size costs 66-155 of 224 sectors (measured: `docs/flash-layout.md` "Measured"), i.e. 8-20 s on HDMI DDC and 35-82 s on DP AUX per flash.
+
 Status: rec 1 + rec 2 implemented (section "Implemented" at the end); the analysis below is the state before.
 
 Analysis only, no hardware (2026-11-19, Dan's question). Tool: `scripts/image_sector_diff.py OLD.bin NEW.bin [--grid]` (reads the `.map` beside each image). Background: `docs/flash-layout.md` (sticky code layout, #12), `docs/flash-registry.md` (manifest diff).

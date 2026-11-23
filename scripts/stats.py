@@ -116,7 +116,7 @@ def main():
         mp = mp if mp.is_absolute() else root / mp
         if mp.is_file():
             import common_metrics
-            for ln in common_metrics.lines(common_metrics.measure(mp, root / "fw/bank_layout.tsv")):
+            for ln in common_metrics.lines(common_metrics.measure(mp, mp.with_name(mp.stem + ".bank_layout.tsv"))):
                 say(ln)
     if a.unit:
         o = sh(root, "./dev.py", "health", "--unit", a.unit, timeout=200)

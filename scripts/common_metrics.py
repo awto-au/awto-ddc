@@ -1,8 +1,8 @@
 """Common-region metric of one image (numbers only, no threshold): used by stats.py and fw_gates.py (tmp/fw/<stem>.gates.json "common").
 
-Common = [0, COMMON_END), copied into every bank image. Source: the linker map (area sizes) and fw/bank_layout.tsv (slots).
+Common = [0, COMMON_END), copied into every bank image. Source: the linker map (area sizes) and the image's bank_layout.tsv.
 - areas: plain sum of the linked areas below COMMON_END, per class (stubs ST*, function chunks CH*, residual CSEG / HOME / GSINIT / XINIT / vectors).
-- slots: what the sticky layout reserves (chunk slot = size + 4 + size/32, stub slot 8 B, residual to #resid_end); this is the figure that fails the link.
+- slots: what the layout reserves (chunk size, stub 8 B, residual to #resid_end); this is the figure that fails the link.
 """
 import re
 from pathlib import Path
