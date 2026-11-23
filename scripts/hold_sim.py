@@ -11,6 +11,8 @@ import argparse
 import sys
 from pathlib import Path
 
+from _log import Logger
+
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import fw_sim as S
 import rtd_proto as P
@@ -33,10 +35,9 @@ def main() -> int:
     ap.add_argument("--mode", default="2160p60")
     a = ap.parse_args()
     (S.ROOT / "tmp/logs/hold_sim.log").parent.mkdir(parents=True, exist_ok=True)
-    log = (S.ROOT / "tmp/logs/hold_sim.log").open("a", buffering=1)
+    log = Logger(S.ROOT / "tmp/logs/hold_sim.log", stamp_echo=False)
 
-    def say(s):
-        print(s); log.write(s + "\n")
+    say = log.say
 
     cmd = int(a.cmd, 0)
     bus = S.SimBus(a.bin, a.map, video=a.mode)

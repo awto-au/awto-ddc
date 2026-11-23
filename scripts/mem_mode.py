@@ -17,7 +17,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import i2cbus
-import isostamp
+from _log import Logger
 from p037_test import rd, wr
 from rtd_i2c_bridge import Real
 
@@ -47,11 +47,9 @@ def main() -> int:
     ap.add_argument("op", choices=["read", "frame", "sdk"])
     a = ap.parse_args()
     (i2cbus.ROOT / "tmp/logs").mkdir(parents=True, exist_ok=True)
-    lf = (i2cbus.ROOT / "tmp/logs/mem_mode.log").open("a")
+    lf = Logger(i2cbus.ROOT / "tmp/logs/mem_mode.log")
 
-    def log(s):
-        line = f"{isostamp.now()} {s}"
-        print(line, flush=True); lf.write(line + "\n"); lf.flush()
+    log = lf.say
 
     i2cbus.require_unit(a.bus, a.serial)
     d = Real(a.bus, allow_write=True)

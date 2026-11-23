@@ -11,7 +11,7 @@ import argparse
 import sys
 from pathlib import Path
 
-import isostamp
+from _log import Logger
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import i2cbus
@@ -49,11 +49,9 @@ def main() -> int:
     a = ap.parse_args()
     root = Path(__file__).resolve().parent.parent
     (root / "tmp/logs").mkdir(parents=True, exist_ok=True)
-    lf = (root / "tmp/logs/edid_port.log").open("a")
+    lf = Logger(root / "tmp/logs/edid_port.log")
 
-    def log(s):
-        line = f"{isostamp.now()} {s}"
-        print(line); lf.write(line + "\n")
+    log = lf.say
 
     i2cbus.require_unit(a.bus, a.serial)
     e = read_live(a.bus)

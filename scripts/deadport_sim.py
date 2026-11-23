@@ -17,6 +17,8 @@ import argparse
 import sys
 from pathlib import Path
 
+from _log import Logger
+
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import ddc_sim as DD
 import fw_sim as S
@@ -156,10 +158,9 @@ def main() -> int:
     ap.add_argument("--secs", type=float, default=16.0, help="NOSIGNAL ~2 s + PS ~10 s after a switch (#84 log), then margin; selhold: hold 30 s x1.25 + margin")
     a = ap.parse_args()
     (S.ROOT / "tmp/logs").mkdir(parents=True, exist_ok=True)
-    log = (S.ROOT / "tmp/logs/deadport_sim.log").open("a", buffering=1)
+    log = Logger(S.ROOT / "tmp/logs/deadport_sim.log", stamp_echo=False)
 
-    def say(s):
-        print(s); log.write(s + "\n")
+    say = log.say
 
     rc, secs, rig = 0, a.secs, Rig(a)
     try:

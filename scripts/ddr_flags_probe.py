@@ -9,10 +9,9 @@ import argparse
 import sys
 from pathlib import Path
 
-import isostamp
-
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import i2cbus
+from _log import Logger
 from _repo import ROOT
 from p037_test import rd, wr
 from rtd_i2c_bridge import Real
@@ -32,11 +31,9 @@ def main() -> int:
     ap.add_argument("--clear", action="store_true")
     a = ap.parse_args()
     (ROOT / "tmp/logs/ddr_flags_probe.log").parent.mkdir(parents=True, exist_ok=True)
-    lf = (ROOT / "tmp/logs/ddr_flags_probe.log").open("a")
+    lf = Logger(ROOT / "tmp/logs/ddr_flags_probe.log")
 
-    def log(s):
-        line = f"{isostamp.now()} {s}"
-        print(line, flush=True); lf.write(line + "\n"); lf.flush()
+    log = lf.say
 
     i2cbus.require_unit(a.bus, a.serial)
     d = Real(a.bus, allow_write=True)

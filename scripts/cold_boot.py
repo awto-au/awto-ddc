@@ -24,6 +24,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 import dbg_xdata as X
 import i2cbus
 import rtd_i2c_bridge as B
+from _log import Logger
 from _repo import ROOT
 
 OFF_S = 8                    # power_cycle.py OFF_S: PSU hold-up ~6 s measured (#27) x1.25
@@ -53,14 +54,12 @@ def main() -> int:
     mp = a.map.read_text(errors="replace")
     diag, mode_a, sw = mapsym(mp, "isr_g_stAwtoDiag") or 0xF6D0, mapsym(mp, "isr_g_stModeInfo"), mapsym(mp, "isr_g_stAwtoSw")
     (ROOT / "tmp/logs/cold_boot.log").parent.mkdir(parents=True, exist_ok=True)
-    lf = (ROOT / "tmp/logs/cold_boot.log").open("a", buffering=1)
+    lf = Logger(ROOT / "tmp/logs/cold_boot.log")
     tsv = ROOT / "tmp/logs/cold_boot.tsv"
     if not tsv.exists():
         tsv.write_text("time\tlabel\timage\trun\tedid_s\tdbg_s\tstage8_s\tactive_s\tstages_ms\tlogo_ms\tvdd_ms\tbl_on_ms\tuevents\n")
 
-    def say(s):
-        line = f"{isostamp.now()} {s}"
-        print(line); lf.write(line + "\n")
+    say = lf.say
 
     def pc(*args):
         return subprocess.run([sys.executable, str(ROOT / "scripts/power_cycle.py"), "--relay", u["relay"], *args],

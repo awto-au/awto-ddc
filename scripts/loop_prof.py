@@ -23,6 +23,7 @@ import rtd_i2c_bridge as B
 SLOTS = ["key+diag+testcmd", "SysPowerHandler", "SysJudgeHandler", "SysTimerHandler", "SysSourceHandler", "SysModeHandler",
          "SysDpRxHandler", "SysTMDSRxHandler", "HDCP2 / MST", "OSD handler", "DDC/CI handler", "panel tick (AWTO_LP 12)", "colour + ScalerDebug"]
 PS_ONLY_OFF = 7 + 4 * len(SLOTS)          # StAwtoLoopProf.ucPsOnly
+from _log import Logger
 from _repo import ROOT
 
 
@@ -69,11 +70,9 @@ def main() -> int:
     ap.add_argument("--ps-only", action="store_true")
     a = ap.parse_args()
     (ROOT / "tmp/logs").mkdir(parents=True, exist_ok=True)
-    lf = (ROOT / "tmp/logs/loop_prof.log").open("a", buffering=1)
+    lf = Logger(ROOT / "tmp/logs/loop_prof.log")
 
-    def say(s):
-        line = f"{isostamp.now()} {s}"
-        print(line); lf.write(line + "\n")
+    say = lf.say
 
     base = base_of(a.map.read_text(errors="replace"))
     if base is None:

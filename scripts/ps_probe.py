@@ -19,6 +19,7 @@ import time
 from pathlib import Path
 
 import isostamp
+from _log import Logger
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import dbg_xdata as X
@@ -46,11 +47,9 @@ def main() -> int:
     ap.add_argument("--lp-s", type=float, default=0.0, help="power-saving-only loop profile over this window (LP image)")
     a = ap.parse_args()
     LOG.parent.mkdir(parents=True, exist_ok=True)
-    lf = LOG.open("a", buffering=1)
+    lf = Logger(LOG)
 
-    def say(s):
-        line = f"{isostamp.now()} {s}"
-        print(line, flush=True); lf.write(line + "\n")
+    say = lf.say
 
     t = W.UnitTarget(a.unit, a.map, say)
     regs = [int(x, 16) for x in a.regs.split(",")]

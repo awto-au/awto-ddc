@@ -20,14 +20,13 @@ import subprocess
 import sys
 from pathlib import Path
 
-import isostamp
-
 SDCC_INSTALL = Path("/usr/local")
 SDCC_COMMIT = "f8d34cffc1"
 SDCC_SRC = str(SDCC_INSTALL / "share/sdcc/awto-src")   # ISR lib clones (sdcc_isr_libs) compile from this tree's device/lib
 SDCCCALL = "3"
 
 
+from _log import Logger
 from _repo import repo_root
 
 
@@ -59,11 +58,9 @@ def main(argv: list[str] | None = None) -> int:
     root = repo_root()
     (root / "tmp/logs").mkdir(parents=True, exist_ok=True)
     (a.tree / "tmp/logs").mkdir(parents=True, exist_ok=True)
-    log = (root / "tmp/logs/fwimage.log").open("a")
+    log = Logger(root / "tmp/logs/fwimage.log")
 
-    def say(s):
-        line = f"{isostamp.now()} {s}"
-        print(line); log.write(line + "\n"); log.flush()
+    say = log.say
 
     st = stamp(a.bin)
     if a.expect and not st.startswith(a.expect):

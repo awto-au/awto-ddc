@@ -21,6 +21,8 @@ import argparse
 import sys
 from pathlib import Path
 
+from _log import Logger
+
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import fw_sim as S
 
@@ -58,11 +60,10 @@ def main() -> int:
     ap.add_argument("--control", action="store_true", help="D1 enabled: boot only, print D1 scans / HPD writes (shows the checks can fail)")
     a = ap.parse_args()
     (S.ROOT / "tmp/logs").mkdir(parents=True, exist_ok=True)
-    lf = (S.ROOT / "tmp/logs/portcfg_sim.log").open("a", buffering=1)
+    lf = Logger(S.ROOT / "tmp/logs/portcfg_sim.log", stamp_echo=False)
     fails = []
 
-    def say(s):
-        print(s, flush=True); lf.write(s + "\n")
+    say = lf.say
 
     def check(name, ok, detail=""):
         say(f"{'PASS' if ok else 'FAIL'} {name} {detail}")

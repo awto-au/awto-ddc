@@ -47,7 +47,7 @@ def _copies():
         for n in ast.walk(ast.parse(src)):
             if isinstance(n, ast.FunctionDef) and n.name in ("say", "log"):
                 body = ast.get_source_segment(src, n)
-                if re.search(r"\.write\(|isostamp|\.open\(|\bopen\(", body):
+                if p.name != "_log.py" and re.search(r"\.write\(|isostamp|\.open\(|\bopen\(", body):
                     out.add(f"{p.relative_to(ROOT).as_posix()}:{n.name}")
     return out
 

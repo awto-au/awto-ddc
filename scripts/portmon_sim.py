@@ -14,6 +14,8 @@ import re
 import sys
 from pathlib import Path
 
+from _log import Logger
+
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import ddc_sim as DD
 import deadport_sim as DP
@@ -38,11 +40,9 @@ def main() -> int:
     a = ap.parse_args()
     a.d2_cabled = False
     (S.ROOT / "tmp/logs").mkdir(parents=True, exist_ok=True)
-    log = (S.ROOT / "tmp/logs/portmon_sim.log").open("a", buffering=1)
+    log = Logger(S.ROOT / "tmp/logs/portmon_sim.log", stamp_echo=False)
 
-    def say(s):
-        print(s)
-        log.write(s + "\n")
+    say = log.say
 
     rc = 0
     rig = DP.Rig(a)

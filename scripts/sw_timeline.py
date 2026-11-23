@@ -16,7 +16,7 @@ import sys
 import time
 from pathlib import Path
 
-import isostamp
+from _log import Logger
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import dbg_link
@@ -135,11 +135,9 @@ def main() -> int:
     a = ap.parse_args()
     root = Path(__file__).resolve().parent.parent
     (root / "tmp/logs").mkdir(parents=True, exist_ok=True)
-    lf = (root / "tmp/logs/sw_timeline.log").open("a", buffering=1)
+    lf = Logger(root / "tmp/logs/sw_timeline.log")
 
-    def say(s):
-        line = f"{isostamp.now()} {s}"
-        print(line); lf.write(line + "\n")
+    say = lf.say
 
     i2cbus.require_unit(a.bus, a.serial)
     base = sym(a.map, "isr_g_stAwtoSw")

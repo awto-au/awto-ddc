@@ -15,7 +15,7 @@ import re
 import sys
 from pathlib import Path
 
-import isostamp
+from _log import Logger
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from sdcc_overlay import repo_root
@@ -31,10 +31,9 @@ def main() -> int:
     ap.add_argument("--prune", action="store_true")
     a = ap.parse_args()
     (ROOT / "tmp/logs").mkdir(parents=True, exist_ok=True)
-    lf = (ROOT / "tmp/logs/warn_policy_check.log").open("a")
+    lf = Logger(ROOT / "tmp/logs/warn_policy_check.log", stamp_echo=False)
 
-    def log(s):
-        print(s); lf.write(f"{isostamp.now()} {s}\n")
+    log = lf.say
     src = str(ROOT / "tmp/sdcc-port/src")
     sites = set()
     for w in a.warnings:

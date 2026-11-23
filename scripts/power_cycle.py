@@ -12,7 +12,7 @@ import sys
 import time
 from pathlib import Path
 
-import isostamp
+from _log import Logger
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from sdcc_overlay import repo_root
@@ -41,11 +41,9 @@ def main() -> int:
     power_set = OUTLETS[a.relay]
     root = repo_root()
     (root / "tmp/logs").mkdir(parents=True, exist_ok=True)
-    f = (root / "tmp/logs/power_cycle.log").open("a")
+    f = Logger(root / "tmp/logs/power_cycle.log")
 
-    def log(s):
-        line = f"{isostamp.now()} {s}"
-        print(line, flush=True); f.write(line + "\n"); f.flush()
+    log = f.say
     try:
         if not a.on:
             power_set(False, log=log)

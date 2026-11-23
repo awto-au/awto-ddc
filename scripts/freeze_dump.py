@@ -17,6 +17,7 @@ import isostamp
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import i2cbus
+from _log import Logger
 from _repo import ROOT
 from p037_test import DBG, rd
 from rtd_i2c_bridge import Real
@@ -32,11 +33,9 @@ def main() -> int:
     ap.add_argument("--pages", default="vendor")
     a = ap.parse_args()
     (ROOT / "tmp/logs/freeze_dump.log").parent.mkdir(parents=True, exist_ok=True)
-    lf = (ROOT / "tmp/logs/freeze_dump.log").open("a")
+    lf = Logger(ROOT / "tmp/logs/freeze_dump.log")
 
-    def log(s):
-        line = f"{isostamp.now()} {s}"
-        print(line, flush=True); lf.write(line + "\n"); lf.flush()
+    log = lf.say
 
     pages = sorted(json.load(VENDOR.open())["pages"]) if a.pages == "vendor" else a.pages.upper().split(",")
     i2cbus.require_unit(a.bus, a.serial)

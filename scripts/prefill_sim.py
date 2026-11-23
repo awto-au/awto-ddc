@@ -13,6 +13,8 @@ import argparse
 import sys
 from pathlib import Path
 
+from _log import Logger
+
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import fw_sim as S
 import sw_timeline as T
@@ -43,10 +45,9 @@ def main() -> int:
     ap.add_argument("--no-switch", action="store_true")
     a = ap.parse_args()
     (S.ROOT / "tmp/logs").mkdir(parents=True, exist_ok=True)
-    log = (S.ROOT / "tmp/logs/prefill_sim.log").open("a", buffering=1)
+    log = Logger(S.ROOT / "tmp/logs/prefill_sim.log", stamp_echo=False)
 
-    def say(s):
-        print(s); log.write(s + "\n")
+    say = log.say
 
     bus = S.SimBus(a.bin, a.map, video=a.mode, port="D2")
     armed, scans = [False], []

@@ -12,7 +12,7 @@ import re
 import sys
 from pathlib import Path
 
-import isostamp
+from _log import Logger
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import fw_sim as S
@@ -44,12 +44,10 @@ def main() -> int:
     ap.add_argument("map", type=Path)
     a = ap.parse_args()
     LOG.parent.mkdir(parents=True, exist_ok=True)
-    lf = LOG.open("a", buffering=1)
+    lf = Logger(LOG)
     fails = []
 
-    def say(s):
-        line = f"{isostamp.now()} {s}"
-        print(line, flush=True); lf.write(line + "\n")
+    say = lf.say
 
     def check(name, ok, detail=""):
         say(f"{'PASS' if ok else 'FAIL'} {name}{(': ' + detail) if detail else ''}")

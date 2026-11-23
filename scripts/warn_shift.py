@@ -13,7 +13,7 @@ import sys
 from collections import Counter, defaultdict
 from pathlib import Path
 
-import isostamp
+from _log import Logger
 
 WARN = re.compile(r"/tmp/sdcc-port/src/(.+?):(\d+): warning \d+: (.*)$")
 
@@ -25,10 +25,9 @@ def main() -> int:
     a = ap.parse_args()
     root = Path(__file__).resolve().parent.parent
     (root / "tmp/logs").mkdir(parents=True, exist_ok=True)
-    lf = (root / "tmp/logs/warn_shift.log").open("a")
+    lf = Logger(root / "tmp/logs/warn_shift.log", stamp_echo=False)
 
-    def say(s):
-        print(s); lf.write(f"{isostamp.now()} {s}\n")
+    say = lf.say
 
     warns = defaultdict(list)                           # file -> [(line, text)]
     for ln in (a.tree / "tmp/sdcc-port/warnings.txt").read_text(errors="replace").splitlines():
