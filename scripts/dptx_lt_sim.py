@@ -16,10 +16,9 @@ import re
 import sys
 from pathlib import Path
 
-import isostamp
-
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import fw_sim as S
+from _log import log_line as _log_line
 
 ROOT = Path(__file__).resolve().parents[1]
 LOG = ROOT / "tmp/logs/dptx_lt_sim.log"
@@ -53,10 +52,7 @@ SINK_CAPS = bytes([0x12, 0x14, 0x84, 0x01, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0])
 
 
 def say(s):
-    LOG.parent.mkdir(parents=True, exist_ok=True)
-    with LOG.open("a") as f:
-        f.write(isostamp.now() + " " + s + "\n")
-    print(s, flush=True)
+    _log_line(s, LOG, stamp_stdout=False)
 
 
 class Sink:
