@@ -77,7 +77,7 @@ def main() -> int:
                 for rn, rate in RATES:
                     run.m.wr(run.m.addr("g_ucDpRx1LaneCount"), bytes([lanes]))
                     run.m.wr(run.m.addr("g_ucDpRx1LinkRate"), bytes([rate]))
-                    cl = call(run, bank, c["addr"] & 0xFFFF, 0 if has_arg else 0)
+                    cl = call(run, bank, c["addr"] & 0xFFFF, 0)
                     say(f"  {label:8s} lanes {lanes} {rn:4s}: cold {cl[0]:6d} clk, hot {cl[-1]:6d} clk = {cl[0] / mhz:6.2f} / {cl[-1] / mhz:6.2f} us")
     finally:
         run.bus.close()
