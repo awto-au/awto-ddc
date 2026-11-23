@@ -64,16 +64,10 @@ void ScalerGDIPhyRx1Z0Switch(bit bSelect);
 void ScalerGDIPhyRx1Power(EnumPowerAction enumPowerAction);
 #endif
 
-#if(_D2_INPUT_PORT_TYPE != _D2_NO_PORT)
-void ScalerGDIPhyRx2PowerProc(EnumPowerAction enumPowerAction);
-void ScalerGDIPhyRx2Z0Switch(bit bSelect);
-void ScalerGDIPhyRx2Power(EnumPowerAction enumPowerAction);
-#endif
-
-#if(_D3_INPUT_PORT_TYPE != _D3_NO_PORT)
-void ScalerGDIPhyRx3PowerProc(EnumPowerAction enumPowerAction);
-void ScalerGDIPhyRx3Z0Switch(bit bSelect);
-void ScalerGDIPhyRx3Power(EnumPowerAction enumPowerAction);
+#if((_D2_TMDS_SUPPORT == _ON) && (_D3_TMDS_SUPPORT == _ON))
+void ScalerGDIPhyRxPowerProc(BYTE ucPort, EnumPowerAction enumPowerAction);
+void ScalerGDIPhyRxZ0Switch(BYTE ucPort, bit bSelect);
+void ScalerGDIPhyRxPower(BYTE ucPort, EnumPowerAction enumPowerAction);
 #endif
 
 //****************************************************************************
@@ -270,8 +264,8 @@ void ScalerGDIPhyZ0Switch(BYTE ucPortSelect, bit bSelect)
 
         case _D2_INPUT_PORT:
 
-#if(_D2_INPUT_PORT_TYPE != _D2_NO_PORT)
-            ScalerGDIPhyRx2Z0Switch(bSelect);
+#if((_D2_TMDS_SUPPORT == _ON) && (_D3_TMDS_SUPPORT == _ON))
+            ScalerGDIPhyRxZ0Switch(0, bSelect);
 #endif
 
             break;
@@ -279,8 +273,8 @@ void ScalerGDIPhyZ0Switch(BYTE ucPortSelect, bit bSelect)
 
         case _D3_INPUT_PORT:
 
-#if(_D3_INPUT_PORT_TYPE != _D3_NO_PORT)
-            ScalerGDIPhyRx3Z0Switch(bSelect);
+#if((_D2_TMDS_SUPPORT == _ON) && (_D3_TMDS_SUPPORT == _ON))
+            ScalerGDIPhyRxZ0Switch(1, bSelect);
 #endif
 
             break;
@@ -327,18 +321,18 @@ void ScalerGDIPhyPowerProc(BYTE ucPortSelect, EnumPowerAction enumPowerAction)
             break;
 #endif
 
-#if(_D2_INPUT_PORT_TYPE != _D2_NO_PORT)
+#if((_D2_TMDS_SUPPORT == _ON) && (_D3_TMDS_SUPPORT == _ON))
         case _D2_INPUT_PORT:
 
-            ScalerGDIPhyRx2PowerProc(enumPowerAction);
+            ScalerGDIPhyRxPowerProc(0, enumPowerAction);
 
             break;
 #endif
 
-#if(_D3_INPUT_PORT_TYPE != _D3_NO_PORT)
+#if((_D2_TMDS_SUPPORT == _ON) && (_D3_TMDS_SUPPORT == _ON))
         case _D3_INPUT_PORT:
 
-            ScalerGDIPhyRx3PowerProc(enumPowerAction);
+            ScalerGDIPhyRxPowerProc(1, enumPowerAction);
 
             break;
 #endif
@@ -559,377 +553,43 @@ void ScalerGDIPhyRx1Power(EnumPowerAction enumPowerAction)
 }
 #endif
 
-#if(_D2_INPUT_PORT_TYPE != _D2_NO_PORT)
+#if((_D2_TMDS_SUPPORT == _ON) && (_D3_TMDS_SUPPORT == _ON))
+#if((_D2_INPUT_PORT_TYPE == _D2_MHL_PORT) || (_D3_INPUT_PORT_TYPE == _D3_MHL_PORT))
+#error "shared GDI Rx2/Rx3 body has no MHL branch (parked, #298)"
+#endif
 //--------------------------------------------------
-// Description  : GDI Rx2 Power Process
-// Input Value  : None
-// Output Value : None
+// ucPort: 0 = D2, 1 = D3; each body sets RX_CUR = ucPort (RxSetBit / RXSEL, as the shared TMDS body) and restores it
 //--------------------------------------------------
-void ScalerGDIPhyRx2PowerProc(EnumPowerAction enumPowerAction)
-{
-    ScalerGDIPhyRx2Power(enumPowerAction);
+#define GDI_EDID_IRQ_PTR                                ((volatile BYTE xdata *)(ucPort ? (WORD)&MCU_FE72_DDC3_EDID_IRQ : (WORD)&MCU_FE69_DDC2_EDID_IRQ))
 
-    switch(enumPowerAction)
-    {
-        case _POWER_ACTION_AC_ON_TO_NORMAL:
-
-            break;
-
-        case _POWER_ACTION_PS_TO_NORMAL:
-
-            if(ScalerGetBit(P7B_18_IMPEDANCE_00, _BIT7) == _BIT7)
-            {
-                // Enable RGB Z0
-                ScalerSetBit(P7B_18_IMPEDANCE_00, ~(_BIT6 | _BIT5 | _BIT4), (_BIT6 | _BIT5 | _BIT4));
-
-#if(_D2_INPUT_PORT_TYPE == _D2_MHL_PORT)
-                if((GET_MHL_RX2_PROCESS_STATE() >= _MHL_STATE_SET_DEV_CAP_DONE) &&
-                   (((GET_MHL_RX2_ADOPTER_ID_HBYTE() == _CHROMA_MHL_ADOPTER_ID_HBYTE) && (GET_MHL_RX2_ADOPTER_ID_LBYTE() == _CHROMA_MHL_ADOPTER_ID_LBYTE)) ||
-                    ((GET_MHL_RX2_ADOPTER_ID_HBYTE() == _SAMSUNG_NOTE2_ADOPTER_ID_HBYTE) && (GET_MHL_RX2_ADOPTER_ID_LBYTE() == _SAMSUNG_NOTE2_ADOPTER_ID_LBYTE))))
-                {
-                    // Reset D2 CBUS
-                    ScalerMHLCBUSResetProc(_D2_INPUT_PORT);
-                }
-#endif
-            }
-
-            break;
-
-        case _POWER_ACTION_OFF_TO_NORMAL:
-
-#if(_D2_INPUT_PORT_TYPE == _D2_MHL_PORT)
-            if((GET_D2_TMDS_MODE() == _TMDS_MHL_MODE) && (GET_MHL_RX2_SWITCH_PORT_DISCOVERY_DONE() == _TRUE) &&
-               (ScalerGetBit(P7B_18_IMPEDANCE_00, (_BIT7 | _BIT6 | _BIT5 | _BIT4)) == (_BIT7 | _BIT6 | _BIT5 | _BIT4)) &&
-               (GET_MHL_RX2_PROCESS_STATE() >= _MHL_STATE_SET_DEV_CAP_DONE) &&
-               (((GET_MHL_RX2_ADOPTER_ID_HBYTE() == _HTC_BUTTERFLY_ADOPTER_ID_HBYTE) && (GET_MHL_RX2_ADOPTER_ID_LBYTE() == _HTC_BUTTERFLY_ADOPTER_ID_LBYTE)) ||
-                ((GET_MHL_RX2_ADOPTER_ID_HBYTE() == _HUAWEI_D2_ADOPTER_ID_HBYTE) && (GET_MHL_RX2_ADOPTER_ID_LBYTE() == _HUAWEI_D2_ADOPTER_ID_LBYTE)) ||
-                ((GET_MHL_RX2_ADOPTER_ID_HBYTE() == _SAMSUNG_NOTE2_ADOPTER_ID_HBYTE) && (GET_MHL_RX2_ADOPTER_ID_LBYTE() == _SAMSUNG_NOTE2_ADOPTER_ID_LBYTE))))
-            {
-                // Reset CBUS
-                ScalerMHLCBUSResetProc(_D2_INPUT_PORT);
-            }
-#endif
-            ScalerGDIPhyZ0Switch(_D2_INPUT_PORT, _ON);
-
-            break;
-
-        case _POWER_ACTION_NORMAL_TO_PS:
-
-#if(_D2_TMDS_SUPPORT == _ON)
-            ScalerTMDSRx2PowerSavingProc();
-#endif
-            break;
-
-        case _POWER_ACTION_NORMAL_TO_OFF:
-        case _POWER_ACTION_SWITCH_INTERFACE_TO_OFF:
-        case _POWER_ACTION_AC_ON_TO_OFF:
-        case _POWER_ACTION_PS_TO_OFF:
-
-#if(_D2_TMDS_SUPPORT == _ON)
-            ScalerTMDSRx2PowerOffProc();
-#endif
-            ScalerGDIPhyZ0Switch(_D2_INPUT_PORT, _OFF);
-
-#if(_D2_INPUT_PORT_TYPE == _D2_MHL_PORT)
-            // MHL Power Off Process
-            ScalerMHLPowerOffProc(_D2_INPUT_PORT);
-#endif
-
-#if((_D2_TMDS_SUPPORT == _ON) && (_TMDS_TOGGLE_HPD_Z0_FOR_ACER == _ON))
-            CLR_TMDS_RX2_TOGGLE_Z0();
-            CLR_TMDS_RX2_TOGGLE_Z0_EVENT();
-#endif
-            break;
-
-        default:
-
-            break;
-    }
-}
-
-
-//--------------------------------------------------
-// Description  : GDI Z0 Switch
-// Input Value  : D2/D2 Port ; Z0 ON/OFF
-// Output Value : None
-//--------------------------------------------------
-void ScalerGDIPhyRx2Z0Switch(bit bSelect)
-{
-    if(bSelect == _ON)
-    {
-        SET_DIGITAL_PORT_SWITCH_TO_D2();
-    }
-    else
-    {
-        CLR_DIGITAL_PORT_SWITCH_TO_D2();
-    }
-
-#if(_D2_INPUT_PORT_TYPE == _D2_MHL_PORT)
-
-    if(GET_D2_TMDS_MODE() == _TMDS_MHL_MODE)
-    {
-        if(bSelect == _ON)
-        {
-#if(_MHL_DEBUG_WITHOUT_CBUS_MODE == _ON)
-            // Enable Z0
-            ScalerSetBit(P7B_18_IMPEDANCE_00, ~(_BIT7 | _BIT6 | _BIT5 | _BIT4), (_BIT7 | _BIT6 | _BIT5 | _BIT4));
-#endif
-        }
-        else
-        {
-            if((ScalerGetBit(P7B_18_IMPEDANCE_00, (_BIT7 | _BIT6 | _BIT5 | _BIT4)) == (_BIT7 | _BIT6 | _BIT5 | _BIT4)) &&
-               (GET_MHL_RX2_PROCESS_STATE() >= _MHL_STATE_SET_DEV_CAP_DONE))
-            {
-                if((GET_MHL_RX2_ADOPTER_ID_HBYTE() == _SAMSUNG_NOTE2_ADOPTER_ID_HBYTE) && (GET_MHL_RX2_ADOPTER_ID_LBYTE() == _SAMSUNG_NOTE2_ADOPTER_ID_LBYTE))
-                {
-                    SET_MHL_RX2_SWITCH_PORT_DISCOVERY_DONE();
-                }
-                else
-                {
-                    // Reset D2 CBUS While Non-NoteII
-                    ScalerMHLCBUSResetProc(_D2_INPUT_PORT);
-                }
-            }
-        }
-    }
-    else
-    {
-        ScalerMHLCBUSPhySwitch(_D2_INPUT_PORT, _OFF);
-
-        if(bSelect == _ON)
-        {
-            if(ScalerGetBit(P7B_18_IMPEDANCE_00, _BIT7) == 0x00)
-            {
-                SET_TMDS_RX2_Z0_ASSERTED();
-
-                // Clear HDCP Flag
-                ScalerSetBit(P71_A9_TMDS_ABC0, ~(_BIT7 | _BIT6 | _BIT5 | _BIT2), (_BIT6 | _BIT5));
-
-                // Initialize DDC Detection Process
-                CLR_TMDS_RX2_DDC_DETECTED();
-
-                // Enable DDC Toggle IRQ
-                MCU_FE69_DDC2_EDID_IRQ |= _BIT2;
-                MCU_FE69_DDC2_EDID_IRQ |= _BIT3;
-
-                // Enable Z0
-                ScalerSetBit(P7B_18_IMPEDANCE_00, ~(_BIT7 | _BIT6 | _BIT5 | _BIT4), (_BIT7 | _BIT6 | _BIT5 | _BIT4));
-            }
-        }
-        else
-        {
-            // Disable DDC Toggle IRQ
-            MCU_FE69_DDC2_EDID_IRQ &= ~(_BIT3 | _BIT1);
-
-            // Disable Z0
-            ScalerSetBit(P7B_18_IMPEDANCE_00, ~(_BIT7 | _BIT6 | _BIT5 | _BIT4), 0x00);
-
-#if((_HDCP_2_2_SUPPORT == _ON) && (_TMDS_HDCP_2_2_SUPPORT == _ON))
-            // Reset Hdcp2 Proc
-            ScalerHdcp2ResetTMDSProc(_D2_INPUT_PORT);
-#endif
-        }
-    }
-
-#else // Else of #if(_D2_INPUT_PORT_TYPE == _D2_MHL_PORT)
-
-    if(bSelect == _ON)
-    {
-        // [1] MHL_Mode = 1'b0 --> Disable MHL Mode
-        ScalerSetBit(P7B_17_BANDGAP_03, ~_BIT1, 0x00);
-
-        // [4] Disable MHL OP
-        ScalerSetBit(P7B_1B_CMU_01, ~_BIT4, 0x00);
-
-        if(ScalerGetBit(P7B_18_IMPEDANCE_00, _BIT7) == 0x00)
-        {
-#if(_D2_TMDS_SUPPORT == _ON)
-
-            SET_TMDS_RX2_Z0_ASSERTED();
-
-            // Clear HDCP Flag
-            ScalerSetBit(P71_A9_TMDS_ABC0, ~(_BIT7 | _BIT6 | _BIT5 | _BIT2), (_BIT6 | _BIT5));
-
-            // Initialize DDC Detection Process
-            CLR_TMDS_RX2_DDC_DETECTED();
-
-            // Enable DDC Toggle IRQ
-            MCU_FE69_DDC2_EDID_IRQ |= _BIT2;
-            MCU_FE69_DDC2_EDID_IRQ |= _BIT3;
-
-#endif // End of #if(_D2_TMDS_SUPPORT == _ON)
-
-            // Enable Z0
-            ScalerSetBit(P7B_18_IMPEDANCE_00, ~(_BIT7 | _BIT6 | _BIT5 | _BIT4), (_BIT7 | _BIT6 | _BIT5 | _BIT4));
-        }
-    }
-    else
-    {
-#if(_D2_TMDS_SUPPORT == _ON)
-
-        // Disable DDC Toggle IRQ
-        MCU_FE69_DDC2_EDID_IRQ &= ~(_BIT3 | _BIT1);
-#endif
-        // Disable Z0
-        ScalerSetBit(P7B_18_IMPEDANCE_00, ~(_BIT7 | _BIT6 | _BIT5 | _BIT4), 0x00);
-
-#if((_D2_INPUT_PORT_TYPE == _D2_HDMI_PORT) && (_TMDS_HDCP_2_2_SUPPORT == _ON) && (_HDCP_2_2_SUPPORT == _ON))
-        // Reset Hdcp2 Proc
-        ScalerHdcp2ResetTMDSProc(_D2_INPUT_PORT);
-#endif
-    }
-#endif // End of #if(_D2_INPUT_PORT_TYPE == _D2_MHL_PORT)
-}
-
-
-//--------------------------------------------------
-// Description  : GDI Bandgap Power On/Off
-// Input Value  : On/Off
-// Output Value : None
-//--------------------------------------------------
-void ScalerGDIPhyRx2Power(EnumPowerAction enumPowerAction)
-{
-    switch(enumPowerAction)
-    {
-        case _POWER_ACTION_AC_ON_TO_NORMAL:
-        case _POWER_ACTION_OFF_TO_NORMAL:
-        case _POWER_ACTION_PS_TO_NORMAL:
-
-            ////////////////////////
-            // Clock Lane Enhance //
-            ////////////////////////
-
-            // [5:4] reg_rxvcom_sel = 2'b01 --> VDD - 0.3V
-            ScalerSetBit(P7B_17_BANDGAP_03, ~(_BIT5 | _BIT4), _BIT4);
-
-
-            ////////////////////////
-            // Offset Calibration //
-            ////////////////////////
-
-            // [7] EN_BACK_OFFSET = 1'b1 --> Enable Background Offset Calibration
-            // [6] EN_FORE_OFFSET = 1'b0 --> Disable Auto K-offset
-            // [5] FORE_OFF_AUTOK = 1'b0 --> Disable Auto K-offset Auto Mode
-            ScalerSetBit(P7B_24_KOFFSET_00, ~(_BIT7 | _BIT6 | _BIT5), _BIT7);
-
-
-            //////////////
-            // Z0 AutoK //
-            //////////////
-
-            // [0] Z0_manual = 1 --> Port2 50ohm Auto Mode
-            ScalerSetBit(P7B_17_BANDGAP_03, ~_BIT0, _BIT0);
+// Per-port TMDS_ABC0 HDCP-flag clear, kept as in the Dahua firmware: Rx3 also clears wr_aksv and hit_i2c_slave_flag (#298)
+#define GDI_ABC0_HDCP_CLR_AND_D2                        (~(_BIT7 | _BIT6 | _BIT5 | _BIT2))
+#define GDI_ABC0_HDCP_CLR_OR_D2                         (_BIT6 | _BIT5)
+#define GDI_ABC0_HDCP_CLR_AND_D3                        (~(_BIT7 | _BIT6 | _BIT5))
+#define GDI_ABC0_HDCP_CLR_OR_D3                         (_BIT7 | _BIT6 | _BIT5)
 
 #if(_D2_TMDS_Z0_IMPEDANCE_OPTION == _LG_90_OHM)
-            // [3:0] Z0_ADJR = 6 --> Z0 Differential Impedance = level 6
-            ScalerSetBit(P7B_18_IMPEDANCE_00, ~(_BIT3 | _BIT2 | _BIT1 | _BIT0), (_BIT2 | _BIT1));
+#define GDI_Z0_ADJR_D2                                  (_BIT2 | _BIT1)
 #else
-            // [3:0] Z0_ADJR = 9 --> Z0 Differential Impedance = level 9
-            ScalerSetBit(P7B_18_IMPEDANCE_00, ~(_BIT3 | _BIT2 | _BIT1 | _BIT0), (_BIT3 | _BIT0));
+#define GDI_Z0_ADJR_D2                                  (_BIT3 | _BIT0)
 #endif
-            // [2:0] Z0_CM_ADJR = 6 --> Z0 Common Mode Impedance = level 6
-            ScalerSetBit(P7B_19_IMPEDANCE_01, ~(_BIT2 | _BIT1 | _BIT0), (_BIT2 | _BIT1));
-
-            // [7] p_channel_en = 1 --> Switch p Channel 50ohm Z0
-            // [6] n_channel_en = 1 --> Switch n Channel 50ohm Z0
-            ScalerSetBit(P7B_17_BANDGAP_03, ~(_BIT7 | _BIT6), (_BIT7 | _BIT6));
-
-
-            ///////////////
-            // Reset PHY //
-            ///////////////
-
-            // [2:0] phy_si_reset_n = 4'b1111 --> Normal Digital PHY
-            ScalerSetBit(P7B_00_DIG_00, ~(_BIT2 | _BIT1 | _BIT0), (_BIT2 | _BIT1 | _BIT0));
-
-            // [1] bypass_clk_rdy = 1 --> Manual Mode
-            ScalerSetBit(P7B_0E_SDM_03, ~_BIT1, _BIT1);
-
-            // [1] bypass_eqen_rdy = 1 --> Manual Mode
-            ScalerSetBit(P7B_10_EQEN_TIMER, ~_BIT1, _BIT1);
-
-            // [1] bypass_data_rdy = 1 --> Manual Mode
-            ScalerSetBit(P7B_11_DATA_TIMER, ~_BIT1, _BIT1);
-
-
-            ////////////////////
-            // HDMI Interface //
-            ////////////////////
-
-            // Digital PHY Lane Swap Setting
-            ScalerSetByte(P7B_01_DIG_01, 0x24);
-
-            // Digital PHY P/N Swap Setting
-            ScalerSetBit(P7B_03_DIG_03, ~(_BIT6 | _BIT5 | _BIT4), 0x00);
-
-            // Digital PHY Select to HDMI
-            ScalerSetBit(P7B_05_DIG_05, ~_BIT7, _BIT7);
-
-            break;
-
-        case _POWER_ACTION_NORMAL_TO_PS:
-
-#if(_SOURCE_BACKGROUND_DETECT_SUPPORT == _OFF)
-            // Disable R/G/B RX_EN, Disable R/G/B/Clock CDR_EN
-            ScalerSetByte(P7B_1A_CMU_00, 0x80);
-
-            // [7] Disable CMU PLL
-            ScalerSetBit(P7B_1B_CMU_01, ~_BIT7, 0x00);
-#endif
-            // Disable Auto k-offset(foreground)
-            // Disable Auto k-offset auto mode (foreground)
-            ScalerSetBit(P7B_24_KOFFSET_00, ~(_BIT6 | _BIT5), 0x00);
-
-#if(_TMDS_Z0_POWER_SAVING_OPTION == _ONLY_CLK_CHANNEL_CONNECTED_FOR_PS)
-
-#if(_D2_INPUT_PORT_TYPE == _D2_MHL_PORT)
-            if(GET_D2_TMDS_MODE() == _TMDS_HDMI_MODE)
-            {
-                // Disable RGB Z0
-                ScalerSetBit(P7B_18_IMPEDANCE_00, ~(_BIT6 | _BIT5 | _BIT4), 0x00);
-            }
+#if(_D3_TMDS_Z0_IMPEDANCE_OPTION == _LG_90_OHM)
+#define GDI_Z0_ADJR_D3                                  (_BIT2 | _BIT1)
 #else
-            // Disable RGB Z0
-            ScalerSetBit(P7B_18_IMPEDANCE_00, ~(_BIT6 | _BIT5 | _BIT4), 0x00);
+#define GDI_Z0_ADJR_D3                                  (_BIT3 | _BIT0)
 #endif
 
-#endif
-            break;
-
-        case _POWER_ACTION_NORMAL_TO_OFF:
-        case _POWER_ACTION_SWITCH_INTERFACE_TO_OFF:
-        case _POWER_ACTION_AC_ON_TO_OFF:
-        case _POWER_ACTION_PS_TO_OFF:
-
-#if(_SOURCE_BACKGROUND_DETECT_SUPPORT == _OFF)
-            // Disable R/G/B RX_EN, Disable R/G/B/Clock CDR_EN
-            ScalerSetByte(P7B_1A_CMU_00, 0x00);
-
-            // [7] Disable CMU PLL
-            ScalerSetBit(P7B_1B_CMU_01, ~_BIT7, 0x00);
-#endif
-            // Disable Auto k-offset(foreground)
-            // Disable Auto k-offset auto mode (foreground)
-            ScalerSetBit(P7B_24_KOFFSET_00, ~(_BIT6 | _BIT5), 0x00);
-
-            break;
-
-        default:
-
-            break;
-    }
-}
-#endif
-
-#if(_D3_INPUT_PORT_TYPE != _D3_NO_PORT)
 //--------------------------------------------------
-// Description  : GDI Rx3 Power Process
-// Input Value  : None
+// Description  : GDI Rx2 / Rx3 Power Process
+// Input Value  : ucPort (0 = D2, 1 = D3) ; Power Action
 // Output Value : None
 //--------------------------------------------------
-void ScalerGDIPhyRx3PowerProc(EnumPowerAction enumPowerAction)
+void ScalerGDIPhyRxPowerProc(BYTE ucPort, EnumPowerAction enumPowerAction)
 {
-    ScalerGDIPhyRx3Power(enumPowerAction);
+    BYTE ucOld = RX_CUR;
+
+    ScalerGDIPhyRxPower(ucPort, enumPowerAction);
+    RX_CUR = ucPort;
 
     switch(enumPowerAction)
     {
@@ -939,47 +599,24 @@ void ScalerGDIPhyRx3PowerProc(EnumPowerAction enumPowerAction)
 
         case _POWER_ACTION_PS_TO_NORMAL:
 
-            if(ScalerGetBit(P7C_18_IMPEDANCE_00, _BIT7) == _BIT7)
+            if(RxGetBit(P7B_18_IMPEDANCE_00, _BIT7) == _BIT7)
             {
                 // Enable RGB Z0
-                ScalerSetBit(P7C_18_IMPEDANCE_00, ~(_BIT6 | _BIT5 | _BIT4), (_BIT6 | _BIT5 | _BIT4));
-
-#if(_D3_INPUT_PORT_TYPE == _D3_MHL_PORT)
-                if((GET_MHL_RX3_PROCESS_STATE() >= _MHL_STATE_SET_DEV_CAP_DONE) &&
-                   (((GET_MHL_RX3_ADOPTER_ID_HBYTE() == _CHROMA_MHL_ADOPTER_ID_HBYTE) && (GET_MHL_RX3_ADOPTER_ID_LBYTE() == _CHROMA_MHL_ADOPTER_ID_LBYTE)) ||
-                    ((GET_MHL_RX3_ADOPTER_ID_HBYTE() == _SAMSUNG_NOTE2_ADOPTER_ID_HBYTE) && (GET_MHL_RX3_ADOPTER_ID_LBYTE() == _SAMSUNG_NOTE2_ADOPTER_ID_LBYTE))))
-                {
-                    // Reset D3 CBUS
-                    ScalerMHLCBUSResetProc(_D3_INPUT_PORT);
-                }
-#endif
+                RxSetBit(P7B_18_IMPEDANCE_00, ~(_BIT6 | _BIT5 | _BIT4), (_BIT6 | _BIT5 | _BIT4));
             }
 
             break;
 
         case _POWER_ACTION_OFF_TO_NORMAL:
 
-#if(_D3_INPUT_PORT_TYPE == _D3_MHL_PORT)
-            if((GET_D3_TMDS_MODE() == _TMDS_MHL_MODE) && (GET_MHL_RX3_SWITCH_PORT_DISCOVERY_DONE() == _TRUE) &&
-               (ScalerGetBit(P7C_18_IMPEDANCE_00, (_BIT7 | _BIT6 | _BIT5 | _BIT4)) == (_BIT7 | _BIT6 | _BIT5 | _BIT4)) &&
-               (GET_MHL_RX3_PROCESS_STATE() >= _MHL_STATE_SET_DEV_CAP_DONE) &&
-               (((GET_MHL_RX3_ADOPTER_ID_HBYTE() == _HTC_BUTTERFLY_ADOPTER_ID_HBYTE) && (GET_MHL_RX3_ADOPTER_ID_LBYTE() == _HTC_BUTTERFLY_ADOPTER_ID_LBYTE)) ||
-                ((GET_MHL_RX3_ADOPTER_ID_HBYTE() == _HUAWEI_D2_ADOPTER_ID_HBYTE) && (GET_MHL_RX3_ADOPTER_ID_LBYTE() == _HUAWEI_D2_ADOPTER_ID_LBYTE)) ||
-                ((GET_MHL_RX3_ADOPTER_ID_HBYTE() == _SAMSUNG_NOTE2_ADOPTER_ID_HBYTE) && (GET_MHL_RX3_ADOPTER_ID_LBYTE() == _SAMSUNG_NOTE2_ADOPTER_ID_LBYTE))))
-            {
-                // Reset CBUS
-                ScalerMHLCBUSResetProc(_D3_INPUT_PORT);
-            }
-#endif
-            ScalerGDIPhyZ0Switch(_D3_INPUT_PORT, _ON);
+            ScalerGDIPhyRxZ0Switch(ucPort, _ON);
 
             break;
 
         case _POWER_ACTION_NORMAL_TO_PS:
 
-#if(_D3_TMDS_SUPPORT == _ON)
-            ScalerTMDSRx3PowerSavingProc();
-#endif
+            RXSTMT(ScalerTMDSRx2PowerSavingProc(), ScalerTMDSRx3PowerSavingProc());
+
             break;
 
         case _POWER_ACTION_NORMAL_TO_OFF:
@@ -987,19 +624,12 @@ void ScalerGDIPhyRx3PowerProc(EnumPowerAction enumPowerAction)
         case _POWER_ACTION_AC_ON_TO_OFF:
         case _POWER_ACTION_PS_TO_OFF:
 
-#if(_D3_TMDS_SUPPORT == _ON)
-            ScalerTMDSRx3PowerOffProc();
-#endif
-            ScalerGDIPhyZ0Switch(_D3_INPUT_PORT, _OFF);
+            RXSTMT(ScalerTMDSRx2PowerOffProc(), ScalerTMDSRx3PowerOffProc());
+            ScalerGDIPhyRxZ0Switch(ucPort, _OFF);
 
-#if(_D3_INPUT_PORT_TYPE == _D3_MHL_PORT)
-            // MHL Power Off Process
-            ScalerMHLPowerOffProc(_D3_INPUT_PORT);
-#endif
-
-#if((_D3_TMDS_SUPPORT == _ON) && (_TMDS_TOGGLE_HPD_Z0_FOR_ACER == _ON))
-            CLR_TMDS_RX3_TOGGLE_Z0();
-            CLR_TMDS_RX3_TOGGLE_Z0_EVENT();
+#if(_TMDS_TOGGLE_HPD_Z0_FOR_ACER == _ON)
+            RXSTMT(CLR_TMDS_RX2_TOGGLE_Z0(), CLR_TMDS_RX3_TOGGLE_Z0());
+            RXSTMT(CLR_TMDS_RX2_TOGGLE_Z0_EVENT(), CLR_TMDS_RX3_TOGGLE_Z0_EVENT());
 #endif
             break;
 
@@ -1007,225 +637,132 @@ void ScalerGDIPhyRx3PowerProc(EnumPowerAction enumPowerAction)
 
             break;
     }
+
+    RX_CUR = ucOld;
 }
 
-
 //--------------------------------------------------
-// Description  : GDI Z0 Switch
-// Input Value  : D3/D3 Port ; Z0 ON/OFF
+// Description  : GDI Rx2 / Rx3 Z0 Switch
+// Input Value  : ucPort (0 = D2, 1 = D3) ; Z0 ON/OFF
 // Output Value : None
 //--------------------------------------------------
-void ScalerGDIPhyRx3Z0Switch(bit bSelect)
+void ScalerGDIPhyRxZ0Switch(BYTE ucPort, bit bSelect)
 {
+    BYTE ucOld = RX_CUR;
+    volatile BYTE xdata *pucEdidIrq = GDI_EDID_IRQ_PTR;
+
+    RX_CUR = ucPort;
+
     if(bSelect == _ON)
     {
-        SET_DIGITAL_PORT_SWITCH_TO_D3();
+        RXSTMT(SET_DIGITAL_PORT_SWITCH_TO_D2(), SET_DIGITAL_PORT_SWITCH_TO_D3());
     }
     else
     {
-        CLR_DIGITAL_PORT_SWITCH_TO_D3();
+        RXSTMT(CLR_DIGITAL_PORT_SWITCH_TO_D2(), CLR_DIGITAL_PORT_SWITCH_TO_D3());
     }
-
-#if(_D3_INPUT_PORT_TYPE == _D3_MHL_PORT)
-
-    if(GET_D3_TMDS_MODE() == _TMDS_MHL_MODE)
-    {
-        if(bSelect == _ON)
-        {
-#if(_MHL_DEBUG_WITHOUT_CBUS_MODE == _ON)
-            // Enable Z0
-            ScalerSetBit(P7C_18_IMPEDANCE_00, ~(_BIT7 | _BIT6 | _BIT5 | _BIT4), (_BIT7 | _BIT6 | _BIT5 | _BIT4));
-#endif
-        }
-        else
-        {
-            if((ScalerGetBit(P7C_18_IMPEDANCE_00, (_BIT7 | _BIT6 | _BIT5 | _BIT4)) == (_BIT7 | _BIT6 | _BIT5 | _BIT4)) &&
-               (GET_MHL_RX3_PROCESS_STATE() >= _MHL_STATE_SET_DEV_CAP_DONE))
-            {
-                if((GET_MHL_RX3_ADOPTER_ID_HBYTE() == _SAMSUNG_NOTE2_ADOPTER_ID_HBYTE) && (GET_MHL_RX3_ADOPTER_ID_LBYTE() == _SAMSUNG_NOTE2_ADOPTER_ID_LBYTE))
-                {
-                    SET_MHL_RX3_SWITCH_PORT_DISCOVERY_DONE();
-                }
-                else
-                {
-                    // Reset D3 CBUS While Non-NoteII
-                    ScalerMHLCBUSResetProc(_D3_INPUT_PORT);
-                }
-            }
-        }
-    }
-    else
-    {
-        ScalerMHLCBUSPhySwitch(_D3_INPUT_PORT, _OFF);
-
-        if(bSelect == _ON)
-        {
-            if(ScalerGetBit(P7C_18_IMPEDANCE_00, _BIT7) == 0x00)
-            {
-                SET_TMDS_RX3_Z0_ASSERTED();
-
-                // Clear HDCP Flag
-                ScalerSetBit(P72_A9_TMDS_ABC0, ~(_BIT7 | _BIT6 | _BIT5), (_BIT7 | _BIT6 | _BIT5));
-
-                // Initialize DDC Detection Process
-                CLR_TMDS_RX3_DDC_DETECTED();
-
-                // Enable DDC Toggle IRQ
-                MCU_FE72_DDC3_EDID_IRQ |= _BIT2;
-                MCU_FE72_DDC3_EDID_IRQ |= _BIT3;
-
-                // Enable Z0
-                ScalerSetBit(P7C_18_IMPEDANCE_00, ~(_BIT7 | _BIT6 | _BIT5 | _BIT4), (_BIT7 | _BIT6 | _BIT5 | _BIT4));
-            }
-        }
-        else
-        {
-            // Disable DDC Toggle IRQ
-            MCU_FE72_DDC3_EDID_IRQ &= ~(_BIT3 | _BIT1);
-
-            // Disable Z0
-            ScalerSetBit(P7C_18_IMPEDANCE_00, ~(_BIT7 | _BIT6 | _BIT5 | _BIT4), 0x00);
-
-#if((_HDCP_2_2_SUPPORT == _ON) && (_TMDS_HDCP_2_2_SUPPORT == _ON))
-            // Reset Hdcp2 Proc
-            ScalerHdcp2ResetTMDSProc(_D3_INPUT_PORT);
-#endif
-        }
-    }
-
-#else // Else of #if(_D3_INPUT_PORT_TYPE == _D3_MHL_PORT)
 
     if(bSelect == _ON)
     {
         // [1] MHL_Mode = 1'b0 --> Disable MHL Mode
-        ScalerSetBit(P7C_17_BANDGAP_03, ~_BIT1, 0x00);
+        RxSetBit(P7B_17_BANDGAP_03, ~_BIT1, 0x00);
 
         // [4] Disable MHL OP
-        ScalerSetBit(P7C_1B_CMU_01, ~_BIT4, 0x00);
+        RxSetBit(P7B_1B_CMU_01, ~_BIT4, 0x00);
 
-        if(ScalerGetBit(P7C_18_IMPEDANCE_00, _BIT7) == 0x00)
+        if(RxGetBit(P7B_18_IMPEDANCE_00, _BIT7) == 0x00)
         {
-#if(_D3_TMDS_SUPPORT == _ON)
-
-            SET_TMDS_RX3_Z0_ASSERTED();
+            RXSTMT(SET_TMDS_RX2_Z0_ASSERTED(), SET_TMDS_RX3_Z0_ASSERTED());
 
             // Clear HDCP Flag
-            ScalerSetBit(P72_A9_TMDS_ABC0, ~(_BIT7 | _BIT6 | _BIT5), (_BIT7 | _BIT6 | _BIT5));
+            RxSetBit(P71_A9_TMDS_ABC0, RXSEL(GDI_ABC0_HDCP_CLR_AND_D2, GDI_ABC0_HDCP_CLR_AND_D3), RXSEL(GDI_ABC0_HDCP_CLR_OR_D2, GDI_ABC0_HDCP_CLR_OR_D3));
 
             // Initialize DDC Detection Process
-            CLR_TMDS_RX3_DDC_DETECTED();
+            RXSTMT(CLR_TMDS_RX2_DDC_DETECTED(), CLR_TMDS_RX3_DDC_DETECTED());
 
             // Enable DDC Toggle IRQ
-            MCU_FE72_DDC3_EDID_IRQ |= _BIT2;
-            MCU_FE72_DDC3_EDID_IRQ |= _BIT3;
-
-#endif // End of #if(_D3_TMDS_SUPPORT == _ON)
+            *pucEdidIrq |= _BIT2;
+            *pucEdidIrq |= _BIT3;
 
             // Enable Z0
-            ScalerSetBit(P7C_18_IMPEDANCE_00, ~(_BIT7 | _BIT6 | _BIT5 | _BIT4), (_BIT7 | _BIT6 | _BIT5 | _BIT4));
+            RxSetBit(P7B_18_IMPEDANCE_00, ~(_BIT7 | _BIT6 | _BIT5 | _BIT4), (_BIT7 | _BIT6 | _BIT5 | _BIT4));
         }
     }
     else
     {
-#if(_D3_TMDS_SUPPORT == _ON)
-
         // Disable DDC Toggle IRQ
-        MCU_FE72_DDC3_EDID_IRQ &= ~(_BIT3 | _BIT1);
-#endif
-        // Disable Z0
-        ScalerSetBit(P7C_18_IMPEDANCE_00, ~(_BIT7 | _BIT6 | _BIT5 | _BIT4), 0x00);
+        *pucEdidIrq &= ~(_BIT3 | _BIT1);
 
-#if((_D3_INPUT_PORT_TYPE == _D3_HDMI_PORT) && (_TMDS_HDCP_2_2_SUPPORT == _ON) && (_HDCP_2_2_SUPPORT == _ON))
+        // Disable Z0
+        RxSetBit(P7B_18_IMPEDANCE_00, ~(_BIT7 | _BIT6 | _BIT5 | _BIT4), 0x00);
+
+#if((_TMDS_HDCP_2_2_SUPPORT == _ON) && (_HDCP_2_2_SUPPORT == _ON))
         // Reset Hdcp2 Proc
-        ScalerHdcp2ResetTMDSProc(_D3_INPUT_PORT);
+        ScalerHdcp2ResetTMDSProc(ucPort ? _D3_INPUT_PORT : _D2_INPUT_PORT);
 #endif
     }
-#endif // End of #if(_D3_INPUT_PORT_TYPE == _D3_MHL_PORT)
-}
 
+    RX_CUR = ucOld;
+}
 
 //--------------------------------------------------
 // Description  : GDI Bandgap Power On/Off
-// Input Value  : On/Off
+// Input Value  : ucPort (0 = D2, 1 = D3) ; On/Off
 // Output Value : None
 //--------------------------------------------------
-void ScalerGDIPhyRx3Power(EnumPowerAction enumPowerAction)
+void ScalerGDIPhyRxPower(BYTE ucPort, EnumPowerAction enumPowerAction)
 {
+    BYTE ucOld = RX_CUR;
+
+    RX_CUR = ucPort;
+
     switch(enumPowerAction)
     {
         case _POWER_ACTION_AC_ON_TO_NORMAL:
         case _POWER_ACTION_OFF_TO_NORMAL:
         case _POWER_ACTION_PS_TO_NORMAL:
 
-            ////////////////////////
-            // Clock Lane Enhance //
-            ////////////////////////
-
             // [5:4] reg_rxvcom_sel = 2'b01 --> VDD - 0.3V
-            ScalerSetBit(P7C_17_BANDGAP_03, ~(_BIT5 | _BIT4), _BIT4);
-
-
-            ////////////////////////
-            // Offset Calibration //
-            ////////////////////////
+            RxSetBit(P7B_17_BANDGAP_03, ~(_BIT5 | _BIT4), _BIT4);
 
             // [7] EN_BACK_OFFSET = 1'b1 --> Enable Background Offset Calibration
             // [6] EN_FORE_OFFSET = 1'b0 --> Disable Auto K-offset
             // [5] FORE_OFF_AUTOK = 1'b0 --> Disable Auto K-offset Auto Mode
-            ScalerSetBit(P7C_24_KOFFSET_00, ~(_BIT7 | _BIT6 | _BIT5), _BIT7);
-
-
-            //////////////
-            // Z0 AutoK //
-            //////////////
+            RxSetBit(P7B_24_KOFFSET_00, ~(_BIT7 | _BIT6 | _BIT5), _BIT7);
 
             // [0] Z0_manual = 1 --> Port2 50ohm Auto Mode
-            ScalerSetBit(P7C_17_BANDGAP_03, ~_BIT0, _BIT0);
+            RxSetBit(P7B_17_BANDGAP_03, ~_BIT0, _BIT0);
 
-#if(_D3_TMDS_Z0_IMPEDANCE_OPTION == _LG_90_OHM)
-            // [3:0] Z0_ADJR = 6 --> Z0 Differential Impedance = level 6
-            ScalerSetBit(P7C_18_IMPEDANCE_00, ~(_BIT3 | _BIT2 | _BIT1 | _BIT0), (_BIT2 | _BIT1));
-#else
-            // [3:0] Z0_ADJR = 9 --> Z0 Differential Impedance = level 9
-            ScalerSetBit(P7C_18_IMPEDANCE_00, ~(_BIT3 | _BIT2 | _BIT1 | _BIT0), (_BIT3 | _BIT0));
-#endif
+            // [3:0] Z0_ADJR --> Z0 Differential Impedance level (6 for LG 90 ohm, else 9)
+            RxSetBit(P7B_18_IMPEDANCE_00, ~(_BIT3 | _BIT2 | _BIT1 | _BIT0), RXSEL(GDI_Z0_ADJR_D2, GDI_Z0_ADJR_D3));
+
             // [2:0] Z0_CM_ADJR = 6 --> Z0 Common Mode Impedance = level 6
-            ScalerSetBit(P7C_19_IMPEDANCE_01, ~(_BIT2 | _BIT1 | _BIT0), (_BIT2 | _BIT1));
+            RxSetBit(P7B_19_IMPEDANCE_01, ~(_BIT2 | _BIT1 | _BIT0), (_BIT2 | _BIT1));
 
             // [7] p_channel_en = 1 --> Switch p Channel 50ohm Z0
             // [6] n_channel_en = 1 --> Switch n Channel 50ohm Z0
-            ScalerSetBit(P7C_17_BANDGAP_03, ~(_BIT7 | _BIT6), (_BIT7 | _BIT6));
-
-
-            ///////////////
-            // Reset PHY //
-            ///////////////
+            RxSetBit(P7B_17_BANDGAP_03, ~(_BIT7 | _BIT6), (_BIT7 | _BIT6));
 
             // [2:0] phy_si_reset_n = 4'b1111 --> Normal Digital PHY
-            ScalerSetBit(P7C_00_DIG_00, ~(_BIT2 | _BIT1 | _BIT0), (_BIT2 | _BIT1 | _BIT0));
+            RxSetBit(P7B_00_DIG_00, ~(_BIT2 | _BIT1 | _BIT0), (_BIT2 | _BIT1 | _BIT0));
 
             // [1] bypass_clk_rdy = 1 --> Manual Mode
-            ScalerSetBit(P7C_0E_SDM_03, ~_BIT1, _BIT1);
+            RxSetBit(P7B_0E_SDM_03, ~_BIT1, _BIT1);
 
             // [1] bypass_eqen_rdy = 1 --> Manual Mode
-            ScalerSetBit(P7C_10_EQEN_TIMER, ~_BIT1, _BIT1);
+            RxSetBit(P7B_10_EQEN_TIMER, ~_BIT1, _BIT1);
 
             // [1] bypass_data_rdy = 1 --> Manual Mode
-            ScalerSetBit(P7C_11_DATA_TIMER, ~_BIT1, _BIT1);
-
-
-            ////////////////////
-            // HDMI Interface //
-            ////////////////////
+            RxSetBit(P7B_11_DATA_TIMER, ~_BIT1, _BIT1);
 
             // Digital PHY Lane Swap Setting
-            ScalerSetByte(P7C_01_DIG_01, 0x24);
+            RxSetByte(P7B_01_DIG_01, 0x24);
 
             // Digital PHY P/N Swap Setting
-            ScalerSetBit(P7C_03_DIG_03, ~(_BIT6 | _BIT5 | _BIT4), 0x00);
+            RxSetBit(P7B_03_DIG_03, ~(_BIT6 | _BIT5 | _BIT4), 0x00);
 
             // Digital PHY Select to HDMI
-            ScalerSetBit(P7C_05_DIG_05, ~_BIT7, _BIT7);
+            RxSetBit(P7B_05_DIG_05, ~_BIT7, _BIT7);
 
             break;
 
@@ -1233,28 +770,18 @@ void ScalerGDIPhyRx3Power(EnumPowerAction enumPowerAction)
 
 #if(_SOURCE_BACKGROUND_DETECT_SUPPORT == _OFF)
             // Disable R/G/B RX_EN, Disable R/G/B/Clock CDR_EN
-            ScalerSetByte(P7C_1A_CMU_00, 0x80);
+            RxSetByte(P7B_1A_CMU_00, 0x80);
 
             // [7] Disable CMU PLL
-            ScalerSetBit(P7C_1B_CMU_01, ~_BIT7, 0x00);
+            RxSetBit(P7B_1B_CMU_01, ~_BIT7, 0x00);
 #endif
             // Disable Auto k-offset(foreground)
             // Disable Auto k-offset auto mode (foreground)
-            ScalerSetBit(P7C_24_KOFFSET_00, ~(_BIT6 | _BIT5), 0x00);
+            RxSetBit(P7B_24_KOFFSET_00, ~(_BIT6 | _BIT5), 0x00);
 
 #if(_TMDS_Z0_POWER_SAVING_OPTION == _ONLY_CLK_CHANNEL_CONNECTED_FOR_PS)
-
-#if(_D3_INPUT_PORT_TYPE == _D3_MHL_PORT)
-            if(GET_D3_TMDS_MODE() == _TMDS_HDMI_MODE)
-            {
-                // Disable RGB Z0
-                ScalerSetBit(P7C_18_IMPEDANCE_00, ~(_BIT6 | _BIT5 | _BIT4), 0x00);
-            }
-#else
             // Disable RGB Z0
-            ScalerSetBit(P7C_18_IMPEDANCE_00, ~(_BIT6 | _BIT5 | _BIT4), 0x00);
-#endif
-
+            RxSetBit(P7B_18_IMPEDANCE_00, ~(_BIT6 | _BIT5 | _BIT4), 0x00);
 #endif
             break;
 
@@ -1265,14 +792,14 @@ void ScalerGDIPhyRx3Power(EnumPowerAction enumPowerAction)
 
 #if(_SOURCE_BACKGROUND_DETECT_SUPPORT == _OFF)
             // Disable R/G/B RX_EN, Disable R/G/B/Clock CDR_EN
-            ScalerSetByte(P7C_1A_CMU_00, 0x00);
+            RxSetByte(P7B_1A_CMU_00, 0x00);
 
             // [7] Disable CMU PLL
-            ScalerSetBit(P7C_1B_CMU_01, ~_BIT7, 0x00);
+            RxSetBit(P7B_1B_CMU_01, ~_BIT7, 0x00);
 #endif
             // Disable Auto k-offset(foreground)
             // Disable Auto k-offset auto mode (foreground)
-            ScalerSetBit(P7C_24_KOFFSET_00, ~(_BIT6 | _BIT5), 0x00);
+            RxSetBit(P7B_24_KOFFSET_00, ~(_BIT6 | _BIT5), 0x00);
 
             break;
 
@@ -1280,5 +807,7 @@ void ScalerGDIPhyRx3Power(EnumPowerAction enumPowerAction)
 
             break;
     }
+
+    RX_CUR = ucOld;
 }
 #endif
