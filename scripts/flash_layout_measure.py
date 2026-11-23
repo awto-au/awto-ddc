@@ -16,7 +16,7 @@ import subprocess
 import sys
 from pathlib import Path
 
-import isostamp
+from _log import Logger
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from sdcc_overlay import repo_root
@@ -41,8 +41,7 @@ LOG = None
 
 
 def log(s):
-    line = f"{isostamp.now()} {s}"
-    print(line, flush=True); LOG.write(line + "\n"); LOG.flush()
+    LOG.say(s)
 
 
 def build(serial, tag, layout=None, edit=None):
@@ -90,7 +89,7 @@ def main() -> int:
     meas = ROOT / "tmp/meas"
     meas.mkdir(parents=True, exist_ok=True)
     (ROOT / "tmp/logs").mkdir(parents=True, exist_ok=True)
-    LOG = (ROOT / "tmp/logs/flash_layout_measure.log").open("a")
+    LOG = Logger(ROOT / "tmp/logs/flash_layout_measure.log")
     lay0 = ROOT / a.layout
     res = {}
 

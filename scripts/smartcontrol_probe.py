@@ -16,7 +16,7 @@ import sys
 import time
 import urllib.request
 
-import isostamp
+from _log import Logger
 
 ROOT = os.environ.get("AWTO_DDC_REPO") or os.path.dirname(
     os.path.dirname(os.path.abspath(__file__))
@@ -24,14 +24,11 @@ ROOT = os.environ.get("AWTO_DDC_REPO") or os.path.dirname(
 PORT = 19400
 BASE = "http://127.0.0.1:%d/Main/" % PORT
 HERE = os.path.join(ROOT, "scripts/smartcontrol_wine.py")
-LOG = open(os.path.join(ROOT, "tmp/logs/smartcontrol_probe.log"), "a")
+LOG = Logger(os.path.join(ROOT, "tmp/logs/smartcontrol_probe.log"))
 
 
 def say(msg):
-    line = f"{isostamp.now()} {msg}"
-    LOG.write(line + "\n")
-    LOG.flush()
-    print(line)
+    LOG.say(msg)
 
 
 def get(path, limit):

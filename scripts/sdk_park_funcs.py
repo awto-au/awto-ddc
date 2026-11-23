@@ -12,7 +12,7 @@ Log: ./tmp/logs/sdk_park_funcs.log
 import re
 import sys
 
-import isostamp
+from _log import Logger
 from _repo import ROOT
 
 SDK, PARK = ROOT / "fw/sdk", ROOT / "fw/sdk-parked"
@@ -28,10 +28,7 @@ LOG = None
 
 
 def log(s):
-    line = f"{isostamp.now()} {s}"
-    print(line)
-    LOG.write(line + "\n")
-    LOG.flush()
+    LOG.say(s)
 
 
 def code_braces(line, in_comment):
@@ -150,7 +147,7 @@ def cmd_restore(paths):
 def main():
     global LOG
     (ROOT / "tmp/logs").mkdir(parents=True, exist_ok=True)
-    LOG = (ROOT / "tmp/logs/sdk_park_funcs.log").open("a")
+    LOG = Logger(ROOT / "tmp/logs/sdk_park_funcs.log")
     cmd = sys.argv[1] if len(sys.argv) > 1 else ""
     if cmd == "plan":
         cmd_plan()

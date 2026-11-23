@@ -17,7 +17,7 @@ import subprocess
 import sys
 import time
 
-import isostamp
+from _log import Logger
 from _repo import repo_root
 
 ROOT = repo_root()
@@ -28,8 +28,7 @@ LOG = None
 
 
 def say(s):
-    line = f"{isostamp.now()} {s}"
-    print(line); LOG.write(line + "\n"); LOG.flush()
+    LOG.say(s)
 
 
 def git(*a, cwd=ROOT):
@@ -44,7 +43,7 @@ def main() -> int:
     ap.add_argument("--keep", action="store_true")
     a = ap.parse_args()
     (ROOT / "tmp/logs").mkdir(parents=True, exist_ok=True)
-    LOG = (ROOT / "tmp/logs/fw_variants.log").open("a")
+    LOG = Logger(ROOT / "tmp/logs/fw_variants.log")
     names = [n for n in VARIANTS if not a.only or n in a.only.split(",")]
     head = git("rev-parse", "--short", "HEAD").stdout.strip()
     say(f"variants {names} at HEAD {head}")

@@ -16,7 +16,7 @@ import sys
 from collections import Counter, defaultdict
 from pathlib import Path
 
-import isostamp
+from _log import Logger
 from _repo import repo_root
 
 ROOT = repo_root()
@@ -26,13 +26,11 @@ ASMDIR = ROOT / "tmp" / "sdcc-port" / "asm"
 OUT = ROOT / "re" / "keil_sdcc_scan.tsv"
 LOGF = ROOT / "tmp" / "logs" / "keil_sdcc_scan.log"
 LOGF.parent.mkdir(parents=True, exist_ok=True)
-LOG = open(LOGF, "w")
+LOG = Logger(LOGF, mode="w")
 
 
 def log(s):
-    line = f"{isostamp.now()} {s}"
-    print(line)
-    LOG.write(line + "\n"); LOG.flush()
+    LOG.say(s)
 
 
 OTHER_CHIPS = re.compile(r"RL6369|RL6410|RL6432|RL6463|RL6492|None Factory|NoneOsd|NoneFunction")

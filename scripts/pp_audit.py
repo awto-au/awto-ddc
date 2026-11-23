@@ -31,7 +31,7 @@ from collections import defaultdict
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
-import isostamp
+from _log import Logger
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import fw_compile as FC
@@ -48,10 +48,7 @@ LOG = None
 
 
 def log(s):
-    line = f"{isostamp.now()} {s}"
-    print(line)
-    LOG.write(line + "\n")
-    LOG.flush()
+    LOG.say(s)
 
 
 def rel(p) -> str:
@@ -272,7 +269,7 @@ def value_ident(name, table, depth=0):
 def main() -> int:
     global LOG
     (ROOT / "tmp/logs").mkdir(parents=True, exist_ok=True)
-    LOG = (ROOT / "tmp/logs/pp_audit.log").open("a")
+    LOG = Logger(ROOT / "tmp/logs/pp_audit.log")
     a = sys.argv[1:]
     check = "--check" in a
     report = Path(a[a.index("--report") + 1]) if "--report" in a else None

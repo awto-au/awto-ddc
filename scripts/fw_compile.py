@@ -30,6 +30,7 @@ import place_rules as PR
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import sdcc_tools as T
+from _log import Logger
 from _repo import repo_root
 
 ROOT = repo_root()
@@ -44,9 +45,7 @@ LOG = None
 
 
 def log(s):
-    line = f"{isostamp.now()} {s}"
-    print(line)
-    LOG.write(line + "\n"); LOG.flush()
+    LOG.say(s)
 
 
 def _resolve_clean():
@@ -492,7 +491,7 @@ def print_hist(rep, n=25):
 def main():
     global LOG
     (ROOT / "tmp" / "logs").mkdir(parents=True, exist_ok=True)
-    LOG = (ROOT / "tmp" / "logs" / "fw_compile.log").open("a")
+    LOG = Logger(ROOT / "tmp" / "logs" / "fw_compile.log")
     a = sys.argv[1:]
     if not a or a[0] in ("-h", "--help"):
         print(__doc__); return 2

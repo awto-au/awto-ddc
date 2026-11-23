@@ -19,7 +19,7 @@ import sys
 from pathlib import Path
 
 import chip_mem as CM
-import isostamp
+from _log import Logger
 
 HERE = Path(__file__).resolve().parent
 COMMON_END = CM.COMMON_END
@@ -30,10 +30,7 @@ LOG = None
 
 
 def say(s):
-    line = f"{isostamp.now()} {s}"
-    print(line, flush=True)
-    LOG.write(line + "\n")
-    LOG.flush()
+    LOG.say(s)
 
 
 def sh(root, *cmd, timeout=900):
@@ -89,7 +86,7 @@ def main():
     a = ap.parse_args()
     root = a.tree.resolve()
     (root / "tmp/logs").mkdir(parents=True, exist_ok=True)
-    LOG = (root / "tmp/logs/stats.log").open("a")
+    LOG = Logger(root / "tmp/logs/stats.log")
     hdr = ["image", "flash_common", "flash_banked", "iram_used", "iram_free", "xdata_used", "xdata_free", "stack_main", "stack_nest_normal", "stack_nest_ps",
            "cycles_pass", "work", "busy_pct", "worst_ms", "passes_s", "freerun_est_s", "headroom_x"]
     say("\t".join(hdr))

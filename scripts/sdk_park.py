@@ -17,7 +17,7 @@ import subprocess
 import sys
 from pathlib import Path
 
-import isostamp
+from _log import Logger
 from _repo import ROOT
 
 SDK, PARK = ROOT / "fw/sdk", ROOT / "fw/sdk-parked"
@@ -37,8 +37,7 @@ LOG = None
 
 
 def log(s):
-    line = f"{isostamp.now()} {s}"
-    print(line); LOG.write(line + "\n"); LOG.flush()
+    LOG.say(s)
 
 
 def zero_modules():
@@ -83,7 +82,7 @@ def main() -> int:
     global LOG
     (ROOT / "tmp/logs").mkdir(parents=True, exist_ok=True)
     (ROOT / "tmp/audit").mkdir(parents=True, exist_ok=True)
-    LOG = (ROOT / "tmp/logs/sdk_park.log").open("a")
+    LOG = Logger(ROOT / "tmp/logs/sdk_park.log")
     a = sys.argv[1:]
     if not a or a[0] not in ("list", "move"):
         print(__doc__); return 2

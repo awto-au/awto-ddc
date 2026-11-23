@@ -21,7 +21,7 @@ import sys
 from collections import Counter
 from pathlib import Path
 
-import isostamp
+from _log import Logger
 
 ROOT = Path(os.environ.get("AWTO_DDC_REPO") or subprocess.run(
     ["git", "rev-parse", "--show-toplevel"], cwd=Path(__file__).parent, capture_output=True, text=True, check=False).stdout.strip())
@@ -32,9 +32,7 @@ LOG = None
 
 
 def log(s):
-    line = f"{isostamp.now()} {s}"
-    print(line)
-    LOG.write(line + "\n"); LOG.flush()
+    LOG.say(s)
 
 
 COMMENT = re.compile(r'//[^\n]*|/\*.*?\*/|"(?:[^"\\\n]|\\.)*"', re.DOTALL)
@@ -201,7 +199,7 @@ def main():
     if out.exists() and any(out.iterdir()):
         raise SystemExit(f"sdk_import: --out {out} is not empty; refusing (pick a new directory)")
     (ROOT / "tmp" / "logs").mkdir(parents=True, exist_ok=True)
-    LOG = (ROOT / "tmp" / "logs" / "sdk_import.log").open("a")
+    LOG = Logger(ROOT / "tmp" / "logs" / "sdk_import.log")
     want = [l.strip() for l in a.manifest.read_text().splitlines() if l.strip() and not l.startswith("#")]
     idx, sfr_addr, using = scan_mirror()
     stats, n, miss = Counter(), 0, []

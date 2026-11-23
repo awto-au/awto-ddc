@@ -16,7 +16,7 @@ import subprocess
 import sys
 from collections import Counter
 
-import isostamp
+from _log import Logger
 from _repo import repo_root
 
 ROOT = repo_root()
@@ -27,9 +27,7 @@ LOG = None
 
 
 def log(s):
-    line = f"{isostamp.now()} {s}"
-    print(line)
-    LOG.write(line + "\n"); LOG.flush()
+    LOG.say(s)
 
 
 def fw_tag(root) -> str:
@@ -253,7 +251,7 @@ def cmd_port():
 def main():
     global LOG
     (ROOT / "tmp" / "logs").mkdir(parents=True, exist_ok=True)
-    LOG = (ROOT / "tmp" / "logs" / "msg_tokenise.log").open("a")
+    LOG = Logger(ROOT / "tmp" / "logs" / "msg_tokenise.log")
     if sys.argv[1:] == ["port"]:
         return cmd_port()
     print(__doc__)

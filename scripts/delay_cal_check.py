@@ -25,7 +25,7 @@ from collections import Counter, defaultdict
 from pathlib import Path
 
 import chip_mem as CM
-import isostamp
+from _log import Logger
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import d8051
@@ -47,8 +47,7 @@ LOG = None
 
 
 def log(s):
-    print(s, flush=True)
-    LOG.write(f"{isostamp.now()} {s}\n"); LOG.flush()
+    LOG.say(s)
 
 
 def dw_cycles(op: int, n: int) -> int:
@@ -318,7 +317,7 @@ def main() -> int:
     ap.add_argument("--layout", default="", help="fn/const classification of the chunks (default: the image's own bank_layout.tsv, fw_link_check.layout_of)")
     a = ap.parse_args()
     (ROOT / "tmp/logs").mkdir(parents=True, exist_ok=True)
-    LOG = (ROOT / "tmp/logs/delay_cal_check.log").open("a")
+    LOG = Logger(ROOT / "tmp/logs/delay_cal_check.log", stamp_echo=False)
     be = a.be or "-be" in a.bin.name
     log(f"delay_cal_check {a.bin.name} (vendor ref {a.vendor.name if a.vendor and a.vendor.exists() else 'none'})")
     im = L.Image(a.bin, a.map, a.layout or str(L.layout_of(a.bin, ROOT)), a.common)

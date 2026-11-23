@@ -12,15 +12,14 @@ import re
 import sys
 from pathlib import Path
 
-import isostamp
+from _log import Logger
 from _repo import ROOT
 
 LOG = None
 
 
 def log(s):
-    line = f"{isostamp.now()} {s}"
-    print(line); LOG.write(line + "\n"); LOG.flush()
+    LOG.say(s)
 
 
 def subst(cond: str, vals: dict) -> str:
@@ -187,7 +186,7 @@ def process(text: str, vals: dict):
 def main() -> int:
     global LOG
     (ROOT / "tmp/logs").mkdir(parents=True, exist_ok=True)
-    LOG = (ROOT / "tmp/logs/unifdef_opt.log").open("a")
+    LOG = Logger(ROOT / "tmp/logs/unifdef_opt.log")
     a = sys.argv[1:]
     if "--" not in a:
         print(__doc__); return 2

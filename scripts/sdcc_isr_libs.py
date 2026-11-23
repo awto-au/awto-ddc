@@ -23,7 +23,7 @@ import sys
 from collections import defaultdict
 from pathlib import Path
 
-import isostamp
+from _log import Logger
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import sdcc_tools as T
@@ -42,8 +42,7 @@ LOG = None
 
 
 def log(s):
-    line = f"{isostamp.now()} {s}"
-    print(line); LOG.write(line + "\n"); LOG.flush()
+    LOG.say(s)
 
 
 # IP state: 0xA0 -> Timer2 high, 0x81 -> EXINT0 high (SDK writes both; EIP never written). Class "" = always low.
@@ -134,7 +133,7 @@ def main() -> int:
     ap.add_argument("--out", default=str(ROOT / "tmp/sdcc-port/isr_libs"))
     a = ap.parse_args()
     (ROOT / "tmp/logs").mkdir(parents=True, exist_ok=True)
-    LOG = (ROOT / "tmp/logs/sdcc_isr_libs.log").open("a")
+    LOG = Logger(ROOT / "tmp/logs/sdcc_isr_libs.log")
     out = Path(a.out)
     for f in out.glob("*.asm") if out.exists() else []:
         f.unlink()                                          # derived

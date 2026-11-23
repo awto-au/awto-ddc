@@ -16,7 +16,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import asteroids_dvg as D
-import isostamp
+from _log import Logger
 from _repo import repo_root
 
 STEPS = 16                      # ship angles per quarter turn
@@ -61,10 +61,7 @@ LOG = None
 
 
 def say(s):
-    line = f"{isostamp.now()} {s}"
-    LOG.write(line + "\n")
-    LOG.flush()
-    print(line, flush=True)
+    LOG.say(s)
 
 
 def rot(p, deg):
@@ -168,7 +165,7 @@ def main():
     ap.add_argument("--check", action="store_true", help="exit 1 when the file on disk differs (nothing written)")
     a = ap.parse_args()
     (root / "tmp/logs").mkdir(parents=True, exist_ok=True)
-    LOG = (root / "tmp/logs/gen_asteroids.log").open("a")
+    LOG = Logger(root / "tmp/logs/gen_asteroids.log")
     sh, src = None, "fallback"
     if not a.fallback and Path(a.zip).is_file():
         try:

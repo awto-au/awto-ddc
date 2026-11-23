@@ -23,7 +23,7 @@ import sys
 from collections import defaultdict
 from pathlib import Path
 
-import isostamp
+from _log import Logger
 from _repo import repo_root
 
 ROOT = repo_root()
@@ -42,8 +42,7 @@ FUNC_HDR = re.compile(r"^;\s+function (\w+)\s*$")
 
 
 def log(s):
-    line = f"{isostamp.now()} {s}"
-    print(line); LOG.write(line + "\n"); LOG.flush()
+    LOG.say(s)
 
 
 class Module:
@@ -169,7 +168,7 @@ def main():
     out_dir = Path(opt("--out", ROOT / "tmp/sdcc-port/asm_ovl"))
     xlimit, dlimit = int(opt("--xlimit", 8192)), int(opt("--dlimit", 0))
     (ROOT / "tmp/logs").mkdir(parents=True, exist_ok=True)
-    LOG = (ROOT / "tmp/logs/sdcc_overlay.log").open("a")
+    LOG = Logger(ROOT / "tmp/logs/sdcc_overlay.log")
 
     mods = [Module(p) for p in sorted(asm_dir.rglob("*.asm"))]
     log(f"{len(mods)} modules from {asm_dir}")

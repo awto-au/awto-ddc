@@ -22,7 +22,7 @@ import sys
 import time
 from pathlib import Path
 
-import isostamp
+from _log import Logger
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import fw_compile as FC
@@ -39,8 +39,7 @@ LOG = None
 
 
 def log(s):
-    line = f"{isostamp.now()} {s}"
-    print(line); LOG.write(line + "\n"); LOG.flush()
+    LOG.say(s)
 
 
 def cpp(probe: Path, extra):
@@ -186,7 +185,7 @@ def cmd_toggle(names, tag, patch_file=None):
 def main():
     global LOG
     (ROOT / "tmp/logs").mkdir(parents=True, exist_ok=True)
-    LOG = (ROOT / "tmp/logs/sdk_option_audit.log").open("a")
+    LOG = Logger(ROOT / "tmp/logs/sdk_option_audit.log")
     a = sys.argv[1:]
     if a and a[0] == "linked":
         cmd_linked(); return 0

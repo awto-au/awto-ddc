@@ -16,7 +16,7 @@ import sys
 from collections import defaultdict
 from pathlib import Path
 
-import isostamp
+from _log import Logger
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from sdcc_overlay import repo_root
@@ -35,8 +35,7 @@ LOG = None
 
 
 def log(s):
-    line = f"{isostamp.now()} {s}"
-    print(line); LOG.write(line + "\n"); LOG.flush()
+    LOG.say(s)
 
 
 def objects(asm_dir: Path):
@@ -168,7 +167,7 @@ def main() -> int:
     ap.add_argument("--map", default=str(ROOT / "tmp/fw/AWT26110003/fw.map"))
     a = ap.parse_args()
     (ROOT / "tmp/logs").mkdir(parents=True, exist_ok=True)
-    LOG = (ROOT / "tmp/logs/iram_names.log").open("a")
+    LOG = Logger(ROOT / "tmp/logs/iram_names.log")
     objs, funcs = objects(Path(a.asm))
     mp = Path(a.map).read_text(errors="replace") if Path(a.map).exists() else ""
     addr = addr_of(mp)
