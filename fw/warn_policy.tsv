@@ -61,7 +61,7 @@
 ^unreachable code$	Kernel/Scaler/ScalerCommonFunction/Code/ScalerCommonNVRam.c	551	ok	OK-CONFIG: MCU_SET_BYTE_WITH_CKCON(...,_CKCON_MCU_SLOW_CYCLE): _CKCON_MCU_SLOW_CYCLE==_CKCON_MOVX_DEFAULT_CYCLE (0) because _LOCAL_DIMMING_SUPPORT is off, so the CKCON-slowing else arm is dead (same as Keil build with this config)
 ^unreachable code$	Kernel/Scaler/ScalerCommonFunction/Code/ScalerCommonNVRam.c	559	ok	OK-CONFIG: MCU_SET_BYTE_WITH_CKCON(...,_CKCON_MCU_SLOW_CYCLE): _CKCON_MCU_SLOW_CYCLE==_CKCON_MOVX_DEFAULT_CYCLE (0) because _LOCAL_DIMMING_SUPPORT is off, so the CKCON-slowing else arm is dead (same as Keil build with this config)
 ^unreachable code$	Kernel/Scaler/ScalerCommonFunction/Code/ScalerCommonNVRam.c	564	ok	OK-CONFIG: MCU_SET_BYTE_WITH_CKCON(...,_CKCON_MCU_SLOW_CYCLE): _CKCON_MCU_SLOW_CYCLE==_CKCON_MOVX_DEFAULT_CYCLE (0) because _LOCAL_DIMMING_SUPPORT is off, so the CKCON-slowing else arm is dead (same as Keil build with this config)
-^conditional flow changed by optimizer	Kernel/Scaler/ScalerCommonFunction/Code/ScalerCommonSync.c	4186	ok	OK-HARMLESS: switch(ucSourceType) cases empty for this config and merge into default
+^conditional flow changed by optimizer	Kernel/Scaler/ScalerCommonFunction/Code/ScalerCommonSync.c	3452	ok	OK-HARMLESS: switch(ucSourceType) cases empty for this config and merge into default
 ^unreachable code$	Kernel/Scaler/ScalerFunction/Code/ScalerDisplayDPTx.c	210	ok	OK-CONFIG: _PANEL_DPTX_LT_TPS3 / 0x14>=0x14 constant (HBR2 panel) so outer else dead
 ^unreachable code$	Kernel/Scaler/ScalerFunction/Code/ScalerDisplayDPTx.c	223	ok	OK-CONFIG: _PANEL_DPTX_LANE_NUMBER==4 constant; 2- and 1-lane arms dead
 ^unreachable code$	Kernel/Scaler/ScalerFunction/Code/ScalerDisplayDPTx.c	227	ok	OK-CONFIG: _PANEL_DPTX_LANE_NUMBER==4 constant; 2- and 1-lane arms dead
@@ -73,8 +73,8 @@
 ^conditional flow changed by optimizer	Kernel/Scaler/ScalerFunction/Code/ScalerDPRx1_INT_SeptPhy.c	779	ok	OK-HARMLESS: lane-count switch: _DP_FOUR_LANE shares body with default; compare dropped, same dispatch
 ^conditional flow changed by optimizer	Kernel/Scaler/ScalerFunction/Code/ScalerDPRx1_SeptPhy.c	1356	ok	OK-HARMLESS: lane-count switch: default and _DP_FOUR_LANE share body; same dispatch
 ^conditional flow changed by optimizer	Kernel/Scaler/ScalerFunction/Code/ScalerDPRx1_SeptPhy.c	1511	ok	OK-HARMLESS: lane-count switch: default and _DP_FOUR_LANE share body; same dispatch
-^conditional flow changed by optimizer	Kernel/Scaler/ScalerFunction/Code/ScalerDPRx1_SeptPhy.c	3486	ok	OK-HARMLESS: lane-count switch: default and _DP_FOUR_LANE share body; same dispatch
-^conditional flow changed by optimizer	Kernel/Scaler/ScalerFunction/Code/ScalerDPRx1_SeptPhy.c	4122	ok	OK-HARMLESS: both arms are ((void)0) debug stubs; ScalerDpRx1InterlaceCheck() call (writes usDpVtotal) is kept
+^conditional flow changed by optimizer	Kernel/Scaler/ScalerFunction/Code/ScalerDPRx1_SeptPhy.c	2170	ok	OK-HARMLESS: lane-count switch: default and _DP_FOUR_LANE share body; same dispatch
+^conditional flow changed by optimizer	Kernel/Scaler/ScalerFunction/Code/ScalerDPRx1_SeptPhy.c	2762	ok	OK-HARMLESS: both arms are ((void)0) debug stubs; ScalerDpRx1InterlaceCheck() call (writes usDpVtotal) is kept
 ^conditional flow changed by optimizer	Kernel/Scaler/ScalerFunction/Code/ScalerDP_SeptPhy.c	1119	ok	OK-CONFIG: _DP_MST_SUPPORT off: NORMAL_TO_FAKE_OFF case empty, equals default
 ^unreachable code$	Kernel/Scaler/ScalerFunction/Code/ScalerMemory.c	194	ok	OK-CONFIG: _VSU_INI_PHASE_LINES==_VSU_4_LINE constant; 3-line arm dead
 ^unreachable code$	Kernel/Scaler/ScalerFunction/Code/ScalerMemory.c	541	ok	OK-CONFIG: GET_D_DOMAIN_REQUEST() is (_1_LINE_AFTER_DVS) for RL6449, so the _7_LINES_BEFORE_DEN block is dead

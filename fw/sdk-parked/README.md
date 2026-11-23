@@ -25,3 +25,7 @@
 | qc | 11 | Realtek QC self-tests (BIST, colour, OSD, DSPC) | factory QC, not built |
 | memory | 7 | DDR1 / DDR3 / SDRAM, FRC, rotation, MBR | DDR2 board; FRC / rotation off (rotation planned, #165 list) |
 | misc | 18 | IR (planned), SPI, TCON, power, PLL common, two-chip data exchange, digital signature, LED drivers, 3D / RGB gamma, user boot | options off; each compiled to 0 B |
+
+## Parked function blocks (same path as the live file, #305)
+- `ScalerDPRx1_SeptPhy.c`, `ScalerCommonDPRx1.c`, `ScalerCommonSync.c`: DpRx1 MST (+ HDCP repeater, MST-to-SST), DP HDCP 2.2 and FreeSync `#if(<FEATURE> == _ON)` blocks cut out of the live file; those options are `_OFF`, so 0 B in the image (#44, #21). Headers and prototypes stay in `fw/sdk`.
+- Restore: set the option `_ON`, `python3 scripts/sdk_park_funcs.py restore` (appends the parked units to the live file, deletes the parked file), build, gates. Re-park: `sdk_park_funcs.py move`.
