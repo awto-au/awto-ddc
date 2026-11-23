@@ -22,6 +22,16 @@ def areas(map_text: str) -> dict:
     return out
 
 
+def iram_areas(map_text: str) -> dict:
+    """{name: size} of the IRAM areas the common-region report lists beside the code (SSEG stack, DDOVL overlay, REG_BANK_*)."""
+    out = {}
+    for line in map_text.splitlines():
+        m = AREA.match(line)
+        if m and (m.group(1) in ("SSEG", "DDOVL") or m.group(1).startswith("REG_BANK")):
+            out[m.group(1)] = int(m.group(4))
+    return out
+
+
 def layout_slots(layout: Path) -> dict:
     """{'resid_end', 'stub_slots', 'chunk_slots', 'stubs', 'chunks'} of the region C rows of a bank_layout.tsv."""
     r = {"resid_end": CM.RESID_END, "stubs": 0, "stub_slots": 0, "chunks": 0, "chunk_slots": 0}
@@ -58,7 +68,7 @@ def measure(map_path: Path, layout: Path | None = None) -> dict:
                      "stubs": cls["stub"][0], "stub_bytes": cls["stub"][1],
                      "chunks": cls["chunk"][0], "chunk_bytes": cls["chunk"][1],
                      "residual": dict(sorted(resid.items(), key=lambda kv: -kv[1])), "residual_bytes": sum(resid.values())},
-           "top_chunks": top}
+           "iram_areas": iram_areas(map_path.read_text(errors="replace")), "top_chunks": top}
     if layout is not None and layout.is_file():
         s = layout_slots(layout)
         used = s["resid_end"] + s["stub_slots"] + s["chunk_slots"]
@@ -77,6 +87,7 @@ def lines(rec: dict) -> list[str]:
         s = rec["slots"]
         out.append(f"common slots: used {s['used']} free {s['free']} = residual {s['resid_end']} + stub slots {s['stub_slot_bytes']} ({s['stub_rows']} rows) + "
                    f"chunk slots {s['chunk_slot_bytes']} ({s['chunk_rows']} rows)")
+    out.append("common-side IRAM areas: " + ", ".join(f"{k} {v}" for k, v in rec["iram_areas"].items()))
     out.append("common top chunks: " + ", ".join(f"{t['name']} {t['bytes']}" for t in rec["top_chunks"]))
     return out
 

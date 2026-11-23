@@ -55,6 +55,8 @@ class Layout:
         """SystemExit if the file's recorded common / resid_end differ from this build's (every slot offset would shift)."""
         for key, want in (("common", common), ("resid_end", resid_end)):
             have = self.header.get(key)
+            if key == "resid_end" and have is not None and want < int(have, 0):
+                continue                        # a lower resid_end only frees common below the first row: no slot moves (#44)
             if have is not None and int(have, 0) != want:
                 raise SystemExit(f"layout: {path} was made with {key}={have}, this build has {key}={hex(want)}; "
                                  f"refusing (slots would shift). Rebuild with the matching args or delete the layout.")
