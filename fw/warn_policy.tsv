@@ -65,12 +65,12 @@
 ^unreachable code$	Kernel/Scaler/ScalerFunction/Code/ScalerDisplayDPTx.c	210	ok	OK-CONFIG: _PANEL_DPTX_LT_TPS3 / 0x14>=0x14 constant (HBR2 panel) so outer else dead
 ^unreachable code$	Kernel/Scaler/ScalerFunction/Code/ScalerDisplayDPTx.c	223	ok	OK-CONFIG: _PANEL_DPTX_LANE_NUMBER==4 constant; 2- and 1-lane arms dead
 ^unreachable code$	Kernel/Scaler/ScalerFunction/Code/ScalerDisplayDPTx.c	227	ok	OK-CONFIG: _PANEL_DPTX_LANE_NUMBER==4 constant; 2- and 1-lane arms dead
-^conditional flow changed by optimizer	Kernel/Scaler/ScalerFunction/Code/ScalerDPRx1_INT_SeptPhy.c	1567	ok	OK-HARMLESS: lane-count switch: _DP_FOUR_LANE shares body with default; compare dropped, same dispatch
-^conditional flow changed by optimizer	Kernel/Scaler/ScalerFunction/Code/ScalerDPRx1_INT_SeptPhy.c	1618	ok	OK-HARMLESS: lane-count switch: _DP_FOUR_LANE shares body with default; compare dropped, same dispatch
-^conditional flow changed by optimizer	Kernel/Scaler/ScalerFunction/Code/ScalerDPRx1_INT_SeptPhy.c	234	ok	OK-CONFIG: if body empty because _DP_HBR_RBR_LT_FORCE_MARGINAL_LINK!=_OFF compiled out the Tp1SetPhy call; condition on g_ucDpRx1LinkRate removed
-^conditional flow changed by optimizer	Kernel/Scaler/ScalerFunction/Code/ScalerDPRx1_INT_SeptPhy.c	284	ok	OK-HARMLESS: lane-count switch: _DP_FOUR_LANE shares body with default; compare dropped, same dispatch
-^conditional flow changed by optimizer	Kernel/Scaler/ScalerFunction/Code/ScalerDPRx1_INT_SeptPhy.c	908	ok	OK-HARMLESS: lane-count switch: _DP_FOUR_LANE shares body with default; compare dropped, same dispatch
-^conditional flow changed by optimizer	Kernel/Scaler/ScalerFunction/Code/ScalerDPRx1_INT_SeptPhy.c	996	ok	OK-HARMLESS: lane-count switch: _DP_FOUR_LANE shares body with default; compare dropped, same dispatch
+^conditional flow changed by optimizer	Kernel/Scaler/ScalerFunction/Code/ScalerDPRx1_INT_SeptPhy.c	1159	ok	OK-HARMLESS: lane-count switch: _DP_FOUR_LANE shares body with default; compare dropped, same dispatch
+^conditional flow changed by optimizer	Kernel/Scaler/ScalerFunction/Code/ScalerDPRx1_INT_SeptPhy.c	1210	ok	OK-HARMLESS: lane-count switch: _DP_FOUR_LANE shares body with default; compare dropped, same dispatch
+^conditional flow changed by optimizer	Kernel/Scaler/ScalerFunction/Code/ScalerDPRx1_INT_SeptPhy.c	530	ok	OK-CONFIG: if body empty because _DP_HBR_RBR_LT_FORCE_MARGINAL_LINK!=_OFF compiled out the Tp1SetPhy call; condition on g_ucDpRx1LinkRate removed
+^conditional flow changed by optimizer	Kernel/Scaler/ScalerFunction/Code/ScalerDPRx1_INT_SeptPhy.c	363	ok	OK-HARMLESS: lane-count switch: _DP_FOUR_LANE shares body with default; compare dropped, same dispatch
+^conditional flow changed by optimizer	Kernel/Scaler/ScalerFunction/Code/ScalerDPRx1_INT_SeptPhy.c	864	ok	OK-HARMLESS: lane-count switch: _DP_FOUR_LANE shares body with default; compare dropped, same dispatch
+^conditional flow changed by optimizer	Kernel/Scaler/ScalerFunction/Code/ScalerDPRx1_INT_SeptPhy.c	776	ok	OK-HARMLESS: lane-count switch: _DP_FOUR_LANE shares body with default; compare dropped, same dispatch
 ^conditional flow changed by optimizer	Kernel/Scaler/ScalerFunction/Code/ScalerDPRx1_SeptPhy.c	1356	ok	OK-HARMLESS: lane-count switch: default and _DP_FOUR_LANE share body; same dispatch
 ^conditional flow changed by optimizer	Kernel/Scaler/ScalerFunction/Code/ScalerDPRx1_SeptPhy.c	1511	ok	OK-HARMLESS: lane-count switch: default and _DP_FOUR_LANE share body; same dispatch
 ^conditional flow changed by optimizer	Kernel/Scaler/ScalerFunction/Code/ScalerDPRx1_SeptPhy.c	3486	ok	OK-HARMLESS: lane-count switch: default and _DP_FOUR_LANE share body; same dispatch

@@ -2484,6 +2484,7 @@ fn	_AwtoPutPassName	6	0x9e60	64
 const	_tAwtoPassName	6	0x9ea0	656
 fn	_ScalerDpRx1Tp1SetPhy_EXINT0	7	0x0000	1928
 fn	_ScalerDpRx1Tp2SetPhy_EXINT0	7	0x0788	1464
+fn	_ScalerDpRx1Tp2LaneCheck_EXINT0	7	0x0d40	848
 fn	_ScalerDpExitIntSetting_EXINT0	7	0x1328	20
 fn	_ScalerDpIntHandler_EXINT0	7	0x133c	8
 fn	_ScalerTMDSIntHandler_EXINT0	7	0x1344	12
@@ -2531,6 +2532,7 @@ fn	_ScalerTMDSRxTMDSStableDetect	7	0x984c	956
 fn	_ScalerDpAuxJudgeHandler_EXINT0	7	0x9c08	1564
 fn	_AwtoSyncPush	7	0xa224	2112
 fn	_ScalerDpRx1DFELaneCheck_EXINT0	7	0xaa64	88
+fn	_ScalerDpRx1Tp1LaneCheck_EXINT0	7	0xaabc	1176
 const	_g_tAstData	8	0x0000	692
 const	_g_tAstOff	8	0x02b4	112
 const	_s_tAstBit	8	0x0324	12

@@ -1,6 +1,9 @@
 # module	hole	offset	slot   (scripts/xdata_layout.py; one fixed XDATA slot per module, fw/xdata_layout.tsv)
 ScalerAudio_SeptPhy	0xd700	0	5
 ScalerDisplayDPTx	0xd700	5	77
+_gptrput_isr	0xd700	109	4
+_gptrget_isr	0xd700	113	3
+ScalerDPRx1_INT_SeptPhy	0xd700	116	36
 keytest	0xd700	169	154
 awto_settings_menu	0xd700	323	135
 ScalerMDomain	0xd700	458	132
@@ -52,7 +55,6 @@ RL6449_Series_Measure	0xd700	2700	15
 ScalerFRC	0xd700	2715	15
 settings_glue	0xd700	2730	15
 testcmd	0xd700	2745	14
-ScalerDPRx1_INT_SeptPhy	0xd700	2759	13
 audio	0xd700	2772	13
 RTD2014UserAdjust	0xd700	2785	12
 UserCommonAdjust	0xd700	2797	12
