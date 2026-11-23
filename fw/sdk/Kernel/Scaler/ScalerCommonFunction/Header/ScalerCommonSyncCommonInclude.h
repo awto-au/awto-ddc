@@ -23,6 +23,76 @@
 //--------------------------------------------------
 // Definitions of DP Link Traiinng Status
 //--------------------------------------------------
+#ifndef _DP_RX_PORT_COUNT
+#define _DP_RX_PORT_COUNT                               1   // DP Rx ports with state in the per-port tables (only D1 wired)
+#endif
+#define _DP_RX1_PORT_INDEX                              0
+#if(_DP_RX_PORT_COUNT > 1)
+#define DPRX_PD1                                        BYTE ucDpRxPort   // port parameter, sole
+#define DPRX_PD                                         BYTE ucDpRxPort,  // port parameter, first of several
+#define DPRX_PA1                                        ucDpRxPort        // forward own port, sole
+#define DPRX_PA                                         ucDpRxPort,
+#define DPRX_CA1                                        _DP_RX1_PORT_INDEX // entry-point call: the Rx1 port
+#define DPRX_CA                                         _DP_RX1_PORT_INDEX,
+#define DPRX_P                                          ucDpRxPort
+#define DPRX_TP1INIT(p)                                 (g_pucDpRxTp1Initial[p])
+#define DPRX_TP1INIT_DEF                                volatile BYTE g_pucDpRxTp1Initial[_DP_RX_PORT_COUNT];
+#else
+#define DPRX_PD1                                        void              // one port: no parameter, index folds to 0
+#define DPRX_PD
+#define DPRX_PA1
+#define DPRX_PA
+#define DPRX_CA1
+#define DPRX_CA
+#define DPRX_P                                          _DP_RX1_PORT_INDEX
+#define DPRX_TP1INIT(p)                                 d_g_bDpRx1Tp1Initial
+#define DPRX_TP1INIT_DEF                                bit d_g_bDpRx1Tp1Initial = _FALSE;
+#endif
+#if(_DP_RX_PORT_COUNT > 1)
+#define DPRX_T1(TYPE, NEW, OLD)  TYPE NEW[_DP_RX_PORT_COUNT]
+#define DPRX_T3(TYPE, NEW, OLD)  TYPE NEW[_DP_RX_PORT_COUNT][3]
+#define DPRX_T4(TYPE, NEW, OLD)  TYPE NEW[_DP_RX_PORT_COUNT][4]
+#define g_pucDpRxLinkRate_P(p) g_pucDpRxLinkRate[p]
+#define g_pucDpRxLaneCount_P(p) g_pucDpRxLaneCount[p]
+#define g_pucDpRxLinkStatus01_P(p) g_pucDpRxLinkStatus01[p]
+#define g_pucDpRxLinkStatus23_P(p) g_pucDpRxLinkStatus23[p]
+#define g_pucDpRxLinkRequest01_P(p) g_pucDpRxLinkRequest01[p]
+#define g_pucDpRxLinkRequest23_P(p) g_pucDpRxLinkRequest23[p]
+#define g_pucDpRxEQCRC_P(p) g_pucDpRxEQCRC[p]
+#define isr_g_pucDpRxLTStatus_P(p) isr_g_pucDpRxLTStatus[p]
+#define g_pucDpRxTrainingPatternSet_P(p) g_pucDpRxTrainingPatternSet[p]
+#define g_pucDpRxAuxAddressBackup_P(p) g_pucDpRxAuxAddressBackup[p]
+#define g_ppucDpRxBackup_P(p) g_ppucDpRxBackup[p]
+#define isr_g_ppucDpRxLEBound_P(p) isr_g_ppucDpRxLEBound[p]
+#define isr_g_ppucDpRxTap1Max_P(p) isr_g_ppucDpRxTap1Max[p]
+#define isr_g_ppucDpRxLEMax_P(p) isr_g_ppucDpRxLEMax[p]
+#define g_ppucDpRxTap1MinTemp_P(p) g_ppucDpRxTap1MinTemp[p]
+#define g_ppucDpRxLEMinTemp_P(p) g_ppucDpRxLEMinTemp[p]
+#define isr_g_ppusDpRxClockCount_P(p) isr_g_ppusDpRxClockCount[p]
+#define isr_g_ppusDpRxClockCount1_P(p) isr_g_ppusDpRxClockCount1[p]
+#else
+#define DPRX_T1(TYPE, NEW, OLD)  TYPE OLD
+#define DPRX_T3(TYPE, NEW, OLD)  TYPE OLD[3]
+#define DPRX_T4(TYPE, NEW, OLD)  TYPE OLD[4]
+#define g_pucDpRxLinkRate_P(p) g_ucDpRx1LinkRate
+#define g_pucDpRxLaneCount_P(p) g_ucDpRx1LaneCount
+#define g_pucDpRxLinkStatus01_P(p) g_ucDpRx1LinkStatus01
+#define g_pucDpRxLinkStatus23_P(p) g_ucDpRx1LinkStatus23
+#define g_pucDpRxLinkRequest01_P(p) g_ucDpRx1LinkRequest01
+#define g_pucDpRxLinkRequest23_P(p) g_ucDpRx1LinkRequest23
+#define g_pucDpRxEQCRC_P(p) g_ucDpRx1EQCRC
+#define isr_g_pucDpRxLTStatus_P(p) isr_g_ucDpRx1LTStatus
+#define g_pucDpRxTrainingPatternSet_P(p) g_ucDpRx1TrainingPatternSet
+#define g_pucDpRxAuxAddressBackup_P(p) g_ucDpRx1AuxAddressBackup
+#define g_ppucDpRxBackup_P(p) g_pucDpRx1Backup
+#define isr_g_ppucDpRxLEBound_P(p) isr_g_pucDpRx1LEBound
+#define isr_g_ppucDpRxTap1Max_P(p) isr_g_pucDpRx1Tap1Max
+#define isr_g_ppucDpRxLEMax_P(p) isr_g_pucDpRx1LEMax
+#define g_ppucDpRxTap1MinTemp_P(p) g_pucDpRx1Tap1MinTemp
+#define g_ppucDpRxLEMinTemp_P(p) g_pucDpRx1LEMinTemp
+#define isr_g_ppusDpRxClockCount_P(p) isr_g_pusDpRx1ClockCount
+#define isr_g_ppusDpRxClockCount1_P(p) isr_g_pusDpRx1ClockCount1
+#endif
 #define _DP_LINK_TRAINING_NONE                          0
 #define _DP_NORMAL_TRAINING_PATTERN_1_PASS              1
 #define _DP_NORMAL_TRAINING_PATTERN_1_FAIL              2
@@ -45,8 +115,9 @@
 //--------------------------------------------------
 #define GET_DP_RX0_LINK_TRAINING_STATUS()               (g_ucDpRx0LTStatus)
 #define SET_DP_RX0_LINK_TRAINING_STATUS(x)              (g_ucDpRx0LTStatus = (x))
-#define GET_DP_RX1_LINK_TRAINING_STATUS()               (isr_g_ucDpRx1LTStatus)
-#define SET_DP_RX1_LINK_TRAINING_STATUS(x)              (isr_g_ucDpRx1LTStatus = (x))
+#define GET_DP_RX1_LINK_TRAINING_STATUS()               (isr_g_pucDpRxLTStatus_P(_DP_RX1_PORT_INDEX))
+#define GET_DP_RX_LINK_TRAINING_STATUS(port)            (isr_g_pucDpRxLTStatus_P(port))
+#define SET_DP_RX1_LINK_TRAINING_STATUS(x)              (isr_g_pucDpRxLTStatus_P(_DP_RX1_PORT_INDEX) = (x))
 
 #define GET_DP_RX0_NORMAL_LINK_TRAINING_SETPHY_FINISH() ((bit)g_bDpRx0NormalLTSetPhyFinish)
 #define SET_DP_RX0_NORMAL_LINK_TRAINING_SETPHY_FINISH() (g_bDpRx0NormalLTSetPhyFinish = _TRUE)
@@ -149,7 +220,7 @@ typedef enum
 // VARIABLE EXTERN
 //****************************************************************************
 extern BYTE g_ucDpRx0LTStatus;
-extern volatile BYTE isr_g_ucDpRx1LTStatus;
+extern DPRX_T1(volatile BYTE, isr_g_pucDpRxLTStatus, isr_g_ucDpRx1LTStatus);
 extern __xdata _Bool g_bDpRx0NormalLTSetPhyFinish;
 extern volatile bit d_isr_g_bDpRx1NormalLTSetPhyFinish;
 
@@ -170,7 +241,7 @@ extern void ScalerSyncVGADdcCheckBusyAndForceNack(void);
 // test ring (default off): 32 x {id, LT status, a, b}; idx = next slot; read with dbg-read
 extern __xdata BYTE isr_g_pucAwtoLtRing[128];
 extern __xdata BYTE isr_g_ucAwtoLtIdx;
-#define AWTO_LT_PUT(id, a, b)       {isr_g_pucAwtoLtRing[isr_g_ucAwtoLtIdx] = (id); isr_g_pucAwtoLtRing[isr_g_ucAwtoLtIdx + 1] = isr_g_ucDpRx1LTStatus; isr_g_pucAwtoLtRing[isr_g_ucAwtoLtIdx + 2] = (a); isr_g_pucAwtoLtRing[isr_g_ucAwtoLtIdx + 3] = (b); isr_g_ucAwtoLtIdx = (isr_g_ucAwtoLtIdx + 4) & 0x7F;}
+#define AWTO_LT_PUT(id, a, b)       {isr_g_pucAwtoLtRing[isr_g_ucAwtoLtIdx] = (id); isr_g_pucAwtoLtRing[isr_g_ucAwtoLtIdx + 1] = isr_g_pucDpRxLTStatus_P(_DP_RX1_PORT_INDEX); isr_g_pucAwtoLtRing[isr_g_ucAwtoLtIdx + 2] = (a); isr_g_pucAwtoLtRing[isr_g_ucAwtoLtIdx + 3] = (b); isr_g_ucAwtoLtIdx = (isr_g_ucAwtoLtIdx + 4) & 0x7F;}
 #define AWTO_LT_LOG_I(id)           AWTO_LT_PUT((id), ScalerDpRx1GetDpcdInfo_EXINT0(0x00, 0x01, 0x00), ScalerDpRx1GetDpcdInfo_EXINT0(0x00, 0x02, 0x02))
 #define AWTO_LT_LOG_M(id)           AWTO_LT_PUT((id), ScalerDpRx1GetDpcdInfo(0x00, 0x01, 0x00), ScalerDpRx1GetDpcdInfo(0x00, 0x02, 0x02))
 #define AWTO_LT_LOG_V(id, v)        AWTO_LT_PUT((id), (v), ScalerDpRx1GetDpcdInfo(0x00, 0x02, 0x02))

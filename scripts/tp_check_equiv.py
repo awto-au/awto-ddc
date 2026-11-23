@@ -29,6 +29,23 @@ PRE = r"""
 #include <stdint.h>
 #include <string.h>
 typedef uint8_t BYTE; typedef uint16_t WORD; typedef unsigned char bit;
+// one-port build: accessor macros of the DP Rx port cut-line (#326) map to the stub globals
+#define DPRX_P 0
+#define DPRX_TP1INIT(p) g_tp1init
+#define GET_DP_RX_LINK_TRAINING_STATUS(p) (g_lt_status)
+#define DPRX_PD1 void
+#define DPRX_PD
+#define DPRX_PA1
+#define DPRX_PA
+#define DPRX_CA1
+#define DPRX_CA
+#define g_pucDpRxLinkRate_P(p) g_rate
+#define g_pucDpRxLaneCount_P(p) g_lanes
+#define g_pucDpRxLinkStatus01_P(p) g_status01
+#define g_pucDpRxLinkStatus23_P(p) g_status23
+#define g_pucDpRxLinkRequest01_P(p) g_req01
+#define g_pucDpRxLinkRequest23_P(p) g_req23
+#define g_pucDpRxEQCRC_P(p) g_eqcrc_state
 #define _BIT0 0x01
 #define _BIT1 0x02
 #define _BIT2 0x04
@@ -185,7 +202,7 @@ def run(ref, names, call, tag, n):
 def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--fn", default="both")
-    ap.add_argument("--old-ref", default="03f6ef81")
+    ap.add_argument("--old-ref", default="9953a70a")
     ap.add_argument("--n", type=int, default=3000000)
     a = ap.parse_args()
     cases = {

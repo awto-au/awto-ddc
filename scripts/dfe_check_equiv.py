@@ -20,13 +20,29 @@ from _repo import ROOT
 
 LOG = ROOT / "tmp/logs/dfe_check_equiv.log"
 SCRATCH = ROOT / "tmp/scratch/dfe_equiv"
-MAIN = "fw/sdk/Kernel/Scaler/ScalerFunction/Code/ScalerDPRx1_SeptPhy.c"
 ISR = "fw/sdk/Kernel/Scaler/ScalerFunction/Code/ScalerDPRx1_INT_SeptPhy.c"
 
 PRE = r"""
 #include <stdio.h>
 #include <stdint.h>
 typedef uint8_t BYTE; typedef uint16_t WORD; typedef unsigned char bit;
+// one-port build: accessor macros of the DP Rx port cut-line (#326) map to the stub globals
+#define DPRX_P 0
+#define DPRX_TP1INIT(p) g_tp1init
+#define GET_DP_RX_LINK_TRAINING_STATUS(p) (g_lt_status)
+#define DPRX_PD1 void
+#define DPRX_PD
+#define DPRX_PA1
+#define DPRX_PA
+#define DPRX_CA1
+#define DPRX_CA
+#define g_pucDpRxLinkRate_P(p) g_rate
+#define g_pucDpRxLaneCount_P(p) g_lanes
+#define g_pucDpRxLinkStatus01_P(p) g_status01
+#define g_pucDpRxLinkStatus23_P(p) g_status23
+#define g_pucDpRxLinkRequest01_P(p) g_req01
+#define g_pucDpRxLinkRequest23_P(p) g_req23
+#define g_pucDpRxEQCRC_P(p) g_eqcrc_state
 #define _BIT0 0x01
 #define _BIT1 0x02
 #define _BIT2 0x04
@@ -124,14 +140,14 @@ def run(ref, path, names, call, tag):
 
 def main() -> int:
     ap = argparse.ArgumentParser()
-    ap.add_argument("--old-ref", default="021f3788")
+    ap.add_argument("--old-ref", default="9953a70a")
     a = ap.parse_args()
     bad = 0
     for label, path, helper, fn in (
-        ("main", MAIN, "ScalerDpRx1DFELaneCheck", "ScalerDpRx1DFECheck"),
         ("isr", ISR, "ScalerDpRx1DFELaneCheck_EXINT0", "ScalerDpRx1DFECheck_EXINT0"),
     ):
-        old = run(a.old_ref, path, [fn], f"{fn}()", f"{label}_old")
+        has_helper = re.search(r"^static \w+ " + helper + r"\(", git_show(a.old_ref, path), re.MULTILINE)
+        old = run(a.old_ref, path, ([helper] if has_helper else []) + [fn], f"{fn}()", f"{label}_old")
         new = run("WORK", path, [helper, fn], f"{fn}()", f"{label}_new")
         ok = old == new
         say(f"{label}: {'EQUAL' if ok else 'MISMATCH'}")

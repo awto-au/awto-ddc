@@ -143,8 +143,8 @@ extern BYTE g_pucDpRx1MstTimeSlotBackup[13];
 extern StructDpLinkInfo g_stDpRx1LinkInfo;
 #endif
 
-extern volatile WORD isr_g_pusDpRx1ClockCount[4];
-extern volatile WORD isr_g_pusDpRx1ClockCount1[4];
+extern DPRX_T4(volatile WORD, isr_g_ppusDpRxClockCount, isr_g_pusDpRx1ClockCount);
+extern DPRX_T4(volatile WORD, isr_g_ppusDpRxClockCount1, isr_g_pusDpRx1ClockCount1);
 extern BYTE g_ucDpRx1Tp1PermitSwingLevel0;
 
 
@@ -186,9 +186,9 @@ extern void ScalerDpRx1Initial(EnumDpVersionType enumDpVersion, EnumDpLaneCount 
 extern bit ScalerDpRx1MarginLinkCheck(void);
 extern void ScalerDpRx1LinkStatusIRQ(void);
 extern void ScalerDpRx1AuxSet(void);
-extern void ScalerDpRx1ErrorCounterUpdate_EXINT0(void);
+extern void ScalerDpRx1ErrorCounterUpdate_EXINT0(DPRX_PD1);
 extern void ScalerDpRx1ErrorCounterDisable_EXINT0(void);
-extern void ScalerDpRx1ErrorCounterEnable_EXINT0(EnumDpLinkTrainingType enumDpLtType);
+extern void ScalerDpRx1ErrorCounterEnable_EXINT0(DPRX_PD EnumDpLinkTrainingType enumDpLtType);
 extern bit ScalerDpRx1MSAActiveChange(void);
 extern bit ScalerDpRx1PSPreDetect(void);
 extern void ScalerDpRx1SecDataBlockReset(void);

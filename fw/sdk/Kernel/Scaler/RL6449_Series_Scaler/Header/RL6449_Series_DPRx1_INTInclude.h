@@ -37,8 +37,8 @@
 //****************************************************************************
 // FUNCTION EXTERN
 //****************************************************************************
-extern void ScalerDpRx1Tp1SetPhy_EXINT0(EnumDpNFCodeRef enumDpNFCodeRef);
-extern void ScalerDpRx1Tp2SetPhy_EXINT0(void);
+extern void ScalerDpRx1Tp1SetPhy_EXINT0(DPRX_PD EnumDpNFCodeRef enumDpNFCodeRef);
+extern void ScalerDpRx1Tp2SetPhy_EXINT0(DPRX_PD1);
 
 #if(_WD_TIMER_INT_SUPPORT == _ON)
 extern void ScalerDpRx1RebuildPhy_WDINT(BYTE ucDpLinkRate);

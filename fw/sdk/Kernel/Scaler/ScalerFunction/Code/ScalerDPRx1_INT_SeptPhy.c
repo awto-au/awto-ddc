@@ -44,9 +44,9 @@ BYTE ScalerDpRx1GetDpcdInfo_EXINT0(BYTE ucDpcdAccessPortH, BYTE ucDpcdAccessPort
 void ScalerDpRx1SetDpcdBitValue_EXINT0(BYTE ucDpcdAccessPortH, BYTE ucDpcdAccessPortM, BYTE ucDpcdAccessPortL, BYTE ucNotDpcdBit, BYTE ucDpcdBit);
 void ScalerDpRx1SetDpcdValue_EXINT0(BYTE ucDpcdAccessPortH, BYTE ucDpcdAccessPortM, BYTE ucDpcdAccessPortL, BYTE ucDpcdValue);
 void ScalerDpRx1SinkStatusSet_EXINT0(EnumDpSinkReceivePort enumReceiverPort, EnumDpSinkStatus enumInSync);
-BYTE ScalerDpRx1TrainingPattern1_EXINT0(EnumDpLinkTrainingType enumDpLtType);
-BYTE ScalerDpRx1TrainingPattern2_EXINT0(EnumDpLinkTrainingType enumDpLtType);
-void ScalerDpRx1TrainingPatternEnd_EXINT0(void);
+BYTE ScalerDpRx1TrainingPattern1_EXINT0(DPRX_PD EnumDpLinkTrainingType enumDpLtType);
+BYTE ScalerDpRx1TrainingPattern2_EXINT0(DPRX_PD EnumDpLinkTrainingType enumDpLtType);
+void ScalerDpRx1TrainingPatternEnd_EXINT0(DPRX_PD1);
 
 #if((_DP_TX_SUPPORT == _ON) && (_D1_DP_MST_PORT_SUPPORT == _ON))
 void ScalerDpRx1HDCPResetDpcdInfo_EXINT0(void);
@@ -61,13 +61,13 @@ BYTE ScalerDpRx1GetDpcdBitInfo_WDINT(BYTE ucDpcdAccessPortH, BYTE ucDpcdAccessPo
 #endif
 #endif
 
-BYTE ScalerDpRx1Tp1Check_EXINT0(EnumDpLinkTrainingType enumDpLtType);
-BYTE ScalerDpRx1Tp2Check_EXINT0(EnumDpLinkTrainingType enumDpLtType);
+BYTE ScalerDpRx1Tp1Check_EXINT0(DPRX_PD EnumDpLinkTrainingType enumDpLtType);
+BYTE ScalerDpRx1Tp2Check_EXINT0(DPRX_PD EnumDpLinkTrainingType enumDpLtType);
 
-void ScalerDpRx1AdjustLaneFLDBand_EXINT0(BYTE ucDpRx1LaneNumber, WORD usVCOBandDiff);
-BYTE ScalerDpRx1DFECheck_EXINT0(void);
-void ScalerDpRx1IntHandler_EXINT0(void);
-void ScalerDpRx1SetDFEInitial_EXINT0(void);
+void ScalerDpRx1AdjustLaneFLDBand_EXINT0(DPRX_PD BYTE ucDpRx1LaneNumber, WORD usVCOBandDiff);
+BYTE ScalerDpRx1DFECheck_EXINT0(DPRX_PD1);
+void ScalerDpRx1IntHandler_EXINT0(DPRX_PD1);
+void ScalerDpRx1SetDFEInitial_EXINT0(DPRX_PD1);
 BYTE ScalerDpRx1CheckSourceOUI_EXINT0(EnumDpRxCheckSourceOUI enumDpRx1CheckSourceOUI);
 
 #if(_DP_MST_AUTO_SEARCH_SUPPORT == _ON)
@@ -180,9 +180,9 @@ void ScalerDpRx1SinkStatusSet_EXINT0(EnumDpSinkReceivePort enumReceiverPort, Enu
 //--------------------------------------------------
 // Description  : TP1 check of the lanes in use, last lane first (normal LT)
 // Input Value  : lane count, DPCD level / request value per lane, swing level that counts as done
-// Output Value : None (g_ucDpRx1LinkStatus01 / 23, g_ucDpRx1LinkRequest01 / 23, lane margin bits)
+// Output Value : None (g_pucDpRxLinkStatus01 / 23, g_pucDpRxLinkRequest01 / 23, lane margin bits)
 //--------------------------------------------------
-static void ScalerDpRx1Tp1LaneCheck_EXINT0(BYTE ucLaneCount, BYTE *pucLevel, BYTE *pucRequest, BYTE ucSwingLevel)
+static void ScalerDpRx1Tp1LaneCheck_EXINT0(DPRX_PD BYTE ucLaneCount, BYTE *pucLevel, BYTE *pucRequest, BYTE ucSwingLevel)
 {
     BYTE ucLane = (ucLaneCount == _DP_FOUR_LANE) ? 4 : ((ucLaneCount == _DP_TWO_LANE) ? 2 : 1);
     BYTE ucMap = 0;
@@ -225,13 +225,13 @@ static void ScalerDpRx1Tp1LaneCheck_EXINT0(BYTE ucLaneCount, BYTE *pucLevel, BYT
         ucKeep = ((ucLane & _BIT0) == _BIT0) ? 0xCF : 0xFC;
         ucDone = ((ucLane & _BIT0) == _BIT0) ? 0x10 : 0x01;
         ucLevel = pucLevel[ucLane];
-        pucStatus = ((ucLane & _BIT1) == _BIT1) ? &g_ucDpRx1LinkStatus23 : &g_ucDpRx1LinkStatus01;
-        pucLinkRequest = ((ucLane & _BIT1) == _BIT1) ? &g_ucDpRx1LinkRequest23 : &g_ucDpRx1LinkRequest01;
+        pucStatus = ((ucLane & _BIT1) == _BIT1) ? &g_pucDpRxLinkStatus23_P(DPRX_P) : &g_pucDpRxLinkStatus01_P(DPRX_P);
+        pucLinkRequest = ((ucLane & _BIT1) == _BIT1) ? &g_pucDpRxLinkRequest23_P(DPRX_P) : &g_pucDpRxLinkRequest01_P(DPRX_P);
 
         // Lane Check: EQ-CRC bit of the lane's scaler lane
         if(ScalerGetBit_EXINT(PB0_14_EQ_CRC_3, (_BIT4 << ucMap)) != 0x00)
         {
-            if(g_ucDpRx1LinkRate <= _DP_LINK_HBR)
+            if(g_pucDpRxLinkRate_P(DPRX_P) <= _DP_LINK_HBR)
             {
                 if(((ucLevel & _BIT2) == _BIT2) || ((ucLevel & (_BIT1 | _BIT0)) >= ucSwingLevel))
                 {
@@ -311,14 +311,14 @@ static void ScalerDpRx1Tp1LaneCheck_EXINT0(BYTE ucLaneCount, BYTE *pucLevel, BYT
 // Input Value  : Normal or Fake LT
 // Output Value : TRUE --> TP1 Pass
 //--------------------------------------------------
-BYTE ScalerDpRx1TrainingPattern1_EXINT0(EnumDpLinkTrainingType enumDpLtType)
+BYTE ScalerDpRx1TrainingPattern1_EXINT0(DPRX_PD EnumDpLinkTrainingType enumDpLtType)
 {
     if(ScalerDpRx1GetDpcdBitInfo_EXINT0(0x00, 0x00, 0x0E, _BIT7) == _BIT7)
     {
 #if(_HW_DP_DPCD_EXT_CAP_PHYSICAL_ADDRESS_SUPPORT == _OFF)
-        if(g_ucDpRx1LinkRate > _D1_DP_LINK_CLK_RATE)
+        if(g_pucDpRxLinkRate_P(DPRX_P) > _D1_DP_LINK_CLK_RATE)
 #else
-        if(g_ucDpRx1LinkRate > ScalerDpRx1GetDpcdInfo_EXINT0(0x00, 0x22, 0x01))
+        if(g_pucDpRxLinkRate_P(DPRX_P) > ScalerDpRx1GetDpcdInfo_EXINT0(0x00, 0x22, 0x01))
 #endif
         {
             ScalerDpRx1SetDpcdValue_EXINT0(0x00, 0x02, 0x02, 0x00);
@@ -330,7 +330,7 @@ BYTE ScalerDpRx1TrainingPattern1_EXINT0(EnumDpLinkTrainingType enumDpLtType)
     }
     else
     {
-        if(g_ucDpRx1LinkRate > ScalerDpRx1GetDpcdInfo_EXINT0(0x00, 0x00, 0x01))
+        if(g_pucDpRxLinkRate_P(DPRX_P) > ScalerDpRx1GetDpcdInfo_EXINT0(0x00, 0x00, 0x01))
         {
             ScalerDpRx1SetDpcdValue_EXINT0(0x00, 0x02, 0x02, 0x00);
             ScalerDpRx1SetDpcdValue_EXINT0(0x00, 0x02, 0x03, 0x00);
@@ -348,32 +348,32 @@ BYTE ScalerDpRx1TrainingPattern1_EXINT0(EnumDpLinkTrainingType enumDpLtType)
     {
         if((ScalerDpRx1GetDpcdInfo_EXINT0(0x00, 0x01, 0x03) & (_BIT1 | _BIT0)) >= _BIT0)
         {
-            ScalerDpRx1Tp1SetPhy_EXINT0(_DP_NF_REF_XTAL);
+            ScalerDpRx1Tp1SetPhy_EXINT0(DPRX_PA _DP_NF_REF_XTAL);
         }
         else
         {
 #if(_DP_LT_TP1_PERMIT_SWING_LEVEL_0_FOR_SPECIFIC_SOURCE_OUI == _ON)
             if(g_ucDpRx1Tp1PermitSwingLevel0 == _TRUE)
             {
-                ScalerDpRx1Tp1SetPhy_EXINT0(_DP_NF_REF_XTAL);
+                ScalerDpRx1Tp1SetPhy_EXINT0(DPRX_PA _DP_NF_REF_XTAL);
             }
             else
 #endif
             {
-                if(g_ucDpRx1LinkRate <= _DP_LINK_HBR)
+                if(g_pucDpRxLinkRate_P(DPRX_P) <= _DP_LINK_HBR)
                 {
 #if(_DP_HBR_RBR_LT_FORCE_MARGINAL_LINK == _OFF)
 
-                    ScalerDpRx1Tp1SetPhy_EXINT0(_DP_NF_REF_XTAL);
+                    ScalerDpRx1Tp1SetPhy_EXINT0(DPRX_PA _DP_NF_REF_XTAL);
 #endif
                 }
             }
         }
     }
 
-    ScalerDpRx1ErrorCounterEnable_EXINT0(enumDpLtType);
+    ScalerDpRx1ErrorCounterEnable_EXINT0(DPRX_PA enumDpLtType);
 
-    if(ScalerDpRx1Tp1Check_EXINT0(enumDpLtType) == _TRUE)
+    if(ScalerDpRx1Tp1Check_EXINT0(DPRX_PA enumDpLtType) == _TRUE)
     {
         return _TRUE;
     }
@@ -383,9 +383,9 @@ BYTE ScalerDpRx1TrainingPattern1_EXINT0(EnumDpLinkTrainingType enumDpLtType)
 //--------------------------------------------------
 // Description  : TP2 EQ-CRC check of the lanes in use (normal LT), lane order 2, 3, 1, 0 for four lanes
 // Input Value  : lane count, EQ-CRC status per lane, DPCD level byte per lane
-// Output Value : None (g_ucDpRx1LinkStatus01 / 23, g_ucDpRx1LinkRequest01 / 23)
+// Output Value : None (g_pucDpRxLinkStatus01 / 23, g_pucDpRxLinkRequest01 / 23)
 //--------------------------------------------------
-static void ScalerDpRx1Tp2LaneCheck_EXINT0(BYTE ucLaneCount, BYTE ucEQCRCStatus, BYTE *pucLevel)
+static void ScalerDpRx1Tp2LaneCheck_EXINT0(DPRX_PD BYTE ucLaneCount, BYTE ucEQCRCStatus, BYTE *pucLevel)
 {
     BYTE ucNext = 0;
     BYTE ucLane = 0;
@@ -417,7 +417,7 @@ static void ScalerDpRx1Tp2LaneCheck_EXINT0(BYTE ucLaneCount, BYTE ucEQCRCStatus,
         ucLane = 1;
     }
 
-    if(g_ucDpRx1LinkRate == _DP_LINK_HBR2)
+    if(g_pucDpRxLinkRate_P(DPRX_P) == _DP_LINK_HBR2)
     {
         if((ucEQCRCStatus & ucMask) != ucMask)
         {
@@ -446,12 +446,12 @@ static void ScalerDpRx1Tp2LaneCheck_EXINT0(BYTE ucLaneCount, BYTE ucEQCRCStatus,
         ucKeep = ((ucMask & _BIT0) == _BIT0) ? 0xCF : 0xFC;
         ucUnit = ((ucMask & _BIT0) == _BIT0) ? 0x10 : 0x01;
         ucPass = ((ucMask & _BIT0) == _BIT0) ? 0x70 : 0x07;
-        pucStatus = ((ucMask & _BIT1) == _BIT1) ? &g_ucDpRx1LinkStatus23 : &g_ucDpRx1LinkStatus01;
-        pucLinkRequest = ((ucMask & _BIT1) == _BIT1) ? &g_ucDpRx1LinkRequest23 : &g_ucDpRx1LinkRequest01;
+        pucStatus = ((ucMask & _BIT1) == _BIT1) ? &g_pucDpRxLinkStatus23_P(DPRX_P) : &g_pucDpRxLinkStatus01_P(DPRX_P);
+        pucLinkRequest = ((ucMask & _BIT1) == _BIT1) ? &g_pucDpRxLinkRequest23_P(DPRX_P) : &g_pucDpRxLinkRequest01_P(DPRX_P);
 
         if((ucEQCRCStatus & (_BIT0 << ucMask)) != 0x00)
         {
-            if(g_ucDpRx1LinkRate == _DP_LINK_HBR2)
+            if(g_pucDpRxLinkRate_P(DPRX_P) == _DP_LINK_HBR2)
             {
                 if(((ucLevel & _BIT2) == _BIT2) || ((ucLevel & (_BIT1 | _BIT0)) >= (_BIT1 | _BIT0)))
                 {
@@ -484,7 +484,7 @@ static void ScalerDpRx1Tp2LaneCheck_EXINT0(BYTE ucLaneCount, BYTE ucEQCRCStatus,
 
             if(ucWeight < 3)
             {
-                if((g_ucDpRx1LinkRate == _DP_LINK_HBR2) && ((ucLevel & _BIT2) != _BIT2))
+                if((g_pucDpRxLinkRate_P(DPRX_P) == _DP_LINK_HBR2) && ((ucLevel & _BIT2) != _BIT2))
                 {
                     *pucLinkRequest = *pucLinkRequest + ucUnit;
                 }
@@ -502,18 +502,18 @@ static void ScalerDpRx1Tp2LaneCheck_EXINT0(BYTE ucLaneCount, BYTE ucEQCRCStatus,
 // Input Value  : Normal or Fake LT
 // Output Value : TRUE --> TP2 Pass
 //--------------------------------------------------
-BYTE ScalerDpRx1TrainingPattern2_EXINT0(EnumDpLinkTrainingType enumDpLtType)
+BYTE ScalerDpRx1TrainingPattern2_EXINT0(DPRX_PD EnumDpLinkTrainingType enumDpLtType)
 {
     ScalerDpRx1ErrorCounterDisable_EXINT0();
 
     if(enumDpLtType == _DP_NORMAL_LT)
     {
-        ScalerDpRx1Tp2SetPhy_EXINT0();
+        ScalerDpRx1Tp2SetPhy_EXINT0(DPRX_PA1);
     }
 
-    ScalerDpRx1ErrorCounterEnable_EXINT0(enumDpLtType);
+    ScalerDpRx1ErrorCounterEnable_EXINT0(DPRX_PA enumDpLtType);
 
-    if(ScalerDpRx1Tp2Check_EXINT0(enumDpLtType) == _TRUE)
+    if(ScalerDpRx1Tp2Check_EXINT0(DPRX_PA enumDpLtType) == _TRUE)
     {
         return _TRUE;
     }
@@ -525,9 +525,9 @@ BYTE ScalerDpRx1TrainingPattern2_EXINT0(EnumDpLinkTrainingType enumDpLtType)
 // Input Value  : None
 // Output Value : None
 //--------------------------------------------------
-void ScalerDpRx1TrainingPatternEnd_EXINT0(void)
+void ScalerDpRx1TrainingPatternEnd_EXINT0(DPRX_PD1)
 {
-    switch(g_ucDpRx1LaneCount)
+    switch(g_pucDpRxLaneCount_P(DPRX_P))
     {
         case _DP_ONE_LANE:
             ScalerSetBit_EXINT(PB0_01_PHY_DIG_RESET_CTRL, ~(_BIT4 | _BIT3), _BIT3);
@@ -686,7 +686,7 @@ BYTE ScalerDpRx1GetDpcdBitInfo_WDINT(BYTE ucDpcdAccessPortH, BYTE ucDpcdAccessPo
 // Input Value  : Normal or Fake LT
 // Output Value : TRUE --> TP1 Pass
 //--------------------------------------------------
-BYTE ScalerDpRx1Tp1Check_EXINT0(EnumDpLinkTrainingType enumDpLtType)
+BYTE ScalerDpRx1Tp1Check_EXINT0(DPRX_PD EnumDpLinkTrainingType enumDpLtType)
 {
     BYTE ucIndex;
     BYTE pucDpPhyLinkTrainingLevel[4];
@@ -694,7 +694,7 @@ BYTE ScalerDpRx1Tp1Check_EXINT0(EnumDpLinkTrainingType enumDpLtType)
     BYTE ucTP1NormalLTSwingLevel = 2;
     BYTE ucTP1RBRHBRFakeLTSwingLevel = 1;
     BYTE ucTP1HBR2FakeLTSwingLevel = 3;
-    BYTE ucFakeLTLaneCount = g_ucDpRx1LaneCount;
+    BYTE ucFakeLTLaneCount = g_pucDpRxLaneCount_P(DPRX_P);
 
     ScalerDpRx1SetDpcdValue_EXINT0(0x00, 0x02, 0x02, 0x00);
     ScalerDpRx1SetDpcdValue_EXINT0(0x00, 0x02, 0x03, 0x00);
@@ -711,17 +711,17 @@ BYTE ScalerDpRx1Tp1Check_EXINT0(EnumDpLinkTrainingType enumDpLtType)
 
     if(enumDpLtType == _DP_NORMAL_LT)
     {
-        if((GET_DP_RX1_LINK_TRAINING_STATUS() != _DP_NORMAL_TRAINING_PATTERN_1_FAIL) &&
-           (GET_DP_RX1_LINK_TRAINING_STATUS() != _DP_FAKE_TRAINING_PATTERN_1_FAIL) &&
-           (d_g_bDpRx1Tp1Initial == _FALSE))
+        if((GET_DP_RX_LINK_TRAINING_STATUS(DPRX_P) != _DP_NORMAL_TRAINING_PATTERN_1_FAIL) &&
+           (GET_DP_RX_LINK_TRAINING_STATUS(DPRX_P) != _DP_FAKE_TRAINING_PATTERN_1_FAIL) &&
+           (DPRX_TP1INIT(DPRX_P) == _FALSE))
         {
             ScalerDpRx1SetDpcdValue_EXINT0(0x00, 0x01, 0x03, 0x00);
             ScalerDpRx1SetDpcdValue_EXINT0(0x00, 0x01, 0x04, 0x00);
             ScalerDpRx1SetDpcdValue_EXINT0(0x00, 0x01, 0x05, 0x00);
             ScalerDpRx1SetDpcdValue_EXINT0(0x00, 0x01, 0x06, 0x00);
 
-            g_ucDpRx1LinkRequest01 = 0x00;
-            g_ucDpRx1LinkRequest23 = 0x00;
+            g_pucDpRxLinkRequest01_P(DPRX_P) = 0x00;
+            g_pucDpRxLinkRequest23_P(DPRX_P) = 0x00;
 
 #if(_DP_HBR_RBR_LT_FORCE_MARGINAL_LINK == _ON)
             SET_DP_RX_D1_LANE0_MARGIN_LINK_HBR_RBR();
@@ -729,7 +729,7 @@ BYTE ScalerDpRx1Tp1Check_EXINT0(EnumDpLinkTrainingType enumDpLtType)
             SET_DP_RX_D1_LANE2_MARGIN_LINK_HBR_RBR();
             SET_DP_RX_D1_LANE3_MARGIN_LINK_HBR_RBR();
 #endif
-            d_g_bDpRx1Tp1Initial = _TRUE;
+            DPRX_TP1INIT(DPRX_P) = _TRUE;
         }
 
         AWTO_TP1_WAIT() pucDpPhyLinkTrainingLevel[0] = ScalerDpRx1GetDpcdInfo_EXINT0(0x00, 0x01, 0x03);
@@ -766,21 +766,21 @@ BYTE ScalerDpRx1Tp1Check_EXINT0(EnumDpLinkTrainingType enumDpLtType)
             }
         }
 
-        g_ucDpRx1LinkStatus01 = 0;
-        g_ucDpRx1LinkStatus23 = 0;
+        g_pucDpRxLinkStatus01_P(DPRX_P) = 0;
+        g_pucDpRxLinkStatus23_P(DPRX_P) = 0;
 
-        ScalerDpRx1Tp1LaneCheck_EXINT0(g_ucDpRx1LaneCount, pucDpPhyLinkTrainingLevel, pucDpPhyLinkTrainingRequest, ucTP1NormalLTSwingLevel);
+        ScalerDpRx1Tp1LaneCheck_EXINT0(DPRX_PA g_pucDpRxLaneCount_P(DPRX_P), pucDpPhyLinkTrainingLevel, pucDpPhyLinkTrainingRequest, ucTP1NormalLTSwingLevel);
 
-        ScalerDpRx1SetDpcdValue_EXINT0(0x00, 0x02, 0x02, g_ucDpRx1LinkStatus01);
-        ScalerDpRx1SetDpcdValue_EXINT0(0x00, 0x02, 0x03, g_ucDpRx1LinkStatus23);
-        ScalerDpRx1SetDpcdValue_EXINT0(0x00, 0x02, 0x06, g_ucDpRx1LinkRequest01);
-        ScalerDpRx1SetDpcdValue_EXINT0(0x00, 0x02, 0x07, g_ucDpRx1LinkRequest23);
+        ScalerDpRx1SetDpcdValue_EXINT0(0x00, 0x02, 0x02, g_pucDpRxLinkStatus01_P(DPRX_P));
+        ScalerDpRx1SetDpcdValue_EXINT0(0x00, 0x02, 0x03, g_pucDpRxLinkStatus23_P(DPRX_P));
+        ScalerDpRx1SetDpcdValue_EXINT0(0x00, 0x02, 0x06, g_pucDpRxLinkRequest01_P(DPRX_P));
+        ScalerDpRx1SetDpcdValue_EXINT0(0x00, 0x02, 0x07, g_pucDpRxLinkRequest23_P(DPRX_P));
 
-        switch(g_ucDpRx1LaneCount)
+        switch(g_pucDpRxLaneCount_P(DPRX_P))
         {
             case _DP_ONE_LANE:
 
-                if((g_ucDpRx1LinkStatus01 & _BIT0) == _BIT0)
+                if((g_pucDpRxLinkStatus01_P(DPRX_P) & _BIT0) == _BIT0)
                 {
                     return _TRUE;
                 }
@@ -789,7 +789,7 @@ BYTE ScalerDpRx1Tp1Check_EXINT0(EnumDpLinkTrainingType enumDpLtType)
 
             case _DP_TWO_LANE:
 
-                if((g_ucDpRx1LinkStatus01 & (_BIT4 | _BIT0)) == (_BIT4 | _BIT0))
+                if((g_pucDpRxLinkStatus01_P(DPRX_P) & (_BIT4 | _BIT0)) == (_BIT4 | _BIT0))
                 {
                     return _TRUE;
                 }
@@ -799,7 +799,7 @@ BYTE ScalerDpRx1Tp1Check_EXINT0(EnumDpLinkTrainingType enumDpLtType)
             case _DP_FOUR_LANE:
             default:
 
-                if(((g_ucDpRx1LinkStatus01 & (_BIT4 | _BIT0)) == (_BIT4 | _BIT0)) && (((g_ucDpRx1LinkStatus23 & (_BIT4 | _BIT0)) == (_BIT4 | _BIT0))))
+                if(((g_pucDpRxLinkStatus01_P(DPRX_P) & (_BIT4 | _BIT0)) == (_BIT4 | _BIT0)) && (((g_pucDpRxLinkStatus23_P(DPRX_P) & (_BIT4 | _BIT0)) == (_BIT4 | _BIT0))))
                 {
                     return _TRUE;
                 }
@@ -809,7 +809,7 @@ BYTE ScalerDpRx1Tp1Check_EXINT0(EnumDpLinkTrainingType enumDpLtType)
     }
     else
     {
-        if((GET_DP_RX1_LINK_TRAINING_STATUS() != _DP_NORMAL_TRAINING_PATTERN_1_FAIL) && (GET_DP_RX1_LINK_TRAINING_STATUS() != _DP_FAKE_TRAINING_PATTERN_1_FAIL))
+        if((GET_DP_RX_LINK_TRAINING_STATUS(DPRX_P) != _DP_NORMAL_TRAINING_PATTERN_1_FAIL) && (GET_DP_RX_LINK_TRAINING_STATUS(DPRX_P) != _DP_FAKE_TRAINING_PATTERN_1_FAIL))
         {
             ScalerDpRx1SetDpcdValue_EXINT0(0x00, 0x01, 0x03, 0x00);
             ScalerDpRx1SetDpcdValue_EXINT0(0x00, 0x01, 0x04, 0x00);
@@ -851,39 +851,39 @@ BYTE ScalerDpRx1Tp1Check_EXINT0(EnumDpLinkTrainingType enumDpLtType)
             }
         }
 
-        g_ucDpRx1LinkRequest01 = (pucDpPhyLinkTrainingLevel[0] & 0x03) | ((pucDpPhyLinkTrainingLevel[1] << 4) & 0x30);
-        g_ucDpRx1LinkRequest23 = (pucDpPhyLinkTrainingLevel[2] & 0x03) | ((pucDpPhyLinkTrainingLevel[3] << 4) & 0x30);
+        g_pucDpRxLinkRequest01_P(DPRX_P) = (pucDpPhyLinkTrainingLevel[0] & 0x03) | ((pucDpPhyLinkTrainingLevel[1] << 4) & 0x30);
+        g_pucDpRxLinkRequest23_P(DPRX_P) = (pucDpPhyLinkTrainingLevel[2] & 0x03) | ((pucDpPhyLinkTrainingLevel[3] << 4) & 0x30);
 
 #if(_DP_RX_MI_DONGLE_SUPPORT == _ON)
-        if(g_ucDpRx1FakeLTLaneCount <= g_ucDpRx1LaneCount)
+        if(g_ucDpRx1FakeLTLaneCount <= g_pucDpRxLaneCount_P(DPRX_P))
         {
             ucFakeLTLaneCount = g_ucDpRx1FakeLTLaneCount;
         }
         else
         {
-            ucFakeLTLaneCount = g_ucDpRx1LaneCount;
+            ucFakeLTLaneCount = g_pucDpRxLaneCount_P(DPRX_P);
         }
 #endif
         switch(ucFakeLTLaneCount)
         {
             case _DP_ONE_LANE:
 
-                if(g_ucDpRx1LinkRate == _DP_LINK_HBR2)
+                if(g_pucDpRxLinkRate_P(DPRX_P) == _DP_LINK_HBR2)
                 {
                     if(((pucDpPhyLinkTrainingLevel[0] & _BIT2) != _BIT2) && ((pucDpPhyLinkTrainingLevel[0] & (_BIT1 | _BIT0)) < ucTP1HBR2FakeLTSwingLevel))
                     {
-                        g_ucDpRx1LinkRequest01 = ((g_ucDpRx1LinkRequest01 & 0xFC) | pucDpPhyLinkTrainingRequest[0]);
+                        g_pucDpRxLinkRequest01_P(DPRX_P) = ((g_pucDpRxLinkRequest01_P(DPRX_P) & 0xFC) | pucDpPhyLinkTrainingRequest[0]);
                     }
                 }
                 else
                 {
                     if(((pucDpPhyLinkTrainingLevel[0] & _BIT2) != _BIT2) && ((pucDpPhyLinkTrainingLevel[0] & (_BIT1 | _BIT0)) < ucTP1RBRHBRFakeLTSwingLevel))
                     {
-                        g_ucDpRx1LinkRequest01 = ((g_ucDpRx1LinkRequest01 & 0xFC) | pucDpPhyLinkTrainingRequest[0]);
+                        g_pucDpRxLinkRequest01_P(DPRX_P) = ((g_pucDpRxLinkRequest01_P(DPRX_P) & 0xFC) | pucDpPhyLinkTrainingRequest[0]);
                     }
                 }
 
-                ScalerDpRx1SetDpcdValue_EXINT0(0x00, 0x02, 0x06, g_ucDpRx1LinkRequest01);
+                ScalerDpRx1SetDpcdValue_EXINT0(0x00, 0x02, 0x06, g_pucDpRxLinkRequest01_P(DPRX_P));
                 ScalerDpRx1SetDpcdValue_EXINT0(0x00, 0x02, 0x07, 0x00);
 
                 if(((pucDpPhyLinkTrainingLevel[0] & _BIT2) == _BIT2) || ((pucDpPhyLinkTrainingLevel[0] & (_BIT1 | _BIT0)) == (ScalerDpRx1GetDpcdBitInfo_EXINT0(0x00, 0x02, 0x06, (_BIT1 | _BIT0)))))
@@ -897,32 +897,32 @@ BYTE ScalerDpRx1Tp1Check_EXINT0(EnumDpLinkTrainingType enumDpLtType)
 
             case _DP_TWO_LANE:
 
-                if(g_ucDpRx1LinkRate == _DP_LINK_HBR2)
+                if(g_pucDpRxLinkRate_P(DPRX_P) == _DP_LINK_HBR2)
                 {
                     if(((pucDpPhyLinkTrainingLevel[0] & _BIT2) != _BIT2) && ((pucDpPhyLinkTrainingLevel[0] & (_BIT1 | _BIT0)) < ucTP1HBR2FakeLTSwingLevel))
                     {
-                        g_ucDpRx1LinkRequest01 = ((g_ucDpRx1LinkRequest01 & 0xFC) | pucDpPhyLinkTrainingRequest[0]);
+                        g_pucDpRxLinkRequest01_P(DPRX_P) = ((g_pucDpRxLinkRequest01_P(DPRX_P) & 0xFC) | pucDpPhyLinkTrainingRequest[0]);
                     }
 
                     if(((pucDpPhyLinkTrainingLevel[1] & _BIT2) != _BIT2) && ((pucDpPhyLinkTrainingLevel[1] & (_BIT1 | _BIT0)) < ucTP1HBR2FakeLTSwingLevel))
                     {
-                        g_ucDpRx1LinkRequest01 = ((g_ucDpRx1LinkRequest01 & 0xCF) | pucDpPhyLinkTrainingRequest[1]);
+                        g_pucDpRxLinkRequest01_P(DPRX_P) = ((g_pucDpRxLinkRequest01_P(DPRX_P) & 0xCF) | pucDpPhyLinkTrainingRequest[1]);
                     }
                 }
                 else
                 {
                     if(((pucDpPhyLinkTrainingLevel[0] & _BIT2) != _BIT2) && ((pucDpPhyLinkTrainingLevel[0] & (_BIT1 | _BIT0)) < ucTP1RBRHBRFakeLTSwingLevel))
                     {
-                        g_ucDpRx1LinkRequest01 = ((g_ucDpRx1LinkRequest01 & 0xFC) | pucDpPhyLinkTrainingRequest[0]);
+                        g_pucDpRxLinkRequest01_P(DPRX_P) = ((g_pucDpRxLinkRequest01_P(DPRX_P) & 0xFC) | pucDpPhyLinkTrainingRequest[0]);
                     }
 
                     if(((pucDpPhyLinkTrainingLevel[1] & _BIT2) != _BIT2) && ((pucDpPhyLinkTrainingLevel[1] & (_BIT1 | _BIT0)) < ucTP1RBRHBRFakeLTSwingLevel))
                     {
-                        g_ucDpRx1LinkRequest01 = ((g_ucDpRx1LinkRequest01 & 0xCF) | pucDpPhyLinkTrainingRequest[1]);
+                        g_pucDpRxLinkRequest01_P(DPRX_P) = ((g_pucDpRxLinkRequest01_P(DPRX_P) & 0xCF) | pucDpPhyLinkTrainingRequest[1]);
                     }
                 }
 
-                ScalerDpRx1SetDpcdValue_EXINT0(0x00, 0x02, 0x06, g_ucDpRx1LinkRequest01);
+                ScalerDpRx1SetDpcdValue_EXINT0(0x00, 0x02, 0x06, g_pucDpRxLinkRequest01_P(DPRX_P));
                 ScalerDpRx1SetDpcdValue_EXINT0(0x00, 0x02, 0x07, 0x00);
 
                 if((((pucDpPhyLinkTrainingLevel[0] & _BIT2) == _BIT2) || ((pucDpPhyLinkTrainingLevel[0] & (_BIT1 | _BIT0)) == (ScalerDpRx1GetDpcdBitInfo_EXINT0(0x00, 0x02, 0x06, (_BIT1 | _BIT0))))) &&
@@ -938,53 +938,53 @@ BYTE ScalerDpRx1Tp1Check_EXINT0(EnumDpLinkTrainingType enumDpLtType)
             case _DP_FOUR_LANE:
             default:
 
-                if(g_ucDpRx1LinkRate == _DP_LINK_HBR2)
+                if(g_pucDpRxLinkRate_P(DPRX_P) == _DP_LINK_HBR2)
                 {
                     if(((pucDpPhyLinkTrainingLevel[0] & _BIT2) != _BIT2) && ((pucDpPhyLinkTrainingLevel[0] & (_BIT1 | _BIT0)) < ucTP1HBR2FakeLTSwingLevel))
                     {
-                        g_ucDpRx1LinkRequest01 = ((g_ucDpRx1LinkRequest01 & 0xFC) | pucDpPhyLinkTrainingRequest[0]);
+                        g_pucDpRxLinkRequest01_P(DPRX_P) = ((g_pucDpRxLinkRequest01_P(DPRX_P) & 0xFC) | pucDpPhyLinkTrainingRequest[0]);
                     }
 
                     if(((pucDpPhyLinkTrainingLevel[1] & _BIT2) != _BIT2) && ((pucDpPhyLinkTrainingLevel[1] & (_BIT1 | _BIT0)) < ucTP1HBR2FakeLTSwingLevel))
                     {
-                        g_ucDpRx1LinkRequest01 = ((g_ucDpRx1LinkRequest01 & 0xCF) | pucDpPhyLinkTrainingRequest[1]);
+                        g_pucDpRxLinkRequest01_P(DPRX_P) = ((g_pucDpRxLinkRequest01_P(DPRX_P) & 0xCF) | pucDpPhyLinkTrainingRequest[1]);
                     }
 
                     if(((pucDpPhyLinkTrainingLevel[2] & _BIT2) != _BIT2) && ((pucDpPhyLinkTrainingLevel[2] & (_BIT1 | _BIT0)) < ucTP1HBR2FakeLTSwingLevel))
                     {
-                        g_ucDpRx1LinkRequest23 = ((g_ucDpRx1LinkRequest23 & 0xFC) | pucDpPhyLinkTrainingRequest[2]);
+                        g_pucDpRxLinkRequest23_P(DPRX_P) = ((g_pucDpRxLinkRequest23_P(DPRX_P) & 0xFC) | pucDpPhyLinkTrainingRequest[2]);
                     }
 
                     if(((pucDpPhyLinkTrainingLevel[3] & _BIT2) != _BIT2) && ((pucDpPhyLinkTrainingLevel[3] & (_BIT1 | _BIT0)) < ucTP1HBR2FakeLTSwingLevel))
                     {
-                        g_ucDpRx1LinkRequest23 = ((g_ucDpRx1LinkRequest23 & 0xCF) | pucDpPhyLinkTrainingRequest[3]);
+                        g_pucDpRxLinkRequest23_P(DPRX_P) = ((g_pucDpRxLinkRequest23_P(DPRX_P) & 0xCF) | pucDpPhyLinkTrainingRequest[3]);
                     }
                 }
                 else
                 {
                     if(((pucDpPhyLinkTrainingLevel[0] & _BIT2) != _BIT2) && ((pucDpPhyLinkTrainingLevel[0] & (_BIT1 | _BIT0)) < ucTP1RBRHBRFakeLTSwingLevel))
                     {
-                        g_ucDpRx1LinkRequest01 = ((g_ucDpRx1LinkRequest01 & 0xFC) | pucDpPhyLinkTrainingRequest[0]);
+                        g_pucDpRxLinkRequest01_P(DPRX_P) = ((g_pucDpRxLinkRequest01_P(DPRX_P) & 0xFC) | pucDpPhyLinkTrainingRequest[0]);
                     }
 
                     if(((pucDpPhyLinkTrainingLevel[1] & _BIT2) != _BIT2) && ((pucDpPhyLinkTrainingLevel[1] & (_BIT1 | _BIT0)) < ucTP1RBRHBRFakeLTSwingLevel))
                     {
-                        g_ucDpRx1LinkRequest01 = ((g_ucDpRx1LinkRequest01 & 0xCF) | pucDpPhyLinkTrainingRequest[1]);
+                        g_pucDpRxLinkRequest01_P(DPRX_P) = ((g_pucDpRxLinkRequest01_P(DPRX_P) & 0xCF) | pucDpPhyLinkTrainingRequest[1]);
                     }
 
                     if(((pucDpPhyLinkTrainingLevel[2] & _BIT2) != _BIT2) && ((pucDpPhyLinkTrainingLevel[2] & (_BIT1 | _BIT0)) < ucTP1RBRHBRFakeLTSwingLevel))
                     {
-                        g_ucDpRx1LinkRequest23 = ((g_ucDpRx1LinkRequest23 & 0xFC) | pucDpPhyLinkTrainingRequest[2]);
+                        g_pucDpRxLinkRequest23_P(DPRX_P) = ((g_pucDpRxLinkRequest23_P(DPRX_P) & 0xFC) | pucDpPhyLinkTrainingRequest[2]);
                     }
 
                     if(((pucDpPhyLinkTrainingLevel[3] & _BIT2) != _BIT2) && ((pucDpPhyLinkTrainingLevel[3] & (_BIT1 | _BIT0)) < ucTP1RBRHBRFakeLTSwingLevel))
                     {
-                        g_ucDpRx1LinkRequest23 = ((g_ucDpRx1LinkRequest23 & 0xCF) | pucDpPhyLinkTrainingRequest[3]);
+                        g_pucDpRxLinkRequest23_P(DPRX_P) = ((g_pucDpRxLinkRequest23_P(DPRX_P) & 0xCF) | pucDpPhyLinkTrainingRequest[3]);
                     }
                 }
 
-                ScalerDpRx1SetDpcdValue_EXINT0(0x00, 0x02, 0x06, g_ucDpRx1LinkRequest01);
-                ScalerDpRx1SetDpcdValue_EXINT0(0x00, 0x02, 0x07, g_ucDpRx1LinkRequest23);
+                ScalerDpRx1SetDpcdValue_EXINT0(0x00, 0x02, 0x06, g_pucDpRxLinkRequest01_P(DPRX_P));
+                ScalerDpRx1SetDpcdValue_EXINT0(0x00, 0x02, 0x07, g_pucDpRxLinkRequest23_P(DPRX_P));
 
                 if((((pucDpPhyLinkTrainingLevel[0] & _BIT2) == _BIT2) || ((pucDpPhyLinkTrainingLevel[0] & (_BIT1 | _BIT0)) == ScalerDpRx1GetDpcdBitInfo_EXINT0(0x00, 0x02, 0x06, (_BIT1 | _BIT0)))) &&
                    (((pucDpPhyLinkTrainingLevel[1] & _BIT2) == _BIT2) || ((pucDpPhyLinkTrainingLevel[1] & (_BIT1 | _BIT0)) == (ScalerDpRx1GetDpcdBitInfo_EXINT0(0x00, 0x02, 0x06, (_BIT5 | _BIT4)) >> 4))) &&
@@ -1008,7 +1008,7 @@ BYTE ScalerDpRx1Tp1Check_EXINT0(EnumDpLinkTrainingType enumDpLtType)
 // Input Value  : Normal or Fake LT
 // Output Value : TRUE --> TP2 Pass
 //--------------------------------------------------
-BYTE ScalerDpRx1Tp2Check_EXINT0(EnumDpLinkTrainingType enumDpLtType)
+BYTE ScalerDpRx1Tp2Check_EXINT0(DPRX_PD EnumDpLinkTrainingType enumDpLtType)
 {
     BYTE pucLevel[4];
     BYTE ucTemp;
@@ -1016,7 +1016,7 @@ BYTE ScalerDpRx1Tp2Check_EXINT0(EnumDpLinkTrainingType enumDpLtType)
     BYTE ucEQCRCStatus = 0;
     BYTE ucEQCRCStatus1 = 0;
     BYTE ucEQCRCStatus2 = 0;
-    BYTE ucFakeLTLaneCount = g_ucDpRx1LaneCount;
+    BYTE ucFakeLTLaneCount = g_pucDpRxLaneCount_P(DPRX_P);
 
     pucLevel[0] = ScalerDpRx1GetDpcdInfo_EXINT0(0x00, 0x01, 0x03);
     pucLevel[1] = ScalerDpRx1GetDpcdInfo_EXINT0(0x00, 0x01, 0x04);
@@ -1027,12 +1027,12 @@ BYTE ScalerDpRx1Tp2Check_EXINT0(EnumDpLinkTrainingType enumDpLtType)
 
     if(enumDpLtType == _DP_NORMAL_LT)
     {
-        g_ucDpRx1LinkRequest01 = ((pucLevel[0] & 0x03) |
+        g_pucDpRxLinkRequest01_P(DPRX_P) = ((pucLevel[0] & 0x03) |
                                   ((pucLevel[0] >> 1) & 0x0C) |
                                   ((pucLevel[1] << 4) & 0x30) |
                                   ((pucLevel[1] << 3) & 0xC0));
 
-        g_ucDpRx1LinkRequest23 = ((pucLevel[2] & 0x03) |
+        g_pucDpRxLinkRequest23_P(DPRX_P) = ((pucLevel[2] & 0x03) |
                                   ((pucLevel[2] >> 1) & 0x0C) |
                                   ((pucLevel[3] << 4) & 0x30) |
                                   ((pucLevel[3] << 3) & 0xC0));
@@ -1045,7 +1045,7 @@ BYTE ScalerDpRx1Tp2Check_EXINT0(EnumDpLinkTrainingType enumDpLtType)
 
         ucEQCRCStatus1 = ScalerGetByte_EXINT(PB0_12_EQ_CRC_1);
 
-        if(g_ucDpRx1LinkRate == _DP_LINK_HBR2)
+        if(g_pucDpRxLinkRate_P(DPRX_P) == _DP_LINK_HBR2)
         {
             for(ucTemp = 0; ucTemp <= 30; ucTemp++)
             {
@@ -1081,90 +1081,90 @@ BYTE ScalerDpRx1Tp2Check_EXINT0(EnumDpLinkTrainingType enumDpLtType)
 
         ucEQCRCStatus = (ucEQCRCStatus1 | ucEQCRCStatus2);
 
-        g_ucDpRx1EQCRC = 0x00;
+        g_pucDpRxEQCRC_P(DPRX_P) = 0x00;
 
         if(GET_DP_RX1_PCB_LANE0_MAPPING() == _DP_SCALER_LANE0)
         {
-            g_ucDpRx1EQCRC |= (ucEQCRCStatus & 0x01);
+            g_pucDpRxEQCRC_P(DPRX_P) |= (ucEQCRCStatus & 0x01);
         }
         else if(GET_DP_RX1_PCB_LANE0_MAPPING() == _DP_SCALER_LANE1)
         {
-            g_ucDpRx1EQCRC |= ((ucEQCRCStatus & 0x02) >> 1);
+            g_pucDpRxEQCRC_P(DPRX_P) |= ((ucEQCRCStatus & 0x02) >> 1);
         }
         else if(GET_DP_RX1_PCB_LANE0_MAPPING() == _DP_SCALER_LANE2)
         {
-            g_ucDpRx1EQCRC |= ((ucEQCRCStatus & 0x04) >> 2);
+            g_pucDpRxEQCRC_P(DPRX_P) |= ((ucEQCRCStatus & 0x04) >> 2);
         }
         else if(GET_DP_RX1_PCB_LANE0_MAPPING() == _DP_SCALER_LANE3)
         {
-            g_ucDpRx1EQCRC |= ((ucEQCRCStatus & 0x08) >> 3);
+            g_pucDpRxEQCRC_P(DPRX_P) |= ((ucEQCRCStatus & 0x08) >> 3);
         }
 
         if(GET_DP_RX1_PCB_LANE1_MAPPING() == _DP_SCALER_LANE0)
         {
-            g_ucDpRx1EQCRC |= ((ucEQCRCStatus & 0x01) << 1);
+            g_pucDpRxEQCRC_P(DPRX_P) |= ((ucEQCRCStatus & 0x01) << 1);
         }
         else if(GET_DP_RX1_PCB_LANE1_MAPPING() == _DP_SCALER_LANE1)
         {
-            g_ucDpRx1EQCRC |= (ucEQCRCStatus & 0x02);
+            g_pucDpRxEQCRC_P(DPRX_P) |= (ucEQCRCStatus & 0x02);
         }
         else if(GET_DP_RX1_PCB_LANE1_MAPPING() == _DP_SCALER_LANE2)
         {
-            g_ucDpRx1EQCRC |= ((ucEQCRCStatus & 0x04) >> 1);
+            g_pucDpRxEQCRC_P(DPRX_P) |= ((ucEQCRCStatus & 0x04) >> 1);
         }
         else if(GET_DP_RX1_PCB_LANE1_MAPPING() == _DP_SCALER_LANE3)
         {
-            g_ucDpRx1EQCRC |= ((ucEQCRCStatus & 0x08) >> 2);
+            g_pucDpRxEQCRC_P(DPRX_P) |= ((ucEQCRCStatus & 0x08) >> 2);
         }
 
         if(GET_DP_RX1_PCB_LANE2_MAPPING() == _DP_SCALER_LANE0)
         {
-            g_ucDpRx1EQCRC |= ((ucEQCRCStatus & 0x01) << 2);
+            g_pucDpRxEQCRC_P(DPRX_P) |= ((ucEQCRCStatus & 0x01) << 2);
         }
         else if(GET_DP_RX1_PCB_LANE2_MAPPING() == _DP_SCALER_LANE1)
         {
-            g_ucDpRx1EQCRC |= ((ucEQCRCStatus & 0x02) << 1);
+            g_pucDpRxEQCRC_P(DPRX_P) |= ((ucEQCRCStatus & 0x02) << 1);
         }
         else if(GET_DP_RX1_PCB_LANE2_MAPPING() == _DP_SCALER_LANE2)
         {
-            g_ucDpRx1EQCRC |= (ucEQCRCStatus & 0x04);
+            g_pucDpRxEQCRC_P(DPRX_P) |= (ucEQCRCStatus & 0x04);
         }
         else if(GET_DP_RX1_PCB_LANE2_MAPPING() == _DP_SCALER_LANE3)
         {
-            g_ucDpRx1EQCRC |= ((ucEQCRCStatus & 0x08) >> 1);
+            g_pucDpRxEQCRC_P(DPRX_P) |= ((ucEQCRCStatus & 0x08) >> 1);
         }
 
         if(GET_DP_RX1_PCB_LANE3_MAPPING() == _DP_SCALER_LANE0)
         {
-            g_ucDpRx1EQCRC |= ((ucEQCRCStatus & 0x01) << 3);
+            g_pucDpRxEQCRC_P(DPRX_P) |= ((ucEQCRCStatus & 0x01) << 3);
         }
         else if(GET_DP_RX1_PCB_LANE3_MAPPING() == _DP_SCALER_LANE1)
         {
-            g_ucDpRx1EQCRC |= ((ucEQCRCStatus & 0x02) << 2);
+            g_pucDpRxEQCRC_P(DPRX_P) |= ((ucEQCRCStatus & 0x02) << 2);
         }
         else if(GET_DP_RX1_PCB_LANE3_MAPPING() == _DP_SCALER_LANE2)
         {
-            g_ucDpRx1EQCRC |= ((ucEQCRCStatus & 0x04) << 1);
+            g_pucDpRxEQCRC_P(DPRX_P) |= ((ucEQCRCStatus & 0x04) << 1);
         }
         else if(GET_DP_RX1_PCB_LANE3_MAPPING() == _DP_SCALER_LANE3)
         {
-            g_ucDpRx1EQCRC |= (ucEQCRCStatus & 0x08);
+            g_pucDpRxEQCRC_P(DPRX_P) |= (ucEQCRCStatus & 0x08);
         }
 
-        ucEQCRCStatus = g_ucDpRx1EQCRC;
+        ucEQCRCStatus = g_pucDpRxEQCRC_P(DPRX_P);
 
-        ScalerDpRx1Tp2LaneCheck_EXINT0(g_ucDpRx1LaneCount, ucEQCRCStatus, pucLevel);
+        ScalerDpRx1Tp2LaneCheck_EXINT0(DPRX_PA g_pucDpRxLaneCount_P(DPRX_P), ucEQCRCStatus, pucLevel);
 
-        ScalerDpRx1SetDpcdValue_EXINT0(0x00, 0x02, 0x02, g_ucDpRx1LinkStatus01);
-        ScalerDpRx1SetDpcdValue_EXINT0(0x00, 0x02, 0x03, g_ucDpRx1LinkStatus23);
-        ScalerDpRx1SetDpcdValue_EXINT0(0x00, 0x02, 0x06, g_ucDpRx1LinkRequest01);
-        ScalerDpRx1SetDpcdValue_EXINT0(0x00, 0x02, 0x07, g_ucDpRx1LinkRequest23);
+        ScalerDpRx1SetDpcdValue_EXINT0(0x00, 0x02, 0x02, g_pucDpRxLinkStatus01_P(DPRX_P));
+        ScalerDpRx1SetDpcdValue_EXINT0(0x00, 0x02, 0x03, g_pucDpRxLinkStatus23_P(DPRX_P));
+        ScalerDpRx1SetDpcdValue_EXINT0(0x00, 0x02, 0x06, g_pucDpRxLinkRequest01_P(DPRX_P));
+        ScalerDpRx1SetDpcdValue_EXINT0(0x00, 0x02, 0x07, g_pucDpRxLinkRequest23_P(DPRX_P));
 
-        switch(g_ucDpRx1LaneCount)
+        switch(g_pucDpRxLaneCount_P(DPRX_P))
         {
             case _DP_ONE_LANE:
 
-                if((g_ucDpRx1LinkStatus01 & 0x07) == 0x07)
+                if((g_pucDpRxLinkStatus01_P(DPRX_P) & 0x07) == 0x07)
                 {
                     ScalerDpRx1SetDpcdValue_EXINT0(0x00, 0x02, 0x04, 0x81);
                     return _TRUE;
@@ -1174,7 +1174,7 @@ BYTE ScalerDpRx1Tp2Check_EXINT0(EnumDpLinkTrainingType enumDpLtType)
 
             case _DP_TWO_LANE:
 
-                if((g_ucDpRx1LinkStatus01 & 0x77) == 0x77)
+                if((g_pucDpRxLinkStatus01_P(DPRX_P) & 0x77) == 0x77)
                 {
                     ScalerDpRx1SetDpcdValue_EXINT0(0x00, 0x02, 0x04, 0x81);
                     return _TRUE;
@@ -1185,7 +1185,7 @@ BYTE ScalerDpRx1Tp2Check_EXINT0(EnumDpLinkTrainingType enumDpLtType)
             case _DP_FOUR_LANE:
             default:
 
-                if(((g_ucDpRx1LinkStatus01 & 0x77) == 0x77) && (((g_ucDpRx1LinkStatus23 & 0x77) == 0x77)))
+                if(((g_pucDpRxLinkStatus01_P(DPRX_P) & 0x77) == 0x77) && (((g_pucDpRxLinkStatus23_P(DPRX_P) & 0x77) == 0x77)))
                 {
                     ScalerDpRx1SetDpcdValue_EXINT0(0x00, 0x02, 0x04, 0x81);
                     return _TRUE;
@@ -1198,17 +1198,17 @@ BYTE ScalerDpRx1Tp2Check_EXINT0(EnumDpLinkTrainingType enumDpLtType)
     {
         ScalerDpRx1SetDpcdValue_EXINT0(0x00, 0x02, 0x04, 0x80);
 
-        g_ucDpRx1LinkRequest01 = (pucLevel[0] & 0x03) | ((pucLevel[1] << 4) & 0x30);
-        g_ucDpRx1LinkRequest23 = (pucLevel[2] & 0x03) | ((pucLevel[3] << 4) & 0x30);
+        g_pucDpRxLinkRequest01_P(DPRX_P) = (pucLevel[0] & 0x03) | ((pucLevel[1] << 4) & 0x30);
+        g_pucDpRxLinkRequest23_P(DPRX_P) = (pucLevel[2] & 0x03) | ((pucLevel[3] << 4) & 0x30);
 
 #if(_DP_RX_MI_DONGLE_SUPPORT == _ON)
-        if(g_ucDpRx1FakeLTLaneCount <= g_ucDpRx1LaneCount)
+        if(g_ucDpRx1FakeLTLaneCount <= g_pucDpRxLaneCount_P(DPRX_P))
         {
             ucFakeLTLaneCount = g_ucDpRx1FakeLTLaneCount;
         }
         else
         {
-            ucFakeLTLaneCount = g_ucDpRx1LaneCount;
+            ucFakeLTLaneCount = g_pucDpRxLaneCount_P(DPRX_P);
         }
 #endif
         switch(ucFakeLTLaneCount)
@@ -1218,22 +1218,22 @@ BYTE ScalerDpRx1Tp2Check_EXINT0(EnumDpLinkTrainingType enumDpLtType)
                 ScalerDpRx1SetDpcdValue_EXINT0(0x00, 0x02, 0x02, 0x01);
                 ScalerDpRx1SetDpcdValue_EXINT0(0x00, 0x02, 0x03, 0x00);
 
-                if(g_ucDpRx1LinkRate == _DP_LINK_HBR2)
+                if(g_pucDpRxLinkRate_P(DPRX_P) == _DP_LINK_HBR2)
                 {
                     if(((pucLevel[0] & _BIT2) != _BIT2) && ((pucLevel[0] & (_BIT1 | _BIT0)) < (_BIT1 | _BIT0)))
                     {
-                        g_ucDpRx1LinkRequest01 = ((g_ucDpRx1LinkRequest01 & 0xFC) | (pucLevel[0] & (_BIT1 | _BIT0))) + 0x01;
+                        g_pucDpRxLinkRequest01_P(DPRX_P) = ((g_pucDpRxLinkRequest01_P(DPRX_P) & 0xFC) | (pucLevel[0] & (_BIT1 | _BIT0))) + 0x01;
                     }
                 }
                 else
                 {
                     if(((pucLevel[0] & _BIT2) != _BIT2) && ((pucLevel[0] & (_BIT1 | _BIT0)) < _BIT1))
                     {
-                        g_ucDpRx1LinkRequest01 = ((g_ucDpRx1LinkRequest01 & 0xFC) | (pucLevel[0] & (_BIT1 | _BIT0))) + 0x01;
+                        g_pucDpRxLinkRequest01_P(DPRX_P) = ((g_pucDpRxLinkRequest01_P(DPRX_P) & 0xFC) | (pucLevel[0] & (_BIT1 | _BIT0))) + 0x01;
                     }
                 }
 
-                ScalerDpRx1SetDpcdValue_EXINT0(0x00, 0x02, 0x06, g_ucDpRx1LinkRequest01);
+                ScalerDpRx1SetDpcdValue_EXINT0(0x00, 0x02, 0x06, g_pucDpRxLinkRequest01_P(DPRX_P));
                 ScalerDpRx1SetDpcdValue_EXINT0(0x00, 0x02, 0x07, 0x00);
 
                 if(((pucLevel[0] & _BIT5) == _BIT5) || ((pucLevel[0] & _BIT2) == _BIT2) || ((pucLevel[0] & (_BIT1 | _BIT0)) == (ScalerDpRx1GetDpcdInfo_EXINT0(0x00, 0x02, 0x06) & (_BIT1 | _BIT0))))
@@ -1251,32 +1251,32 @@ BYTE ScalerDpRx1Tp2Check_EXINT0(EnumDpLinkTrainingType enumDpLtType)
                 ScalerDpRx1SetDpcdValue_EXINT0(0x00, 0x02, 0x02, 0x11);
                 ScalerDpRx1SetDpcdValue_EXINT0(0x00, 0x02, 0x03, 0x00);
 
-                if(g_ucDpRx1LinkRate == _DP_LINK_HBR2)
+                if(g_pucDpRxLinkRate_P(DPRX_P) == _DP_LINK_HBR2)
                 {
                     if(((pucLevel[0] & _BIT2) != _BIT2) && ((pucLevel[0] & (_BIT1 | _BIT0)) < (_BIT1 | _BIT0)))
                     {
-                        g_ucDpRx1LinkRequest01 = ((g_ucDpRx1LinkRequest01 & 0xFC) | (pucLevel[0] & (_BIT1 | _BIT0))) + 0x01;
+                        g_pucDpRxLinkRequest01_P(DPRX_P) = ((g_pucDpRxLinkRequest01_P(DPRX_P) & 0xFC) | (pucLevel[0] & (_BIT1 | _BIT0))) + 0x01;
                     }
 
                     if(((pucLevel[1] & _BIT2) != _BIT2) && ((pucLevel[1] & (_BIT1 | _BIT0)) < (_BIT1 | _BIT0)))
                     {
-                        g_ucDpRx1LinkRequest01 = ((g_ucDpRx1LinkRequest01 & 0xCF) | ((pucLevel[1] & (_BIT1 | _BIT0)) << 4)) + 0x10;
+                        g_pucDpRxLinkRequest01_P(DPRX_P) = ((g_pucDpRxLinkRequest01_P(DPRX_P) & 0xCF) | ((pucLevel[1] & (_BIT1 | _BIT0)) << 4)) + 0x10;
                     }
                 }
                 else
                 {
                     if(((pucLevel[0] & _BIT2) != _BIT2) && ((pucLevel[0] & (_BIT1 | _BIT0)) < _BIT1))
                     {
-                        g_ucDpRx1LinkRequest01 = ((g_ucDpRx1LinkRequest01 & 0xFC) | (pucLevel[0] & (_BIT1 | _BIT0))) + 0x01;
+                        g_pucDpRxLinkRequest01_P(DPRX_P) = ((g_pucDpRxLinkRequest01_P(DPRX_P) & 0xFC) | (pucLevel[0] & (_BIT1 | _BIT0))) + 0x01;
                     }
 
                     if(((pucLevel[1] & _BIT2) != _BIT2) && ((pucLevel[1] & (_BIT1 | _BIT0)) < _BIT1))
                     {
-                        g_ucDpRx1LinkRequest01 = ((g_ucDpRx1LinkRequest01 & 0xCF) | ((pucLevel[1] & (_BIT1 | _BIT0)) << 4)) + 0x10;
+                        g_pucDpRxLinkRequest01_P(DPRX_P) = ((g_pucDpRxLinkRequest01_P(DPRX_P) & 0xCF) | ((pucLevel[1] & (_BIT1 | _BIT0)) << 4)) + 0x10;
                     }
                 }
 
-                ScalerDpRx1SetDpcdValue_EXINT0(0x00, 0x02, 0x06, g_ucDpRx1LinkRequest01);
+                ScalerDpRx1SetDpcdValue_EXINT0(0x00, 0x02, 0x06, g_pucDpRxLinkRequest01_P(DPRX_P));
                 ScalerDpRx1SetDpcdValue_EXINT0(0x00, 0x02, 0x07, 0x00);
 
                 if((((pucLevel[0] & _BIT5) == _BIT5) || ((pucLevel[0] & _BIT2) == _BIT2) || ((pucLevel[0] & (_BIT1 | _BIT0)) == (ScalerDpRx1GetDpcdInfo_EXINT0(0x00, 0x02, 0x06) & (_BIT1 | _BIT0)))) &&
@@ -1296,53 +1296,53 @@ BYTE ScalerDpRx1Tp2Check_EXINT0(EnumDpLinkTrainingType enumDpLtType)
                 ScalerDpRx1SetDpcdValue_EXINT0(0x00, 0x02, 0x02, 0x11);
                 ScalerDpRx1SetDpcdValue_EXINT0(0x00, 0x02, 0x03, 0x11);
 
-                if(g_ucDpRx1LinkRate == _DP_LINK_HBR2)
+                if(g_pucDpRxLinkRate_P(DPRX_P) == _DP_LINK_HBR2)
                 {
                     if(((pucLevel[0] & _BIT2) != _BIT2) && ((pucLevel[0] & (_BIT1 | _BIT0)) < (_BIT1 | _BIT0)))
                     {
-                        g_ucDpRx1LinkRequest01 = ((g_ucDpRx1LinkRequest01 & 0xFC) | (pucLevel[0] & (_BIT1 | _BIT0))) + 0x01;
+                        g_pucDpRxLinkRequest01_P(DPRX_P) = ((g_pucDpRxLinkRequest01_P(DPRX_P) & 0xFC) | (pucLevel[0] & (_BIT1 | _BIT0))) + 0x01;
                     }
 
                     if(((pucLevel[1] & _BIT2) != _BIT2) && ((pucLevel[1] & (_BIT1 | _BIT0)) < (_BIT1 | _BIT0)))
                     {
-                        g_ucDpRx1LinkRequest01 = ((g_ucDpRx1LinkRequest01 & 0xCF) | ((pucLevel[1] & (_BIT1 | _BIT0)) << 4)) + 0x10;
+                        g_pucDpRxLinkRequest01_P(DPRX_P) = ((g_pucDpRxLinkRequest01_P(DPRX_P) & 0xCF) | ((pucLevel[1] & (_BIT1 | _BIT0)) << 4)) + 0x10;
                     }
 
                     if(((pucLevel[2] & _BIT2) != _BIT2) && ((pucLevel[2] & (_BIT1 | _BIT0)) < (_BIT1 | _BIT0)))
                     {
-                        g_ucDpRx1LinkRequest23 = ((g_ucDpRx1LinkRequest23 & 0xFC) | (pucLevel[2] & (_BIT1 | _BIT0))) + 0x01;
+                        g_pucDpRxLinkRequest23_P(DPRX_P) = ((g_pucDpRxLinkRequest23_P(DPRX_P) & 0xFC) | (pucLevel[2] & (_BIT1 | _BIT0))) + 0x01;
                     }
 
                     if(((pucLevel[3] & _BIT2) != _BIT2) && ((pucLevel[3] & (_BIT1 | _BIT0)) < (_BIT1 | _BIT0)))
                     {
-                        g_ucDpRx1LinkRequest23 = ((g_ucDpRx1LinkRequest23 & 0xCF) | ((pucLevel[3] & (_BIT1 | _BIT0)) << 4)) + 0x10;
+                        g_pucDpRxLinkRequest23_P(DPRX_P) = ((g_pucDpRxLinkRequest23_P(DPRX_P) & 0xCF) | ((pucLevel[3] & (_BIT1 | _BIT0)) << 4)) + 0x10;
                     }
                 }
                 else
                 {
                     if(((pucLevel[0] & _BIT2) != _BIT2) && ((pucLevel[0] & (_BIT1 | _BIT0)) < _BIT1))
                     {
-                        g_ucDpRx1LinkRequest01 = ((g_ucDpRx1LinkRequest01 & 0xFC) | (pucLevel[0] & (_BIT1 | _BIT0))) + 0x01;
+                        g_pucDpRxLinkRequest01_P(DPRX_P) = ((g_pucDpRxLinkRequest01_P(DPRX_P) & 0xFC) | (pucLevel[0] & (_BIT1 | _BIT0))) + 0x01;
                     }
 
                     if(((pucLevel[1] & _BIT2) != _BIT2) && ((pucLevel[1] & (_BIT1 | _BIT0)) < _BIT1))
                     {
-                        g_ucDpRx1LinkRequest01 = ((g_ucDpRx1LinkRequest01 & 0xCF) | ((pucLevel[1] & (_BIT1 | _BIT0)) << 4)) + 0x10;
+                        g_pucDpRxLinkRequest01_P(DPRX_P) = ((g_pucDpRxLinkRequest01_P(DPRX_P) & 0xCF) | ((pucLevel[1] & (_BIT1 | _BIT0)) << 4)) + 0x10;
                     }
 
                     if(((pucLevel[2] & _BIT2) != _BIT2) && ((pucLevel[2] & (_BIT1 | _BIT0)) < _BIT1))
                     {
-                        g_ucDpRx1LinkRequest23 = ((g_ucDpRx1LinkRequest23 & 0xFC) | (pucLevel[2] & (_BIT1 | _BIT0))) + 0x01;
+                        g_pucDpRxLinkRequest23_P(DPRX_P) = ((g_pucDpRxLinkRequest23_P(DPRX_P) & 0xFC) | (pucLevel[2] & (_BIT1 | _BIT0))) + 0x01;
                     }
 
                     if(((pucLevel[3] & _BIT2) != _BIT2) && ((pucLevel[3] & (_BIT1 | _BIT0)) < _BIT1))
                     {
-                        g_ucDpRx1LinkRequest23 = ((g_ucDpRx1LinkRequest23 & 0xCF) | ((pucLevel[3] & (_BIT1 | _BIT0)) << 4)) + 0x10;
+                        g_pucDpRxLinkRequest23_P(DPRX_P) = ((g_pucDpRxLinkRequest23_P(DPRX_P) & 0xCF) | ((pucLevel[3] & (_BIT1 | _BIT0)) << 4)) + 0x10;
                     }
                 }
 
-                ScalerDpRx1SetDpcdValue_EXINT0(0x00, 0x02, 0x06, g_ucDpRx1LinkRequest01);
-                ScalerDpRx1SetDpcdValue_EXINT0(0x00, 0x02, 0x07, g_ucDpRx1LinkRequest23);
+                ScalerDpRx1SetDpcdValue_EXINT0(0x00, 0x02, 0x06, g_pucDpRxLinkRequest01_P(DPRX_P));
+                ScalerDpRx1SetDpcdValue_EXINT0(0x00, 0x02, 0x07, g_pucDpRxLinkRequest23_P(DPRX_P));
 
                 if((((pucLevel[0] & _BIT5) == _BIT5) || ((pucLevel[0] & _BIT2) == _BIT2) || ((pucLevel[0] & (_BIT1 | _BIT0)) == (ScalerDpRx1GetDpcdInfo_EXINT0(0x00, 0x02, 0x06) & (_BIT1 | _BIT0)))) &&
                    (((pucLevel[1] & _BIT5) == _BIT5) || ((pucLevel[1] & _BIT2) == _BIT2) || ((pucLevel[1] & (_BIT1 | _BIT0)) == ((ScalerDpRx1GetDpcdInfo_EXINT0(0x00, 0x02, 0x06) & (_BIT5 | _BIT4)) >> 4))) &&
@@ -1368,7 +1368,7 @@ BYTE ScalerDpRx1Tp2Check_EXINT0(EnumDpLinkTrainingType enumDpLtType)
 // Input Value  : LaneNumber
 // Output Value : None
 //--------------------------------------------------
-void ScalerDpRx1AdjustLaneFLDBand_EXINT0(BYTE ucDpRx1LaneNumber, WORD usVCOBandDiff)
+void ScalerDpRx1AdjustLaneFLDBand_EXINT0(DPRX_PD BYTE ucDpRx1LaneNumber, WORD usVCOBandDiff)
 {
     BYTE ucTemp;
 
@@ -1426,15 +1426,15 @@ void ScalerDpRx1AdjustLaneFLDBand_EXINT0(BYTE ucDpRx1LaneNumber, WORD usVCOBandD
 
     if(ScalerGetBit_EXINT(PB0_50_DP_SIG_DET_0, _BIT6) == _BIT6)
     {
-        isr_g_pusDpRx1ClockCount1[ucDpRx1LaneNumber] = ((((WORD)ScalerGetByte_EXINT(PB0_53_DP_SIG_DET_3)) << 8) | ScalerGetByte_EXINT(PB0_54_DP_SIG_DET_4));
+        isr_g_ppusDpRxClockCount1_P(DPRX_P)[ucDpRx1LaneNumber] = ((((WORD)ScalerGetByte_EXINT(PB0_53_DP_SIG_DET_3)) << 8) | ScalerGetByte_EXINT(PB0_54_DP_SIG_DET_4));
 
-        if(isr_g_pusDpRx1ClockCount1[ucDpRx1LaneNumber] < isr_g_pusDpRx1ClockCount[ucDpRx1LaneNumber])
+        if(isr_g_ppusDpRxClockCount1_P(DPRX_P)[ucDpRx1LaneNumber] < isr_g_ppusDpRxClockCount_P(DPRX_P)[ucDpRx1LaneNumber])
         {
-            ucBestVCOBand = ucAutoVCOBand + (((isr_g_pusDpRx1ClockCount[ucDpRx1LaneNumber] - isr_g_pusDpRx1ClockCount1[ucDpRx1LaneNumber]) / usVCOBandDiff) + 1);
+            ucBestVCOBand = ucAutoVCOBand + (((isr_g_ppusDpRxClockCount_P(DPRX_P)[ucDpRx1LaneNumber] - isr_g_ppusDpRxClockCount1_P(DPRX_P)[ucDpRx1LaneNumber]) / usVCOBandDiff) + 1);
         }
         else
         {
-            ucBestVCOBand = ucAutoVCOBand - ((isr_g_pusDpRx1ClockCount1[ucDpRx1LaneNumber] - isr_g_pusDpRx1ClockCount[ucDpRx1LaneNumber]) / usVCOBandDiff);
+            ucBestVCOBand = ucAutoVCOBand - ((isr_g_ppusDpRxClockCount1_P(DPRX_P)[ucDpRx1LaneNumber] - isr_g_ppusDpRxClockCount_P(DPRX_P)[ucDpRx1LaneNumber]) / usVCOBandDiff);
         }
     }
     else
@@ -1499,14 +1499,14 @@ static BYTE ScalerDpRx1DFELaneCheck_EXINT0(BYTE ucMap)
     return (((WORD)ucVth << 8) | ucTap0) != 0x0015;
 }
 
-BYTE ScalerDpRx1DFECheck_EXINT0(void)
+BYTE ScalerDpRx1DFECheck_EXINT0(DPRX_PD1)
 {
-    if(g_ucDpRx1LinkRate == _DP_LINK_HBR2)
+    if(g_pucDpRxLinkRate_P(DPRX_P) == _DP_LINK_HBR2)
     {
         return _TRUE;
     }
 
-    switch(g_ucDpRx1LaneCount)
+    switch(g_pucDpRxLaneCount_P(DPRX_P))
     {
         case _DP_FOUR_LANE:
 
@@ -1549,14 +1549,14 @@ BYTE ScalerDpRx1DFECheck_EXINT0(void)
 // Input Value  : None
 // Output Value : None
 //--------------------------------------------------
-void ScalerDpRx1IntHandler_EXINT0(void)
+void ScalerDpRx1IntHandler_EXINT0(DPRX_PD1)
 {
     // Aux Firmware Control -> Reply Defer
     SET_DP_RX1_AUX_MANUAL_MODE_EXINT();
 
-    g_pucDpRx1Backup[0] = ScalerGetByte_EXINT(PBA_C1_DPCD_ADDR_PORT_H);
-    g_pucDpRx1Backup[1] = ScalerGetByte_EXINT(PBA_C2_DPCD_ADDR_PORT_M);
-    g_pucDpRx1Backup[2] = ScalerGetByte_EXINT(PBA_C3_DPCD_ADDR_PORT_L);
+    g_ppucDpRxBackup_P(DPRX_P)[0] = ScalerGetByte_EXINT(PBA_C1_DPCD_ADDR_PORT_H);
+    g_ppucDpRxBackup_P(DPRX_P)[1] = ScalerGetByte_EXINT(PBA_C2_DPCD_ADDR_PORT_M);
+    g_ppucDpRxBackup_P(DPRX_P)[2] = ScalerGetByte_EXINT(PBA_C3_DPCD_ADDR_PORT_L);
 
     // DP Global IRQ Flag
     if(ScalerGetBit_EXINT(PBA_DC_AUX_IRQ_STATUS, _BIT7) == _BIT7)
@@ -1584,7 +1584,7 @@ void ScalerDpRx1IntHandler_EXINT0(void)
             // The Judge Handler take much time, It lead to MacBook 720P @50 <---> @60 Timing changing Issue
             if(((ScalerDpRx1GetDpcdInfo_EXINT0(0x00, 0x01, 0x11) & _BIT0) == 0x00) &&
                (ScalerDpRx1GetDpcdBitInfo_EXINT0(0x00, 0x06, 0x00, (_BIT2 | _BIT1 | _BIT0)) == _BIT0) &&
-               (ScalerDpRx1DFECheck_EXINT0() == _FALSE))
+               (ScalerDpRx1DFECheck_EXINT0(DPRX_PA1) == _FALSE))
             {
                 ScalerDpRx1SetDpcdValue_EXINT0(0x00, 0x02, 0x02, 0x00);
                 ScalerDpRx1SetDpcdValue_EXINT0(0x00, 0x02, 0x03, 0x00);
@@ -1769,16 +1769,16 @@ void ScalerDpRx1IntHandler_EXINT0(void)
 #endif
     }
 
-    ScalerSetByte_EXINT(PBA_C1_DPCD_ADDR_PORT_H, g_pucDpRx1Backup[0]);
-    ScalerSetByte_EXINT(PBA_C2_DPCD_ADDR_PORT_M, g_pucDpRx1Backup[1]);
-    ScalerSetByte_EXINT(PBA_C3_DPCD_ADDR_PORT_L, g_pucDpRx1Backup[2]);
+    ScalerSetByte_EXINT(PBA_C1_DPCD_ADDR_PORT_H, g_ppucDpRxBackup_P(DPRX_P)[0]);
+    ScalerSetByte_EXINT(PBA_C2_DPCD_ADDR_PORT_M, g_ppucDpRxBackup_P(DPRX_P)[1]);
+    ScalerSetByte_EXINT(PBA_C3_DPCD_ADDR_PORT_L, g_ppucDpRxBackup_P(DPRX_P)[2]);
 }
 //--------------------------------------------------
 // Description  : DP PHY DFE Initial Setting in TP2
 // Input Value  : None
 // Output Value : None
 //--------------------------------------------------
-void ScalerDpRx1SetDFEInitial_EXINT0(void)
+void ScalerDpRx1SetDFEInitial_EXINT0(DPRX_PD1)
 {
     // [6] Enable Timer Control DFE Loop
     // [5:4] Reduce Gain to 1/4
@@ -1815,7 +1815,7 @@ void ScalerDpRx1SetDFEInitial_EXINT0(void)
     // Tap0 Max is 21
     ScalerSetByte_EXINT(P7A_E6_LIMIT_1, 0x35);
 
-    if(g_ucDpRx1LinkRate == _DP_LINK_HBR2)
+    if(g_pucDpRxLinkRate_P(DPRX_P) == _DP_LINK_HBR2)
     {
         // Tap1 Min is 49
         ScalerSetBit_EXINT(P7A_E7_LIMIT_2, ~(_BIT5 | _BIT4 | _BIT3 | _BIT2 | _BIT1 | _BIT0), (_BIT5 | _BIT4 | _BIT0));
@@ -1843,7 +1843,7 @@ void ScalerDpRx1SetDFEInitial_EXINT0(void)
     // Tap0 Threshold = 10
     ScalerSetBit_EXINT(P7A_EF_RESET_1, ~(_BIT7 | _BIT6 | _BIT5 | _BIT4), (_BIT7 | _BIT5));
 
-    if(g_ucDpRx1LinkRate == _DP_LINK_HBR2)
+    if(g_pucDpRxLinkRate_P(DPRX_P) == _DP_LINK_HBR2)
     {
         // Set Vth Max = 6, Min = 4
         ScalerSetByte_EXINT(P7A_F9_LIMIT_10, 0x64);
@@ -1857,7 +1857,7 @@ void ScalerDpRx1SetDFEInitial_EXINT0(void)
     // Set Vth/Servo-loop/Tap Divider
     ScalerSetByte_EXINT(P7A_EC_LOOP_DIV_1, 0xA3);
 
-    if(g_ucDpRx1TrainingPatternSet == _DP_TRAINING_PATTERN_3)
+    if(g_pucDpRxTrainingPatternSet_P(DPRX_P) == _DP_TRAINING_PATTERN_3)
     {
         // Tap Divider = 34 for TP3
         ScalerSetByte_EXINT(P7A_ED_LOOP_DIV_2, 0xE2);
@@ -1872,7 +1872,7 @@ void ScalerDpRx1SetDFEInitial_EXINT0(void)
     // [0] tap0_trans = 1'b0 --> Tap0 is Effective every bit
     ScalerSetBit_EXINT(P7A_E3_GAIN_2, ~(_BIT1 | _BIT0), 0x00);
 
-    if(g_ucDpRx1LinkRate == _DP_LINK_HBR2)
+    if(g_pucDpRxLinkRate_P(DPRX_P) == _DP_LINK_HBR2)
     {
         // [1:0] trans_rlength = 2'b01 --> Tap0 Run Length = 3
         ScalerSetBit_EXINT(P7A_E4_GAIN_3, ~(_BIT1 | _BIT0), _BIT0);
@@ -1892,7 +1892,7 @@ void ScalerDpRx1SetDFEInitial_EXINT0(void)
     // DFE Code Initialize //
     /////////////////////////
 
-    if(g_ucDpRx1LinkRate == _DP_LINK_HBR2)
+    if(g_pucDpRxLinkRate_P(DPRX_P) == _DP_LINK_HBR2)
     {
         // LE Max = 18, Initial = 16, Servo Initial = 16
         ScalerSetByte_EXINT(P7A_A2_L0_LIMIT_INIT, 0x20);

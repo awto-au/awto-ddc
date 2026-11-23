@@ -54,7 +54,7 @@ volatile WORD isr_g_usInputPixelClk;
 WORD isr_g_usTmdsOffLineMeasureClk [[awto::isr_shared("main writes it with EX0 masked (TMDS Rx2/Rx3 PhySetDeferred); EXINT0 only reads")]];
 
 BYTE g_ucDpRx0LTStatus = _DP_LINK_TRAINING_NONE;
-volatile BYTE isr_g_ucDpRx1LTStatus = _DP_LINK_TRAINING_NONE; AWTO_LT_RING_DEF AWTO_PROBE_DEF
+DPRX_T1(volatile BYTE, isr_g_pucDpRxLTStatus, isr_g_ucDpRx1LTStatus) = {_DP_LINK_TRAINING_NONE}; AWTO_LT_RING_DEF AWTO_PROBE_DEF
 __xdata _Bool g_bDpRx0NormalLTSetPhyFinish = _FALSE;
 volatile bit d_isr_g_bDpRx1NormalLTSetPhyFinish = _FALSE;
 

@@ -125,7 +125,7 @@ BYTE ScalerDpAuxJudgeHandler_EXINT0(void)
             // Aux Firmware Control -> Reply Defer
             SET_DP_RX1_AUX_MANUAL_MODE_EXINT();
 
-            g_ucDpRx1AuxAddressBackup = (ScalerGetByte_EXINT(PBA_D4_AUX_RX_ADDR_L));
+            g_pucDpRxAuxAddressBackup_P(_DP_RX1_PORT_INDEX) = (ScalerGetByte_EXINT(PBA_D4_AUX_RX_ADDR_L));
 
             // Enable Force Defer
             ScalerSetBit_EXINT(PBA_D0_AUX_MODE_SET, ~_BIT4, _BIT4);
@@ -536,7 +536,7 @@ BYTE ScalerDpAuxJudgeHandler_EXINT0(void)
                 // Aux Firmware Control -> Reply Defer
                 SET_DP_RX1_AUX_MANUAL_MODE_EXINT();
 
-                g_ucDpRx1AuxAddressBackup = (ScalerGetByte_EXINT(PBA_D4_AUX_RX_ADDR_L));
+                g_pucDpRxAuxAddressBackup_P(_DP_RX1_PORT_INDEX) = (ScalerGetByte_EXINT(PBA_D4_AUX_RX_ADDR_L));
 
                 // Enable Force Defer
                 ScalerSetBit_EXINT(PBA_D0_AUX_MODE_SET, ~_BIT4, _BIT4);
@@ -551,9 +551,9 @@ BYTE ScalerDpAuxJudgeHandler_EXINT0(void)
             SET_DP_RX1_AUX_MANUAL_MODE_EXINT();
         }
 
-        g_pucDpRx1Backup[0] = ScalerGetByte_EXINT(PBA_C1_DPCD_ADDR_PORT_H);
-        g_pucDpRx1Backup[1] = ScalerGetByte_EXINT(PBA_C2_DPCD_ADDR_PORT_M);
-        g_pucDpRx1Backup[2] = ScalerGetByte_EXINT(PBA_C3_DPCD_ADDR_PORT_L);
+        g_ppucDpRxBackup_P(_DP_RX1_PORT_INDEX)[0] = ScalerGetByte_EXINT(PBA_C1_DPCD_ADDR_PORT_H);
+        g_ppucDpRxBackup_P(_DP_RX1_PORT_INDEX)[1] = ScalerGetByte_EXINT(PBA_C2_DPCD_ADDR_PORT_M);
+        g_ppucDpRxBackup_P(_DP_RX1_PORT_INDEX)[2] = ScalerGetByte_EXINT(PBA_C3_DPCD_ADDR_PORT_L);
 
         // Symbol Error Count Read IRQ
         if(ScalerGetBit_EXINT(PBA_FB_DUMMY_1, (_BIT1 | _BIT0)) == (_BIT1 | _BIT0))
@@ -575,7 +575,7 @@ BYTE ScalerDpAuxJudgeHandler_EXINT0(void)
                     // Directly Reply Aux Defer Command
                     ScalerSetBit_EXINT(PBA_D7_AUX_TX_CMD, ~(_BIT3 | _BIT2 | _BIT1 | _BIT0), _BIT1);
 
-                    ScalerDpRx1ErrorCounterUpdate_EXINT0();
+                    ScalerDpRx1ErrorCounterUpdate_EXINT0(DPRX_CA1);
 
                     SET_DP_RX1_SOURCE_READ_ERROR_COUNT();
                 }
@@ -611,28 +611,28 @@ BYTE ScalerDpAuxJudgeHandler_EXINT0(void)
             ScalerSetBit_EXINT(PBA_FB_DUMMY_1, ~(_BIT7 | _BIT5 | _BIT3 | _BIT1), _BIT7);
 
             ucLength = (ScalerGetByte_EXINT(PBA_D5_AUX_RXLEN) & 0x0F) + 1;
-            g_ucDpRx1AuxAddressBackup -= ucLength;
+            g_pucDpRxAuxAddressBackup_P(_DP_RX1_PORT_INDEX) -= ucLength;
 
-            if(g_ucDpRx1AuxAddressBackup <= 0x0F)
+            if(g_pucDpRxAuxAddressBackup_P(_DP_RX1_PORT_INDEX) <= 0x0F)
             {
-                if(g_ucDpRx1AuxAddressBackup == 0x00)
+                if(g_pucDpRxAuxAddressBackup_P(_DP_RX1_PORT_INDEX) == 0x00)
                 {
                     ScalerSetByte_EXINT(PBA_D9_AUX_TX_DATA, isr_g_ucDpRx1DPCD02200hValue);
-                    g_ucDpRx1AuxAddressBackup++;
+                    g_pucDpRxAuxAddressBackup_P(_DP_RX1_PORT_INDEX)++;
                     ucLength--;
                 }
 
-                if((ucLength > 0) && (g_ucDpRx1AuxAddressBackup == 0x01))
+                if((ucLength > 0) && (g_pucDpRxAuxAddressBackup_P(_DP_RX1_PORT_INDEX) == 0x01))
                 {
                     ScalerSetByte_EXINT(PBA_D9_AUX_TX_DATA, isr_g_ucDpRx1DPCD02201hValue);
-                    g_ucDpRx1AuxAddressBackup++;
+                    g_pucDpRxAuxAddressBackup_P(_DP_RX1_PORT_INDEX)++;
                     ucLength--;
                 }
 
-                if((g_ucDpRx1AuxAddressBackup + ucLength) > 16)
+                if((g_pucDpRxAuxAddressBackup_P(_DP_RX1_PORT_INDEX) + ucLength) > 16)
                 {
                     // ucAddress is The Address of DPCD Table
-                    for(ucAddress = g_ucDpRx1AuxAddressBackup; ucAddress <= 0x0F; ucAddress++)
+                    for(ucAddress = g_pucDpRxAuxAddressBackup_P(_DP_RX1_PORT_INDEX); ucAddress <= 0x0F; ucAddress++)
                     {
                         ScalerSetByte_EXINT(PBA_D9_AUX_TX_DATA, ScalerDpRx1GetDpcdInfo_EXINT0(0x00, 0x00, ucAddress));
                     }
@@ -649,18 +649,18 @@ BYTE ScalerDpAuxJudgeHandler_EXINT0(void)
                 {
                     for(ucAddress = 0; ucAddress < ucLength; ucAddress++)
                     {
-                        ScalerSetByte_EXINT(PBA_D9_AUX_TX_DATA, ScalerDpRx1GetDpcdInfo_EXINT0(0x00, 0x00, (g_ucDpRx1AuxAddressBackup + ucAddress)));
+                        ScalerSetByte_EXINT(PBA_D9_AUX_TX_DATA, ScalerDpRx1GetDpcdInfo_EXINT0(0x00, 0x00, (g_pucDpRxAuxAddressBackup_P(_DP_RX1_PORT_INDEX) + ucAddress)));
                     }
                 }
             }
             else
             {
-                if(g_ucDpRx1AuxAddressBackup == 0x10)
+                if(g_pucDpRxAuxAddressBackup_P(_DP_RX1_PORT_INDEX) == 0x10)
                 {
                     // Set DPCD 02210h[3] = 1 --> VSC_SDP_EXTENSION_FOR_COLORIMETRY_SUPPORTED
                     ScalerSetByte_EXINT(PBA_D9_AUX_TX_DATA, isr_g_ucDpRx1DPCD02210hValue);
 
-                    g_ucDpRx1AuxAddressBackup++;
+                    g_pucDpRxAuxAddressBackup_P(_DP_RX1_PORT_INDEX)++;
                     ucLength--;
                 }
 
@@ -676,7 +676,7 @@ BYTE ScalerDpAuxJudgeHandler_EXINT0(void)
 
         if((ScalerGetByte_EXINT(PBA_DD_AUX_DPCD_IRQ) & (_BIT7 | _BIT6 | _BIT5)) != 0x00)  // Write Link Config Field into INT0
         {
-            AWTO_LTWR_WAIT() g_ucDpRx1TrainingPatternSet = (ScalerDpRx1GetDpcdInfo_EXINT0(0x00, 0x01, 0x02) & 0x03);
+            AWTO_LTWR_WAIT() g_pucDpRxTrainingPatternSet_P(_DP_RX1_PORT_INDEX) = (ScalerDpRx1GetDpcdInfo_EXINT0(0x00, 0x01, 0x02) & 0x03);
 
             // Backup Source Write Continous 0x102 and 0x103
             g_ucDpRx1LTPatternSet = ScalerGetByte_EXINT(PBA_DD_AUX_DPCD_IRQ);
@@ -685,21 +685,21 @@ BYTE ScalerDpAuxJudgeHandler_EXINT0(void)
             if(((GET_DP_RX1_LINK_TRAINING_STATUS() == _DP_NORMAL_TRAINING_PATTERN_1_FAIL) ||
                 (GET_DP_RX1_LINK_TRAINING_STATUS() == _DP_NORMAL_TRAINING_PATTERN_2_FAIL)) &&
                ((g_ucDpRx1LTPatternSet & (_BIT7 | _BIT6 | _BIT5)) == _BIT6) &&
-               ((g_ucDpRx1LinkRate != ScalerDpRx1GetDpcdInfo_EXINT0(0x00, 0x01, 0x00)) ||
-                (g_ucDpRx1LaneCount != (ScalerDpRx1GetDpcdInfo_EXINT0(0x00, 0x01, 0x01) & 0x1F))))
+               ((g_pucDpRxLinkRate_P(_DP_RX1_PORT_INDEX) != ScalerDpRx1GetDpcdInfo_EXINT0(0x00, 0x01, 0x00)) ||
+                (g_pucDpRxLaneCount_P(_DP_RX1_PORT_INDEX) != (ScalerDpRx1GetDpcdInfo_EXINT0(0x00, 0x01, 0x01) & 0x1F))))
             {
-                g_ucDpRx1TrainingPatternSet = _DP_TRAINING_PATTERN_END;
+                g_pucDpRxTrainingPatternSet_P(_DP_RX1_PORT_INDEX) = _DP_TRAINING_PATTERN_END;
 
                 SET_DP_RX1_LINK_TRAINING_STATUS(_DP_LINK_TRAINING_NONE);
             }
 
-            g_ucDpRx1LinkRate = ScalerDpRx1GetDpcdInfo_EXINT0(0x00, 0x01, 0x00);
-            g_ucDpRx1LaneCount = (ScalerDpRx1GetDpcdInfo_EXINT0(0x00, 0x01, 0x01) & 0x1F);
+            g_pucDpRxLinkRate_P(_DP_RX1_PORT_INDEX) = ScalerDpRx1GetDpcdInfo_EXINT0(0x00, 0x01, 0x00);
+            g_pucDpRxLaneCount_P(_DP_RX1_PORT_INDEX) = (ScalerDpRx1GetDpcdInfo_EXINT0(0x00, 0x01, 0x01) & 0x1F);
 
             // Clear Flag
-            ScalerSetBit_EXINT(PBA_DD_AUX_DPCD_IRQ, ~(_BIT7 | _BIT6 | _BIT5), (_BIT7 | _BIT6 | _BIT5)); AWTO_LT_LOG_I(0x10 | g_ucDpRx1TrainingPatternSet)
+            ScalerSetBit_EXINT(PBA_DD_AUX_DPCD_IRQ, ~(_BIT7 | _BIT6 | _BIT5), (_BIT7 | _BIT6 | _BIT5)); AWTO_LT_LOG_I(0x10 | g_pucDpRxTrainingPatternSet_P(_DP_RX1_PORT_INDEX))
 
-            switch(g_ucDpRx1TrainingPatternSet)
+            switch(g_pucDpRxTrainingPatternSet_P(_DP_RX1_PORT_INDEX))
             {
                 case _DP_TRAINING_PATTERN_1:
 
@@ -718,8 +718,8 @@ BYTE ScalerDpAuxJudgeHandler_EXINT0(void)
                             ScalerDpRx1SetDpcdValue_EXINT0(0x00, 0x01, 0x05, 0x00);
                             ScalerDpRx1SetDpcdValue_EXINT0(0x00, 0x01, 0x06, 0x00);
 
-                            g_ucDpRx1LinkRequest01 = 0x00;
-                            g_ucDpRx1LinkRequest23 = 0x00;
+                            g_pucDpRxLinkRequest01_P(_DP_RX1_PORT_INDEX) = 0x00;
+                            g_pucDpRxLinkRequest23_P(_DP_RX1_PORT_INDEX) = 0x00;
 
 #if(_DP_HBR_RBR_LT_FORCE_MARGINAL_LINK == _ON)
                             SET_DP_RX_D1_LANE0_MARGIN_LINK_HBR_RBR();
@@ -727,7 +727,7 @@ BYTE ScalerDpAuxJudgeHandler_EXINT0(void)
                             SET_DP_RX_D1_LANE2_MARGIN_LINK_HBR_RBR();
                             SET_DP_RX_D1_LANE3_MARGIN_LINK_HBR_RBR();
 #endif
-                            d_g_bDpRx1Tp1Initial = _TRUE;
+                            DPRX_TP1INIT(_DP_RX1_PORT_INDEX) = _TRUE;
                         }
                     }
 
@@ -736,7 +736,7 @@ BYTE ScalerDpAuxJudgeHandler_EXINT0(void)
                     {
                         if(GET_DP_RX1_FAKE_LINK_TRAINING() == _FALSE)
                         {
-                            if(ScalerDpRx1TrainingPattern1_EXINT0(_DP_NORMAL_LT) == _TRUE)
+                            if(ScalerDpRx1TrainingPattern1_EXINT0(DPRX_CA _DP_NORMAL_LT) == _TRUE)
                             {
                                 SET_DP_RX1_LINK_TRAINING_STATUS(_DP_NORMAL_TRAINING_PATTERN_1_PASS);
                             }
@@ -747,7 +747,7 @@ BYTE ScalerDpAuxJudgeHandler_EXINT0(void)
                         }
                         else
                         {
-                            if(ScalerDpRx1TrainingPattern1_EXINT0(_DP_FAKE_LT) == _TRUE)
+                            if(ScalerDpRx1TrainingPattern1_EXINT0(DPRX_CA _DP_FAKE_LT) == _TRUE)
                             {
                                 SET_DP_RX1_LINK_TRAINING_STATUS(_DP_FAKE_TRAINING_PATTERN_1_PASS);
                             }
@@ -765,13 +765,13 @@ BYTE ScalerDpAuxJudgeHandler_EXINT0(void)
                 case _DP_TRAINING_PATTERN_2:
                 case _DP_TRAINING_PATTERN_3:
 
-                    d_g_bDpRx1Tp1Initial = _FALSE;
+                    DPRX_TP1INIT(_DP_RX1_PORT_INDEX) = _FALSE;
 
                     if((GET_DP_RX1_FAKE_LINK_TRAINING() == _FALSE) &&
                        ((GET_DP_RX1_LINK_TRAINING_STATUS() == _DP_NORMAL_TRAINING_PATTERN_1_PASS) ||
                         (GET_DP_RX1_LINK_TRAINING_STATUS() == _DP_NORMAL_TRAINING_PATTERN_2_FAIL)))
                     {
-                        if(ScalerDpRx1TrainingPattern2_EXINT0(_DP_NORMAL_LT) == _TRUE)
+                        if(ScalerDpRx1TrainingPattern2_EXINT0(DPRX_CA _DP_NORMAL_LT) == _TRUE)
                         {
                             SET_DP_RX1_LINK_TRAINING_STATUS(_DP_NORMAL_TRAINING_PATTERN_2_PASS);
 
@@ -787,7 +787,7 @@ BYTE ScalerDpAuxJudgeHandler_EXINT0(void)
                             (GET_DP_RX1_LINK_TRAINING_STATUS() == _DP_NORMAL_TRAINING_PATTERN_1_PASS) ||
                             (GET_DP_RX1_LINK_TRAINING_STATUS() == _DP_NORMAL_TRAINING_PATTERN_2_FAIL))
                     {
-                        if(ScalerDpRx1TrainingPattern2_EXINT0(_DP_FAKE_LT) == _TRUE)
+                        if(ScalerDpRx1TrainingPattern2_EXINT0(DPRX_CA _DP_FAKE_LT) == _TRUE)
                         {
                             SET_DP_RX1_LINK_TRAINING_STATUS(_DP_FAKE_TRAINING_PATTERN_2_PASS);
                         }
@@ -803,11 +803,11 @@ BYTE ScalerDpAuxJudgeHandler_EXINT0(void)
 
                 case _DP_TRAINING_PATTERN_END:
 
-                    d_g_bDpRx1Tp1Initial = _FALSE;
+                    DPRX_TP1INIT(_DP_RX1_PORT_INDEX) = _FALSE;
 
                     if((GET_DP_RX1_LINK_TRAINING_STATUS() == _DP_NORMAL_LINK_TRAINING_PASS) || (GET_DP_RX1_LINK_TRAINING_STATUS() == _DP_NORMAL_TRAINING_PATTERN_END_REBUILD_PHY))
                     {
-                        ScalerDpRx1TrainingPatternEnd_EXINT0();
+                        ScalerDpRx1TrainingPatternEnd_EXINT0(DPRX_CA1);
                     }
                     else if((GET_DP_RX1_LINK_TRAINING_STATUS() == _DP_NORMAL_TRAINING_PATTERN_2_PASS) || (GET_DP_RX1_LINK_TRAINING_STATUS() == _DP_FAKE_TRAINING_PATTERN_2_PASS))
                     {
@@ -815,7 +815,7 @@ BYTE ScalerDpAuxJudgeHandler_EXINT0(void)
 
                         if(GET_DP_RX1_LINK_TRAINING_STATUS() == _DP_NORMAL_TRAINING_PATTERN_2_PASS)
                         {
-                            ScalerDpRx1TrainingPatternEnd_EXINT0();
+                            ScalerDpRx1TrainingPatternEnd_EXINT0(DPRX_CA1);
 
                             SET_DP_RX1_LINK_TRAINING_STATUS(_DP_NORMAL_TRAINING_PATTERN_END_REBUILD_PHY);
 
@@ -860,9 +860,9 @@ BYTE ScalerDpAuxJudgeHandler_EXINT0(void)
             }
         }
 
-        ScalerSetByte_EXINT(PBA_C1_DPCD_ADDR_PORT_H, g_pucDpRx1Backup[0]);
-        ScalerSetByte_EXINT(PBA_C2_DPCD_ADDR_PORT_M, g_pucDpRx1Backup[1]);
-        ScalerSetByte_EXINT(PBA_C3_DPCD_ADDR_PORT_L, g_pucDpRx1Backup[2]);
+        ScalerSetByte_EXINT(PBA_C1_DPCD_ADDR_PORT_H, g_ppucDpRxBackup_P(_DP_RX1_PORT_INDEX)[0]);
+        ScalerSetByte_EXINT(PBA_C2_DPCD_ADDR_PORT_M, g_ppucDpRxBackup_P(_DP_RX1_PORT_INDEX)[1]);
+        ScalerSetByte_EXINT(PBA_C3_DPCD_ADDR_PORT_L, g_ppucDpRxBackup_P(_DP_RX1_PORT_INDEX)[2]);
     }
 
 #endif
@@ -889,7 +889,7 @@ void ScalerDpIntHandler_EXINT0(void)
 #endif
 
 #if(_D1_DP_EXIST == _ON)
-    ScalerDpRx1IntHandler_EXINT0();
+    ScalerDpRx1IntHandler_EXINT0(DPRX_CA1);
 #endif
 }
 
@@ -901,7 +901,7 @@ void ScalerDpIntHandler_EXINT0(void)
 //--------------------------------------------------
 void ScalerDpWDTimerEventProc_WDINT(EnumScalerWDTimerEventID enumEventID)
 {
-    BYTE ucBackup[3];                               // T0 owns its copy: EXINT0 keeps g_pucDpRx1Backup
+    BYTE ucBackup[3];                               // T0 owns its copy: EXINT0 keeps g_ppucDpRxBackup_P(_DP_RX1_PORT_INDEX)
     BYTE ucTemp = 0;
 
     switch(enumEventID)

@@ -177,7 +177,11 @@ extern WORD g_usDpRx1MstToSstVfrontporch;
 extern BYTE g_ucDpRx1MSAFailMacRsetCount;
 extern bit d_g_bDpRx1SourceRDErrorCount;
 extern __xdata _Bool g_bDpRx1InterlaceVtotalNum;
+#if(_DP_RX_PORT_COUNT > 1)
+extern volatile BYTE g_pucDpRxTp1Initial[_DP_RX_PORT_COUNT];
+#else
 extern bit d_g_bDpRx1Tp1Initial;
+#endif
 extern BYTE g_ucDpRx1LTPatternSet;
 
 #if(_DP_ILLEGAL_IDLE_PATTERN_CHECK_SUPPORT == _ON)

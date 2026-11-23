@@ -41,9 +41,9 @@ extern BYTE ScalerDpRx1GetDpcdInfo_EXINT0(BYTE ucDpcdAccessPortH, BYTE ucDpcdAcc
 extern void ScalerDpRx1SetDpcdBitValue_EXINT0(BYTE ucDpcdAccessPortH, BYTE ucDpcdAccessPortM, BYTE ucDpcdAccessPortL, BYTE ucNotDpcdBit, BYTE ucDpcdBit);
 extern void ScalerDpRx1SetDpcdValue_EXINT0(BYTE ucDpcdAccessPortH, BYTE ucDpcdAccessPortM, BYTE ucDpcdAccessPortL, BYTE ucDpcdValue);
 extern void ScalerDpRx1SinkStatusSet_EXINT0(EnumDpSinkReceivePort enumReceiverPort, EnumDpSinkStatus enumInSync);
-extern BYTE ScalerDpRx1TrainingPattern1_EXINT0(EnumDpLinkTrainingType enumDpLtType);
-extern BYTE ScalerDpRx1TrainingPattern2_EXINT0(EnumDpLinkTrainingType enumDpLtType);
-extern void ScalerDpRx1TrainingPatternEnd_EXINT0(void);
+extern BYTE ScalerDpRx1TrainingPattern1_EXINT0(DPRX_PD EnumDpLinkTrainingType enumDpLtType);
+extern BYTE ScalerDpRx1TrainingPattern2_EXINT0(DPRX_PD EnumDpLinkTrainingType enumDpLtType);
+extern void ScalerDpRx1TrainingPatternEnd_EXINT0(DPRX_PD1);
 
 #if((_DP_TX_SUPPORT == _ON) && (_D1_DP_MST_PORT_SUPPORT == _ON))
 extern void ScalerDpRx1HDCPResetDpcdInfo_EXINT0(void);
@@ -58,9 +58,9 @@ extern BYTE ScalerDpRx1GetDpcdBitInfo_WDINT(BYTE ucDpcdAccessPortH, BYTE ucDpcdA
 #endif
 #endif
 
-extern void ScalerDpRx1AdjustLaneFLDBand_EXINT0(BYTE ucDpRx1LaneNumber, WORD usVCOBandDiff);
-extern void ScalerDpRx1IntHandler_EXINT0(void);
-extern void ScalerDpRx1SetDFEInitial_EXINT0(void);
+extern void ScalerDpRx1AdjustLaneFLDBand_EXINT0(DPRX_PD BYTE ucDpRx1LaneNumber, WORD usVCOBandDiff);
+extern void ScalerDpRx1IntHandler_EXINT0(DPRX_PD1);
+extern void ScalerDpRx1SetDFEInitial_EXINT0(DPRX_PD1);
 
 #if(_DP_MST_AUTO_SEARCH_SUPPORT == _ON)
 extern void ScalerDpRx1MstAutoSwitch_EXINT0(void);

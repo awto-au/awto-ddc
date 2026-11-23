@@ -171,26 +171,26 @@ extern volatile bit d_isr_g_bDpRx1PSAuxToggle;
 
 extern __xdata _Bool g_bDpRx1AuxCommandNoReply;
 
-extern BYTE g_ucDpRx1LinkStatus01;
-extern BYTE g_ucDpRx1LinkStatus23;
-extern BYTE g_ucDpRx1LinkRequest01;
-extern BYTE g_ucDpRx1LinkRequest23;
-extern BYTE g_pucDpRx1Backup[3];
+extern DPRX_T1(BYTE, g_pucDpRxLinkStatus01, g_ucDpRx1LinkStatus01);
+extern DPRX_T1(BYTE, g_pucDpRxLinkStatus23, g_ucDpRx1LinkStatus23);
+extern DPRX_T1(BYTE, g_pucDpRxLinkRequest01, g_ucDpRx1LinkRequest01);
+extern DPRX_T1(BYTE, g_pucDpRxLinkRequest23, g_ucDpRx1LinkRequest23);
+extern DPRX_T3(BYTE, g_ppucDpRxBackup, g_pucDpRx1Backup);
 
 extern BYTE g_ucDpRx1Info;
 extern volatile bit d_isr_g_bDpRx1FakeLinkTraining;
 extern volatile bit d_isr_g_bDpRx1CrcCalculate;
-extern BYTE g_ucDpRx1LinkRate;
-extern volatile BYTE g_ucDpRx1LaneCount;
-extern BYTE g_ucDpRx1TrainingPatternSet;
-extern BYTE g_ucDpRx1AuxAddressBackup;
+extern DPRX_T1(BYTE, g_pucDpRxLinkRate, g_ucDpRx1LinkRate);
+extern DPRX_T1(volatile BYTE, g_pucDpRxLaneCount, g_ucDpRx1LaneCount);
+extern DPRX_T1(BYTE, g_pucDpRxTrainingPatternSet, g_ucDpRx1TrainingPatternSet);
+extern DPRX_T1(BYTE, g_pucDpRxAuxAddressBackup, g_ucDpRx1AuxAddressBackup);
 
-extern volatile BYTE isr_g_pucDpRx1LEBound[4];
-extern BYTE g_pucDpRx1Tap1MinTemp[4];
-extern volatile BYTE isr_g_pucDpRx1Tap1Max[4];
-extern BYTE g_pucDpRx1LEMinTemp[4];
-extern volatile BYTE isr_g_pucDpRx1LEMax[4];
-extern BYTE g_ucDpRx1EQCRC;
+extern DPRX_T4(volatile BYTE, isr_g_ppucDpRxLEBound, isr_g_pucDpRx1LEBound);
+extern DPRX_T4(BYTE, g_ppucDpRxTap1MinTemp, g_pucDpRx1Tap1MinTemp);
+extern DPRX_T4(volatile BYTE, isr_g_ppucDpRxTap1Max, isr_g_pucDpRx1Tap1Max);
+extern DPRX_T4(BYTE, g_ppucDpRxLEMinTemp, g_pucDpRx1LEMinTemp);
+extern DPRX_T4(volatile BYTE, isr_g_ppucDpRxLEMax, isr_g_pucDpRx1LEMax);
+extern DPRX_T1(BYTE, g_pucDpRxEQCRC, g_ucDpRx1EQCRC);
 extern BYTE g_ucRx1AuxTemp;
 extern BYTE g_ucRx1AuxTemp_EXINT;
 extern WORD g_usDpRx1Vfrontporch;
@@ -210,8 +210,8 @@ extern StructDPRxHDCPAuthInfo g_stDpRx1HDCPAuthInfo;
 extern BYTE g_pucDPRx1Caps[3];
 #endif
 
-extern volatile WORD isr_g_pusDpRx1ClockCount[4];
-extern volatile WORD isr_g_pusDpRx1ClockCount1[4];
+extern DPRX_T4(volatile WORD, isr_g_ppusDpRxClockCount, isr_g_pusDpRx1ClockCount);
+extern DPRX_T4(volatile WORD, isr_g_ppusDpRxClockCount1, isr_g_pusDpRx1ClockCount1);
 
 //****************************************************************************
 // FUNCTION EXTERN

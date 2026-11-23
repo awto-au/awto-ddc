@@ -49,7 +49,7 @@ BYTE g_pucDpMacRx1MstStMuxBackup[5];
 StructDpLinkInfo g_stDpRx1LinkInfo;
 #endif
 
-bit d_g_bDpRx1Tp1Initial = _FALSE;
+DPRX_TP1INIT_DEF
 BYTE g_ucDpRx1LTPatternSet;
 BYTE g_ucDpRx1Tp1PermitSwingLevel0;
 
@@ -93,9 +93,9 @@ void ScalerDpRx1Initial(EnumDpVersionType enumDpVersion, EnumDpLaneCount enumDpL
 bit ScalerDpRx1MarginLinkCheck(void);
 void ScalerDpRx1LinkStatusIRQ(void);
 void ScalerDpRx1AuxSet(void);
-void ScalerDpRx1ErrorCounterUpdate_EXINT0(void);
+void ScalerDpRx1ErrorCounterUpdate_EXINT0(DPRX_PD1);
 void ScalerDpRx1ErrorCounterDisable_EXINT0(void);
-void ScalerDpRx1ErrorCounterEnable_EXINT0(EnumDpLinkTrainingType enumDpLtType);
+void ScalerDpRx1ErrorCounterEnable_EXINT0(DPRX_PD EnumDpLinkTrainingType enumDpLtType);
 
 #if(_DP_HBR2_MARGIN_LINK_SUPPORT == _ON)
 bit ScalerDpRx1DecodeErrorCountCheck(WORD usTimeCriteria, BYTE ucErrorCriteria);
@@ -1349,11 +1349,11 @@ void ScalerDpRx1AuxSet(void)
 // Input Value  : None
 // Output Value : None
 //--------------------------------------------------
-void ScalerDpRx1ErrorCounterUpdate_EXINT0(void)
+void ScalerDpRx1ErrorCounterUpdate_EXINT0(DPRX_PD1)
 {
     WORD usErrorTemp = 0;
 
-    switch(g_ucDpRx1LaneCount)
+    switch(g_pucDpRxLaneCount_P(DPRX_P))
     {
         case _DP_ONE_LANE:
 
@@ -1505,10 +1505,10 @@ void ScalerDpRx1ErrorCounterDisable_EXINT0(void)
 // Input Value  : DP Link Training Type
 // Output Value : None
 //--------------------------------------------------
-void ScalerDpRx1ErrorCounterEnable_EXINT0(EnumDpLinkTrainingType enumDpLtType)
+void ScalerDpRx1ErrorCounterEnable_EXINT0(DPRX_PD EnumDpLinkTrainingType enumDpLtType)
 {
     // Enable DPCD Error Count Valid Flag
-    switch(g_ucDpRx1LaneCount)
+    switch(g_pucDpRxLaneCount_P(DPRX_P))
     {
         case _DP_ONE_LANE:
 
@@ -2108,15 +2108,15 @@ void ScalerDpRx1AdjustLaneFLDBand(BYTE ucDpRx1LaneNumber, WORD usVCOBandDiff)
 
     if(ScalerGetBit(PB0_50_DP_SIG_DET_0, _BIT6) == _BIT6)
     {
-        isr_g_pusDpRx1ClockCount1[ucDpRx1LaneNumber] = ((((WORD)ScalerGetByte(PB0_53_DP_SIG_DET_3)) << 8) | ScalerGetByte(PB0_54_DP_SIG_DET_4));
+        isr_g_ppusDpRxClockCount1_P(_DP_RX1_PORT_INDEX)[ucDpRx1LaneNumber] = ((((WORD)ScalerGetByte(PB0_53_DP_SIG_DET_3)) << 8) | ScalerGetByte(PB0_54_DP_SIG_DET_4));
 
-        if(isr_g_pusDpRx1ClockCount1[ucDpRx1LaneNumber] < isr_g_pusDpRx1ClockCount[ucDpRx1LaneNumber])
+        if(isr_g_ppusDpRxClockCount1_P(_DP_RX1_PORT_INDEX)[ucDpRx1LaneNumber] < isr_g_ppusDpRxClockCount_P(_DP_RX1_PORT_INDEX)[ucDpRx1LaneNumber])
         {
-            ucBestVCOBand = ucAutoVCOBand + (((isr_g_pusDpRx1ClockCount[ucDpRx1LaneNumber] - isr_g_pusDpRx1ClockCount1[ucDpRx1LaneNumber]) / usVCOBandDiff) + 1);
+            ucBestVCOBand = ucAutoVCOBand + (((isr_g_ppusDpRxClockCount_P(_DP_RX1_PORT_INDEX)[ucDpRx1LaneNumber] - isr_g_ppusDpRxClockCount1_P(_DP_RX1_PORT_INDEX)[ucDpRx1LaneNumber]) / usVCOBandDiff) + 1);
         }
         else
         {
-            ucBestVCOBand = ucAutoVCOBand - ((isr_g_pusDpRx1ClockCount1[ucDpRx1LaneNumber] - isr_g_pusDpRx1ClockCount[ucDpRx1LaneNumber]) / usVCOBandDiff);
+            ucBestVCOBand = ucAutoVCOBand - ((isr_g_ppusDpRxClockCount1_P(_DP_RX1_PORT_INDEX)[ucDpRx1LaneNumber] - isr_g_ppusDpRxClockCount_P(_DP_RX1_PORT_INDEX)[ucDpRx1LaneNumber]) / usVCOBandDiff);
         }
     }
     else
@@ -3194,7 +3194,7 @@ bit ScalerDpRx1MeasureLaneCDRClk(BYTE ucDpLinkRate, BYTE ucDpRx1LaneNumber)
     {
         case _DP_LINK_HBR2:
 
-            if((abs(isr_g_pusDpRx1ClockCount[ucDpRx1LaneNumber] - 0x2710)) > (0x2710 >> 4))
+            if((abs(isr_g_ppusDpRxClockCount_P(_DP_RX1_PORT_INDEX)[ucDpRx1LaneNumber] - 0x2710)) > (0x2710 >> 4))
             {
                 return _TRUE;
             }
@@ -3203,7 +3203,7 @@ bit ScalerDpRx1MeasureLaneCDRClk(BYTE ucDpLinkRate, BYTE ucDpRx1LaneNumber)
 
         case _DP_LINK_HBR:
 
-            if((abs(isr_g_pusDpRx1ClockCount[ucDpRx1LaneNumber] - 0x1388)) > (0x1388 >> 4))
+            if((abs(isr_g_ppusDpRxClockCount_P(_DP_RX1_PORT_INDEX)[ucDpRx1LaneNumber] - 0x1388)) > (0x1388 >> 4))
             {
                 return _TRUE;
             }
@@ -3213,7 +3213,7 @@ bit ScalerDpRx1MeasureLaneCDRClk(BYTE ucDpLinkRate, BYTE ucDpRx1LaneNumber)
         default:
         case _DP_LINK_RBR:
 
-            if((abs(isr_g_pusDpRx1ClockCount[ucDpRx1LaneNumber] - 0xBB8)) > (0xBB8 >> 4))
+            if((abs(isr_g_ppusDpRxClockCount_P(_DP_RX1_PORT_INDEX)[ucDpRx1LaneNumber] - 0xBB8)) > (0xBB8 >> 4))
             {
                 return _TRUE;
             }
@@ -3252,7 +3252,7 @@ bit ScalerDpRx1MeasureLaneCDRClk(BYTE ucDpLinkRate, BYTE ucDpRx1LaneNumber)
 
     usCDRClockCount = ((((WORD)ScalerGetByte(PB0_53_DP_SIG_DET_3)) << 8) | ScalerGetByte(PB0_54_DP_SIG_DET_4));
 
-    if(abs(isr_g_pusDpRx1ClockCount[ucDpRx1LaneNumber] - usCDRClockCount) > (isr_g_pusDpRx1ClockCount[ucDpRx1LaneNumber] >> 7))
+    if(abs(isr_g_ppusDpRxClockCount_P(_DP_RX1_PORT_INDEX)[ucDpRx1LaneNumber] - usCDRClockCount) > (isr_g_ppusDpRxClockCount_P(_DP_RX1_PORT_INDEX)[ucDpRx1LaneNumber] >> 7))
     {
         return _FALSE;
     }
@@ -3380,14 +3380,14 @@ bit ScalerDpRx1NormalPreDetect(void)
                (ScalerDpRx1DecodeCheck() == _TRUE))
             {
                 /*
-                DebugMessageRx1("9. Lane0 LE Diff", (g_pucDpRx1LEMaxTemp[0] - g_pucDpRx1LEMinTemp[0]));
-                DebugMessageRx1("9. Lane1 LE Diff", (g_pucDpRx1LEMaxTemp[1] - g_pucDpRx1LEMinTemp[1]));
-                DebugMessageRx1("9. Lane2 LE Diff", (g_pucDpRx1LEMaxTemp[2] - g_pucDpRx1LEMinTemp[2]));
-                DebugMessageRx1("9. Lane3 LE Diff", (g_pucDpRx1LEMaxTemp[3] - g_pucDpRx1LEMinTemp[3]));
-                DebugMessageRx1("9. Lane0 LE Min", g_pucDpRx1LEMinTemp[0]);
-                DebugMessageRx1("9. Lane1 LE Min", g_pucDpRx1LEMinTemp[1]);
-                DebugMessageRx1("9. Lane2 LE Min", g_pucDpRx1LEMinTemp[2]);
-                DebugMessageRx1("9. Lane3 LE Min", g_pucDpRx1LEMinTemp[3]);
+                DebugMessageRx1("9. Lane0 LE Diff", (g_pucDpRx1LEMaxTemp[0] - g_ppucDpRxLEMinTemp_P(_DP_RX1_PORT_INDEX)[0]));
+                DebugMessageRx1("9. Lane1 LE Diff", (g_pucDpRx1LEMaxTemp[1] - g_ppucDpRxLEMinTemp_P(_DP_RX1_PORT_INDEX)[1]));
+                DebugMessageRx1("9. Lane2 LE Diff", (g_pucDpRx1LEMaxTemp[2] - g_ppucDpRxLEMinTemp_P(_DP_RX1_PORT_INDEX)[2]));
+                DebugMessageRx1("9. Lane3 LE Diff", (g_pucDpRx1LEMaxTemp[3] - g_ppucDpRxLEMinTemp_P(_DP_RX1_PORT_INDEX)[3]));
+                DebugMessageRx1("9. Lane0 LE Min", g_ppucDpRxLEMinTemp_P(_DP_RX1_PORT_INDEX)[0]);
+                DebugMessageRx1("9. Lane1 LE Min", g_ppucDpRxLEMinTemp_P(_DP_RX1_PORT_INDEX)[1]);
+                DebugMessageRx1("9. Lane2 LE Min", g_ppucDpRxLEMinTemp_P(_DP_RX1_PORT_INDEX)[2]);
+                DebugMessageRx1("9. Lane3 LE Min", g_ppucDpRxLEMinTemp_P(_DP_RX1_PORT_INDEX)[3]);
                 DebugMessageRx1("9. Lane0 Tap0 Diff", (g_pucDpRx1Tap0MaxTemp[0] - g_pucDpRx1Tap0MinTemp[0]));
                 DebugMessageRx1("9. Lane1 Tap0 Diff", (g_pucDpRx1Tap0MaxTemp[1] - g_pucDpRx1Tap0MinTemp[1]));
                 DebugMessageRx1("9. Lane2 Tap0 Diff", (g_pucDpRx1Tap0MaxTemp[2] - g_pucDpRx1Tap0MinTemp[2]));
@@ -3406,7 +3406,7 @@ bit ScalerDpRx1NormalPreDetect(void)
                 DebugMessageRx1("9. Lane1 Tap0 Max 2", g_pucDpRx1Tap0MaxTemp2[1]);
                 DebugMessageRx1("9. Lane2 Tap0 Max 2", g_pucDpRx1Tap0MaxTemp2[2]);
                 DebugMessageRx1("9. Lane3 Tap0 Max 2", g_pucDpRx1Tap0MaxTemp2[3]);
-                DebugMessageRx1("9. TP2 Check Result", g_ucDpRx1EQCRC);
+                DebugMessageRx1("9. TP2 Check Result", g_pucDpRxEQCRC_P(_DP_RX1_PORT_INDEX));
                 */
 
                 ScalerTimerCancelTimerEvent(_SCALER_TIMER_EVENT_DP_RX1_LINK_STATUS_IRQ);
@@ -3414,7 +3414,7 @@ bit ScalerDpRx1NormalPreDetect(void)
 #if(_DP_RX_MI_DONGLE_SUPPORT == _ON)
                 ScalerTimerCancelTimerEvent(_SCALER_TIMER_EVENT_DP_RX1_LONG_HOTPLUG_EVENT);
 
-                g_ucDpRx1FakeLTLaneCount = g_ucDpRx1LaneCount;
+                g_ucDpRx1FakeLTLaneCount = g_pucDpRxLaneCount_P(_DP_RX1_PORT_INDEX);
 #endif
                 if(GET_DP_RX1_NORMAL_LINK_TRAINING_SETPHY_FINISH() == _TRUE)
                 {
@@ -3546,14 +3546,14 @@ bit ScalerDpRx1NormalPreDetect(void)
                 DebugMessageRx1("7. Rebuild Phy Pass", 0);
 
                 /*
-                DebugMessageRx1("9. Lane0 LE Diff", (g_pucDpRx1LEMaxTemp[0] - g_pucDpRx1LEMinTemp[0]));
-                DebugMessageRx1("9. Lane1 LE Diff", (g_pucDpRx1LEMaxTemp[1] - g_pucDpRx1LEMinTemp[1]));
-                DebugMessageRx1("9. Lane2 LE Diff", (g_pucDpRx1LEMaxTemp[2] - g_pucDpRx1LEMinTemp[2]));
-                DebugMessageRx1("9. Lane3 LE Diff", (g_pucDpRx1LEMaxTemp[3] - g_pucDpRx1LEMinTemp[3]));
-                DebugMessageRx1("9. Lane0 LE Min", g_pucDpRx1LEMinTemp[0]);
-                DebugMessageRx1("9. Lane1 LE Min", g_pucDpRx1LEMinTemp[1]);
-                DebugMessageRx1("9. Lane2 LE Min", g_pucDpRx1LEMinTemp[2]);
-                DebugMessageRx1("9. Lane3 LE Min", g_pucDpRx1LEMinTemp[3]);
+                DebugMessageRx1("9. Lane0 LE Diff", (g_pucDpRx1LEMaxTemp[0] - g_ppucDpRxLEMinTemp_P(_DP_RX1_PORT_INDEX)[0]));
+                DebugMessageRx1("9. Lane1 LE Diff", (g_pucDpRx1LEMaxTemp[1] - g_ppucDpRxLEMinTemp_P(_DP_RX1_PORT_INDEX)[1]));
+                DebugMessageRx1("9. Lane2 LE Diff", (g_pucDpRx1LEMaxTemp[2] - g_ppucDpRxLEMinTemp_P(_DP_RX1_PORT_INDEX)[2]));
+                DebugMessageRx1("9. Lane3 LE Diff", (g_pucDpRx1LEMaxTemp[3] - g_ppucDpRxLEMinTemp_P(_DP_RX1_PORT_INDEX)[3]));
+                DebugMessageRx1("9. Lane0 LE Min", g_ppucDpRxLEMinTemp_P(_DP_RX1_PORT_INDEX)[0]);
+                DebugMessageRx1("9. Lane1 LE Min", g_ppucDpRxLEMinTemp_P(_DP_RX1_PORT_INDEX)[1]);
+                DebugMessageRx1("9. Lane2 LE Min", g_ppucDpRxLEMinTemp_P(_DP_RX1_PORT_INDEX)[2]);
+                DebugMessageRx1("9. Lane3 LE Min", g_ppucDpRxLEMinTemp_P(_DP_RX1_PORT_INDEX)[3]);
                 DebugMessageRx1("9. Lane0 Tap0 Diff", (g_pucDpRx1Tap0MaxTemp[0] - g_pucDpRx1Tap0MinTemp[0]));
                 DebugMessageRx1("9. Lane1 Tap0 Diff", (g_pucDpRx1Tap0MaxTemp[1] - g_pucDpRx1Tap0MinTemp[1]));
                 DebugMessageRx1("9. Lane2 Tap0 Diff", (g_pucDpRx1Tap0MaxTemp[2] - g_pucDpRx1Tap0MinTemp[2]));
@@ -3575,7 +3575,7 @@ bit ScalerDpRx1NormalPreDetect(void)
                 DebugMessageRx1("9. Lane2 Tap0 Max 2", g_pucDpRx1Tap0MaxTemp2[2]);
                 DebugMessageRx1("9. Lane3 Tap0 Max 2", g_pucDpRx1Tap0MaxTemp2[3]);
                 DebugMessageRx1("9. Best FLD Band", ScalerGetByte(PB0_BE_LANE0_A_CDR_01));
-                DebugMessageRx1("9. TP2 Check Result", g_ucDpRx1EQCRC);
+                DebugMessageRx1("9. TP2 Check Result", g_pucDpRxEQCRC_P(_DP_RX1_PORT_INDEX));
                 DebugMessageRx1("9. DP Requeset", ScalerDpRx1GetDpcdInfo(0x00, 0x02, 0x06));
                 DebugMessageRx1("9. DP Requeset", ScalerDpRx1GetDpcdInfo(0x00, 0x02, 0x07));
                 DebugMessageRx1("9. Lane0 Tap1 Max", ScalerGetByte(P7A_A5_L0_INIT_3));
