@@ -13,11 +13,10 @@
 | DCDR <= 200 MHz | 1101 | 1123 | ~1200 | - |
 | ACDR 200-340 MHz | 2638 | 2608-2656 | - | - |
 | ACDR > 340 MHz (4K60), first CDR check passes | 3138 | 3137-3156 | ~4300 | 3-4 ms (M057, 10 locks); longest masked stretch 4475 us (25 locks, `tmds-ex0-shared` arm 4) |
-| ACDR > 340 MHz, first check fails: 2nd SetPhy with the 2.9 ms block | 9125 | 9125 | 8803 (M057 sum of branches) | not seen in 35 hardware locks |
 
 - Sim 3.14 ms matches hardware 3-4 ms for the normal 4K60 lock.
-- The retry path (9.1 ms) is above the static 8803 us and above the gate budget 9000: the static scan counts the repeated `SetPhy` call once. Finding, no gate change here.
-- Two set-ups back to back (Rx2 then Rx3): `PhySetDeferred` restores EX0 at return and the wrapper runs once per port per main pass, so each is its own masked stretch (1.1-3.2 ms each); a pending request is taken in the gap. The sum (up to 6.3 ms first-try, 18 ms with two retries) is time to ready, not a mask. Rule for stage 3: at most one set-up per main pass.
+- The 4K60 retry with the 2.9 ms RLE0638 block (9125 us, never seen in 35 hardware locks) was removed: requirement not confirmed (#331). Sim after: 4K60 first try 3136 / 3155 us (Rx2 / Rx3), before 3138 / 3137 us, same image otherwise (2026-11-23).
+- Two set-ups back to back (Rx2 then Rx3): `PhySetDeferred` restores EX0 at return and the wrapper runs once per port per main pass, so each is its own masked stretch (1.1-3.2 ms each); a pending request is taken in the gap. The sum (up to 6.3 ms) is time to ready, not a mask. Rule for stage 3: at most one set-up per main pass.
 - Other EX0 masks in the inventory: <= 30 us each (`AwtoSdTick` 30), `ScalerDpRx1PhyCTS` 742 us is compliance mode only. ISR-context spins: `Tp2SetPhy_EXINT0` 0.71 ms, `RebuildPhy_WDINT` 0.85 ms (they delay the TMDS clock IRQ, which only sets a pending flag).
 - Sim artifact: one Rx3 rep in 4 returned early (33 us); median is unaffected.
 
@@ -35,12 +34,11 @@
 | 1.1 ms (DCDR) | ~2 | ~1 | no loss | no loss |
 | 3.1 ms (4K60 normal) | ~6 | ~3 of 5 | no loss (one 4 ms wait) | exceeds 3 x 400 us: a transaction fails, LT restarts |
 | 4.5 ms (hardware max seen) | ~9 | ~4 of 5 | no loss | LT restarts |
-| 9.1 ms (retry path) | ~18 | 7-10 | per-try 4 ms, 5 tries: no loss; SKL 1.6 ms: LT may fail and fall back | LT fails, rate / lane fallback |
 | flash erase 200 ms | ~400 | all | 5 x 4 ms = 20 ms per transfer, 32 attempts = 640 ms: survives one transfer, LT fails | fails |
 
 - An established link does not drop: the main link is hardware; AUX is quiet except IRQ_HPD / status polls. The exposure is a link training that overlaps a mask: the training fails or falls back to a lower rate, not a link drop.
 - Overlap chance [derived]: one 3.1 ms set-up inside an LT window of ~100 ms (sync log: "120 ms after the loop first saw it training", includes host spread) = ~3 % per set-up. Not measured.
-- CEC: byte period 24 ms, bit 2.4 ms, frame handling once per >= 24 ms (`docs/cec.md`): tolerates every mask <= 9.1 ms. A 200 ms halt drops frames; the CEC initiator retransmits.
+- CEC: byte period 24 ms, bit 2.4 ms, frame handling once per >= 24 ms (`docs/cec.md`): tolerates every mask <= 3.2 ms (HDMI set-up). A 200 ms halt drops frames; the CEC initiator retransmits.
 
 ## 3. Flash halts (#308)
 - Datasheet maxima: erase 200 ms, WRSR 40 ms, page program 3 ms (`docs/delays.md`, MX25L8006E). Measured: 2 programs in 5 ms (`docs/nvram-settings.md` burst test); an erase happens at the EEPROM-emulation page move, about every 239 item writes. Not modelled in the sim, not measured on hardware; a halt starves EX0, Timer2 and EX1 alike (WDT does not bite, `FFEA[5]`).
@@ -62,7 +60,6 @@
 - NO-GO for stage 3 as "fully parallel" (PHY set-up and DP LT allowed to overlap, NV writes unconstrained). GO for stage 3 in a serialised form:
   - One TMDS set-up per main pass, and none while a DP LT is running or within ~20 ms of its last AUX event (defers the HDMI lock by at most the LT time, ~100-120 ms; an HDMI source has no deadline).
   - DP LT already running when a set-up is due: wait. A set-up already running when LT starts: <= 3.2 ms (4.5 ms seen), survivable by i915 on ICL+; a spec-minimum source may restart its LT once.
-  - 4K60 retry path (9.1 ms): not allowed while any DP source is linked; run it only with the DP port idle (no LT, no AUX event for 1 s), or fix #256 so EX0 is open between steps first.
   - NV flush gate gets the idle-port activity input before any idle-port bring-up ships.
 - Expected gain of the serialised form: stage-3 claim was 400-500 ms off the picture time [inference, #318]; the serialisation costs at most ~120 ms of that on a coincident LT, only in the overlap case.
 - Not answerable in the sim, needs hardware: (a) DP source live during an HDMI PHY set-up (DP host on D1 + HDMI host on D2 at once; unit 3 has DP-4 disabled in the layout and one HDMI source; two sources = #330, needs Dan); (b) flash erase halt length and its Timer2 deficit (Timer2 count across `ScalerFlashErasePage`); (c) idle DP MAC tolerance with no consumer.

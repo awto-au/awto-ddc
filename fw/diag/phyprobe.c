@@ -106,11 +106,6 @@ bit AwtoPhyProbePlain(void)
     return ((g_ucPhyProbeSkip & 2) != 0) ? _TRUE : _FALSE;
 }
 
-bit AwtoPhyProbeSkip(void)
-{
-    return ((g_ucPhyProbeSkip & 1) != 0) ? _TRUE : _FALSE;
-}
-
 void AwtoPhyProbeMark(void)
 {
     s_usTot = PhyUsSince(&s_stBegin);
@@ -126,11 +121,6 @@ void AwtoPhyProbeStamp(unsigned char ucN)
 void AwtoPhyProbeFld(unsigned char ucLoop, unsigned char ucCount)
 {
     s_ucFld[ucLoop] = ucCount;
-}
-
-void AwtoPhyProbeRetry(void)
-{
-    s_ucRetry = 1;
 }
 
 void AwtoPhyProbeEnd(unsigned char ucCdrOk)
