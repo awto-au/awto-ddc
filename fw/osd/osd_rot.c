@@ -21,16 +21,16 @@ BYTE AwtoOsdRot180(void)                                // 1 = draw the OSD turn
 #define AWTO_REV4(n)                            AWTO_REV2(n), AWTO_REV2((n) + 2 * 16), AWTO_REV2((n) + 1 * 16), AWTO_REV2((n) + 3 * 16)
 #define AWTO_REV6(n)                            AWTO_REV4(n), AWTO_REV4((n) + 2 * 4), AWTO_REV4((n) + 1 * 4), AWTO_REV4((n) + 3 * 4)
 
-#pragma place bank(13)                          // table and its leaf reader share a bank (movc reads the running bank)
+#pragma place group(osdrot_13)                          // table and its leaf reader share a bank (movc reads the running bank)
 static const __code BYTE s_aucRev[256] = { AWTO_REV6(0), AWTO_REV6(2), AWTO_REV6(1), AWTO_REV6(3) };
 
-#pragma place bank(13)
+#pragma place group(osdrot_13)
 BYTE AwtoOsdRevByte(BYTE ucB)                           // bit order of one byte reversed
 {
     return s_aucRev[ucB];
 }
 
-#pragma place bank(13)
+#pragma place group(osdrot_13)
 void AwtoOsdTurn(BYTE __xdata *pucB, BYTE ucN)
 {
     BYTE ucLo = 0;

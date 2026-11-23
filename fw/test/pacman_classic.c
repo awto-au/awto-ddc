@@ -59,49 +59,49 @@ __xdata BYTE g_ucAwtoPcFactor = AWTO_PC_SU_FACTOR;      // scale-up factor (0 = 
 __xdata WORD g_usAwtoPcPosH = AWTO_PC_POS_H;            // WORD: the centred position is above 255
 __xdata WORD g_usAwtoPcPosV;
 
-#pragma place bank(12)                      // each reader sits in the bank of the table it reads (a pragma pins only the next definition)
+#pragma place group(pacman_12)                      // each reader sits in the bank of the table it reads (a pragma pins only the next definition)
 static BYTE PcPal(BYTE ucK)
 {
     return g_pcPal[ucK];
 }
 
-#pragma place bank(12)
+#pragma place group(pacman_12)
 static BYTE PcGlyph(WORD usK)
 {
     return g_pcGlyph[usK];
 }
 
-#pragma place bank(12)
+#pragma place group(pacman_12)
 static BYTE PcStyle(BYTE ucK)
 {
     return g_pcStyle[ucK];
 }
 
-#pragma place bank(13)
+#pragma place group(pacman_13)
 static BYTE PcCell(WORD usK)
 {
     return g_pcCell[usK];
 }
 
-#pragma place bank(12)
+#pragma place group(pacman_12)
 static BYTE PcIdx(WORD usK)
 {
     return g_pcIdx[usK];
 }
 
-#pragma place bank(12)
+#pragma place group(pacman_12)
 static BYTE PcDeltaA(WORD usK)
 {
     return g_pcDeltaA[usK];
 }
 
-#pragma place bank(12)
+#pragma place group(pacman_12)
 static BYTE PcEvt(WORD usStep)
 {
     return g_pcEvt[usStep];
 }
 
-#pragma place bank(11)
+#pragma place group(pacman_11)
 static BYTE PcDeltaB(WORD usK)
 {
     return g_pcDeltaB[usK];

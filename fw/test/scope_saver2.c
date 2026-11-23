@@ -130,13 +130,13 @@ static void S2Run(BYTE ucX, BYTE ucLo, BYTE ucHi)                               
     }
 }
 
-#pragma place bank(12)                      // data and its reader share a bank (docs/banking: movc reads the running bank)
+#pragma place group(scope2_12)                      // data and its reader share a bank (docs/banking: movc reads the running bank)
 static BYTE S2CellId(WORD usCell)
 {
     return s_tS2Cell[usCell];
 }
 
-#pragma place bank(12)
+#pragma place group(scope2_12)
 static void S2BaseCopy(BYTE ucId)
 {
     BYTE ucI;
@@ -158,7 +158,7 @@ static void S2Base(BYTE ucId)                                                   
     }
 }
 
-#pragma place bank(12)
+#pragma place group(scope2_12)
 static BYTE S2Pulse(WORD usX)                                                       // 0..255 pulse height at raster x, linear between table steps
 {
     WORD usD;
@@ -183,7 +183,7 @@ static BYTE S2Pulse(WORD usX)                                                   
     return (BYTE)((int16_t)ucA + ((int16_t)ucB - (int16_t)ucA) * ucR / s_ucSpread);
 }
 
-#pragma place bank(11)
+#pragma place group(scope2_11)
 static void S2Char(char cC, int16_t sX, int16_t sY, BYTE ucScale)                   // into the tile buffer, clipped to the tile
 {
     BYTE ucI;
@@ -242,7 +242,7 @@ static void S2Char(char cC, int16_t sX, int16_t sY, BYTE ucScale)               
     }
 }
 
-#pragma place bank(11)
+#pragma place group(scope2_11)
 static void S2Text(const __xdata char *pcS, int16_t sX, int16_t sY, BYTE ucScale)
 {
     while(*pcS != 0)
@@ -253,7 +253,7 @@ static void S2Text(const __xdata char *pcS, int16_t sX, int16_t sY, BYTE ucScale
     }
 }
 
-#pragma place bank(12)
+#pragma place group(scope2_12)
 static int16_t S2Y(WORD usX)
 {
     return AWTO_S2_BASE_Y - (int16_t)(((WORD)S2Pulse(usX) * AWTO_S2_AMP) / AWTO_S2_PULSE_PEAK);

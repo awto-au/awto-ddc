@@ -34,7 +34,7 @@
 #define AWTO_QC_4BIT_COLS                       11                  // tQCICON_4BIT: 11 x 7, ids ICON_4BIT(0..76)
 #define AWTO_QC_4BIT_ROWS                       7
 
-#pragma place bank(12)                      // reads the blobs via movc: same bank as the data above
+#pragma place group(qcosd_12)                      // reads the blobs via movc: same bank as the data above
 static void AwtoQcBlob(const uint8_t __code *pucBlob, WORD usWord)     // blob = [8 B value map][2 B BE N][N stream bytes], to SRAM word usWord
 {
     static __xdata BYTE s_aucBuf[32];

@@ -49,7 +49,7 @@ def add_unique(items: list, index: dict, key, data=None) -> int:
     return index[key]
 
 
-def arr(name: str, data: bytes, per: int, bank: int) -> str:
-    """C const byte array in a pinned bank."""
+def arr(name: str, data: bytes, per: int, group: str) -> str:
+    """C const byte array in a place group (one bank)."""
     rows = ["    " + ", ".join(f"0x{b:02X}" for b in data[i:i + per]) + "," for i in range(0, len(data), per)]
-    return f"#pragma place bank({bank})\nstatic const uint8_t __code {name}[{len(data)}] = {{\n" + "\n".join(rows) + "\n};\n"
+    return f"#pragma place group({group})\nstatic const uint8_t __code {name}[{len(data)}] = {{\n" + "\n".join(rows) + "\n};\n"

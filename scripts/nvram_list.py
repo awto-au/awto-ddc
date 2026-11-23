@@ -8,7 +8,7 @@ usage: nvram_list.py [--unit N --map MAP] [--doc docs/nvram-settings.md] [--no-d
         g_stPanelTimeData by XDATA byte reads over debug slave 0x35 (needs the debug link: dev.py link --unit N on).
     (b) registry values through the firmware VCP mailbox: the same GET a DDC/CI host does (no set, no save).
     Flash contents are NOT read: no firmware read path over the debug slave, ISP resets the unit, and the archived
-    images are code only (0x00000-0xDFFFF).
+    images are code only (0x00000 up to the last code bank, fw/rl6449_memory.toml).
   Sources: $AWTO_SDK_SRC (default awto-ddc-ui/tmp/sdcc-port/src), $AWTO_RTDFW_UI (default fw/rtdfw).
   Bitfield layout rule (SDCC, checked against the live bytes): LSB first, never straddling a byte, a non-bitfield
   member starts a new byte, WORD members big-endian in a --big-endian build.

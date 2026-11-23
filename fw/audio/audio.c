@@ -161,7 +161,7 @@ void AwtoAudioTestStep(BYTE ucHi, BYTE ucLo)
 #define AWTO_PS_CMD_EVARG                       2
 #include "snd_data.inc"
 
-#pragma place bank(11)                      // leaf reader in the data's bank (a const read in a function that calls banked code trips the link check)
+#pragma place group(audio_11)                      // leaf reader in the data's bank (a const read in a function that calls banked code trips the link check)
 static BYTE PsByte(WORD usIdx)
 {
     return g_aucPsData[usIdx];

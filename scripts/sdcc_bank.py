@@ -31,6 +31,7 @@ from pathlib import Path
 import isostamp
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
+import bank_affinity as AF
 import msg_table as MT
 import place_rules as PR
 import sdcc_cluster as SC
@@ -90,6 +91,24 @@ def addr_stays_in_bank(code, i, c, funcs):
 
 JMP = re.compile(r"^\s+(?:sjmp|ljmp|ajmp|djnz|jnz|jz|jc|jnc|jb|jnb|jbc|cjne)\b[^;]*?,?\s*(\d+\$)\s*(?:;.*)?$|"
                  r"^\s+(?:sjmp|ljmp|ajmp)\s+(\d+\$)\s*(?:;.*)?$")
+
+
+def const_call_pairs(funcs, consts):
+    """{(fn, callee, const)}: the first lcall within 14 instructions after a CONST address load (fw_link_check gptr_const_xbank:
+    caller, callee and CONST must share a bank, or the callee reads the pointer in its own bank)."""
+    out = set()
+    for c in funcs.values():
+        ins = [l for l in (x.split(";", 1)[0] for x in c.lines) if l.strip() and not LABEL.match(l) and not l.strip().startswith(".")]
+        for k, l in enumerate(ins):
+            rs = [r for r in SYM.findall(l) if r in consts]
+            for l2 in ins[k + 1:k + 15] if rs else ():
+                if re.match(r"\s+(ret|reti|ljmp|sjmp|ajmp|jmp)\b", l2):
+                    break
+                m = CALLJ.match(l2)
+                if m and m.group(1) == "lcall":
+                    out.update((c.name, m.group(2), r) for r in rs)
+                    break
+    return out
 
 
 def gptr_callee(code, i, funcs):
@@ -443,6 +462,9 @@ def main() -> int:
                     "callee's bank instead of common")
     ap.add_argument("--inline-consts", type=int, default=0, metavar="CUT", help="emit a CONST after each user fn of its module "
                     "(one copy per fn) while users x size <= CUT bytes; 0 = off")
+    ap.add_argument("--repack", action="store_true", help="keep the map's common rows, re-assign every banked fn / const by call affinity "
+                    "(bank_affinity.py) into --banks banks; the new map is a one-time full relocation")
+    ap.add_argument("--headroom", type=lambda x: int(x, 0), default=0, help="--repack: bytes kept free in every bank")
     ap.add_argument("--keep-dead", action="store_true", help="keep chunks unreachable from main/ISRs")
     ap.add_argument("--layout", default="", help="tracked bank map (fw/bank_map.tsv): region per chunk, reused "
                     "between builds; missing/empty file = create from the packing below (sdcc_layout.py)")
@@ -569,6 +591,8 @@ def main() -> int:
         log(f"bank map was made with common {lay.header.get('common')} / resid_end {lay.header.get('resid_end')}: repacked for "
             f"{hex(a.common_max)} / {hex(a.resid_end)} (offsets are build output, only the bank decision is kept)")
     fill = [0] * a.banks
+    if a.repack and not reuse:
+        sys.exit("--repack needs the existing bank map (it keeps the common rows)")
 
     def first_fit(limit, sizeof, split=False):
         fl = [0] * a.banks
@@ -615,6 +639,15 @@ def main() -> int:
                     slot_fill[c.bank] += c.size
                     newc.append(c.name)
         log(f"sticky layout {a.layout}: {len(lay.rows)} rows, {len(newc)} new chunks: {', '.join(sorted(newc)[:20])}")
+        if a.repack:
+            caps = [cap - a.headroom - MSG_RESERVE.get(b, 0) for b in range(a.banks)]
+            tot, _ = AF.assign(funcs, consts, place["groups"], place["pins"], lambda c: c.common, caps, const_call_pairs(funcs, consts),
+                                  load_weights(a.cluster_weights, funcs) if a.cluster_weights else None, log)
+            log(f"repack: {a.banks} banks, headroom {a.headroom}: fill (incl. local stubs) {tot}")
+            for c in [*funcs.values(), *consts.values()]:                     # the old banked rows are void: new region, same key
+                k = ("fn" if c.area == "CSEG" else "const", c.name)
+                if c.size and not c.common and k in lay.rows:
+                    lay.rows[k] = (c.bank, 0, 0)
     elif sticky:
         f = a.fill_target
         while True:

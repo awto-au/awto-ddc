@@ -19,13 +19,13 @@ small edit rewrote few sectors; cost 48 KB of slot slack (22 KB padding + 26 KB 
 
 ## Cost of an edit (replaces the sticky claim; numbers in "Measured")
 - An edit that changes the size of a chunk moves every later chunk of its bank: the bank is rewritten from that chunk on.
-- A common edit moves the common chunks and stubs, which are copied into every bank: 14 x sectors touched.
+- A common edit moves the common chunks and stubs, which are copied into every bank: code_banks x sectors touched.
 - XDATA layout is separate (`fw/xdata_layout.tsv`, `docs/flash-sector-churn.md`) and unchanged by this design.
 
 ## Limits
 - Consts are only reachable from their own bank (movc without bank switch), so data cannot move to a separate data bank.
 - Common holds ~1100 stubs x 8 B (`STUB_SIZE`: mov r0,#bank 2 + mov dptr,#fn 3 + ljmp 3).
-- Bank 14 (0xE0000) is the 15th code bank (`fw/rl6449_memory.toml` code_banks 15): its own 0x5000 common copy + 44 KiB banked.
+- Code banks: `fw/rl6449_memory.toml` `code_banks` (13 since the repack below); the image ends with the last one, banks above are not flashed. The debug-message block (`msg` reserved range) sits at the top of the last code bank.
 
 ## Measured (2026-11-23, unit-3 build, `scripts/flash_layout_measure.py`)
 Image sectors (4 KiB, of 224) changed by one small edit vs the unedited build of the same tree. Sticky = origin/main ea533d43 (slots), compact = this design.
@@ -67,3 +67,16 @@ Image sectors (4 KiB, of 224) changed by one small edit vs the unedited build of
 - CONST handed only to `--ptr-safe` common readers (default `_AwtoPutStr`) or to one banked callee (`--const-to-callee`, default on) lives in the user / callee bank.
 - `--inline-consts CUT` (off): emits a CONST after each user fn; fw_link_check reports false findings (227 at cut 64) until it knows each chunk's code size.
 - Audit: `scripts/common_audit.py` (common chunk classes, stub callers by bank, const classes, helper duplication).
+
+## Bank repack by call affinity (#333 follow-up, `scripts/bank_affinity.py`, `scripts/bank_pack.py`)
+- `fw/bank_map.tsv` is the output of `python scripts/bank_pack.py --banks N --headroom BYTES --msg-size BYTES --keep` (also sets `code_banks` and the `msg` address in the toml). Deterministic: same inputs, same map. Never hand-merge a conflict: run it again on the merged tree.
+- Inputs: the map's common rows (ISR-reachable, SP-reading, pinned: unchanged), `#pragma place group / bank`, call sites (8^loop depth), measured calls per pass (`fw/cluster_weights.json`, from `scripts/fw_profile.py --json`), CONST users.
+- Units that share a bank: place-group members, a CONST with every fn that names it (else it would go to common), a CONST pointer and the fn it is passed to (link gate gptr_const_xbank).
+- Method: heavy-edge agglomeration + first-fit-decreasing, then move / swap refinement on (cut weight + 6 x stub copies); every bank stays within `64 KiB - common - headroom` counting its local stub copies (8 B each, exact); the message block is reserved in the last bank.
+- Address-taken fns (pointer tables) always get a stub in the table's bank, even when the fn lives there (364 stubs for `_OperationFactoryTable`, fixed).
+- `#pragma place bank(n)` with n above the last code bank does not exist: those became `group(<file>_<n>)` (generators emit the same); pins on banks 5, 6, 8 stay.
+- A new map is a one-time full relocation: the first flash after it rewrites most banks.
+- Planner: `bank_pack.py` runs `sdcc_bank.py --repack` alone on `tmp/sdcc-port/asm_ovl` (needs a finished build), prints per-bank fn / const / stub bytes and free.
+
+Measured 2026-11-24, unit-3 image, main 5a092af4 + repack, sim (`fw_profile`, 12 passes), `flash_layout_measure.py` (4 edits, same tree before / after):
+see awto-ddc#333 comment for the table (banks vs headroom, stubs, sectors, speed).

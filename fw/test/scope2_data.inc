@@ -30,9 +30,9 @@
 #define AWTO_S2_FONT_N                 13
 // model: worst case 76 live dynamic tiles + largest column 9 of 205 slots
 
-#pragma place bank(12)                      // data and its readers share a bank (docs/banking)
+#pragma place group(scope2_12)                // data and its readers share a bank (docs/banking)
 static __code uint8_t s_tS2Pulse[64] = {0, 0, 0, 1, 2, 3, 5, 8, 12, 18, 26, 36, 49, 65, 84, 106, 130, 154, 176, 196, 213, 227, 238, 246, 251, 254, 255, 254, 251, 246, 239, 230, 220, 209, 198, 186, 174, 162, 150, 139, 128, 118, 108, 99, 90, 82, 75, 68, 62, 56, 50, 45, 40, 36, 32, 28, 25, 22, 19, 16, 13, 10, 7, 4};
-#pragma place bank(11)
+#pragma place group(scope2_11)
 static __code uint8_t s_tS2Font[13][6] = {
     {'0', 0x3E, 0x51, 0x49, 0x45, 0x3E},
     {'1', 0x00, 0x42, 0x7F, 0x40, 0x00},
@@ -48,7 +48,7 @@ static __code uint8_t s_tS2Font[13][6] = {
     {'n', 0x7C, 0x08, 0x04, 0x04, 0x78},
     {'s', 0x48, 0x54, 0x54, 0x54, 0x20},
 };
-#pragma place bank(12)
+#pragma place group(scope2_12)
 static __code uint8_t s_tS2Cell[600] = {
     0, 1, 2, 3, 4, 5, 6, 7, 7, 7, 8, 7, 7, 7, 7, 8, 7, 7, 7, 9, 10, 7, 7, 11, 12, 8, 7, 7, 7, 7, 8, 7, 7, 7, 7, 8, 7, 7, 7, 13,
     14, 15, 15, 15, 15, 14, 15, 15, 15, 15, 14, 15, 15, 15, 15, 14, 15, 15, 15, 16, 17, 15, 15, 15, 15, 14, 15, 15, 15, 15, 14, 15, 15, 15, 15, 14, 15, 15, 15, 18,
@@ -66,7 +66,7 @@ static __code uint8_t s_tS2Cell[600] = {
     14, 15, 15, 15, 15, 14, 15, 15, 15, 15, 14, 15, 15, 15, 15, 14, 15, 15, 15, 16, 17, 15, 15, 15, 15, 14, 15, 15, 15, 15, 14, 15, 15, 15, 15, 14, 15, 15, 15, 18,
     33, 34, 35, 36, 37, 38, 37, 37, 37, 37, 38, 37, 37, 37, 37, 38, 37, 37, 37, 39, 40, 41, 37, 37, 37, 38, 37, 37, 37, 37, 38, 37, 37, 37, 37, 38, 37, 37, 37, 42,
 };
-#pragma place bank(12)
+#pragma place group(scope2_12)
 static __code uint8_t s_tS2Base[43][54] = {        // per id: green plane 27 bytes, red plane 27 bytes, in data port byte order (turned on use for Rotate 180)
     {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x06, 0x20, 0x00, 0x02, 0x20, 0x00, 0x02, 0x20, 0x00, 0x00, 0x70, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xF8, 0xFF, 0x00, 0x08, 0x80, 0x00, 0x08, 0x80, 0x00, 0x08, 0x80, 0x00, 0x08, 0x80, 0x00, 0x08, 0x80, 0x00, 0x08, 0x80, 0x00, 0x08, 0x80, 0x00, 0x08, 0x80},
     {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x88, 0x71, 0x08, 0x81, 0x00, 0x08, 0x84, 0x20, 0x08, 0x00, 0xF0, 0x1C, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xF0, 0xFF, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00},

@@ -23,7 +23,7 @@ COLS, ROWS = 28, 36
 MAZE_TOP = 3                                  # tile row of maze row 0 (3 score rows above, 2 spare below)
 W, H, VIS = 12, 18, 12                        # glyph 12 x 18, visible 12 x 12
 STEPS = 260
-BANK_A, BANK_B, BANK_C = 12, 11, 13       # C: cell table, off bank 12 so no bank 12 const covers xdata 0xF0xx (fw_link_check gptr_const_xbank)
+BANK_A, BANK_B, BANK_C = "pacman_12", "pacman_11", "pacman_13"       # place groups (one bank each, the packer picks it); C: cell table, off bank 12 so no bank 12 const covers xdata 0xF0xx (fw_link_check gptr_const_xbank)
 DELTA_B_MAX = 7200                            # bytes of delta stream in bank 11 (multiple of the record size)
 
 # Palette: index 0 transparent, 1 opaque black (cell background), then colours.

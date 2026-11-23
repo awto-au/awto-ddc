@@ -16,6 +16,7 @@ import subprocess
 import sys
 from pathlib import Path
 
+import chip_mem as CM
 from _log import Logger
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
@@ -23,6 +24,7 @@ from sdcc_overlay import repo_root
 
 ROOT = repo_root()
 SECTOR, BANK = 4096, 0x10000
+COMMON_SECTORS = -(-CM.COMMON_END // SECTOR)       # sectors of each bank image that are the common copy
 BUILD_TIMEOUT = 600          # full build ~100 s cold (port 15 s, compile ~70 s, link ~5 s); 3x + margin, awto-dan#53
 EDITS = {
     "panel": [{"file": "Panel/AWTO_M280DCA_E3B.h", "old": "_PANEL_DH_START                         48",
@@ -45,22 +47,26 @@ def log(s):
 
 
 def build(serial, tag, layout=None, edit=None):
+    """dev.py build (it sets the env fw_build needs: ISR libs, compiler); the image is tmp/fw/<serial>-<tag>-be.bin."""
     meas = ROOT / "tmp/meas"
-    cmd = [sys.executable, "scripts/fw_build.py", "--serial", serial]
+    cmd = [sys.executable, "dev.py", "build", "--serial", serial, "--tag", tag]
+    fw = []
     if layout:
-        cmd += ["--layout", str(layout)]
+        fw += ["--layout", str(layout)]
     if edit:
         pf = meas / f"patch_{edit}.json"
         pf.write_text(json.dumps(EDITS[edit]))
-        cmd += ["--src-patch", str(pf)]
+        fw += ["--src-patch", str(pf)]
+    if fw:
+        cmd += [f"--fw-args={' '.join(fw)}"]
     log(f"build {tag}: {' '.join(cmd[1:])}")
     r = subprocess.run(cmd, cwd=ROOT, capture_output=True, text=True, timeout=BUILD_TIMEOUT, check=False)
     (meas / f"{tag}.build.log").write_text(r.stdout + r.stderr)
     if r.returncode:
         sys.exit(f"build {tag} failed rc={r.returncode}: {(r.stdout + r.stderr)[-1500:]}")
     img = meas / f"{tag}.bin"
-    shutil.copy(ROOT / "tmp/fw" / serial / "fw.bin", img)
-    shutil.copy(ROOT / "tmp/fw" / serial / "fw.map", meas / f"{tag}.map")
+    shutil.copy(ROOT / "tmp/fw" / f"{serial}-{tag}-be.bin", img)
+    shutil.copy(ROOT / "tmp/fw" / f"{serial}-{tag}-be.map", meas / f"{tag}.map")
     return img
 
 
@@ -75,7 +81,7 @@ def diff(a: Path, b: Path):
     sx, sy = sectors(x, n), sectors(y, n)
     ch = [i for i in range(n) if sx[i] != sy[i]]
     per = BANK // SECTOR
-    return {"sectors": len(ch), "total": n, "common": sum(1 for i in ch if i % per < 5),
+    return {"sectors": len(ch), "total": n, "common": sum(1 for i in ch if i % per < COMMON_SECTORS),
             "banks": sorted({i // per for i in ch})}
 
 

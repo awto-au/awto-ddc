@@ -194,7 +194,7 @@ def inc_text(k_hz: float) -> str:
         lines.append(f"#define AWTO_PS_OFF_{name.upper()} {off}")
         lines.append(f"#define AWTO_PS_LOOP_{name.upper()} {1 if loop else 0}")
     lines.append(f"#define AWTO_PS_BYTES {len(blob)}")
-    lines.append("#pragma place bank(11)                      // data, tables and their reader (PsByte) share the bank")
+    lines.append("#pragma place group(audio_11)                      // data, tables and their reader (PsByte) share the bank")
     per_line = 20
     wrapped = [", ".join(f"0x{b:02X}" for b in blob[i:i + per_line]) + "," for i in range(0, len(blob), per_line)]
     lines.append(f"#define AWTO_PS_TRK {len(blob)}                       // track table after the note data: {{offset lo, offset hi, priority, loops}} per track")

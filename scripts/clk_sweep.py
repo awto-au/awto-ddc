@@ -380,7 +380,7 @@ def pll_checks(ctx, name: str, t: bytes, pll: int, chk) -> None:
         say(f"  {'!!!! sync processor clock OVER the regdb 0x4006 cap' if c > SYNC_CAP_MHZ else 'info sync processor clock under the regdb 0x4006 cap'}: {c:.2f} MHz vs {SYNC_CAP_MHZ} MHz (divider 4 bit, max 15: above {SYNC_CAP_MHZ * 15:.0f} MHz M2PLL the cap cannot be kept; a documented 'should', not a check)")
 
 OPTS = {"allow_oc": False, "tune_first": False, "fps": True, "rb": False}      # set by main(): --allow-overclock-flash, --tune-first, --no-fps
-IMG_PASS_S = 25.0                          # one whole-image pass (14 banks) at the stock clock, first guess: refined by the first run
+IMG_PASS_S = 25.0                          # one whole-image pass at the stock clock, first guess: refined by the first run
 FL_CYCLE_S = 3.0                           # one flash erase + 4 KB program + 2 read-backs, first guess: refined by the first run
 
 

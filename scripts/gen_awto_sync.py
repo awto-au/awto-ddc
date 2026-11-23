@@ -104,7 +104,7 @@ def rows_block(r):
     for k, i in enumerate(ids):
         if first[i] == 0:
             first[i] = k + 1
-    pl = f"#pragma place bank({TXT_BANK})"            # tables + reader in one bank (bank 8 is full; movc reads the running bank)
+    pl = f"#pragma place group(sync_{TXT_BANK})"       # tables + reader in one bank (bank 8 is full; movc reads the running bank)
     return "\n".join([
         f"#define AWTO_SYNC_ROWS {n}",
         pl, arr("tAwtoSyncRowId", [f"0x{x['id']:02X}" for x in r]),
@@ -155,7 +155,7 @@ def names_block(r):
 def cls_block(r, classes):
     """per logged row the console text style (macro name from sync_classes.tsv), read by AwtoSyncClsOf in the text bank"""
     n = logged(r)
-    pl = f"#pragma place bank({TXT_BANK})"
+    pl = f"#pragma place group(sync_{TXT_BANK})"
     return "\n".join([
         pl, arr("tAwtoSyncCls", [classes[x["cls"]]["style"] for x in r[:n]]),
         pl,
@@ -176,13 +176,13 @@ def text_block(r, classes=None):
         pos += len(x["text"]) + 1
     assert pos < 65536
     return "\n".join([
-        f"#pragma place bank({TXT_BANK})                  // text tables + reader: one bank, off the full bank 8 (movc reads the running bank)",
+        f"#pragma place group(console_{TXT_BANK})                  // text tables + reader: one bank, off the full bank 8 (movc reads the running bank)",
         arr("tAwtoSyncFmt", [f"0x{x['fmt']:02X}" for x in r]),
-        f"#pragma place bank({TXT_BANK})",
+        f"#pragma place group(console_{TXT_BANK})",
         f'static const __code char tAwtoSyncTxtS[] = "{blob}";',
-        f"#pragma place bank({TXT_BANK})",
+        f"#pragma place group(console_{TXT_BANK})",
         f"static const __code WORD tAwtoSyncTxtOff[{len(r)}] = {{" + ", ".join(str(o) for o in real) + "};",
-        f"#pragma place bank({TXT_BANK})",
+        f"#pragma place group(console_{TXT_BANK})",
         "static BYTE AwtoSyncTxt(WORD usRow, BYTE ucPart)   // text after ucPart (0..2) value marks, 0xFF = none; returns the fmt",
         "{                                                  // usRow: logged row, or AWTO_SYNC_NAME_ROW0 + name row",
         "    const __code char *pc = &tAwtoSyncTxtS[tAwtoSyncTxtOff[usRow]];",

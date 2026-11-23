@@ -210,7 +210,7 @@ def const_audit(mods, funcs, consts, lay):
     print("  class: consts, bytes (1 copy), copies, bytes as per-user-bank copies")
     for k, v in cls.items():
         print(f"  {k}: {v}")
-    print(f"  today: {sum(c.size for c in cc)} B x 14 copies = {sum(c.size for c in cc) * 14} B flash; per-user-bank: {sum(v[3] for v in cls.values())} B flash")
+    print(f"  today: {sum(c.size for c in cc)} B x {L.CM.CODE_BANKS} copies = {sum(c.size for c in cc) * L.CM.CODE_BANKS} B flash; per-user-bank: {sum(v[3] for v in cls.values())} B flash")
 
 
 def helper_audit(mods, funcs, consts, lay):

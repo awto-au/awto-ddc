@@ -467,7 +467,8 @@ def check(im, xdata=(), regnames=None, proven=None):
         stubs[c["addr"]] = (tgt, bank, tc)
         if tc is None:
             add("stub_bad_target", c["name"], f"-> bank {bank} 0x{tgt:04x} is not a function start", c["addr"])
-    stub_lo = {a & 0xFFFF: a for a in stubs}
+    stub_reg = {c["addr"]: c["reg"] for c in im.chunks if c["kind"] == "stub"}
+    stub_lo = {(stub_reg.get(a, "C"), a & 0xFFFF): a for a in stubs}   # per region: bank-local stubs share low addresses across banks
     gx = []                                                   # gptr_const_xbank candidates, judged after the sweep
 
     def xbank_stub(own, nxt, reg, c, at):
@@ -476,8 +477,9 @@ def check(im, xdata=(), regnames=None, proven=None):
             if x.text.startswith(("RET", "LJMP", "SJMP", "AJMP", "JMP")):
                 break
             if x.text.startswith("LCALL"):               # the first call takes the pointer; a later call does not (it was a direct
-                if x.target is not None and x.target in stub_lo:     # common call, then a byte-arg stub: false finding, 2026-11-13)
-                    _tgt, bank, tc = stubs[stub_lo[x.target]]
+                key = next((k for k in ((reg, x.target), ("C", x.target)) if k in stub_lo), None)
+                if x.target is not None and key is not None:         # common call, then a byte-arg stub: false finding, 2026-11-13)
+                    _tgt, bank, tc = stubs[stub_lo[key]]
                     if bank != reg:
                         gx.append((c, own[0], tc, bank, at))
                 break

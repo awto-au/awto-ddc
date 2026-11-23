@@ -3,7 +3,7 @@
 
 usage: gen_qc_osd.py [--qc FILE] [--out FILE] [--check]
   Reads tQCDRAW_MAP, tQCFONT_GLOBAL, tQCFONT_2BITBROOK, tQCFONT_4BITLUFFY and tPALETTE_QC from the upstream mirror
-  (RL6449_Series_QC_OSD.c, Kingdomwhisky/RTD-Scaler-TEST) and writes them as C arrays, each under `#pragma place bank(12)` so
+  (RL6449_Series_QC_OSD.c, Kingdomwhisky/RTD-Scaler-TEST) and writes them as C arrays, each under `#pragma place group(qcosd_12)` so
   they share a bank with the loader (fw/test/qc_osd.c reads them via movc). --check: exit 1 when the file on disk differs.
 Log: ./tmp/logs/gen_qc_osd.log
 """
@@ -36,7 +36,7 @@ def main() -> int:
         if not m:
             sys.exit(f"{src_name} not in {a.qc}")
         b = bytes(int(x, 16) for x in re.findall(r"0x[0-9a-fA-F]+", m.group(1)))
-        out.append(f"#pragma place bank(12)\nstatic const uint8_t __code {c_name}[{len(b)}] = {{")
+        out.append(f"#pragma place group(qcosd_12)\nstatic const uint8_t __code {c_name}[{len(b)}] = {{")
         for i in range(0, len(b), 16):
             out.append("    " + ", ".join(f"0x{x:02x}" for x in b[i:i + 16]) + ",")
         out.append("};")

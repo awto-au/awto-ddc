@@ -4,9 +4,9 @@
 usage: msg_table.py build [--tsv fw/msgids.tsv] [--out FILE]   table block from the enabled rows
        msg_table.py show  FILE|IMAGE.bin                       parse a block, or the block inside an image
        msg_table.py read  BUS                                  ISP-read the block from the unit's flash (halts the MCU)
-Fixed location: flash 0xDA000..0xDFFFF = top 24 KiB of bank 13 (a code bank, so inside the flashed image length).
-- sdcc_bank reserves it (sdcc_layout reserve=), fw_build checks no code byte lands there and pads to 14 banks.
-- Rest of flash: bank 8/9 = code consts (EDID/HDCP), bank 14 = code when the image reaches it (#44), bank 15 = settings: untouched.
+Fixed location: `addr` / `size` of the msg block in fw/rl6449_memory.toml = the top of the LAST code bank (inside the flashed image length).
+- sdcc_bank reserves it (sdcc_layout reserve=), fw_build checks no code byte lands there and pads the image to that bank.
+- Rest of flash: banks above the last code bank are not flashed (stale content from an older image stays), bank 15 = settings: untouched.
 Block (big-endian multi-byte, sorted by id; changes only when the enabled set / texts / lines change):
   0  "AMSG" | 4 ver u8 (1) | 5 ncat u8 | 6 count u16 | 8 nfile u16 | 10 idx_off u16 | 12 txt_off u16 | 14 u16 0
   16 total_len u32 | 20 hash 8 B = sha256(block with this field zeroed)[:8] | 28 u32 0

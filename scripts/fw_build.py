@@ -321,6 +321,23 @@ def parse_ihx(p: Path) -> dict:
     return mem
 
 
+def bank_args(a, new_layout):
+    """sdcc_bank.py command line of this build (scripts/bank_pack.py runs the same step alone)."""
+    pin = ",".join(x for x in (a.pin_common, (ROOT / "tmp/sdcc-port/pin_common.txt").read_text().strip()
+                               if (ROOT / "tmp/sdcc-port/pin_common.txt").exists() else "") if x)
+    return ["scripts/sdcc_bank.py", "--common-max", hex(a.common), "--banks", NBANKS,
+            *(["--layout", a.layout, "--layout-out", new_layout] if a.layout else []),
+            *(["--local-stubs"] if a.local_stubs else []),
+            *(["--inline-consts", str(a.inline_consts)] if a.inline_consts else []),
+            *(["--const-to-callee"] if a.const_to_callee else []),
+            *(["--ptr-safe", a.ptr_safe] if a.ptr_safe else []),
+            *(["--cluster", a.cluster] if a.cluster else []),
+            *(["--cluster-weights", a.cluster_weights] if a.cluster_weights else []),
+            *(["--repack", "--headroom", str(a.headroom)] if a.repack else []),
+            *(["--pin-common", pin] if pin else []),
+            *(["--resid-end", a.resid_end] if a.resid_end else [])]
+
+
 def parse_args(argv=None):
     ap = argparse.ArgumentParser()
     ap.add_argument("--serial", required=True)
@@ -337,6 +354,9 @@ def parse_args(argv=None):
     ap.add_argument("--cluster-weights", default="", help="passed to sdcc_bank (measured call counts, fw/cluster_weights.json)")
     ap.add_argument("--pin-common", default="_ScalerTimerDelayXms,_ScalerTimerPollingFlagProc,_AwtoPutStr,_AwtoStackPaint,_AwtoStackCheck,_AwtoStackDeepTest,_AwtoDbgIsrCmd_EXINT1,_ScalerTimerWaitForEvent,_AwtoWaitLog,_AwtoWaitPump,_AwtoPsPollSite,_AwtoDelayLoops,_AwtoDelayXus,_AwtoDelayCnt,_AwtoDelayEnd,_AwtoDelayLong,_AwtoWdtPoke,_AwtoPassStamp,_ScalerSyncDpHpdIrqAssertTimer2EventProc_EXINT,_RxRegGetBit,_RxRegGetByte,_RxRegSetBit,_RxRegSetByte",
                     help="passed to sdcc_bank (comma list of fns forced into common; OSD string helper: callers pass bank-local literals; stack canary fns read SP: no trampoline bytes in between; the EXINT1 debug reply: no banked call in the ISR; ScalerTimerWaitForEvent reads its caller's return address (#216): no stub; AwtoWaitLog / AwtoWaitPump / ScalerTimerDelayXms / PollingFlagProc read SP)")
+    ap.add_argument("--repack", action="store_true", help="one-time: re-assign every banked fn / const by call affinity into code_banks banks "
+                    "(sdcc_bank --repack; the new fw/bank_map.tsv is a full relocation)")
+    ap.add_argument("--headroom", type=lambda x: int(x, 0), default=0, help="--repack: bytes kept free in every bank")
     ap.add_argument("--src-patch", default="")
     # 0xc38: the --keil-compat /0 wrappers (_divulong_keil etc.) end the library at 0xc12 (awto-sdcc#36)
     ap.add_argument("--xdata-compact", action="store_true", help="re-place every module's XDATA from scratch (full-churn flash; fw/xdata_layout.tsv rewritten)")
@@ -383,17 +403,7 @@ def main() -> int:
     run("isr", [py, "scripts/sdcc_isr_libs.py"])              # ISR-private non-reentrant lib helpers (#19)
     new_layout = ROOT / "tmp/sdcc-port/bank_layout.new.tsv"
     new_layout.unlink(missing_ok=True)                        # only this run's output may be promoted
-    run("bank", [py, "scripts/sdcc_bank.py", "--common-max", hex(a.common), "--banks", NBANKS,
-                 *(["--layout", a.layout, "--layout-out", new_layout] if a.layout else []),
-                 *(["--local-stubs"] if a.local_stubs else []),
-                 *(["--inline-consts", str(a.inline_consts)] if a.inline_consts else []),
-                 *(["--const-to-callee"] if a.const_to_callee else []),
-                 *(["--ptr-safe", a.ptr_safe] if a.ptr_safe else []),
-                 *(["--cluster", a.cluster] if a.cluster else []),
-                 *(["--cluster-weights", a.cluster_weights] if a.cluster_weights else []),
-                 *(["--pin-common", pin] if (pin := ",".join(x for x in (a.pin_common, (ROOT / "tmp/sdcc-port/pin_common.txt").read_text().strip()
-                                                                         if (ROOT / "tmp/sdcc-port/pin_common.txt").exists() else "") if x)) else []),
-                 *(["--resid-end", a.resid_end] if a.resid_end else [])])
+    run("bank", [py, *bank_args(a, new_layout)])
     bank_dir = ROOT / "tmp/sdcc-port/asm_bank"
     # / % * memcpy: library only (#204); % by 0 = Keil's result via the _keil entries (--keil-div)
     for extra in (ROOT / "fw/sdcc/bank.asm", ROOT / "fw/sdcc/crt_xinit.asm", ROOT / "fw/sdcc/crt_rtd_startup.asm",
