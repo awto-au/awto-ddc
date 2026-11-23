@@ -2904,12 +2904,9 @@ fn	_ScalerGDIPhyPowerProc	9	0x1998	100
 fn	_ScalerGDIPhyRx1Power	9	0x19fc	192
 fn	_ScalerGDIPhyRx1PowerProc	9	0x1abc	100
 fn	_ScalerGDIPhyRx1Z0Switch	9	0x1b20	72
-fn	_ScalerGDIPhyRx2Power	9	0x1b68	236
-fn	_ScalerGDIPhyRx2PowerProc	9	0x1c54	104
-fn	_ScalerGDIPhyRx2Z0Switch	9	0x1cbc	124
-fn	_ScalerGDIPhyRx3Power	9	0x1d38	236
-fn	_ScalerGDIPhyRx3PowerProc	9	0x1e24	104
-fn	_ScalerGDIPhyRx3Z0Switch	9	0x1e8c	124
+fn	_ScalerGDIPhyRxPower	9	0x1b68	280
+fn	_ScalerGDIPhyRxPowerProc	9	0x1c80	152
+fn	_ScalerGDIPhyRxZ0Switch	9	0x1d18	272
 fn	_ScalerGDIPhyZ0Switch	9	0x1f08	48
 fn	_ScalerGlobalCrystalClkSel	9	0x1f38	60
 fn	_ScalerLDOPowerControl	9	0x1f74	8

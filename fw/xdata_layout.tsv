@@ -129,6 +129,7 @@ SysCec	0xe380	183	1
 __ovl	0xe380	184	1
 flash_screen	0xe380	185	1
 SysPower	0xe380	186	66
+RL6449_Series_GDIPhy	0xe380	252	3
 sync	0xe780	37	733
 asteroids	0xe780	770	515
 ScalerCommonDebug	0xe780	1285	363
