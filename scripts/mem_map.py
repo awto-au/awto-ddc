@@ -15,13 +15,14 @@ import html
 import json
 from pathlib import Path
 
+import chip_mem as CM
 from _log import log_line
 from _repo import repo_root
 
 ROOT = repo_root()
 LOG = ROOT / "tmp" / "logs" / "mem_map.log"
 BANK = 0x10000          # one bank image in the flash (64 KiB)
-COMMON = 0x5000         # common copy at the start of every bank image
+COMMON = CM.COMMON_END         # common copy at the start of every bank image
 
 # Documented duplicates (docs/duplicate-code.md, #44 comments); sizes as recorded there, not re-measured here.
 TWINS = [

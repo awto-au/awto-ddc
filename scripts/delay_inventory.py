@@ -30,6 +30,7 @@ import sys
 import time
 from pathlib import Path
 
+import chip_mem as CM
 import isostamp
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
@@ -640,7 +641,7 @@ def sim_measure(binp: Path, mapp: Path, rows, out: Path, stub_names: dict, fn_na
     be = "-be" in binp.name
     b = F.SimBus(binp, mapp, video=mode, boot=False)
     m = b.m
-    cend = getattr(m.where, "cend", 0x5000)
+    cend = getattr(m.where, "cend", CM.COMMON_END)
     base = b.diag_base
     last = {"t": None, "abs": 0}
 

@@ -62,11 +62,14 @@ def log(s):
     print(line); LOG.write(line + "\n"); LOG.flush()
 
 
+PTR_SAFE = set()          # common fns that read a pointer arg themselves and only pass bytes on (--ptr-safe)
+
+
 def addr_stays_in_bank(code, i, c, funcs):
     """True if a CONST address loaded at code[i] is consumed by movc, or passed to a callee that reads
     in this bank (same-bank / library / common leaf). Saves to variables or registers escape (#16)."""
-    if re.match(r"^\s+(mov\s+(a?r[0-7]|@r[01]),\s*#|\.(db|dw|byte|word)\b)", code[i]):
-        return False
+    if re.match(r"^\s+(mov\s+(a?r[0-7]|@r[01]),\s*#|\.(db|dw|byte|word)\b)", code[i]) and not re.match(r"^\s+mov\s+r[123],\s*#", code[i]):
+        return False                                         # r1-r3 = pointer argument (sdcccall 3): the callee decides, below
     for l in code[i + 1:i + 1 + SCAN_MAX]:
         if MOVC.match(l):
             return True
@@ -75,8 +78,8 @@ def addr_stays_in_bank(code, i, c, funcs):
             t = funcs.get(m.group(2))
             if t is None or t.bank == c.bank:
                 return True
-            if t.bank is None:                               # common callee: ok unless it calls a banked fn
-                return not any(x in funcs and funcs[x].bank is not None for x in t.calls)
+            if t.bank is None:                               # common callee: ok unless it calls a banked fn (PTR_SAFE: never forwards the pointer)
+                return t.name in PTR_SAFE or not any(x in funcs and funcs[x].bank is not None for x in t.calls)
             return False
         if SAVE.match(l):
             return False
@@ -261,8 +264,62 @@ def drop_dead(mods, funcs, consts):
     log(f"dead chunks dropped: {len(dead)} ({nb['CSEG']} B code, {nb['CONST']} B const); kept {len(seen)}")
 
 
-def render(mod, area_of, stubs_needed, extra_globl, stub_area=lambda f: "CSEG"):
-    """Module text with each chunk in the area area_of(chunk) gives; calls/refs to stubbed fns rewritten."""
+def inline_consts(mods, funcs, consts, cut):
+    """CONST used only by fns of its own module, never through a table / initialiser / foreign callee, is emitted after each user
+    fn (one copy per user fn while users * size <= cut): the fn and its data form one chunk, movable to any bank."""
+    other = defaultdict(int)
+    for t in consts.values():
+        for r in t.refs:
+            other[r] += 1
+    for m in mods:
+        for l in m.head + m.tail:
+            if re.match(r"^\s+\.(db|dw|byte|word)\b", l):
+                for r in SYM.findall(l.split(";", 1)[0]):
+                    other[r] += 1
+    users, bad = defaultdict(list), set()
+    for f in funcs.values():
+        code = [x.split(";", 1)[0] for x in f.lines]
+        for i, ln in enumerate(code):
+            for r in {x for x in SYM.findall(ln) if x in consts}:
+                if r not in users or users[r][-1] is not f:
+                    users[r].append(f)
+                ok = False
+                for l2 in code[i + 1:i + 1 + SCAN_MAX]:
+                    if MOVC.match(l2):
+                        ok = True
+                        break
+                    m2 = CALLJ.match(l2)
+                    if m2:
+                        ok = m2.group(2) in PTR_SAFE or m2.group(2) not in funcs
+                        break
+                    if SAVE.match(l2) or re.match(r"^\s+(ret|reti|sjmp|jmp)\b", l2):
+                        break
+                if not ok:
+                    bad.add(r)
+    n = nb = 0
+    for r, us in users.items():
+        c = consts[r]
+        if r in bad or other[r] or c.group or c.pin is not None or not c.size or c.module is None or len(us) * c.size > cut:
+            continue
+        if any(f.module is not c.module for f in us):
+            continue
+        for k, f in enumerate(us):
+            ln = c.lines if len(us) == 1 else [re.sub(rf"\b{re.escape(r)}\b", f"{r}__i{k}", x) for x in c.lines]
+            if len(us) > 1:
+                f.lines = [re.sub(rf"\b{re.escape(r)}\b(?!:)", f"{r}__i{k}", x) if not x.startswith(";") else x for x in f.lines]
+            f.lines.extend(ln)
+            f.size += c.size
+            nb += c.size
+        c.module.chunks = [x for x in c.module.chunks if x is not c]
+        consts.pop(r)
+        n += 1
+    log(f"inline-consts (cut {cut}): {n} consts, {nb} B emitted after their user fns")
+
+
+def render(mod, area_of, stubs_needed, extra_globl, stub_area=lambda f: "CSEG", ssym=lambda t, b: f"__bs{t}",
+           stub_emit=None):
+    """Module text with each chunk in the area area_of(chunk) gives; calls/refs to stubbed fns rewritten.
+    ssym(target, caller bank) = stub symbol; stub_emit(f) = [(symbol, area)] stubs to emit for fn f (default: one common)."""
     out = list(mod.head)
     for g in sorted(extra_globl.get(mod.name, ())):
         out.append(f"\t.globl {g}")
@@ -272,9 +329,9 @@ def render(mod, area_of, stubs_needed, extra_globl, stub_area=lambda f: "CSEG"):
         for l in c.lines:
             m = CALL.match(l.split(";", 1)[0]) if not l.startswith(";") else None
             if m and m.group(4) in stubs_needed and stubs_needed[m.group(4)][1] != c.bank:
-                l = f"{m.group(1)}{m.group(2)}{m.group(3)}__bs{m.group(4)}"
+                l = f"{m.group(1)}{m.group(2)}{m.group(3)}{ssym(m.group(4), c.bank)}"
             elif not l.lstrip().startswith(";") and not m and not LABEL.match(l):
-                l = SYM.sub(lambda x: f"__bs{x.group(1)}" if x.group(1) in stubs_needed else x.group(1), l)
+                l = SYM.sub(lambda x, c=c: ssym(x.group(1), c.bank) if x.group(1) in stubs_needed else x.group(1), l)
             lines.append(l)
         groups[area_of(c)].extend(lines)
     for area, lines in groups.items():
@@ -282,8 +339,9 @@ def render(mod, area_of, stubs_needed, extra_globl, stub_area=lambda f: "CSEG"):
         out.extend(lines)
     stubs = [f for f in sorted(stubs_needed) if stubs_needed[f][0] == mod.name]
     for f in stubs:
-        out += [f"\t.area {stub_area(f)}    (CODE)", f"\t.globl __bs{f}", f"__bs{f}:", f"\tmov\tr0,#({f} >> 16)",
-                f"\tmov\tdptr,#{f}", "\tljmp\t__bs_call"]
+        for sym, area in (stub_emit(f) if stub_emit else [(f"__bs{f}", stub_area(f))]):
+            out += [f"\t.area {area}    (CODE)", f"\t.globl {sym}", f"{sym}:", f"\tmov\tr0,#({f} >> 16)",
+                    f"\tmov\tdptr,#{f}", "\tljmp\t__bs_call"]
     out.extend(mod.tail)
     return "\n".join(out)
 
@@ -376,6 +434,15 @@ def main() -> int:
                     "measured call counts added to the --cluster edge weights (sdcc_cluster.DYN_W each)")
     ap.add_argument("--pin-common", default="", help="comma list of fns forced into common (small ISR-called handlers: "
                     "the ISR -> banked call needs a stub otherwise); counted against nothing, common must fit")
+    ap.add_argument("--local-stubs", action="store_true",
+                    help="a stub whose callers are all in banks (no common caller, no address taken from code) is emitted in each "
+                         "caller bank instead of common; only the rest stays in common (awto-ddc common-shrink)")
+    ap.add_argument("--ptr-safe", default="", help="comma list of common fns that read a pointer argument in the caller's bank and "
+                    "never pass it to a banked fn: CONST passed to them may live in the user bank (e.g. _AwtoPutStr)")
+    ap.add_argument("--const-to-callee", action="store_true", help="a CONST whose address only goes to one banked callee is placed in the "
+                    "callee's bank instead of common")
+    ap.add_argument("--inline-consts", type=int, default=0, metavar="CUT", help="emit a CONST after each user fn of its module "
+                    "(one copy per fn) while users x size <= CUT bytes; 0 = off")
     ap.add_argument("--keep-dead", action="store_true", help="keep chunks unreachable from main/ISRs")
     ap.add_argument("--layout", default="", help="tracked bank map (fw/bank_map.tsv): region per chunk, reused "
                     "between builds; missing/empty file = create from the packing below (sdcc_layout.py)")
@@ -388,6 +455,8 @@ def main() -> int:
     ap.add_argument("--resid-end", type=lambda x: int(x, 0), default=0x0C00,
                     help="layout: common bytes [0, this) kept for vectors/HOME/GSINIT/library/XINIT; chunk slots follow")
     a = ap.parse_args()
+    if a.local_stubs and not a.layout:
+        sys.exit("--local-stubs needs --layout (sticky areas)")
     (ROOT / "tmp/logs").mkdir(parents=True, exist_ok=True)
     LOG = (ROOT / "tmp/logs/sdcc_bank.log").open("a")
     src, out = Path(a.asm), Path(a.out)
@@ -410,6 +479,7 @@ def main() -> int:
         if n not in funcs:
             sys.exit(f"--pin-common: no function {n}")
         funcs[n].common = True
+    PTR_SAFE.update(filter(None, a.ptr_safe.split(",")))
     place = load_place(funcs, consts)
     for c in funcs.values():
         if c.common:
@@ -430,6 +500,8 @@ def main() -> int:
             c.size = sz.get(f"S{idx[id(c)]}", 0)
     if not a.keep_dead:
         drop_dead(mods, funcs, consts)
+    if a.inline_consts:
+        inline_consts(mods, funcs, consts, a.inline_consts)
     cap = BANK_SIZE - a.common_max
     # packing units: a module's banked chunks together; a module over a bank splits into its chunks
     # module order = DFS preorder of the call graph from main and the ISRs (callees right after callers), so
@@ -493,8 +565,9 @@ def main() -> int:
     reuse = sticky and bool(lay.rows)                        # existing layout: placement comes from it
     if a.cluster and not (sticky and not reuse):             # #51.6: it only acts while a layout is created
         sys.exit("--cluster is ignored unless a layout is being created (--layout FILE missing or empty); refusing")
-    if reuse:
-        lay.check_header(a.common_max, a.resid_end, a.layout)   # #51.3
+    if reuse and any(lay.header.get(k) not in (None, hex(v)) for k, v in (("common", a.common_max), ("resid_end", a.resid_end))):
+        log(f"bank map was made with common {lay.header.get('common')} / resid_end {lay.header.get('resid_end')}: repacked for "
+            f"{hex(a.common_max)} / {hex(a.resid_end)} (offsets are build output, only the bank decision is kept)")
     fill = [0] * a.banks
 
     def first_fit(limit, sizeof, split=False):
@@ -652,6 +725,7 @@ def main() -> int:
     users = defaultdict(set)
     escaping = set()                                         # address may reach another bank (#16)
     gptr_x = {}                                              # CONST -> (caller, gptr-reading callee in another bank) (#46)
+    sites, esc_to = defaultdict(int), defaultdict(list)      # CONST -> address-load sites; callee banks of its escaping sites
     for m in mods:
         for c in m.chunks:
             if c.area != "CSEG":
@@ -659,8 +733,14 @@ def main() -> int:
             code = [l.split(";", 1)[0] for l in c.lines]
             for i, l in enumerate(code):
                 rs = [r for r in SYM.findall(l) if r in consts]
+                for r in rs:
+                    sites[r] += 1
                 if rs and not addr_stays_in_bank(code, i, c, funcs):
                     escaping.update(rs)
+                    cb = next((funcs[m.group(2)].bank if m.group(2) in funcs else -1 for l2 in code[i + 1:i + 1 + SCAN_MAX]
+                               if (m := CALLJ.match(l2))), -1)      # bank of the callee that receives the address (-1 unknown, None common)
+                    for r in rs:
+                        esc_to[r].append(cb)
                 if rs:
                     t = gptr_callee(code, i, funcs)
                     if t is not None and not t.common and t.bank != c.bank:
@@ -694,7 +774,12 @@ def main() -> int:
             if r in gptr_x and len(u) <= 1 and None not in u:
                 log(f"const {r} -> common: passed by {gptr_x[r][0]} to gptr reader {gptr_x[r][1]} in another bank (#46)")
         elif u != {c.bank}:
-            if r in escaping:
+            tb = set(esc_to[r])
+            if a.const_to_callee and r in escaping and len(esc_to[r]) == sites[r] and len(tb) == 1 and next(iter(tb)) not in (None, -1) \
+                    and r not in {x for t in consts.values() for x in t.refs}:
+                c.common, c.bank = False, next(iter(tb)); moved += 1     # only ever handed to one banked callee: lives in ITS bank
+                log(f"const {r} -> bank {c.bank}: address only passed to a callee there")
+            elif r in escaping:
                 c.common, c.bank = True, None; stopped.append(r)
             else:
                 c.bank = next(iter(u)); moved += 1
@@ -715,29 +800,65 @@ def main() -> int:
             for r in c.refs:
                 if r in funcs and funcs[r].bank is not None:
                     stubs[r] = (funcs[r].module.name, funcs[r].bank)
+    # local stubs: target -> banks that hold a copy. Eligible: callers only in banks, address taken only by a CONST
+    # whose every user fn is in the CONST's own bank (the dispatcher that follows the pointer runs in that bank)
+    local = {}
+    if a.local_stubs:
+        users = defaultdict(set)
+        bad = set()
+        cuse = defaultdict(set)                              # const -> banks of fns that name it
+        for m in mods:
+            for c in m.chunks:
+                for r in c.refs:
+                    if r in consts and c.area == "CSEG":
+                        cuse[r].add(c.bank)
+        for m in mods:
+            for c in m.chunks:
+                for t in c.calls:
+                    if t in stubs and funcs[t].bank != c.bank:
+                        users[t].add(c.bank)
+                for r in c.refs:
+                    if r in stubs:
+                        users[r].add(c.bank)
+                        if c.area == "CSEG" or c.bank is None or cuse[c.name] - {c.bank}:
+                            bad.add(r)
+        for t in stubs:
+            if None not in users[t] and t not in bad and users[t]:
+                local[t] = sorted(users[t])
+        log(f"local stubs: {len(local)} fns -> {sum(len(v) for v in local.values())} copies; common stubs: {len(stubs) - len(local)}")
+    ssym = lambda t, b: f"__bs{t}_b{b}" if t in local and b in local[t] else f"__bs{t}"
+    lkey = lambda t, b: f"{b}_{t}"
+    stub_emit = lambda f: ([(ssym(f, b), "ST" + lkey(f, b)) for b in local[f]] if f in local else [(f"__bs{f}", "ST" + f)])
     extra = defaultdict(set)                                 # modules referencing another module's stub
     for m in mods:
         for c in m.chunks:
             for x in c.calls | c.refs:
-                if x in stubs and stubs[x][0] != m.name:
-                    extra[m.name].add(f"__bs{x}")
+                used = x in c.refs or stubs.get(x, (0, c.bank))[1] != c.bank       # the chunk text names this stub symbol
+                if x in stubs and used and (stubs[x][0] != m.name or x in local):
+                    extra[m.name].add(ssym(x, c.bank))
     log(f"stubs: {len(stubs)}")
+
+    def stub_items():
+        its = []
+        for f_, (mn, bk) in sorted(stubs.items()):
+            for b in local.get(f_, [None]):
+                st = L.Item("stub", f_ if b is None else lkey(f_, b), STUB_SIZE, "C" if b is None else b, mn, slot=STUB_SIZE)
+                st.fixed = True
+                its.append(st)
+        return its
 
     aname, bases = {}, {}
     if sticky:                                               # pass B: every slot (chunks, consts, stubs), no re-homing
         its = slot_items(True)
         for it in its:
             it.fixed = True
-        for f_, (mn, bk) in sorted(stubs.items()):
-            st = L.Item("stub", f_, STUB_SIZE, "C", mn, slot=STUB_SIZE)
-            st.fixed = True
-            its.append(st)
+        its += stub_items()
         placed, _ = L.assign(its, lay, a.resid_end, a.common_max, a.banks, cap, log, reserve=MSG_RESERVE,
                              labels=place["labels"])
         apply_placed(placed)
         check_place(place, lambda c: placed[("fn" if c.area == "CSEG" else "const", c.name)][0])
         placed_slot = {("ST" if k[0] == "stub" else "CH") + k[1]: v[2] for k, v in placed.items()}
-        lay.header.update({"common": hex(a.common_max), "resid_end": hex(a.resid_end), "stubs": str(len(stubs))})
+        lay.header.update({"common": hex(a.common_max), "resid_end": hex(a.resid_end), "stubs": str(len(stubs) - len(local))})   # common stubs: their room is reserved first next build
         lay.header.pop("slot_pad", None)
         for (kind, name), (rid, off, sl) in placed.items():
             an = ("ST" if kind == "stub" else "CH") + name
@@ -757,7 +878,8 @@ def main() -> int:
     common_size, final = 0, [0] * a.banks
     for m in mods:
         p = out / f"{m.name}.asm"
-        p.write_text(render(m, area_of, stubs, extra, (lambda f_: aname[("stub", f_)]) if sticky else (lambda f_: "CSEG")))
+        p.write_text(render(m, area_of, stubs, extra, (lambda f_: aname[("stub", f_)]) if sticky else (lambda f_: "CSEG"),
+                            ssym, stub_emit if sticky else None))
         sz = assemble(p)
         common_size += sz.get("CSEG", 0) + sz.get("CONST", 0)
         for k, v in sz.items():

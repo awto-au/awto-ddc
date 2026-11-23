@@ -17,11 +17,13 @@ import re
 import sys
 from pathlib import Path
 
+import chip_mem as CM
+
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import dbg_xdata as X
 
 DEV8, SIZE, REC_N, SEED = 0x6A, 32, 25, 0xA5
-COMMON_END = 0x5000                                  # banked code from 0x5000 (docs/reversing/realtek-rtd/mcu-8051.md)
+COMMON_END = CM.COMMON_END                           # banked code from here (fw/rl6449_memory.toml)
 CAUSE = {0: "none", 1: "STALL"}
 BOOT = ((0x01, "HW-WDT"), (0x02, "BITE-PENDING"), (0x04, "TEST-ARMED"), (0x08, "NEW"), (0x10, "WARM"), (0x20, "COLD"),
         (0x40, "AFTER-BITE"), (0x80, "AFTER-PROBE"))       # RL6449_Project.h AWTO_WDT_B_* (record v2, #138)

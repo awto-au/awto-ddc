@@ -44,6 +44,7 @@ from contextlib import contextmanager
 from dataclasses import dataclass
 from pathlib import Path
 
+import chip_mem as CM
 import isostamp
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
@@ -397,7 +398,7 @@ def crc_calibrate(isp, s0: bytes) -> bool:
 
 PROJECT_AFTER = 5                                     # log the measured rate after 5 sectors (no stop, #177)
 MIXED_SOURCES = ("write-in-progress", "write-failed")  # manifest sources of a session that ended part-way
-COMMON_END = 0x5000                                   # fw_build --common: [0, 0x5000) of every bank = common code + vectors
+COMMON_END = CM.COMMON_END                            # fw_build --common: [0, COMMON_END) of every bank = common code + vectors
 
 
 def _phase(i: int) -> str:

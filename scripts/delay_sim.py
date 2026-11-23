@@ -21,6 +21,7 @@ import statistics
 import sys
 from pathlib import Path
 
+import chip_mem as CM
 from _log import log_line as _log_line
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
@@ -291,7 +292,7 @@ def judge(pr, run, fails):
 
 def measure(binp, mapp, tree, mode):
     """One image: the scenario with probes + the replays. Returns (fails, {'mhz', 'ratio', 'debounce_us'})."""
-    im = L.Image(binp, mapp, str(L.layout_of(binp, tree)), 0x5000)
+    im = L.Image(binp, mapp, str(L.layout_of(binp, tree)), CM.COMMON_END)
     say(f"delay_sim {binp.name}")
     run = P.Run(argparse.Namespace(bin=binp, map=mapp, mode=mode, report=True, tree=tree))
     try:

@@ -60,3 +60,11 @@ Image sectors (4 KiB, of 224) changed by one small edit vs the unedited build of
 - Top chunks: ScalerMDomainDHVtotalFinetune 645, ScalerMDomainDHtotalFinetune 520, AwtoDbgIsrCmd_EXINT1 471, AwtoWaitLog 361, ScalerTimerWaitForEvent 323, UserCommonNVRamGetSystemData 308, ScalerTimerPollingFlagProc 281, SysTimerIntProc2 233, AwtoWdtPoke 229, ScalerTimerDelayXms 213.
 - Residual hole: CSEG ends 0x82F, XINIT is pinned at 0xCBC-0xD1C (`resid_end` 0xd1c): 1165 B free in every common copy. A lower `resid_end` (fw/rl6449_memory.toml) is accepted by the layout and moves no slot.
 - Stub = one per banked function called from another bank / common or address-taken (not per call site): moving a function between banks changes the stub count of its callers.
+
+## Common shrink (branch common-shrink, awto-ddc issue "Shrink the common region")
+- `common_end` 0x2000 (was 0x5000), `resid_end` 0x890; image 14 banks, common used 0x1eb4 (unit-3 image).
+- Stubs of fns called only from banks are emitted per caller bank (`--local-stubs`, area `ST<bank>_<fn>`, symbol `__bs<fn>_b<bank>`); only stubs with a common / ISR caller stay in common (38).
+- Hot helpers left common (`--demote-hot`, one-off with `--recompact`); `_ScalerTimerDelayXms` / `_ScalerTimerPollingFlagProc` read SP and stay pinned.
+- CONST handed only to `--ptr-safe` common readers (`_AwtoPutStr`) or to one banked callee (`--const-to-callee`) lives in the user / callee bank.
+- `--inline-consts CUT` (off): emits a CONST after each user fn; fw_link_check needs inline-data awareness first.
+- Audit: `scripts/common_audit.py` (common chunk classes, stub callers by bank, const classes, helper duplication).

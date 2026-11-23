@@ -326,11 +326,15 @@ def parse_args(argv=None):
     ap.add_argument("--common", type=lambda x: int(x, 0), default=CM.COMMON_END)
     ap.add_argument("--layout", default="fw/bank_map.tsv",
                     help="tracked bank map (default); '' = no map, first-fit packing")
+    ap.add_argument("--local-stubs", action=argparse.BooleanOptionalAction, default=True, help="passed to sdcc_bank: bank-local stubs for fns called only from banks")
+    ap.add_argument("--ptr-safe", default="_AwtoPutStr", help="passed to sdcc_bank (common readers that never forward a pointer)")
+    ap.add_argument("--const-to-callee", action=argparse.BooleanOptionalAction, default=True, help="passed to sdcc_bank")
+    ap.add_argument("--inline-consts", type=int, default=0, help="passed to sdcc_bank")
     ap.add_argument("--cluster", choices=["module", "fn"], default="",
                     help="call-graph bank placement; only valid while a layout is being created (missing/empty --layout file)")
     ap.add_argument("--cluster-weights", default="", help="passed to sdcc_bank (measured call counts, fw/cluster_weights.json)")
-    ap.add_argument("--pin-common", default="_AwtoPutStr,_AwtoStackPaint,_AwtoStackCheck,_AwtoStackDeepTest,_AwtoDbgIsrCmd_EXINT1,_ScalerTimerWaitForEvent,_AwtoWaitLog,_AwtoWaitPump,_AwtoPsPollSite,_AwtoDelayLoops,_AwtoDelayXus,_AwtoDelayCnt,_AwtoDelayEnd,_AwtoDelayLong,_AwtoWdtPoke,_AwtoPassStamp,_ScalerSyncDpHpdIrqAssertTimer2EventProc_EXINT,_RxRegGetBit,_RxRegGetByte,_RxRegSetBit,_RxRegSetByte",
-                    help="passed to sdcc_bank (comma list of fns forced into common; OSD string helper: callers pass bank-local literals; stack canary fns read SP: no trampoline bytes in between; the EXINT1 debug reply: no banked call in the ISR; ScalerTimerWaitForEvent reads its caller's return address (#216): no stub; AwtoWaitLog / AwtoWaitPump read SP)")
+    ap.add_argument("--pin-common", default="_ScalerTimerDelayXms,_ScalerTimerPollingFlagProc,_AwtoPutStr,_AwtoStackPaint,_AwtoStackCheck,_AwtoStackDeepTest,_AwtoDbgIsrCmd_EXINT1,_ScalerTimerWaitForEvent,_AwtoWaitLog,_AwtoWaitPump,_AwtoPsPollSite,_AwtoDelayLoops,_AwtoDelayXus,_AwtoDelayCnt,_AwtoDelayEnd,_AwtoDelayLong,_AwtoWdtPoke,_AwtoPassStamp,_ScalerSyncDpHpdIrqAssertTimer2EventProc_EXINT,_RxRegGetBit,_RxRegGetByte,_RxRegSetBit,_RxRegSetByte",
+                    help="passed to sdcc_bank (comma list of fns forced into common; OSD string helper: callers pass bank-local literals; stack canary fns read SP: no trampoline bytes in between; the EXINT1 debug reply: no banked call in the ISR; ScalerTimerWaitForEvent reads its caller's return address (#216): no stub; AwtoWaitLog / AwtoWaitPump / ScalerTimerDelayXms / PollingFlagProc read SP)")
     ap.add_argument("--src-patch", default="")
     # 0xc38: the --keil-compat /0 wrappers (_divulong_keil etc.) end the library at 0xc12 (awto-sdcc#36)
     ap.add_argument("--xdata-compact", action="store_true", help="re-place every module's XDATA from scratch (full-churn flash; fw/xdata_layout.tsv rewritten)")
@@ -379,6 +383,10 @@ def main() -> int:
     new_layout.unlink(missing_ok=True)                        # only this run's output may be promoted
     run("bank", [py, "scripts/sdcc_bank.py", "--common-max", hex(a.common), "--banks", NBANKS,
                  *(["--layout", a.layout, "--layout-out", new_layout] if a.layout else []),
+                 *(["--local-stubs"] if a.local_stubs else []),
+                 *(["--inline-consts", str(a.inline_consts)] if a.inline_consts else []),
+                 *(["--const-to-callee"] if a.const_to_callee else []),
+                 *(["--ptr-safe", a.ptr_safe] if a.ptr_safe else []),
                  *(["--cluster", a.cluster] if a.cluster else []),
                  *(["--cluster-weights", a.cluster_weights] if a.cluster_weights else []),
                  *(["--pin-common", pin] if (pin := ",".join(x for x in (a.pin_common, (ROOT / "tmp/sdcc-port/pin_common.txt").read_text().strip()

@@ -11,6 +11,8 @@ import json
 import sys
 from pathlib import Path
 
+import chip_mem as CM
+
 OUT = Path(__file__).resolve().parent / "dw8051_model.json"
 
 
@@ -86,7 +88,7 @@ def model() -> dict:
         "flash_fetch": {
             "note": "code is read from the SPI flash: uncached while FDA0[0] cache_en = 0 (reset state; the SDK enables it in ScalerMcuInitial), "
                     "else through a line cache. Stall = flash clocks x (CPU clk per flash clk = FFE9[3:0] / FFEE[5:2]) minus the base byte cycles.",
-            "common_end": 0x5000,
+            "common_end": CM.COMMON_END,
             "line_bytes": 16,
             "line_bytes_source": "regdb 0xFDA2..0xFDAF: cache address registers resolve [7:4] = 16 B",
             "cmd_flash_clk": 40,

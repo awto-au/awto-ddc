@@ -920,7 +920,7 @@ def main():
     ap.add_argument("--bin", required=True)
     ap.add_argument("--map", required=True)
     ap.add_argument("--layout", default="")
-    ap.add_argument("--common", type=lambda x: int(x, 0), default=0x5000)
+    ap.add_argument("--common", type=lambda x: int(x, 0), default=CM.COMMON_END)
     ap.add_argument("--against", default="", help="findings file of the good image: print only keys not in it")
     ap.add_argument("--equiv-bin", default="", help="good image of the same source: compare chunk by chunk")
     ap.add_argument("--equiv-map", default="")

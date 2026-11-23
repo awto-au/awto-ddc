@@ -15,6 +15,7 @@ import sys
 import types
 from pathlib import Path
 
+import chip_mem as CM
 from _log import log_line as _log_line
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
@@ -119,7 +120,7 @@ def main():
     ap.add_argument("--scenario", default="panel", choices=["panel", *SCENARIOS, "all"])
     a = ap.parse_args()
     P.panel_times(a.tree)
-    im = L.Image(a.bin, a.map, str(L.layout_of(a.bin, a.tree)), 0x5000)
+    im = L.Image(a.bin, a.map, str(L.layout_of(a.bin, a.tree)), CM.COMMON_END)
     worst = collections.defaultdict(float)
     todo = ["panel", *SCENARIOS] if a.scenario == "all" else [a.scenario]
     for sc in todo:

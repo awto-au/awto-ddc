@@ -15,6 +15,7 @@ import re
 import sys
 from pathlib import Path
 
+import chip_mem as CM
 import isostamp
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
@@ -22,7 +23,7 @@ import fw_sim as S
 
 LOG = S.ROOT / "tmp/logs/sim_waits.log"
 SFR_SP = 0x81
-COMMON_END = 0x5000       # fw/rl6449_memory.toml common_end: below it the address is the same in every bank
+COMMON_END = CM.COMMON_END   # below it the address is the same in every bank
 BANK_SIZE = 0x10000
 
 

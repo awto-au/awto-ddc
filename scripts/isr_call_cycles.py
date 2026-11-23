@@ -14,6 +14,7 @@ import argparse
 import sys
 from pathlib import Path
 
+import chip_mem as CM
 from _log import log_line as _log_line
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
@@ -85,7 +86,7 @@ def main() -> int:
     ap.add_argument("--tree", default=str(ROOT))
     ap.add_argument("--label", default="")
     a = ap.parse_args()
-    im = L.Image(a.bin, a.map, str(L.layout_of(a.bin, a.tree)), 0x5000)
+    im = L.Image(a.bin, a.map, str(L.layout_of(a.bin, a.tree)), CM.COMMON_END)
     run = P.Run(argparse.Namespace(bin=a.bin, map=a.map, mode="1080p60", report=True, tree=a.tree))
     try:
         run.bus.run_until_mode(P.MODE_ACTIVE, P.BOOT_INSTR)

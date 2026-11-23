@@ -11,6 +11,8 @@ import re
 import sys
 from pathlib import Path
 
+import chip_mem as CM
+
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import fw_link_check as L
 import fw_sim as F
@@ -22,7 +24,7 @@ ROUTINES = ("AwtoDelayXus",)        # the routine with the long-block check
 
 
 def sites(binp: Path, mapp: Path):
-    im = L.Image(binp, mapp, str(L.layout_of(binp, ROOT)), 0x5000)
+    im = L.Image(binp, mapp, str(L.layout_of(binp, ROOT)), CM.COMMON_END)
     text = mapp.read_text(errors="replace")
     out = []
     for r in ROUTINES:

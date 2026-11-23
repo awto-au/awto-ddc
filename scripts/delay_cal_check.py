@@ -24,6 +24,7 @@ import sys
 from collections import Counter, defaultdict
 from pathlib import Path
 
+import chip_mem as CM
 import isostamp
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
@@ -313,7 +314,7 @@ def main() -> int:
     ap.add_argument("--vendor", type=Path, default=VENDOR, help="Keil vendor flash dump (shape reference); '' = skip")
     ap.add_argument("--stages", nargs=2, type=Path, metavar=("REF_BIN", "REF_MAP"))
     ap.add_argument("--be", action="store_true", help="diag block big-endian (default: '-be' in the name)")
-    ap.add_argument("--common", type=lambda x: int(x, 0), default=0x5000)
+    ap.add_argument("--common", type=lambda x: int(x, 0), default=CM.COMMON_END)
     ap.add_argument("--layout", default="", help="fn/const classification of the chunks (default: the image's own bank_layout.tsv, fw_link_check.layout_of)")
     a = ap.parse_args()
     (ROOT / "tmp/logs").mkdir(parents=True, exist_ok=True)
