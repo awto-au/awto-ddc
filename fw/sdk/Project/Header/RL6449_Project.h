@@ -2424,9 +2424,9 @@ extern bit SysMachineOffOrGoing(void);
 // HDCP Key //
 //////////////
 
-// awto: HDCP 1.4 on (#44). _OFF (-D) = no key tables, no key load, HDCP DDC slave / DPCD Bcaps not advertised
+// awto: HDCP parked (#44). _OFF = no key tables in the image, no key load, HDCP DDC slave / DPCD Bcaps not advertised
 #ifndef _AWTO_HDCP
-#define _AWTO_HDCP                                              _ON
+#define _AWTO_HDCP                                              _OFF
 #endif
 
 //-------------------------------------------------

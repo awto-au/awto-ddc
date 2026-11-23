@@ -2982,7 +2982,6 @@ void UserCommonInterfaceHDMISwitchMultiEeprom(BYTE ucInputPort, EnumEdidSelectio
 // Input Value  : None
 // Output Value : None
 //--------------------------------------------------
-#pragma place bank(0)   // leaf reader in the key const's bank (#44)
 void UserCommonInterfaceGetHDCPKeyBKsv(BYTE ucSubAddr, BYTE ucLength, BYTE *pucReadArray)
 {
     ucSubAddr = ucSubAddr;
@@ -3005,7 +3004,6 @@ void UserCommonInterfaceGetHDCPKeyBKsv(BYTE ucSubAddr, BYTE ucLength, BYTE *pucR
 // Input Value  : None
 // Output Value : None
 //--------------------------------------------------
-#pragma place bank(0)   // leaf reader in the key const's bank (#44)
 void UserCommonInterfaceGetHDCPKey(WORD usSubAddr, WORD usLength, BYTE *pucReadArray)
 {
     usSubAddr = usSubAddr;
