@@ -16,6 +16,7 @@ import gi
 gi.require_version("Gtk", "4.0")
 gi.require_version("Gdk", "4.0")
 import cairo
+from _log import shared
 from _repo import ROOT
 from gi.repository import Gdk, GLib, Gtk
 
@@ -24,9 +25,7 @@ state = {"cmd": ["solid", "0", "0", "0"]}
 
 
 def log(s):
-    LOG.parent.mkdir(parents=True, exist_ok=True)
-    with LOG.open("a") as f:
-        f.write(s + "\n")
+    shared(LOG, echo=None).say(s)
 
 
 def draw(area, cr, w, h):

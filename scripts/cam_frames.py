@@ -53,6 +53,7 @@ SLEEP_HOLD_S = 3.0       # DDC/CI sleep held this long before wake: the panel ha
 START_TRIES = 4          # the camera sometimes answers a spurious RTSP 401: retry
 START_WAIT_S = 12.0       # first byte in the clip or the try is dropped (RTSP setup measured 1-5 s, 12 s when other clients load the camera)
 
+from _log import shared
 from _repo import ROOT
 
 LOG = ROOT / "tmp" / "logs" / "cam_frames.log"
@@ -63,11 +64,7 @@ def now_iso_ms() -> str:
 
 
 def log(msg: str) -> None:
-    line = f"{now_iso_ms()}  {msg}"
-    print(line, flush=True)
-    LOG.parent.mkdir(parents=True, exist_ok=True)
-    with LOG.open("a") as f:
-        f.write(line + "\n")
+    shared(LOG, ms=True).say(msg)
 
 
 def credentials() -> tuple[str, str]:

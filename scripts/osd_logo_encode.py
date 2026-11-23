@@ -20,6 +20,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import numpy as np
+from _log import shared
 from _repo import repo_root
 from glyph_decode import CODES, decode_blob, tile
 from PIL import Image
@@ -37,10 +38,7 @@ N0_MAX, N1_MAX = 80, 71            # font slots of the SDK logo (_Logo_0x00.. / 
 
 
 def log(s):
-    LOG.parent.mkdir(parents=True, exist_ok=True)
-    with LOG.open("a") as f:
-        f.write(s + "\n")
-    print(s)
+    shared(LOG, stamp_echo=False).say(s)
 
 
 # ---- SDK source parsing -------------------------------------------------------------------------

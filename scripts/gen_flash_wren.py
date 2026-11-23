@@ -20,6 +20,7 @@ import sys
 from pathlib import Path
 
 import numpy as np
+from _log import shared
 
 ROOT = Path(
     os.environ.get("AWTO_DDC_REPO")
@@ -55,10 +56,7 @@ FUNCS = {
 
 
 def say(s):
-    LOG.parent.mkdir(parents=True, exist_ok=True)
-    with LOG.open("a") as f:
-        f.write(s + "\n")
-    print(s, flush=True)
+    shared(LOG, stamp_echo=False).say(s)
 
 
 def git_show(ref, path):

@@ -14,10 +14,10 @@ import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-import isostamp
 import osd_render as R
 import osd_test as T
 import sync_log as S
+from _log import shared
 from _repo import ROOT
 
 LOG = ROOT / "tmp/logs/mem_mode_sim.log"
@@ -26,11 +26,7 @@ STEP_S = 1.0      # one display-setting re-run: 217 ms on hardware (#26 meas4k),
 
 
 def say(s):
-    LOG.parent.mkdir(parents=True, exist_ok=True)
-    line = f"{isostamp.now()} {s}"
-    print(line, flush=True)
-    with LOG.open("a") as f:
-        f.write(line + "\n")
+    shared(LOG).say(s)
 
 
 def main() -> int:

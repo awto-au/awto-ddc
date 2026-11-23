@@ -12,6 +12,7 @@ import subprocess
 import sys
 from pathlib import Path
 
+from _log import shared
 from _repo import ROOT
 
 REGMAP = ROOT / "re/regmap"
@@ -60,10 +61,7 @@ READ_BEHIND_COLS = ["page", "live", "isp", "live_byte", "live_block", "isp_byte"
 
 
 def log(msg):
-    LOG.parent.mkdir(parents=True, exist_ok=True)
-    with LOG.open("a") as f:
-        f.write(msg + "\n")
-    print(msg)
+    shared(LOG, stamp_echo=False).say(msg)
 
 
 def git_sha():

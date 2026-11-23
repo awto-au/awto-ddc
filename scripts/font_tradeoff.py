@@ -15,6 +15,7 @@ import sys
 from pathlib import Path
 
 import numpy as np
+from _log import shared
 from PIL import Image, ImageDraw, ImageFont
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
@@ -46,10 +47,7 @@ LOG = ROOT / "tmp" / "logs" / "font_tradeoff.log"
 
 
 def log(msg):
-    print(msg)
-    LOG.parent.mkdir(parents=True, exist_ok=True)
-    with LOG.open("a") as f:
-        f.write(msg + "\n")
+    shared(LOG, stamp_echo=False).say(msg)
 
 
 # ---------------- text ----------------

@@ -25,6 +25,7 @@ from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
 HERE = Path(__file__).resolve().parent
+from _log import shared
 from _repo import ROOT
 
 sys.path.insert(0, str(HERE))
@@ -45,10 +46,7 @@ SPACE = re.compile(r"\b__(xdata|data|idata|pdata|code|bit|sfr|sbit)\b")
 
 
 def log(m):
-    LOG.parent.mkdir(parents=True, exist_ok=True)
-    with LOG.open("a") as f:
-        f.write(m + "\n")
-    print(m)
+    shared(LOG, stamp_echo=False).say(m)
 
 
 def preprocess(use_cache):

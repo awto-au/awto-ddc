@@ -12,6 +12,7 @@ import subprocess
 import sys
 from pathlib import Path
 
+from _log import shared
 from _repo import repo_root as _repo
 
 REPO = _repo()
@@ -23,10 +24,7 @@ PROJECT_H = "fw/sdk/Project/Header/RL6449_Project.h"
 
 
 def log(msg: str) -> None:
-    LOG.parent.mkdir(parents=True, exist_ok=True)
-    with LOG.open("a") as f:
-        f.write(msg + "\n")
-    print(msg, file=sys.stderr)
+    shared(LOG, echo="stderr", stamp_echo=False).say(msg)
 
 
 def options(path: Path) -> dict:

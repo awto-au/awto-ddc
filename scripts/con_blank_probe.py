@@ -13,7 +13,6 @@ import re
 import subprocess
 import sys
 import time
-from datetime import datetime
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
@@ -21,6 +20,7 @@ import dbg_link as L
 import dbg_xdata as X
 import i2cbus
 import rtd_i2c_bridge as B
+from _log import shared
 from _repo import ROOT
 
 LOG = ROOT / "tmp" / "logs" / "con_blank_probe.log"
@@ -31,10 +31,7 @@ VARS = ("g_usFontSelectStart", "g_ucOsdWidth", "g_ucOsdHeight", "g_stOsdInfo")
 
 
 def log(msg: str) -> None:
-    line = f"{datetime.now().astimezone().isoformat(timespec='milliseconds')} {msg}"
-    print(line, flush=True)
-    with LOG.open("a", encoding="utf-8") as fh:
-        fh.write(line + "\n")
+    shared(LOG, ms=True).say(msg)
 
 
 def sym(mt: str, name: str) -> int | None:

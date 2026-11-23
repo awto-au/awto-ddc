@@ -23,6 +23,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import isostamp
 import unit_lock
+from _log import shared
 from _repo import ROOT
 
 LOG = ROOT / "tmp/logs/bl_sweep.log"
@@ -46,11 +47,7 @@ _WAIT = threading.Event()                                # never set: Event.wait
 
 
 def say(s: str) -> None:
-    LOG.parent.mkdir(parents=True, exist_ok=True)
-    line = f"{isostamp.now_ms()} {s}"
-    with LOG.open("a") as f:
-        f.write(line + "\n")
-    print(line, flush=True)
+    shared(LOG, ms=True).say(s)
 
 
 def pause(seconds: float, why: str) -> None:

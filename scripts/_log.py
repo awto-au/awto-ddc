@@ -21,6 +21,17 @@ def log_line(msg: str, log: Path, *, stamp_stdout: bool = True) -> None:
     print(line if stamp_stdout else msg, flush=True)
 
 
+_SHARED: dict[Path, "Logger"] = {}
+
+
+def shared(path: Path, **kw) -> "Logger":
+    """Lazily opened Logger per path, for scripts without a main() that owns the handle."""
+    path = Path(path)
+    if path not in _SHARED:
+        _SHARED[path] = Logger(path, **kw)
+    return _SHARED[path]
+
+
 class Logger:
     """Open-once log file (#302): `say` = stamped line to the file and the echo stream, line-buffered.
 

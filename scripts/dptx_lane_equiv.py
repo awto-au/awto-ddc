@@ -18,6 +18,8 @@ import subprocess
 import sys
 from pathlib import Path
 
+from _log import shared
+
 ROOT = Path(
     os.environ.get("AWTO_DDC_REPO")
     or subprocess.run(
@@ -57,10 +59,7 @@ typedef uint8_t BYTE; typedef uint16_t WORD; typedef unsigned char bit;
 
 
 def say(s):
-    LOG.parent.mkdir(parents=True, exist_ok=True)
-    with LOG.open("a") as f:
-        f.write(s + "\n")
-    print(s, flush=True)
+    shared(LOG, stamp_echo=False).say(s)
 
 
 def git_show(ref, path):

@@ -22,6 +22,7 @@ from contextlib import contextmanager
 from pathlib import Path
 
 import isostamp
+from _log import shared
 from _repo import repo_root
 
 
@@ -41,9 +42,7 @@ SESSION_COMM = ("claude", "node")
 
 
 def log(s: str) -> None:
-    (ROOT / "tmp/logs").mkdir(parents=True, exist_ok=True)
-    with (ROOT / "tmp/logs/unit_lock.log").open("a") as f:
-        f.write(f"{isostamp.now()} {s}\n")
+    shared(ROOT / "tmp/logs/unit_lock.log", echo=None).say(s)
 
 
 def alive(pid: int) -> bool:

@@ -15,9 +15,9 @@ import re
 import sys
 import time
 import urllib.request
-from datetime import datetime
 from pathlib import Path
 
+from _log import shared
 from _repo import repo_root as _repo
 
 ROOT = _repo()
@@ -28,11 +28,7 @@ POLL_S = 0.1
 
 
 def log(msg: str) -> None:
-    line = f"{datetime.now().astimezone().isoformat(timespec='milliseconds')} {msg}"
-    print(line, flush=True)
-    LOG.parent.mkdir(parents=True, exist_ok=True)
-    with LOG.open("a", encoding="utf-8") as fh:
-        fh.write(line + "\n")
+    shared(LOG, ms=True).say(msg)
 
 
 def creds() -> tuple[str, str]:

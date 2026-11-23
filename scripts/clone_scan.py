@@ -22,6 +22,8 @@ import sys
 from collections import defaultdict
 from pathlib import Path
 
+from _log import shared
+
 ROOT = Path(os.environ.get("AWTO_DDC_REPO") or subprocess.run(
     ["git", "rev-parse", "--show-toplevel"], capture_output=True, text=True, check=False).stdout.strip()
     or Path(__file__).resolve().parents[1])
@@ -38,10 +40,7 @@ DIGITS = re.compile(r"\d+")
 
 
 def say(s):
-    LOG.parent.mkdir(parents=True, exist_ok=True)
-    with LOG.open("a") as f:
-        f.write(s + "\n")
-    print(s)
+    shared(LOG, stamp_echo=False).say(s)
 
 
 def norm_lines(path, digits):
