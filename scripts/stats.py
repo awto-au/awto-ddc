@@ -18,8 +18,8 @@ import subprocess
 import sys
 from pathlib import Path
 
-import isostamp
 import chip_mem as CM
+import isostamp
 
 HERE = Path(__file__).resolve().parent
 COMMON_END = CM.COMMON_END
