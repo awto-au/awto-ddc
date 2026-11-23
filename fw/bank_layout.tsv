@@ -30,6 +30,10 @@ stub	_osd_tc_place_corner	C	0x0e40	8
 stub	_osd_tc_viewport	C	0x0e48	8
 stub	_AwtoFastScalerStatus	C	0x0e50	8
 stub	_AwtoPortSearchSkip	C	0x0e58	8
+fn	_ScalerWrite	C	0x0e60	40
+stub	_UserCommonInterfaceGetHDCPKey	C	0x0e88	8
+stub	_UserCommonInterfaceGetHDCPKeyBKsv	C	0x0e90	8
+stub	_reg_wr_n	C	0x0e98	8
 const	___str_127	C	0x0ed4	12
 const	___str_128	C	0x0ee0	20
 const	___str_120	C	0x0ef4	8
@@ -1242,6 +1246,7 @@ fn	_ScalerFRCControl	0	0x0590	924
 fn	_ScalerFRCInitial	0	0x135c	252
 fn	_ScalerFRCInputCtrl	0	0x1458	2144
 fn	_AwtoSyncDisplay	0	0x1cb8	456
+const	_tHDCP_KEY_TABLE	0	0x1e80	336
 fn	_ScalerMDomainControlDBApply	0	0x236c	728
 fn	_ScalerMemoryCalculateLineStepAndBlockStep	0	0x2644	148
 fn	_ScalerMemoryFrameSyncSetDt	0	0x26d8	2652
@@ -1279,6 +1284,7 @@ fn	_ScalerMemoryAddressConversion	0	0x65f4	84
 fn	_ScalerMemoryCalculateFrameLineTotalPixel	0	0x6648	628
 fn	_ScalerFRCOneFrameCtrl	0	0x68bc	2000
 fn	_ScalerOsdPositionCorrectSupport	0	0x708c	8
+const	_tHDCP_KEY_BKSV	0	0x7094	12
 fn	_ScalerMemoryFrameTracking	0	0x70b0	1652
 fn	_ScalerMemoryGetDtMaxMin	0	0x7724	1928
 fn	_ScalerMemoryGetMNRatio	0	0x7eac	64
@@ -1295,6 +1301,8 @@ fn	_ScalerPLLGetNewCount	0	0x9734	168
 fn	_ScalerPLLSetDPLLOffset	0	0x97dc	40
 fn	_AwtoFbRegCount	0	0x9804	40
 fn	_AwtoSyncFormat	0	0x982c	52
+fn	_UserCommonInterfaceGetHDCPKey	0	0x9860	36
+fn	_UserCommonInterfaceGetHDCPKeyBKsv	0	0x9884	52
 fn	_ScalerVgipGetCaptureVDelay	0	0x98c4	84
 fn	_ScalerVgipGetCaptureVStartPosition	0	0x9918	84
 fn	_ScalerVgipGetDigitalCaptureStatus	0	0x996c	28
@@ -2356,7 +2364,7 @@ const	_tLUTGAMMA_18_TABLE	6	0x0164	6352
 const	_tLUTGAMMA_20_TABLE	6	0x1a34	6352
 const	_tLUTGAMMA_22_TABLE	6	0x3304	6352
 const	_tLUTGAMMA_24_TABLE	6	0x4bd4	6352
-const	_UserInterfaceGetOverScanStatus_tusOverscanEnTable_10000_1381	6	0x64a4	92
+const	_UserInterfaceGetOverScanStatus_tusOverscanEnTable_10000_1384	6	0x64a4	92
 const	_OperationFactoryTable	6	0x6500	756
 const	_tCOLOR_CONV_RGB2YUV_ITU709	6	0x67f4	32
 const	_tCOLOR_CONV_YUV2RGB_ITU601	6	0x6814	32
@@ -2868,9 +2876,9 @@ const	_tDISPLAY_DPTX_DRV_HBR2_TABLE	9	0x0000	56
 const	_tEDID_TABLE_D1	9	0x0038	268
 const	_tEDID_TABLE_D2	9	0x0144	268
 const	_tEDID_TABLE_D3	9	0x0250	268
-const	_set_ap_rotate_tFlipToSdk_10000_1405	9	0x035c	8
+const	_set_ap_rotate_tFlipToSdk_10000_1408	9	0x035c	8
 fn	_ScalerColor420To422D2D3Enable	9	0x0364	60
-fn	_ScalerDpPowerSwitch	9	0x03a0	120
+fn	_ScalerSyncHdcpDownLoadKey	9	0x03a0	112
 fn	_ScalerDpRx1AuxIntInitial	9	0x0418	116
 fn	_ScalerDpRx1AuxPowerOnInitial	9	0x048c	240
 fn	_ScalerDpRx1RebuildPhy_WDINT	9	0x057c	2316
@@ -2934,12 +2942,16 @@ fn	_ScalerPowerGroupAIsolation	9	0x3864	96
 fn	_ScalerPowerGroupAPowerCut	9	0x38c4	32
 fn	_ScalerPowerGroupBIsolation	9	0x38e4	28
 fn	_ScalerPowerGroupDPowerCut	9	0x3900	372
+fn	_ScalerSyncHdcpDownLoadBKsv	9	0x3a74	376
+fn	_ScalerSyncHdcpEnableDownLoadKey	9	0x3bec	252
+fn	_SysPowerLoadHDCPKey	9	0x3ce8	120
 fn	_ScalerSyncGetInputPixelClk	9	0x3d88	56
 fn	_ScalerTMDSHdmiReadRequestTimerEnable_WDINT	9	0x3dc0	20
 fn	_ScalerTMDSInterruptInitial	9	0x3dd4	20
 fn	_ScalerTMDSYUV420SupportCheck	9	0x3de8	20
 fn	_ScalerMeasureUpdateInputTimingPolarity	9	0x3e60	516
 fn	_ScalerDisplayDPTx1TP2LaneAdjust	9	0x4064	156
+fn	_ScalerDpPowerSwitch	9	0x4100	128
 fn	_AwtoSyncScan	9	0x41a4	508
 fn	_ScalerDisplayDPTx1TP1SameVolCnt	9	0x43a0	204
 fn	_ScalerVgipInputInitial	9	0x4484	92
@@ -3616,6 +3628,7 @@ fn	_AwtoPassSlow	10	0xa9cc	308
 fn	_AwtoDemoLog	10	0xab00	228
 fn	_AwtoPortMonClock	10	0xabe4	236
 fn	_AwtoPortMonPoll	10	0xacd0	408
+fn	_reg_wr_n	10	0xae68	96
 const	_g_aucPsData	11	0x0000	740
 const	___str_202	11	0x02e4	20
 const	___str_203	11	0x02f8	20
