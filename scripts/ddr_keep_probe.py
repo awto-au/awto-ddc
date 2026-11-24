@@ -2,7 +2,7 @@
 """Does the DDR keep a marker at its top over an event? (awto-ddc log-keep, option F of the note store)
 
 usage: ddr_keep_probe.py --unit N --map MAP [--bus B] [--seed S] fill | verify | cmd 0xNN
-  Freeze image (`./dev.py build --freeze --savers pacman`, fw/test/ddr_draw.c ops addrfill / addrverify, docs/ddr-draw.md).
+  Freeze image (`./dev.py build --freeze`, fw/test/ddr_draw.c ops addrfill / addrverify, docs/ddr-draw.md).
   fill    write the address-in-data pattern (seed) to the top region: AWTO_BLOCKS blocks ending at the 2^22-unit wrap (32 MiB)
   verify  read it back with single reads (lane swap AWTO_SWAP, as ddr_addr_test.py): bad bursts of N; the seed is kept in tmp/scratch/ddr_keep.seed
   Each call freezes the picture for the op (test cmd 0xFE ... 0xFF) and releases it: a few hundred ms.

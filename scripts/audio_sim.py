@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
 """Audio tap for the firmware simulator (fw_sim): time-stamped writes to the HDMI audio test generator and the amp pins -> mono WAV.
 
-usage (library): tap = AudioTap(clock); pass it in the Machine devs; tap.wav(path, t0, t1) after the run. Docs: docs/pacman-sound.md
+usage (library): tap = AudioTap(clock); pass it in the Machine devs; tap.wav(path, t0, t1) after the run. Docs: docs/audio.md
   - Recorded: indirect data port writes of the D2 / D3 HDMI audio block (AFCR, CMCR, SCAPR) and the amp pins P7.4 / P7.3.
   - Model (everything in MODEL below is [guess]): tone f = K / sc (AFCR.tst_i2s_sw = 1), K / 2 / sc (= 0), sine (phase continuous over pitch changes), silent unless
-    generator on AND amp enabled AND not muted. Same K as scripts/pacman_sound.py (PS_K_DEFAULT_HZ).
+    generator on AND amp enabled AND not muted. Same K as scripts/snd_data_gen.py (PS_K_DEFAULT_HZ).
   - Register addresses are numeric (regdb re/regdb/RTD2795T-CG.tsv.gz): AWTO_R_ names exist only in firmware builds (gen_regnames.py).
 """
 from __future__ import annotations
@@ -25,9 +25,9 @@ RESET = {IDX_AFCR: 0x58, IDX_CMCR: 0x40, IDX_SCAPR: 0x05}       # regdb reset va
 DVC_GAIN_MSB, DVC_GAIN_LSB = 0x08A5, 0x08A6                    # DVC_GAIN_MSB / LSB (regdb): the volume ramp target, written by the SDK mute / unmute
 PIN_AMP_EN, PIN_AMP_MUTE = 0xFE1C, 0xFE1B                       # PORT74_PIN_REG (bAMP_EN, P7.4) / PORT73_PIN_REG (bAMP_MUTE, P7.3), bit 0
 
-# --- model assumptions: [guess], the single place (docs/pacman-sound.md "Unverified")
+# --- model assumptions: [guess], the single place (docs/audio.md "Unverified")
 MODEL = {
-    "k_hz": 48000.0,        # tone f = k_hz / sc; = pacman_sound.PS_K_DEFAULT_HZ (sc 32 = 48 kHz sample rate, 32 samples per period)
+    "k_hz": 48000.0,        # tone f = k_hz / sc; = snd_data_gen.PS_K_DEFAULT_HZ (sc 32 = 48 kHz sample rate, 32 samples per period)
     "latch_s": 0.0,         # delay from the CMCR.dbdcb write to the new pitch (hardware: after the current audio PLL cycle)
     "amp_en_reset": 0,      # pin values before the first firmware write (audio.c: EN 0, MUTE 1 at start)
     "amp_mute_reset": 1,

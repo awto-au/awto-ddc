@@ -17,7 +17,7 @@ from pathlib import Path
 import isostamp
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-import gen_pacman_classic as G
+import osd_gfx as OG
 from _repo import ROOT
 
 OUT = ROOT / "fw/test/flash_screen_data.inc"
@@ -103,8 +103,8 @@ def pac_tiles():
 
 
 def glyph_list():
-    out = [G.pack(char_glyph(ch), 1) for ch in FONT_CHARS]
-    out += [G.pack(t, 1) for t in pac_tiles()]
+    out = [OG.pack_rows(char_glyph(ch)[:TILE_H]) for ch in FONT_CHARS]
+    out += [OG.pack_rows(t[:TILE_H]) for t in pac_tiles()]
     assert len(out) == GLYPHS
     return out
 

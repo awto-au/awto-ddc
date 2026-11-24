@@ -15,7 +15,7 @@ tools/gmbus_rate/modules.order
 /build-debris/
 .claude/worktrees/
 
-# Asteroids ROM set and anything derived from it: never committed (docs/asteroids.md)
+# Asteroids ROM set and anything derived from it: never committed (the games live in awto-au/awto-doom, docs/games.md)
 asteroid.zip
 asteroids*.zip
 *.np3
@@ -26,4 +26,3 @@ asteroids*.zip
 **/asteroids/
 **/asteroids_shapes*
 **/asteroids_rom*
-fw/test/asteroids_data.inc

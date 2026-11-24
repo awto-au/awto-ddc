@@ -3,10 +3,11 @@
 
 usage: osd_screens_md5.py BIN MAP [--rotate] [--tsv OUT]      osd_screens_md5.py --compare A.tsv B.tsv
   Screens: console (boot console, text layer osd_tc_cells), flash preview (VCP 0xEB = 7: flash_screen.c map + glyph writes).
-  Same state hash as saver_frames_md5.py (font SRAM, window SRAM, palette, OSD registers, overlay). Nothing touches hardware.
+  State hash (font SRAM, window SRAM, palette, OSD registers, overlay). Nothing touches hardware.
 Log: ./tmp/logs/osd_screens_md5.log
 """
 import argparse
+import hashlib
 import os
 import sys
 from pathlib import Path
@@ -16,16 +17,28 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 import ddc_sim as D
 import osd_render as R
 from _log import log_line as _log_line
-from saver_frames_md5 import ROTATE_SETTLE_S, ROW_DISP_ROTATE, VCP_SAVER, state_md5
 
 LOG = R.ROOT / "tmp/logs/osd_screens_md5.log"
+VCP_SAVER = 0xEB                         # screensaver_now (fw/awto/savers.tsv)
+ROW_DISP_ROTATE = 32                     # registry row id of disp_rotate
+ROTATE_SETTLE_S = 6.0                    # fw time for the display re-set after Rotate changes
 VCP_FLASH_PREVIEW = 7
-CONSOLE_S = 4.0                          # fw time after boot: the console has drawn its boot lines (saver_sim / splash_sim use 3 s)
+CONSOLE_S = 4.0                          # fw time after boot: the console has drawn its boot lines (splash_sim uses 3 s)
 FLASH_S = 8.0                            # preview draws in chunks per main pass (flash_screen.c AWTO_FS_STEP_*): 2.7 x the sim's 3 s
 
 
 def say(s: str) -> None:
     _log_line(s, LOG)
+
+
+def state_md5(st) -> str:
+    h = hashlib.md5()
+    for k in sorted(st.font):
+        h.update(k.to_bytes(4, "big") + bytes(st.font[k]))
+    for k in sorted(st.win):
+        h.update(k.to_bytes(4, "big") + bytes(st.win[k]))
+    h.update(repr(list(st.pal)).encode() + st.regs + bytes(st.ovl))
+    return h.hexdigest()
 
 
 def run(a) -> int:

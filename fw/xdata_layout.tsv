@@ -70,7 +70,6 @@ ScalerDP_SeptPhy	0xd700	2928	8
 ScalerDisplay	0xd700	2936	7
 OsdAddress90_91_92	0xd700	2943	1
 awto_reg_burst	0xe380	0	7
-pacman_classic	0xe380	7	7
 OsdChange2BitColor	0xe380	14	6
 RL6449_Series_OsdHardwareVLC	0xe380	20	6
 ScalerCommonFlashWrite	0xe380	26	6
@@ -131,13 +130,10 @@ RL6449_Series_GDIPhy	0xe380	252	3
 RL6449_Series_DPRx1	0xe580	0	99
 ScalerMDomain	0xe580	99	134
 sync	0xe780	37	733
-asteroids	0xe780	770	515
 ScalerCommonDebug	0xe780	1285	363
 awto_settings_settings	0xe780	1648	335
 console	0xe780	1983	322
 swlog	0xe780	2305	278
 inputs	0xe780	2583	232
-saver_canvas	0xe780	2815	229
 hostnote	0xe780	3044	188
-scope_saver2	0xe780	3232	188
 OsdChange4BitColor	0xe780	3420	3

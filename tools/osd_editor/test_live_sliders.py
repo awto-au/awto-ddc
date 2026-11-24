@@ -62,8 +62,8 @@ def rows_that_are_live():
     sliders = [r["name"] for r in MON.T.ROWS if MON.live_row(r) and r["type"] == "int"]
     combos = [r["name"] for r in MON.T.ROWS if MON.live_row(r) and r["type"] == "enum"]
     assert sliders == ["brightness", "black_level", "contrast", "user_red", "user_green", "user_blue", "osd_hpos", "osd_vpos",
-                       "osd_transparency", "volume", "screensaver_s"], sliders
-    assert combos == ["gamma", "colour_temp", "screensaver"], combos
+                       "osd_transparency", "volume"], sliders
+    assert combos == ["gamma", "colour_temp"], combos
     pg, fb = fresh(0)
     assert all(pg.rows[n].btn.isHidden() for n in sliders + combos)                 # a live row has no Set
     assert not pg.rows["sharpness"].btn.isHidden() and not pg.rows["osd_timeout"].btn.isHidden()   # inert / non-live int rows keep it

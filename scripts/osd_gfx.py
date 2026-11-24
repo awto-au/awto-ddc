@@ -1,6 +1,6 @@
-"""Shared helpers of the OSD generators (gen_pacman_classic, gen_scope2, gen_flash_screen, gen_asteroids): glyph packer, content dedup, array emit, log, repo root.
+"""Shared helpers of the OSD generators (gen_flash_screen, osd_demo): glyph packer, content dedup, array emit, log, repo root.
 
-Glyph stream: a 12 px wide tile, two rows per 24-bit word, pixel p of a word = bit 23 - p, bytes low first (the OSD data port order). Docs: docs/saver-library.md
+Glyph stream: a 12 px wide tile, two rows per 24-bit word, pixel p of a word = bit 23 - p, bytes low first (the OSD data port order).
 Fonts stay in their generators (the 5 x 7 glyph shapes differ per screen: '5', '6', '9', 'C', 'G').
 """
 from pathlib import Path

@@ -6,7 +6,7 @@ Display Rotate 180 (setting row 32 `disp_rotate`, unit 3 stored) turns the pictu
 | mechanism | used by | evidence |
 |---|---|---|
 | decoder turn while downloading glyphs (`0x3A0B[7:6]` f_dl_swap 01 = 180, `hw_rotate_en`, buffer poll `0x3A0B[5:4]`) + map written in reverse | menu, console (`text_layer.c`, `AwtoOsdOrient`) | [hw] unit 3, works with the VLC / compressed download path |
-| software turn: map cell mirrored, glyph words reversed + bit-reversed while streaming (`fw/osd/osd_rot.c`) | savers, QC pattern (glyphs go raw, not through the decoder) | [hw] unit 3; sim check `scripts/saver_sim.py` |
+| software turn: map cell mirrored, glyph words reversed + bit-reversed while streaming (`fw/osd/osd_rot.c`) | savers, QC pattern (glyphs go raw, not through the decoder) | [hw] unit 3; sim check `scripts/splash_sim.py` |
 | chip auto rotation `0x3A41` (auto_rotate_en, dir 00 CCW / 01 CW / 10 180, `rotate_flib`, char remap, `0x3A42` font B LUT start) | not used (`AwtoOsdTestReset` clears it) | [?] T-G: would turn map and glyphs in hardware |
 - The decoder's raw path (`0x3A17[1]` decode_nocom_data with `f_dl_swap`) is the SDK's route for raw glyphs [sdk-hypothesis]; not in our savers yet: T-I.
 - Auto rotation + `disp_zone` 00 not allowed [spec]; with double size it showed boxes without text [hw] unit 3.

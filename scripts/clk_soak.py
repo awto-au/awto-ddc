@@ -1,11 +1,11 @@
 #!/usr/bin/env python3
-"""Soak of one clock step on the test unit with the savers cycling (docs/clock-sweep.md "Soak").
+"""Soak of one clock step on the test unit (docs/clock-sweep.md "Soak").
 
 usage: clk_soak.py --bus B --serial S --map MAP [--bin BIN] STEP MINUTES
   Image built with -D _AWTO_OSD_HWTEST. STEP = a name from clk_sweep.STEPS (stock = the control run).
   The step is held by the firmware for HOLD_S and kept alive by a KEEP op every KEEP_S: the host's silence or a firmware stall = revert / WDT reset.
-  Every PERIOD_S: firmware checks again (CRC passes, XDATA, delays), link reads, heartbeat vs the host clock, IOSC trim registers, next saver
-  (Scope 2, Asteroids, Pac-Man = VCP 0xEB 4 / 8 / 2). A reset is logged, the unit relinked, the step applied again.
+  Every PERIOD_S: firmware checks again (CRC passes, XDATA, delays), link reads, heartbeat vs the host clock, IOSC trim registers.
+  A reset is logged, the unit relinked, the step applied again.
   Log ./tmp/logs/clk_soak.log, one TSV line per period ./tmp/logs/clk_soak.tsv.
 """
 from __future__ import annotations
@@ -26,7 +26,6 @@ from _repo import ROOT
 
 LOG = ROOT / "tmp/logs/clk_soak.log"
 TSV = ROOT / "tmp/logs/clk_soak.tsv"
-SAVERS = (4, 8, 2)                         # Scope 2, Asteroids, Pac-Man (VCP 0xEB values)
 PERIOD_S = 30.0                            # Dan's brief: checks every 30 s
 KEEP_S = 4.0                               # KEEP op period; HOLD_S / KEEP_S = 5 missed keeps before the firmware reverts
 HOLD_S = 20.0
@@ -148,17 +147,14 @@ def soak(ctx, name: str, minutes: float, a) -> dict:
         say("FAIL initial apply")
         stats["resets"] += 1
         return stats
-    say(f"soak {name} {minutes} min: held, savers {SAVERS}, check every {PERIOD_S:.0f} s")
+    say(f"soak {name} {minutes} min: held, check every {PERIOD_S:.0f} s")
     if a.nvram is not None:
         stats["nvram"] = nvram_test(ctx, name, a)
-    n, nxt_check, nxt_keep, si = 0, time.monotonic(), time.monotonic(), 0
+    n, nxt_check, nxt_keep = 0, time.monotonic(), time.monotonic()
     while time.monotonic() < t_end:
         now = time.monotonic()
         try:
             if now >= nxt_check:
-                H.op(ctx.dev, H.OP_SAVER, H.lim_saver(), flags=0, n=SAVERS[si % len(SAVERS)], label="saver")
-                say(f"  saver {SAVERS[si % len(SAVERS)]} on")
-                si += 1
                 n += 1
                 period_check(ctx, n, now - t_start, name, stats)
                 nxt_check = now + PERIOD_S
@@ -207,7 +203,6 @@ def main() -> int:
     import i2cbus
     import sync_log as S
     i2cbus.require_unit(a.bus, a.serial)
-    C.OPTS["fps"] = False
     with dbg_link.linked(a.bus, int(a.minutes) + 5):
         dev = H.Unit(a.bus, a.map)
         ck = copy.copy(dev)

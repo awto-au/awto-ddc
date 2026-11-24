@@ -7,7 +7,7 @@ usage: osd_sweep.py --bus B --serial S --map MAP [--bin BIN] [--sim] [--continue
   before the op returns (a stalled main loop = WDT reset); the host then reads M1 and M2 back (circuit off, scale-up off, overlay off,
   0x3A33[4], two reads) at the restored values and compares with the pattern. Pass = 0 bad bytes, registers read back as requested and
   restored, no new FIFO flag, op finished inside its limit.
-  GROUPS: base fff1 fffb ffbc burst state size combo (combo reads the best passing values from the TSV) hold (setting held while the savers run)
+  GROUPS: base fff1 fffb ffbc burst state size combo (combo reads the best passing values from the TSV) hold (setting held while the main loop runs)
   Log ./tmp/logs/osd_sweep.log, TSV ./tmp/logs/osd_sweep.tsv.
 """
 from __future__ import annotations
@@ -59,7 +59,6 @@ POLL_PACE_S = 0.05                                   # between polls of a runnin
 HB_WINDOW_S = 2.0
 HB_TOL_PCT = 1.5
 HOLD_FW_MS = 25000                                   # fw-side restore of a held setting; host normally restores first
-SAVER_SCOPE2 = H.SAVER_SCOPE2
 
 
 def say(s: str) -> None:
@@ -303,7 +302,7 @@ def wait(dev, s: float) -> None:
 
 
 def hold_case(ctx, c: Case, hold_ms: int = HOLD_FW_MS) -> dict:
-    """Setting held while the main loop runs: heartbeat vs the host clock, link reads, Scope 2 frames per second; then restore."""
+    """Setting held while the main loop runs: heartbeat vs the host clock, link reads; then restore."""
     row = {"case": c.name, "mode": "held", "fff1": c.fff1, "fffb": c.fffb, "ffbc": c.ffbc, "pass": False}
     raw = send(ctx, OP_HOLD, LIMIT_S, row["case"], params(c, 1, 0, hold_ms))
     if raw is None or raw[W_STATE] != ST_HELD:
@@ -325,18 +324,11 @@ def hold_case(ctx, c: Case, hold_ms: int = HOLD_FW_MS) -> dict:
             reads_ok = False
             break
         pace(sw)
-    fps = None
-    if not ctx.sim:
-        try:
-            fps = fps_scope2(ctx.dev)
-        except (TimeoutError, RuntimeError) as e:
-            notes.append(f"scope2 fps: {e}")
     end = send(ctx, OP_RESTORE, LIMIT_S, row["case"] + " restore")
     ok_rest = end is not None and end[W_STATE] == ST_RESTORED
     row["pass"] = bool(hb_ok and reads_ok and ok_rest)
     row["note"] = "; ".join(notes)
-    say(f"  {'PASS' if row['pass'] else 'FAIL'} {row['case']}: heartbeat {ratio:.4f}, 100 link reads {'ok' if reads_ok else 'FAILED'}, Scope 2 "
-        f"{(f'{fps:.2f}') if fps is not None else 'n/a'} frames/s, restored {ok_rest}" + (f"; {row['note']}" if row["note"] else ""))
+    say(f"  {'PASS' if row['pass'] else 'FAIL'} {row['case']}: heartbeat {ratio:.4f}, 100 link reads {'ok' if reads_ok else 'FAILED'}, restored {ok_rest}" + (f"; {row['note']}" if row["note"] else ""))
     return row
 
 
@@ -362,21 +354,6 @@ def autorevert_case(ctx, c: Case) -> dict:
     return row
 
 
-FPS_SETTLE_S, FPS_WINDOW_S = 2.5, 6.0                # first Scope 2 frame hidden (clk_sweep.py)
-
-
-def fps_scope2(dev) -> float:
-    """Scope 2 frames per second from the firmware frame counter over a 6 s window; saver off afterwards."""
-    H.op(dev, H.OP_SAVER, H.lim_saver(), flags=0, n=SAVER_SCOPE2, label="scope2 on")
-    H.wait_scope2(dev)
-    wait(dev, FPS_SETTLE_S)
-    r0 = H.op(dev, H.OP_REGS, H.lim_read(0), label="frame0")
-    t0 = dev.now()
-    wait(dev, FPS_WINDOW_S)
-    r1 = H.op(dev, H.OP_REGS, H.lim_read(0), label="frame1")
-    t1 = dev.now()
-    H.op(dev, H.OP_SAVER, H.lim_saver(), flags=0, n=H.SAVER_OFF, label="saver off")
-    return ((r1["frame"] - r0["frame"]) & 0xFFFF) / (t1 - t0)
 
 
 class _CkCtx:

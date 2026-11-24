@@ -24,7 +24,6 @@ import ddc_sim as D
 import key_sim_test as K
 import numpy as np
 import osd_render as R
-import saver_sim as V
 
 ROOT = R.ROOT
 LOG = ROOT / "tmp/logs/splash_sim.log"
@@ -36,7 +35,10 @@ TIME_TOL_MS = 2                 # one main pass (~4 ms) is the resolution of a r
 KEY_AT_MS = 150                 # fw ms: the splash is running (the key is polled once the main loop passes again, ~0.4 s after the first pass)
 VCP_PREVIEW = 7                 # screensaver_now option "Boot splash"
 TURN_TOL_PX = 40                # the turned render sits 24 px higher than the mirror (sim display offset)
-FRAME_S = 8.0                   # fw time for the flash drawing (as saver_sim RUN_S)
+FRAME_S = 8.0                   # fw time for the flash drawing (the full-screen draw steps plus one frame)
+VCP_SAVER = 0xEB                # screensaver_now (fw/awto/savers.tsv)
+ROW_DISP_ROTATE = 32            # registry row id of disp_rotate
+ROTATE_SETTLE_S = 6.0           # fw time for the display re-set after Rotate changes
 
 
 def say(s):
@@ -112,10 +114,10 @@ def frames(a):
         sess = R.Session(a.bin, a.map, "1080p60", devs=[eng])
         sess.boot()
         ddc = D.Mccs(sess.bus, eng)
-        ddc.set(0xE0, V.ROW_DISP_ROTATE)
+        ddc.set(0xE0, ROW_DISP_ROTATE)
         ddc.set(0xE1, rot)
-        sess.bus.wait(V.ROTATE_SETTLE_S)
-        ddc.set(V.VCP_SAVER, VCP_PREVIEW)
+        sess.bus.wait(ROTATE_SETTLE_S)
+        ddc.set(VCP_SAVER, VCP_PREVIEW)
         sess.bus.wait(FRAME_S)
         img = R.render_snap(sess.snap(), "black", 2)
         img.save(a.out / f"splash_{name}.png")

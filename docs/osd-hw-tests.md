@@ -103,7 +103,7 @@ Commands: `./dev.py osd-hw-test --unit 3 [--cal] t1 t2 t4 t7 t8 rd freeze`; logs
 
 ## OT-8: 24 x 36 cell mode (prepared 2026-11-19, not run)
 
-- Question (Dan, 2026-11-19): does `0x3A43[6]` give 24 x 36 px cells so Asteroids can draw 720 x 396 (30 x 11 cells, scale 12 on the 4K panel) with the same 330 glyph ids = 330 x 36 + 342 = 12222 of 12288 words (`docs/asteroids-resolution.md`, option 2)?
+- Question (Dan, 2026-11-19): does `0x3A43[6]` give 24 x 36 px cells so Asteroids can draw 720 x 396 (30 x 11 cells, scale 12 on the 4K panel) with the same 330 glyph ids = 330 x 36 + 342 = 12222 of 12288 words (`docs/games.md (Asteroids resolution note, removed)`, option 2)?
 - Registers [spec / sdk]: `0x3A43[6]` font 24 x 36 (`ScalerOsdFont24x36OnOff`); char word B0[4:0] width (<= 31), row command B1 = height - 1 (6 bit, 36 fits); scale-up region = cols x 24 by rows x 36 (`AwtoOsdPlaceScaleUp` multiplies by 12 / 18, so the test passes 2 x cols / 2 x rows). No other cell-size register is known; 2- / 4-bit offset bits 8 / 7 must be 0 [spec].
 - Firmware: op 12 `AwtoOhwBig` (`fw/test/testcmd.c`, `-D _AWTO_OSD_HWTEST`), `usN` 1 = mode on, 0 = control (mode off, same SRAM). Host: `./dev.py osd-hw-test --unit 3 ot8full ot8` (then `ot8off` for the control).
 - Screen (4 x 8 cells, scale 8, centred, unit 3 shows it turned 180; glyph word = 24 bit, port order low byte first; px 0 = bit 23 under the row-major reading):

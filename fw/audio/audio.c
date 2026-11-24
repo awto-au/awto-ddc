@@ -2,7 +2,7 @@
 #include "UserCommonInclude.h"
 #include "../rtdfw/awto/include/dataport.h"   // the SDK data port calls are macros for dp_wr / dp_rmw (fw/awto/boundary.py)
 
-// fw/audio = the one owner of the speaker path (#229): amp pins + ear tests (docs/audio.md), then the tone player below (docs/pacman-sound.md).
+// fw/audio = the one owner of the speaker path (#229): amp pins + ear tests (docs/audio.md), then the tone player below.
 // awto speaker amp pins (awto-ddc#94, docs/audio.md): the one owner of P7.4 (amp enable) and P7.3 (AMP_MUTE, high = muted).
 // aout 116/117 feeds the amp; P7.4 = !mute as Dahua 1:ea99 (evidence: docs/audio.md).
 // Callers: PCB_ON_REGION_GPIO_SETTING_POWER_AC_ON (boot), PCB_AMP_MUTE (SysAudioMuteProc), VCP 0x63 (ear tests).
@@ -100,41 +100,25 @@ void AwtoAudioTestStep(BYTE ucHi, BYTE ucLo)
 #endif
 
 
-// Sound player of the unit (Pac-Man, Asteroids, alert, key click, calibration; module snd, docs/saver-library.md D-SL1) (docs/pacman-sound.md): the HDMI audio test generator (AFCR audio_test_enable) as the tone source,
-// pitch = audio PLL S code per note. Test cmds AWTO_TC_PACMAN_SND + 0 intro, + 1 waka (loops), + 2 death, + 3 calibration tone, + 4 stop, + 5 alert.
-// One generator: priorities (pacman_sound.py PRIORITY); a dropped waka / background sound stays wanted and resumes when the higher one ends.
+// Sound player of the unit (alert, key click, calibration; module snd): the HDMI audio test generator (AFCR audio_test_enable) as the tone source,
+// pitch = audio PLL S code per note. Test cmds AWTO_TC_SND + 0 calibration tone, + 1 stop, + 2 alert.
+// One generator: the alert track and the calibration tone are top priority (they replace what plays); a key click is refused while one plays.
 // Every build (#229): SDK generator + SysAudioHandler hold are always compiled. No host-stream gate: state PLAYBACK = stream present, not audible (a PC host is always there). Non-blocking: AwtoPmSoundPoll per main pass.
-// Data: snd_data.inc (scripts/pacman_sound.py): notes, track table (offset, priority, loops), cmd table (track, sync event).
+// Data: snd_data.inc (scripts/snd_data_gen.py): the notes of the alert track.
 #define AWTO_PS_OCT_FLAG                        0x80    // note byte bit 7: AFCR tst_i2s_sw = 0 (one octave down)
 #define AWTO_PS_SC_MASK                         0x7F
 #define AWTO_PS_TICK_MS                         10
 #define AWTO_PS_CAL_SC                          32      // calibration tone: sc 32 = 48 kHz sample rate
-#define AWTO_PS_TRACK_INTRO                     0       // track ids = TRACKS order in scripts/pacman_sound.py (tests/test_pacman_sound.py checks)
-#define AWTO_PS_TRACK_WAKA                      1
-#define AWTO_PS_TRACK_ALERT                     3
-#define AWTO_PS_TRACK_GHOST                     4
-#define AWTO_PS_TRACK_FRUIT                     5
-#define AWTO_PS_TRACK_BG0                       6       // siren speed 1..3 = 6..8 (background state 1..3), frightened = 9 (state 4): track = BG0 - 1 + state
-#define AWTO_PS_TRACK_BG_LAST                   11      // saucer: background states 5 (thrust) and 6 (saucer) are the Asteroids ones
-#define AWTO_PS_TRACK_FIRE                      12      // Asteroids one-shots: fire, boom_s, boom_m, boom_l, boom_ship
+#define AWTO_PS_TRACK_ALERT                     0       // data track (notes at AWTO_PS_OFF_ALERT)
 #define AWTO_PS_TRACK_NONE                      0xFE    // nothing playing
 #define AWTO_PS_TRACK_CAL                       0xFF    // calibration tone: no data track
-#define AWTO_PS_PRIO_TOP                        7       // intro, alert, calibration: above everything
-#define AWTO_PS_CMD_WAKA                        1       // AwtoPmSound(cmd): 0 intro, 1 waka, 2 death, 3 calibration, 4 stop, 5 alert, 6 ghost eaten, 7 fruit eaten, 8 waka off
-#define AWTO_PS_CMD_CAL                         3
-#define AWTO_PS_CMD_STOP                        4
-#define AWTO_PS_CMD_ALERT                       5
-#define AWTO_PS_CMD_GHOST                       6
-#define AWTO_PS_CMD_FRUIT                       7
-#define AWTO_PS_CMD_WAKA_OFF                    8
-#define AWTO_PS_CMD_FIRE                        9       // Asteroids: 9 fire, 10 / 11 / 12 explosion small / medium / large, 13 ship explosion
-#define AWTO_PS_CMD_LAST                        13
+#define AWTO_PS_CMD_CAL                         0       // AwtoPmSound(cmd): 0 calibration tone, 1 stop, 2 alert
+#define AWTO_PS_CMD_STOP                        1
+#define AWTO_PS_CMD_ALERT                       2
+#define AWTO_PS_CMDS                            3
 #define AWTO_PS_F_BOOT                          0x01    // flags: the boot-time generator off has run
 #define AWTO_PS_F_GATE                          0x02    // the amp is muted for a pitch change and opens at s_usPsGateAt
-#define AWTO_PS_F_WAKA                          0x04    // eating: waka wanted
 #define AWTO_PS_F_DVC_UP                        0x08    // the DVC has been ramped up (gain written); cleared by the ramp down
-#define AWTO_PS_F_LOW_MASK                      0x0F    // flags bits 3:0; bits 7:4 = background state wanted (siren speed / frightened)
-#define AWTO_PS_F_BG_SHIFT                      4
 #define AWTO_PS_NOTE_BYTES                      2
 #define AWTO_PS_GAP_MS                          4       // amp muted while the audio PLL divider changes (the pitch step was a click): by ear, not measured; Dan 2026-11-18 "a bit clicky at the change of sounds"
 #define AWTO_DVC_STEP_1DB                       0x00    // DVC_EN dvc_down_db / dvc_up_db = 00: +-1 dB per step (gain * 7/8 down, 9/8 up)
@@ -143,43 +127,16 @@ void AwtoAudioTestStep(BYTE ucHi, BYTE ucLo)
 #define AWTO_DVC_RAMP_POLLS                     2       // ramp down 68 steps (ln 8191 / ln 8/7) x 1 sample / 48 kHz = 1.4 ms, x1.25 = 1.8 ms -> 2 polls of 1 ms
 #define AWTO_PS_MS_HALF                         0x8000  // WORD ms difference below this = the time has passed
 #define AWTO_PS_SCAPR_SLC                       0x80    // SCAPR bit 7 = S1 div 2, as the SDK 48 kHz code 0xA0
-#define AWTO_PS_EV_START                        0x80    // sync E9: + track
 #define AWTO_PS_EV_CAL                          0x83
 #define AWTO_PS_EV_STOP                         0x84
 #define AWTO_PS_EV_DONE                         0x85
 #define AWTO_PS_EV_ALERT                        0x87
-#define AWTO_PS_EV_GHOST                        0x88
-#define AWTO_PS_EV_FRUIT                        0x89
-#define AWTO_PS_EV_BG                           0x8A    // value = background state
-#define AWTO_PS_EV_WAKA_OFF                     0x8B
-#define AWTO_PS_EV_AST                          0x8C    // value = cmd
-#define AWTO_PS_TRK_SHIFT                       2       // track table row = 4 bytes: offset lo, offset hi, priority, loops
-#define AWTO_PS_TRK_PRIO                        2
-#define AWTO_PS_TRK_LOOPS                       3
-#define AWTO_PS_CMD_ROW                         3       // cmd table row: track, sync event, 1 = event value is the cmd
-#define AWTO_PS_CMD_EV                          1
-#define AWTO_PS_CMD_EVARG                       2
 #include "snd_data.inc"
 
 #pragma place group(audio_11)                      // leaf reader in the data's bank (a const read in a function that calls banked code trips the link check)
 static BYTE PsByte(WORD usIdx)
 {
     return g_aucPsData[usIdx];
-}
-
-static BYTE PsTrk(BYTE ucTrack, BYTE ucField)
-{
-    return PsByte(AWTO_PS_TRK + ((WORD)ucTrack << AWTO_PS_TRK_SHIFT) + ucField);
-}
-
-static WORD PsOff(BYTE ucTrack)                 // start of a track in g_aucPsData
-{
-    return (WORD)PsTrk(ucTrack, 0) | ((WORD)PsTrk(ucTrack, 1) << 8);
-}
-
-static BYTE PsPrio(BYTE ucTrack)                // priority: higher wins the one tone generator; the calibration tone is a top one
-{
-    return (ucTrack < AWTO_PS_TRACKS) ? PsTrk(ucTrack, AWTO_PS_TRK_PRIO) : AWTO_PS_PRIO_TOP;
 }
 
 static __xdata BYTE s_ucPsTrack;                // playing track, AWTO_PS_TRACK_NONE = off
@@ -278,33 +235,7 @@ static void PsStart(BYTE ucTrack)
     }
     else
     {
-        s_usPsPos = PsOff(ucTrack);
-    }
-}
-
-static void PsResume(void)                      // after a sound ended: waka if eating, else the background sound, else silence
-{
-    BYTE ucBg = s_ucPsFlags >> AWTO_PS_F_BG_SHIFT;
-
-    if((s_ucPsFlags & AWTO_PS_F_WAKA) != 0)
-    {
-        PsStart(AWTO_PS_TRACK_WAKA);
-    }
-    else if(ucBg != 0)
-    {
-        PsStart(AWTO_PS_TRACK_BG0 - 1 + ucBg);
-    }
-    else
-    {
-        PsStop();
-    }
-}
-
-static void PsRequest(BYTE ucTrack)             // plays when its priority >= the playing sound's, else dropped (waka / background stay wanted)
-{
-    if((s_ucPsTrack == AWTO_PS_TRACK_NONE) || (PsPrio(ucTrack) >= PsPrio(s_ucPsTrack)))
-    {
-        PsStart(ucTrack);
+        s_usPsPos = AWTO_PS_OFF_ALERT;
     }
 }
 
@@ -339,15 +270,10 @@ void AwtoPmSoundPoll(void)                      // each main pass
     }
     s_usPsAt += s_usPsDur;                      // note boundary on the schedule, not on this pass: no drift
     ucDur = PsByte(s_usPsPos + 1);
-    if((ucDur == 0) && (PsTrk(s_ucPsTrack, AWTO_PS_TRK_LOOPS) != 0))
-    {
-        s_usPsPos = PsOff(s_ucPsTrack);
-        ucDur = PsByte(s_usPsPos + 1);
-    }
     if(ucDur == 0)
     {
         AwtoSyncPush(AWTO_SYNC_EV_ODEMO, AWTO_PS_EV_DONE, 0);
-        PsResume();
+        PsStop();
         return;
     }
     PsNote(PsByte(s_usPsPos));
@@ -355,66 +281,29 @@ void AwtoPmSoundPoll(void)                      // each main pass
     s_usPsPos += AWTO_PS_NOTE_BYTES;
 }
 
-void AwtoPmSoundBg(BYTE ucState)                // background state (siren speed 1..3, frightened 4, 0 none): acts on a change only
+void AwtoPmSound(BYTE ucCmd)                    // AWTO_TC_SND + 0..2: 0 calibration tone, 1 stop, 2 alert
 {
-    if((s_ucPsFlags >> AWTO_PS_F_BG_SHIFT) == ucState)
-    {
-        return;
-    }
-    s_ucPsFlags = (s_ucPsFlags & AWTO_PS_F_LOW_MASK) | (BYTE)(ucState << AWTO_PS_F_BG_SHIFT);
-    AwtoSyncPush(AWTO_SYNC_EV_ODEMO, AWTO_PS_EV_BG, ucState);
-    if(((s_ucPsTrack == AWTO_PS_TRACK_NONE) || ((s_ucPsTrack >= AWTO_PS_TRACK_BG0) && (s_ucPsTrack <= AWTO_PS_TRACK_BG_LAST))))
-    {
-        PsResume();                             // silence or another background sound is playing; a higher sound picks the new state up at its end
-    }
-}
-
-void AwtoPmSound(BYTE ucCmd)                    // AWTO_TC_PACMAN_SND + 0..5; 6 ghost, 7 fruit, 8 waka off (game events)
-{
-    BYTE ucTrack;
-    WORD usRow;
-
     if(ucCmd >= AWTO_PS_CMDS)
     {
         return;
     }
-
-    if(ucCmd == AWTO_PS_CMD_WAKA_OFF)
-    {
-        s_ucPsFlags &= (BYTE)~AWTO_PS_F_WAKA;
-        AwtoSyncPush(AWTO_SYNC_EV_ODEMO, AWTO_PS_EV_WAKA_OFF, 0);
-        if(s_ucPsTrack == AWTO_PS_TRACK_WAKA)
-        {
-            PsResume();
-        }
-        return;
-    }
     if(ucCmd == AWTO_PS_CMD_STOP)
     {
-        s_ucPsFlags &= AWTO_PS_F_BOOT;          // wanted waka and background cleared too
+        s_ucPsFlags &= AWTO_PS_F_BOOT;
         PsStop();
         AwtoSyncPush(AWTO_SYNC_EV_ODEMO, AWTO_PS_EV_STOP, 0);
-        return;
     }
-    if(ucCmd == AWTO_PS_CMD_CAL)
+    else if(ucCmd == AWTO_PS_CMD_CAL)
     {
         s_ucPsToneSc = AWTO_PS_CAL_SC;
         PsStart(AWTO_PS_TRACK_CAL);
         AwtoSyncPush(AWTO_SYNC_EV_ODEMO, AWTO_PS_EV_CAL, 0);
-        return;
-    }
-    if(ucCmd == AWTO_PS_CMD_WAKA)
-    {
-        s_ucPsFlags |= AWTO_PS_F_WAKA;
     }
     else
     {
-        s_ucPsFlags &= (BYTE)~AWTO_PS_F_WAKA;   // any other sound ends the eating run; the next pellet starts waka again
+        AwtoSyncPush(AWTO_SYNC_EV_ODEMO, AWTO_PS_EV_ALERT, 0);
+        PsStart(AWTO_PS_TRACK_ALERT);
     }
-    usRow = AWTO_PS_CMD + ucCmd * AWTO_PS_CMD_ROW;
-    ucTrack = PsByte(usRow);
-    AwtoSyncPush(AWTO_SYNC_EV_ODEMO, PsByte(usRow + AWTO_PS_CMD_EV), (PsByte(usRow + AWTO_PS_CMD_EVARG) != 0) ? ucCmd : 0);
-    PsRequest(ucTrack);
 }
 
 BYTE AwtoPmSoundTone(BYTE ucSc, WORD usMs)      // one tone of S code ucSc, usMs audible (key click, fw/keys/key_click.c); AWTO_TONE_* (RL6449_Project.h)

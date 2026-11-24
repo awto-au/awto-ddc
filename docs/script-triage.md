@@ -57,8 +57,6 @@ Scan 2026-11-22 on 2949ca69: module-name word match over tracked text files (exc
 | rtd_settings_diff | 2026-11-20 | bot | Show byte offsets in the settings area (default 0xFB000-0xFD000) that  | - | delete |
 | rtd_xfr_diff | 2026-11-20 | bot | Read-only: dump MCU XFR ranges (DDC / DDC-CI / bank control) from seve | - | delete |
 | rtd_xram_probe | 2026-11-20 | bot | Find the RTD2795T's real XRAM extent over ISP (MCU halted): dump and/o | - | delete |
-| saver_tour | 2026-11-20 | Dan | Show every saver on a unit for HOLD_S seconds each, with the alert ton | - | delete |
-| scope2_wrap_sheet | 2026-11-20 | Dan | Contact sheet of Scope 2 frames across one drift wrap (docs/scope-real | - | delete |
 | screens_diff | 2026-11-20 | Dan | Compare two osd_catalog.py output directories pixel for pixel: prints  | #122,#137* | keep |
 | sdcc_bank_stackargs_test | 2026-11-20 | bot | A function that reads stack-passed args via SP/_bp must be common (stu | #11 | delete |
 | sdcc_link_test | 2026-11-20 | bot | Offline test for sdcc_link.dseg_runs: DSEG split around the bit bytes  | - | keep |
@@ -85,7 +83,6 @@ Scan 2026-11-22 on 2949ca69: module-name word match over tracked text files (exc
 
 | script | referenced from |
 |---|---|
-| asteroids_res | docs/asteroids-resolution.md, docs/saver-mode.md |
 | bl_knob_sim | docs/bl-delay-sweep.md |
 | boot_profile | docs/delay-audit.md |
 | boot_variance | docs/delays.md |
@@ -108,7 +105,7 @@ Scan 2026-11-22 on 2949ca69: module-name word match over tracked text files (exc
 | ghidra_match_sdk | docs/re-full-reversal.md, docs/reversing/8051-reuse-playbook.md |
 | ghidra_merge_lib_names | docs/re-full-reversal.md |
 | ghidra_re_stats | docs/re-full-reversal.md, docs/reversing/8051-reuse-playbook.md |
-| host_output_drop | docs/power-levels.md, docs/saver-mode.md |
+| host_output_drop | docs/power-levels.md |
 | irq_masks_hw | docs/irq-masks.md |
 | keil_probe | docs/reversing/8051-reuse-playbook.md |
 | keil_sdcc_scan | docs/genconstprop-switch.md, docs/keil-vs-sdcc.md |
@@ -125,7 +122,6 @@ Scan 2026-11-22 on 2949ca69: module-name word match over tracked text files (exc
 | osd_logo_big | docs/osd-editor-spec.md |
 | osd_screens_md5 | docs/osd/path-cost.md |
 | osdt_unit | docs/delays.md |
-| pacman_speed | docs/pacman.md, docs/saver-fps-plan.md, docs/saver-library.md |
 | philips_probe | docs/README.md, docs/monitors/README.md |
 | philips_raw_ddc | docs/README.md, docs/monitors/smartcontrol-wine.md |
 | qc_suite_unit | docs/osd/api.md, docs/qc-osd-suite.md |
@@ -137,17 +133,9 @@ Scan 2026-11-22 on 2949ca69: module-name word match over tracked text files (exc
 | rtd_panel_aux | docs/monitors/panel-edid.md |
 | rtd_pin_ledger | docs/monitors/rtd2795t-pin-audit.md |
 | san_bench | docs/sanitizer.md |
-| saver_code_profile | docs/saver-code-placement.md, docs/saver-mode.md |
-| saver_fps_probe | docs/saver-fps-plan.md |
-| saver_hw_budget | docs/saver-fps-hw.md |
-| saver_lib_sizes | docs/saver-library.md |
-| saver_mode_sim | docs/saver-mode.md, docs/sim.md |
-| saver_port_ab | docs/saver-fps-plan.md |
-| scope2_ddc_latency | docs/saver-fps-budget.md, docs/saver-mode.md, docs/screensaver.md |
 | sdcc_size_probe | docs/delays.md |
 | sdk_option_audit | docs/delays.md |
 | smartcontrol_probe | docs/README.md, docs/monitors/smartcontrol-wine.md |
-| snd_timing | docs/pacman-sound.md |
 | stack_high | docs/history.md |
 | startup_clear_cost | docs/flash-sector-churn.md |
 | vlc_probe | README.md, docs/osd.md |

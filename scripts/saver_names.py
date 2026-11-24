@@ -18,8 +18,8 @@ def load(path=TSV):
     for ln in Path(path).read_text().splitlines():
         if not ln.strip() or ln.startswith(("#", "name\t")):
             continue
-        name, macro, run, vcp, option, note = (ln.split("\t") + [""])[:6]
-        rows.append({"name": name, "macro": macro, "run": _num(run), "vcp": _num(vcp), "option": None if option == "-" else option, "note": note})
+        name, macro, run, vcp, note = (ln.split("\t") + [""])[:5]
+        rows.append({"name": name, "macro": macro, "run": _num(run), "vcp": _num(vcp), "note": note})
     return rows
 
 
@@ -28,11 +28,6 @@ SAVERS = load()
 
 def names():
     return [r["name"] for r in SAVERS if r["vcp"] is not None]
-
-
-def options():
-    """saver name -> build option (-D <option>=_OFF drops it), for the savers that can be left out."""
-    return {r["name"]: r["option"] for r in SAVERS if r["option"]}
 
 
 def vcp(name):

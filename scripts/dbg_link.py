@@ -10,7 +10,7 @@ usage: dbg_link.py on|off|state|expiry BUS [--minutes N]
 - Firmware: fw/diag/dbgport.c + fw/ddcci/ddcci.c (wb-p14swap); sim check: scripts/swap_sim.py.
 - dev.py wraps every debug-slave command in on/off (`linked`), so it does not matter which side owns the DDC.
 - `linked` closes a console / pop-up the block opened (ucHold bit1: clear before, set after; test cmd 0x27, verified) unless
-  keep_console (osd, gpio, menu, pacman). `dev.py health --no-osd` skips the info card + debug pop-up round-trip.
+  keep_console (osd, gpio, menu). `dev.py health --no-osd` skips the info card + debug pop-up round-trip.
 Log: ./tmp/logs/dbg_link.log
 """
 from __future__ import annotations

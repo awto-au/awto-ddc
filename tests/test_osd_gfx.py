@@ -27,6 +27,6 @@ def test_add_unique():
 
 
 def test_generated_includes_unchanged():
-    for g in ("gen_scope2", "gen_flash_screen", "gen_pacman_classic"):
+    for g in ("gen_flash_screen",):
         r = subprocess.run([sys.executable, str(ROOT / "scripts" / f"{g}.py"), "--check"], capture_output=True, text=True, check=False)
         assert r.returncode == 0, f"{g}: {r.stdout[-300:]}"

@@ -22,7 +22,7 @@
 | 15 | Scope 2 tile garble | display-side, unresolved; T10 verdict (digits 2/3/4 flicker?) not recorded; scale-up-off test planned | `docs/osd/timing.md`, `docs/osd-hw-tests.md` | no | D records verdict | #226 |
 | 16 | Run-glyph trace tests T-A, T-C | pending; width field layout | `docs/saver-fps-hw.md` | no | A | #226 |
 | 17 | VLC-turn (T-I) | hardware rotate-on-download could replace `AwtoOsdTurn` | `docs/saver-fps-hw.md` | no | A | #226 |
-| 18 | Cache size | 2 KB shared vs 4 KB per bank both within 3 % of unit 3; counters `FDB3..FDC6` settle it | `docs/saver-code-placement.md` | no | A | #242 |
+| 18 | Cache size | 2 KB shared vs 4 KB per bank both within 3 % of unit 3; counters `FDB3..FDC6` settle it | removed doc `docs/saver-code-placement.md` (git 3d271b99) | no | A | #242 |
 | 19 | OSD open tests OT-1..OT-27 | listed; OT-4 read-back disagreement | `docs/osd/open-items.md` | no | A | #226 |
 | 20 | Live register scan units 1 / 2 | read-only, running; results to `re/regmap/obs/` | `docs/register-audit.md` | no | A | #236 / #237 |
 | 21 | Debris cleanup (#237) | retire docs that only link; list in the session report, not moved | #237 | no | D | #237 |

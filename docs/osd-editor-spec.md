@@ -78,4 +78,4 @@ Own words. Source of facts: running Realtek's OsdEdit GUI under Wine (2026-11-08
 - Expiry: TERM (dev.py turns the debug link off), kill after 2 s, banner + log line with limit and elapsed.
 - No answer (`no bus with EDID serial`, `DDC communication failed`): red banner, other calls stay usable.
 - Live refresh: every 15 s, only when no call is pending (a list takes 6.4 s); touched or dragged rows keep the widget value.
-- Quick group: screensaver start / stop = `dev.py ddc set 0xEB v` (0 stop, 1 selected, 2 Pac-Man, 3 Scope, 4 Scope 2, 5 Flash warning), volume 0x62, mute 0x8D (1 muted, 2 unmuted), rotate = registry row `disp_rotate` through the mailbox.
+- Quick group: screensaver start / stop = `dev.py ddc set 0xEB v` (0 stop, 5 flash warning, 6 alert tone, 7 boot splash), volume 0x62, mute 0x8D (1 muted, 2 unmuted), rotate = registry row `disp_rotate` through the mailbox.

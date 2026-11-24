@@ -13,5 +13,5 @@ Decision (Dan, 2026-11-19): `FFF1[3:0]` (`mcu_wr_sca_intrvl_sel`) = 12 is the de
 - Raw triple stores, 30 passes x 612 words: sel 10..15 0 bad bytes; sel <= 9 fail.
 - Cost per byte at sel 12: raw 0.411 us, 24-nop macro 0.674 us, SDK call 1.34 us.
 - Same sel fixes the DPCD read corruption at 350.8 (`docs/clock-sweep.md` "DP input at 350.8 MHz on unit 2").
-- Earlier nop bisect (16 pass, 12 fail): `docs/scope-corruption.md`.
+- Earlier nop bisect (16 pass, 12 fail): `docs/games.md` (Scope 2 corruption note, removed).
 - Sel 12 + 24 nops (n12): checked by eye on unit 3, no corruption.

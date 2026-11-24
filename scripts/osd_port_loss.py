@@ -6,7 +6,7 @@ usage: osd_port_loss.py --bus B --serial S --map MAP [--bin BIN] [--sim] GROUP|C
   One case = prefill the region with pattern A (slow safe stores), one pass of pattern B with the chosen delays between the stores
   (address set -> B0 -> B1 -> B2), read back M1 (+ M2) by the firmware verify against B: bad bytes, per byte position, doubled bytes.
   One pass only: a lost store of a repeated pass would leave the same value and hide.
-  States: hidden = saver off; shown = Scope 2 running, saver poll held (OSD fetching the map / glyph SRAM).
+  States: hidden = saver off; shown = the ladder screen on (op LADDER), saver poll held (OSD fetching the map / glyph SRAM).
   Log ./tmp/logs/osd_port_loss.log, TSV ./tmp/logs/osd_port_loss.tsv.
 """
 from __future__ import annotations
@@ -33,7 +33,7 @@ NONE = 0xFF
 W_KA, W_K0, W_K1, W_TARGET, W_SYNC, W_SIZE = 42, 43, 44, 45, 46, 47
 O_POS = H.SIZE                                       # aucPos[3], ucDupPrev after the StAwtoOsdHw of osd_hw_test
 SEED_A, SEED_B = 0x11, 0x3C
-# regions (words): Scope 2 map, Scope 2 glyphs, unused top; 8184 B max per pass (N_MAX)
+# regions (words): ladder map, ladder glyphs, unused top; 8184 B max per pass (N_MAX)
 REGIONS = {"map": (0, 616), "glyph": (616, 2728), "top": (0x2000, 2728)}
 SLOW_K = 40                                          # prefill delays (known clean: 24 nops pass)
 CYCLES_PER_K = 2                                     # djnz = 2 machine cycles
@@ -88,8 +88,7 @@ def set_state(ctx, shown: bool) -> None:
     dev = ctx.dev
     H.set_flags(dev, 0)
     if shown:
-        H.op(dev, H.OP_SAVER, H.lim_saver(), flags=0, n=H.SAVER_SCOPE2, label="scope2 on")
-        H.wait_scope2(dev)
+        H.op(dev, H.OP_LADDER, H.lim_write(H.M_SDK, H.LD_IDS * H.BUF + 2 * H.BUF), label="ladder on")
         wait(ctx, 1.0)
         H.set_flags(dev, H.F_HOLD)
     else:

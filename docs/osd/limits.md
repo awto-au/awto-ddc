@@ -7,7 +7,7 @@ Format: rated by the chip | what we use | why the gap. A gap with no reason is a
 | OSD SRAM | 12288 words x 24 bit, M1 + M2 | up to the whole (Scope 2 uses 616 + glyphs; console map 136 x 58 + glyphs) | extent [hw] 2026-11-16 (#226); no hole at 4096 / 8192 on the explicit port |
 | budget | `rows + 1 + cells + 9 U1 + 18 U2 + 36 U4 <= 12288` | same | arithmetic [spec] |
 | 1-bit glyph ids | 9 bit = 512 (B0[5] = id bit 8) | Asteroids 330, text layer 95 | [hw] ids > 255 rendered by Asteroids |
-| 2-bit glyph ids | 8 bit = 256 (B0[5] is a colour bit) | Scope 2: 67 static + 161 dynamic ids at 960 x 540 = exactly full | ids bind before SRAM [emu: `gen_scope2.py --raster 960`] |
+| 2-bit glyph ids | 8 bit = 256 (B0[5] is a colour bit) | Scope 2: 67 static + 161 dynamic ids at 960 x 540 = exactly full | ids bind before SRAM [emu: `gen_scope2.py (removed, docs/games.md) --raster 960`] |
 | char words per row | 255 (8 bit) | 160 tested clean, console 118 columns shown | [hw] unit 2, 2026-11-11 |
 | rows | row command count 8 bit (`0x3A3E` row total) | console 58 map rows | [?] hardware row limit OT-27 |
 | row height | 1..64 px (B1[5:0] in the sim) | font cell heights 5..18 | [sdk-hypothesis] |

@@ -204,7 +204,6 @@ Abbreviations in the table:
 | `menu.c:487` `key_hold` | host key hold | arg x 50 ms | menu.c | protocol unit | n/a | n/a | key released |
 | registry rows 40-43 (`awto-rtdfw settings/registry.tsv`) | source search windows | HDMI 2000 / DP 3000 ms (min 500 / 1000, max 10000) | registry | [vendor-value] = SDK defaults | 2000 / 3000 ms | 1.00 | search ends |
 | registry rows 76, 78 | L1 delay 0 ms, L2 60 s | as listed | registry | inert, stored only. The firmware uses `AWTO_L2_SEC` 60. | n/a | n/a | n/a |
-| registry row 80 `pwr_l3_s`; `AWTO_SAVER_NOSIG_MS` 1.8 s | no-signal saver run time 600 s; saver start 1.8 s after NOSIGNAL | row 80: time before deep sleep, same as `AWTO_L3_SEC`; start: SDK card timer SEC(2) minus 10 % | registry; `fw/test/saver.c` | run time ends the saver, SDK card / power-saving chain resumes (`docs/saver-mode.md` D1) | n/a | n/a | n/a |
 | registry row 66 `logo_ms` | boot logo time | 3000 ms | registry | no reader in the firmware (`RL6449_Project.h:1028` calls the VCP code retired) | n/a | n/a | none |
 
 ## (a) Added margin: the code value exceeds its source

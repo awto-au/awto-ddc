@@ -133,9 +133,6 @@ static void AwtoOsdSramProbe(void)
 
 #ifdef _AWTO_OSD_HWTEST                         // -D _AWTO_OSD_HWTEST: OSD SRAM write / read-back tests on the unit (docs/osd-hw-tests.md); host: scripts/osd_hw_test.py
 // The host fills g_stAwtoOsdHw over the debug link, then writes ucGo = op; the main loop runs it and clears ucGo. No test cmd number.
-#if((_AWTO_SAVER_SCOPE2 != _ON) || (_AWTO_SAVER_ASTEROIDS != _ON))
-#error "_AWTO_OSD_HWTEST uses Scope 2 and Asteroids: all savers _ON"
-#endif
 #include "../../tools/osd_lines/osd_lines.h"                // tile geometry only
 #define AWTO_OHW_BUF                            54                  // one 2-bit glyph (18 words): the chunk a direct write streams back-to-back
 #define AWTO_OHW_REGS                           9
@@ -147,7 +144,6 @@ static void AwtoOsdSramProbe(void)
 #define AWTO_OHW_OP_CRC                         4                   // CRC-16 of usN words read back
 #define AWTO_OHW_OP_WRBUF                       5                   // aucBuf (usN bytes) to usAddr
 #define AWTO_OHW_OP_PLANES                      6                   // the plane / colour screen (T6)
-#define AWTO_OHW_OP_S2FRAMES                    7                   // Scope 2: finish the current frame + usN more (saver poll held)
 #define AWTO_OHW_OP_REGS                        8                   // register snapshot only
 #define AWTO_OHW_OP_LADDER                      10                  // 2-bit glyph id ladder: ids 0..255 in a 16 x 16 grid, all plane A solid
 #define AWTO_OHW_OP_SAVER                       9                   // saver request usN (as DDC/CI VCP 0xEB), served by one saver poll in the op
@@ -164,17 +160,12 @@ static void AwtoOsdSramProbe(void)
 #define AWTO_OHW_F_RD_SU                        0x40                // read-back: scale-up engine off for the read
 #define AWTO_OHW_ST_OK                          1
 #define AWTO_OHW_ST_BAD_OP                      2
-#define AWTO_OHW_ST_LIMIT                       3                   // S2FRAMES: call limit reached
-#define AWTO_OHW_ST_NO_S2                       4                   // S2FRAMES: Scope 2 is not the running saver (cmd 2 without its start draws garbage)
-#define AWTO_OHW_RUN_SCOPE2                     3                   // g_ucAwtoSaverRun of Scope 2 (saver.c AWTO_SAVER_SCOPE2)
 #define AWTO_OHW_LFSR_POLY                      0xB400              // 16-bit Galois LFSR (x^16 + x^14 + x^13 + x^11 + 1)
 #define AWTO_OHW_LFSR_LOW                       0x5A                // low byte of the start state (never all zero)
 #define AWTO_OHW_LFSR_STEPS                     8                   // steps per output byte: no shifted copy between neighbours
 #define AWTO_OHW_CRC_POLY                       0x1021              // CRC-16/CCITT-FALSE
 #define AWTO_OHW_CRC_INIT                       0xFFFF
 #define AWTO_OHW_BYTE_BITS                      8
-#define AWTO_OHW_S2_CALLS                       60000               // S2FRAMES: cmd-2 calls per frame at most (one call = <= 8 ms band)
-#define AWTO_OHW_S2_DRAW                        2
 #define AWTO_OHW_PL_ROWS                        3                   // plane screen: 3 x 3 cells per shape, one gap column
 #define AWTO_OHW_PL_COLS                        11
 #define AWTO_OHW_PL_SHAPE                       4                   // shape column pitch (3 cells + gap)
@@ -199,7 +190,7 @@ static void AwtoOsdSramProbe(void)
 #define AWTO_OHW_PAL_C3                         4
 #define AWTO_OHW_LD_N                           16                  // ladder: 16 x 16 cells, glyph id = row * 16 + col (as the viewer reads it)
 #define AWTO_OHW_LD_IDS                         256
-#define AWTO_OHW_LD_FONT                        616                 // = Scope 2 font base: the same glyph word addresses
+#define AWTO_OHW_LD_FONT                        616                 // glyph font base (word address)
 #define AWTO_OHW_LD_POS_H                       384                 // (3840 - 16 * 12 * 4) / 2 / 4
 #define AWTO_OHW_LD_POS_V                       504                 // (2160 - 16 * 18 * 4) / 2
 #define AWTO_OHW_SOLID                          0xFF
@@ -215,11 +206,8 @@ static void AwtoOsdSramProbe(void)
 #define AWTO_OHW_V_MAP                          4                   // map words rewritten (same content)
 #define AWTO_OHW_V_VBLANK                       5                   // one glyph per frame, right after DVS
 #define AWTO_OHW_V_ADDR                         6                   // address sets only, no data
-#define AWTO_OHW_V_SCOPE2                       7                   // Scope 2 running (one band per main pass), no digit
 #define AWTO_OHW_CY_MS                          8000                // per variant
-#define AWTO_OHW_CY_S2_START                    1                   // AwtoOhwCycleStep result: Scope 2 cmd 1
-#define AWTO_OHW_CY_S2_STOP                     3                   // ... Scope 2 off + the ladder again
-#define AWTO_OHW_CY_BAND_MS                     8                   // writes per main pass, as Scope 2 (AWTO_S2_PASS_MS)
+#define AWTO_OHW_CY_BAND_MS                     8                   // writes per main pass
 #define AWTO_OHW_OP_CYCLE                       11                  // T10 on (usN != 0) / off
 #define AWTO_OHW_OP_BIG                         12                  // OT-8: 24 x 36 cell mode on (usN != 0) or off (control): test glyphs + coded map (docs/osd-hw-tests.md)
 #define AWTO_OHW_BG_ROWS                        4                   // OT-8 rows: 0 ids 0..7 width 24, 1 the same width 12, 2 high ids vs low ids, 3 colour bars
@@ -279,7 +267,7 @@ typedef struct
     WORD usFirst;                                       // first bad byte index (0xFFFF none)
     WORD usCrc;
     WORD usMs;                                          // write / op time (AwtoMs)
-    WORD usFrame;                                       // g_usAwtoS2Frame at the end of the op
+    WORD usFrame;                                       // T10: the variant shown
     BYTE aucRegs[AWTO_OHW_REGS];                        // 3A02 3A0B 3A17 3A33 3A34 3A41 0093 0094 006C at the start of the op
     BYTE aucBad[AWTO_OHW_BAD];
     BYTE aucBuf[AWTO_OHW_BUF];
@@ -288,7 +276,6 @@ typedef struct
     BYTE ucDupPrev;                                     // VERIFY: bad bytes equal to the previous wanted byte (a doubled byte; saturating)
 } StAwtoOsdHw;
 __xdata StAwtoOsdHw g_stAwtoOsdHw;
-extern __xdata WORD g_usAwtoS2Frame;
 extern __xdata BYTE g_ucAwtoSaverRun;
 extern void set_ap_screensaver_now(BYTE ucId, int iV);
 static __xdata WORD s_usOhwLfsr;
@@ -614,7 +601,7 @@ static void AwtoOhwGlyphPut(BYTE ucId, BYTE ucDirect)  // one ladder glyph rewri
 
 static void AwtoOhwLadder(void);
 
-static BYTE AwtoOhwCycleStep(void)                      // T10: one band of the variant; next every AWTO_OHW_CY_MS. Returns the Scope 2 cmd the poll must call (0 none)
+static void AwtoOhwCycleStep(void)                      // T10: one band of the variant; next every AWTO_OHW_CY_MS
 {
     unsigned long ulT0 = AwtoMs();
     WORD usCells = (WORD)AWTO_OHW_LD_N * AWTO_OHW_LD_N;
@@ -622,26 +609,14 @@ static BYTE AwtoOhwCycleStep(void)                      // T10: one band of the 
     if((WORD)((WORD)ulT0 - s_usOhwCyT0) >= AWTO_OHW_CY_MS)
     {
         s_usOhwCyT0 = (WORD)ulT0;
-        s_ucOhwCyVar = (s_ucOhwCyVar >= AWTO_OHW_V_SCOPE2) ? 1 : (BYTE)(s_ucOhwCyVar + 1);
+        s_ucOhwCyVar = (s_ucOhwCyVar >= AWTO_OHW_V_ADDR) ? 1 : (BYTE)(s_ucOhwCyVar + 1);
         g_stAwtoOsdHw.usFrame = s_ucOhwCyVar;                         // host sees the variant shown
-        if(s_ucOhwCyVar == AWTO_OHW_V_SCOPE2)
-        {
-            return AWTO_OHW_CY_S2_START;                                // the real saver for one variant (no digit: the scope itself)
-        }
-        if(s_ucOhwCyVar == 1)
-        {
-            return AWTO_OHW_CY_S2_STOP;                                 // the poll stops Scope 2 and redraws the ladder
-        }
         AwtoOhwLadderMap(s_ucOhwCyVar);
-        return 0;
-    }
-    if(s_ucOhwCyVar == AWTO_OHW_V_SCOPE2)
-    {
-        return AWTO_OHW_S2_DRAW;                                        // one band, as the saver poll does
+        return;
     }
     if(s_ucOhwCyVar == AWTO_OHW_V_STATIC)
     {
-        return 0;
+        return;
     }
     do
     {
@@ -651,7 +626,7 @@ static BYTE AwtoOhwCycleStep(void)                      // T10: one band of the 
             AwtoOhwGlyphPut((BYTE)s_usOhwCyPos, 1);
             s_usOhwCyPos = (s_usOhwCyPos + 1) % AWTO_OHW_LD_IDS;
             g_stAwtoOsdHw.usBad++;
-            return 0;
+            return;
         }
         if(s_ucOhwCyVar == AWTO_OHW_V_MAP)
         {
@@ -669,7 +644,6 @@ static BYTE AwtoOhwCycleStep(void)                      // T10: one band of the 
         g_stAwtoOsdHw.usBad++;                                          // writes done (glyphs, maps or address sets)
     }
     while((WORD)(AwtoMs() - ulT0) < AWTO_OHW_CY_BAND_MS);
-    return 0;
 }
 
 static void AwtoOhwLadder(void)                         // ids >= the first broken cell are fetched from elsewhere; colour = what plane A alone selects
@@ -897,10 +871,8 @@ typedef struct
     BYTE ucChip;                                        // ScalerGlobalGetIDCode (0x20 A, 0x21 B, 0x22 D, 0x23 E)
     BYTE ucDriveNow;                                    // P10_C2 / P10_81 now
     BYTE ucSlewNow;
-    WORD usAstFrames;                                   // Asteroids frames drawn (g_usAwtoAstFrames, asteroids.c)
     BYTE ucRdTune;                                      // request: FF6C[5:2] (latch_so_rise, drive_si_fall, si_dly_sel) while the step is held, 0xFF = keep
     BYTE ucPasses;                                      // request: CRC passes in the checks (0 = AWTO_CLK_CRC_PASSES); more = a longer flash-read stress
-    WORD usS2Frames;                                    // Scope 2 frames drawn (g_usAwtoS2Frame); the slot held the Scope 1 count
     BYTE ucPllM;                                        // request (flag PLL): M2PLL M / N / O, 0x01E0 = M - 2, 0x01E1[3:0] = N - 2, 0x01E1[5:4] = O / 2
     BYTE ucPllN;
     BYTE ucPllO;
@@ -935,7 +907,6 @@ typedef struct
     WORD usImgMs;                                       // result: ms of the last pass
 } StAwtoClk;
 __xdata StAwtoClk g_stAwtoClk;
-extern __xdata WORD g_usAwtoAstFrames;
 static __xdata BYTE s_ucClkSaved;
 static __xdata BYTE s_ucClkStock[11];                   // F, F2, M, CKCON, FF6C, D5, DX, FDA1, P10_C2, P10_81, FF6B
 static __xdata WORD s_usClkStockRcap;
@@ -2056,8 +2027,6 @@ static void AwtoClkPoll(void)
     BYTE ucGo = g_stAwtoClk.ucGo;
 
     g_stAwtoClk.usNowMs = (WORD)AwtoMs();
-    g_stAwtoClk.usAstFrames = g_usAwtoAstFrames;
-    g_stAwtoClk.usS2Frames = g_usAwtoS2Frame;
     if((ucGo == AWTO_CLK_OP_KEEP) || (ucGo == AWTO_CLK_OP_CHECK))
     {
         if(g_stAwtoClk.ucState == AWTO_CLK_ST_HELD)
@@ -2139,7 +2108,7 @@ static void AwtoClkPoll(void)
 #define AWTO_OSW_HOLD_MAX_MS                    30000
 #define AWTO_OSW_FFF1_MASK                      0x8F                // burwr_func_int_sel + mcu_wr_sca_intrvl_sel; bits 6:4 reserved: kept
 #define AWTO_OSW_FFBC_MASK                      0x1F                // mcurd_max_cycle; bits 7:5 reserved: kept
-#define AWTO_OSW_BURST_GAP                      3                   // FFFB of a burst when the op does not apply FFFB (value left by non-OSD bursts, docs/saver-fps-hw.md)
+#define AWTO_OSW_BURST_GAP                      3                   // FFFB of a burst when the op does not apply FFFB (value left by non-OSD bursts)
 #define AWTO_OSW_BURST_RESTARTS                 100                 // restarts after an interrupt released the MCU (the SDK's count [sdk-hypothesis])
 #define AWTO_OSW_PAGE_COMMON                    0x00
 #define AWTO_OSW_FIFO_N                         5
@@ -3059,8 +3028,6 @@ static void AwtoOsdHwPoll(void)
     BYTE ucOp = g_stAwtoOsdHw.ucGo;
     BYTE ucI;
     BYTE ucSu;
-    WORD usF;
-    WORD usCalls;
     unsigned long ulT0;
 
     AwtoClkPoll();
@@ -3069,17 +3036,7 @@ static void AwtoOsdHwPoll(void)
     g_stAwtoOsdHw.ucSaverRun = g_ucAwtoSaverRun;
     if(s_ucOhwCyOn != 0)
     {
-        ucI = AwtoOhwCycleStep();
-        if(ucI == AWTO_OHW_CY_S2_STOP)
-        {
-            AwtoScopeSaver2(0);
-            AwtoOhwLadder();
-            AwtoOhwLadderMap(1);
-        }
-        else if(ucI != 0)
-        {
-            AwtoScopeSaver2(ucI);                                       // called here, not deeper: the saver poll's stack depth
-        }
+        AwtoOhwCycleStep();
     }
     if(ucOp == 0)
     {
@@ -3137,24 +3094,6 @@ static void AwtoOsdHwPoll(void)
     {
         AwtoOhwPlanes();
     }
-    else if(ucOp == AWTO_OHW_OP_S2FRAMES)                   // finish the current Scope 2 frame + usN more (poll held); inline: the saver poll's stack depth
-    {
-        if(g_ucAwtoSaverRun != AWTO_OHW_RUN_SCOPE2)
-        {
-            g_stAwtoOsdHw.ucState = AWTO_OHW_ST_NO_S2;
-        }
-        for(usF = 0; (g_stAwtoOsdHw.ucState == AWTO_OHW_ST_OK) && (usF <= g_stAwtoOsdHw.usN); usF++)
-        {
-            for(usCalls = 0; AwtoScopeSaver2(AWTO_OHW_S2_DRAW) == 0; usCalls++)
-            {
-                if(usCalls >= AWTO_OHW_S2_CALLS)
-                {
-                    g_stAwtoOsdHw.ucState = AWTO_OHW_ST_LIMIT;
-                    break;
-                }
-            }
-        }
-    }
     else if(ucOp == AWTO_OHW_OP_LADDER)
     {
         AwtoOhwLadder();
@@ -3169,7 +3108,7 @@ static void AwtoOsdHwPoll(void)
         if(s_ucOhwCyOn != 0)
         {
             AwtoOhwLadder();
-            s_ucOhwCyVar = AWTO_OHW_V_SCOPE2;                           // the first step goes on to variant 1
+            s_ucOhwCyVar = AWTO_OHW_V_ADDR;                             // the first step goes on to variant 1
             s_usOhwCyT0 = (WORD)AwtoMs() - AWTO_OHW_CY_MS;
             s_usOhwCyPos = 0;
             g_stAwtoOsdHw.usBad = 0;
@@ -3187,7 +3126,6 @@ static void AwtoOsdHwPoll(void)
     {
         g_stAwtoOsdHw.usMs = (WORD)(AwtoMs() - ulT0);
     }
-    g_stAwtoOsdHw.usFrame = g_usAwtoS2Frame;
     g_stAwtoOsdHw.ucSeq++;
     g_stAwtoOsdHw.ucGo = 0;
 }
@@ -3358,15 +3296,9 @@ void AwtoDiagTestCmd(void)
     {
         AwtoDpgTest(ucCmd == AWTO_TC_DPG);
     }
-#if(_AWTO_SAVER_PACMAN == _ON)
-    else if((ucCmd >= AWTO_TC_PACMAN) && (ucCmd <= AWTO_TC_PACMAN + 2))
+    else if((ucCmd >= AWTO_TC_SND) && (ucCmd <= AWTO_TC_SND + 2))   // sound: calibration tone, stop, alert
     {
-        AwtoPacmanClassic((ucCmd == AWTO_TC_PACMAN) ? 1 : ((ucCmd == AWTO_TC_PACMAN + 1) ? 2 : 0));
-    }
-#endif
-    else if((ucCmd >= AWTO_TC_PACMAN_SND) && (ucCmd <= AWTO_TC_PACMAN_SND + 5))   // Pac-Man sound (0xB7..0xB9 are the full-screen Pac-Man)
-    {
-        AwtoPmSound(ucCmd - AWTO_TC_PACMAN_SND);
+        AwtoPmSound(ucCmd - AWTO_TC_SND);
     }
     else if((ucCmd >= AWTO_TC_OSD_DEMO) && (ucCmd <= AWTO_TC_OSD_DEMO + 5))   // #226 OSD window demo (first: 0xC0.. is the probe-columns range below)
     {

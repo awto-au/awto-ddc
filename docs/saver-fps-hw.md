@@ -1,6 +1,6 @@
 # Saver frame rate: what the OSD hardware can do instead of the CPU
 
-Status 2026-11-18 (Dan: "get some agents to sort out how to get to 25 fps"). Scope: hardware features only; per-saver redesign and CPU budgets live in their own docs (`docs/saver-fps-budget.md`, per-saver docs). Nothing flashed, no production firmware change.
+Status 2026-11-18 (Dan: "get some agents to sort out how to get to 25 fps"). Scope: hardware features only; the savers it measures (Scope 1 / Scope 2 / Asteroids / Pac-Man) and their docs were removed 2026-11-25 (`docs/games.md`). Nothing flashed, no production firmware change.
 
 - Tags: `[spec]` regdb `re/regdb/RTD2795T-CG.tsv.gz`; `[sdk]` Realtek SDK source in `fw/sdk`; `[hw]` measured on our units; `[emu]` fw_sim / `osd_model.py`; `[guess]`; `[?]` unknown (says what resolves it). Conventions: awto-dan `docs/embedded/reversing/README.md`.
 - Register and limit reference (one place per fact): [OSD manual](osd/README.md); this file keeps the ranking and the test plan.

@@ -91,7 +91,7 @@ All values are the trace of `trace_vendor_2160p60.tsv.gz`; function names are Da
 
 ## Sequence (pop-free order, awto-ddc#249; code: `SysAudioMuteProc`, `SysAudioInternalGenTestProc`, `fw/audio/audio.c`)
 - Rule: the PAM8006A MUTE pin cuts the outputs without a fade, and class-D switch-on / off is what is heard (`/vendors/diodes/PAM8006A.pdf`, "MUTE operation", V2P5 text; no MUTE / SD timing given). Amp enable / disable and mute change only with the DAC input at zero.
-- Delays (`AWTO_AMP_MUTE_MS` 2, `AWTO_AMP_WAKE_MS` 20) are by ear: no datasheet value exists. Both blocking, skipped when the pin already has the value. Invariants: `scripts/audio_sim.py order_violations`, `tests/test_audio_order.py`, `saver_sim.py --only-alert`.
+- Delays (`AWTO_AMP_MUTE_MS` 2, `AWTO_AMP_WAKE_MS` 20) are by ear: no datasheet value exists. Both blocking, skipped when the pin already has the value. Invariants: `scripts/audio_sim.py order_violations`, `tests/test_audio_order.py`.
 
 | Event | Before (#249) | Now |
 |---|---|---|

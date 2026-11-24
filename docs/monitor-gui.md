@@ -62,7 +62,7 @@ Launch: `python3 tools/osd_editor/run.py --monitor` (opens on the monitor tab) o
 - bool rows (29) = switch (one checkable button showing off / on); enum rows with 2..4 options (20) = segmented buttons, all options visible; enums with 5+ options (9) = combo box + Set; int rows (54) = slider + Set.
 - A click sends exactly one write, then one read-back (`settings get NAME`, or `ddc get` for volume / mute); the row shows what the unit reports.
 - Cancelled confirm (risky / action rows) or failed write puts the widget back to the last known value.
-- Quick strip: mute = switch, input = D1 / D2 / D3 segmented (one click runs `scripts/kvm.py`), screensaver = combo + Start / Stop (7 options).
+- Quick strip: mute = switch, input = D1 / D2 / D3 segmented (one click runs `scripts/kvm.py`), screensaver = combo + Start / Stop (3 options).
 - Greyed on read-only and unknown units.
 
 ## Advanced pages, unknown units, last read

@@ -20,11 +20,10 @@ Status 2026-11-17. The only simulator is ours; no ucsim in any flow except the c
 
 ## Recipes
 
-- **Test cmd** (`fw/test/testcmd.c`, one per main pass): `pacman_sim.send(sess, cmd)` writes it over 0x35 without waiting; leave a gap before the next one.
-- **DDC/CI set / get**: `ddc_sim.Mccs(sess.bus, engine).set(vcp, value)` with `Session(..., devs=[engine])` (`scripts/saver_sim.py`).
+- **Test cmd** (`fw/test/testcmd.c`, one per main pass): `splash_sim.py` / `key_sim_test.py` (`k.cmd(byte)`) writes it over 0x35 without waiting; leave a gap before the next one.
+- **DDC/CI set / get**: `ddc_sim.Mccs(sess.bus, engine).set(vcp, value)` with `Session(..., devs=[engine])` (`scripts/splash_sim.py`).
 - **Picture of the OSD**: `osd_render.render_snap(sess.snap(), "black", 2)` (1920 x 1080 for the 3840 x 2160 panel).
-- **Video**: frames at a fixed fw period, ffmpeg (`scripts/pacman_sim.py`).
-- **Sound**: `audio_sim.AudioTap` records generator / amp writes -> WAV (`docs/pacman-sound.md`).
+- **Sound**: `audio_sim.AudioTap` records generator / amp writes -> WAV (`docs/audio.md`).
 
 ## Ready scripts
 
@@ -32,9 +31,6 @@ Status 2026-11-17. The only simulator is ours; no ucsim in any flow except the c
 |---|---|
 | `scripts/boot_sim.py`, `wake_sim.py`, `sync_sim.py`, `wdt_sim.py`, `key_sim_test.py` | boot, wake, sync log, watchdog, keys |
 | `scripts/card_shot.py`, `qc_frames_shot.py` | menu cards, Realtek QC OSD frames |
-| `scripts/pacman_sim.py`, `saver_sim.py` | Pac-Man + sound video, screensaver start / stop by DDC/CI VCP 0xEB |
-| `scripts/saver_mode_sim.py`, `saver_loop_cost.py` | screensaver exits (signal loss, lock, no signal vs power saving); main-loop cost per handler under a saver (`docs/saver-mode.md`) |
-| `scripts/asteroids_sim.py`, `asteroids_speed.py` | Asteroids frames + mp4 + wav (`--rotate`), ms per column pass / frame (default image, audio in every build) |
 | `scripts/nv_policy_sim.py` | flash halts per scenario (#151): equal VCP sets, menu close, input switch, backlight minutes, changed set, POWER off |
 | `scripts/fw_gates.py <stem>` | the gate set (boot, isr, link, h1080, h2160, ...) run before a flash |
 

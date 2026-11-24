@@ -22,7 +22,7 @@ import osd_render as R
 
 LOG = R.ROOT / "tmp/logs/flash_screen_pic.log"
 ROW_DISP_ROTATE = 32
-SETTLE_S = 6.0                  # fw time for the display re-set after Rotate changes (saver_sim.py ROTATE_SETTLE_S)
+SETTLE_S = 6.0                  # fw time for the display re-set after Rotate changes
 DRAW_S = 3.0                    # fw time for the firmware's draw steps after VCP 0xEB = 5
 SCALE = 4                       # 3840 -> 960 px per picture
 INFO = {"phase": "BANKED", "bank": 6, "nbank": 15, "addr": 0x6F000, "sec": 112, "nsec": 224, "pct": 50, "iface": "DP-AUX 1000 KHZ BURST",

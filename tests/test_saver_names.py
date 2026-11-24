@@ -13,25 +13,15 @@ def test_c_block_current():
     assert r.returncode == 0, r.stdout + r.stderr
 
 
-def test_vcp_rule_matches_firmware():
-    # saver.c: value 1 = selected saver, 2.. = run id + 1 for Pac-Man / Scope 2 (VCP 3 = retired Scope 1, not in the TSV)
-    for name in ("pacman", "scope2"):
-        row = next(r for r in saver_names.SAVERS if r["name"] == name)
-        assert row["vcp"] == row["run"] + 1
-    assert saver_names.vcp("selected") == 1 and saver_names.vcp("stop") == 0
+def test_vcp_values():
+    assert saver_names.vcp("stop") == 0
+    assert [saver_names.vcp(n) for n in ("flash", "alert", "splash")] == [5, 6, 7]
+    assert saver_names.names() == ["stop", "flash", "splash", "alert"]
 
 
-def test_retired_scope1_gone():
-    assert all(r["name"] != "scope1" and r["run"] != 2 and r["vcp"] != 3 for r in saver_names.SAVERS)
-
-
-def test_build_options_in_header():
-    # each saver that can be left out has a default _ON option in the project header (dev.py build --savers)
-    hdr = (ROOT / "fw/sdk/Project/Header/RL6449_Project.h").read_text()
-    opts = saver_names.options()
-    assert set(opts) == {"pacman", "scope2", "asteroids"}
-    for o in opts.values():
-        assert f"#ifndef {o}\n#define {o}" in hdr
+def test_removed_games_gone():
+    # run ids 1..4, 7 and VCP values 1..4, 8 are not reused (docs/games.md)
+    assert all(r["run"] not in (1, 2, 3, 4, 7) and r["vcp"] not in (1, 2, 3, 4, 8) for r in saver_names.SAVERS)
 
 
 def test_unknown_name_refused():

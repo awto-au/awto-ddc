@@ -619,7 +619,7 @@ extern void AwtoOsdKeyLines(void);
 // GENERATED-END awto_inputs
 #define AWTO_GPIO_LOG_N                                         32
 #define AWTO_GPIO_REFRESH_MS                                    20
-#define AWTO_IN_SLOW_MS                                         AWTO_GPIO_REFRESH_MS   // slow rows (inputs.tsv rate): the console redraws at this rate, so a faster scan is never shown; docs/saver-mode.md
+#define AWTO_IN_SLOW_MS                                         AWTO_GPIO_REFRESH_MS   // slow rows (inputs.tsv rate): the console redraws at this rate, so a faster scan is never shown; docs/input-scan-rates.md
 #define AWTO_ADC_DEADBAND                                       2       // analog inputs: a change smaller than this is noise, not logged
 typedef struct                                  // 5 B, byte-only so LE/BE layout is identical
 {
@@ -1368,7 +1368,6 @@ extern BYTE AwtoOsdRot180(void);                                                
 extern BYTE AwtoOsdRevByte(BYTE ucB);
 extern WORD AwtoOsdRotCell(WORD usCell, WORD usCells);
 extern BYTE AwtoOsdRotSrc(BYTE ucOut, BYTE ucWords);
-extern void AwtoOsdTurn(BYTE __xdata *pucB, BYTE ucN);                          // turn ucN stream bytes 180 in place (bytes reversed, bits of each reversed)
 extern void AwtoOsdTestReset(void);                                                 // fw/test/osd_reset.c: clear the OSD state an earlier image left, for test screens
 #define AWTO_OSD_ZERO                                           0x00
 // OSD SRAM data port: direct store + 24 nops of store spacing on top of FFF1 sel 12 (sel 12 alone corrupts the savers on unit 3; docs/osd-port-loss.md)
@@ -1386,37 +1385,17 @@ extern void AwtoOsdScreenBegin(void);                                           
 extern void AwtoOsdScreenOff(void);                                             // close + scale-up off
 #define AWTO_TC_DPG                                             0xB2    // test cmd: 0xB2 Realtek QC D-domain pattern generator on, 0xB3 off (#228)
 extern void AwtoDpgTest(unsigned char ucOn);
-// Screensavers in the image (fw/awto/savers.tsv option column; docs/saver-mode.md "Selecting savers"): -D _AWTO_SAVER_<X>=_OFF drops one, default all _ON
-#ifndef _AWTO_SAVER_PACMAN
-#define _AWTO_SAVER_PACMAN                                      _ON
-#endif
-#ifndef _AWTO_SAVER_SCOPE2
-#define _AWTO_SAVER_SCOPE2                                      _ON
-#endif
-#ifndef _AWTO_SAVER_ASTEROIDS
-#define _AWTO_SAVER_ASTEROIDS                                   _ON
-#endif
-#if((_AWTO_SAVER_PACMAN != _ON) && (_AWTO_SAVER_SCOPE2 != _ON) && (_AWTO_SAVER_ASTEROIDS != _ON))
-#error "at least one of _AWTO_SAVER_PACMAN / _AWTO_SAVER_SCOPE2 / _AWTO_SAVER_ASTEROIDS must be _ON"
-#endif
-#define AWTO_TC_PACMAN                                          0xB7    // test cmd: 0xB7 classic-layout Pac-Man (28 x 36 tiles, scaled to the panel), 0xB8 next step, 0xB9 off
-extern void AwtoPacmanClassic(unsigned char ucCmd);
-#define AWTO_SAVER_VCP                                          0xEB    // DDC/CI: screensaver now (registry row 121 screensaver_now): 0 stop, 1 selected, 2 Pac-Man, 3 retired (was scope 1, ignored), 4 scope 2, 5 flash warning, 6 alert tone, 8 Asteroids
-#define AWTO_TC_PACMAN_SND                                     0xBA    // test cmd: + 0 Pac-Man intro, + 1 waka (loops), + 2 death, + 3 calibration tone, + 4 stop, + 5 alert tone (1 s) 
+#define AWTO_SAVER_VCP                                          0xEB    // DDC/CI: screensaver now (registry row 121 screensaver_now): 0 stop, 5 flash warning, 6 alert tone, 7 boot splash (docs/games.md)
+#define AWTO_TC_SND                                             0xBD    // test cmd: + 0 calibration tone, + 1 stop, + 2 alert tone (1 s)
 extern BYTE AwtoFlashDraw(BYTE ucSplash, BYTE ucStep);                                 // one step of the same drawing (boot splash: ucSplash = 1); 1 when shown
 extern void AwtoSaverTaken(void);                                                       // OsdDispDisableOsd: the OSD is being reset / reused; a boot splash is over without a redraw
 extern void AwtoFlashScreen(BYTE ucOn);                                                 // fw/test/flash_screen.c: huge Pac-Man shown while the host flashes (VCP 0xEB = 5)
 extern void AwtoSaverPoll(void);
-extern unsigned char AwtoSaverGuard(void);                                               // 1 = the no-signal saver owns the OSD (pop-ups dropped)
-extern void AwtoSaverActivity(void);
 extern void AwtoSaverKey(void);
 extern void AwtoSaverStart(unsigned char ucWhich, unsigned char ucWhy);
 extern void AwtoSaverStop(void);
-extern unsigned char AwtoScopeSaver2(unsigned char ucCmd);
-extern unsigned char AwtoAsteroids(unsigned char ucCmd);
 extern void AwtoPmSound(unsigned char ucCmd);
 extern void AwtoPmSoundPoll(void);
-extern void AwtoPmSoundBg(unsigned char ucState);                                       // Pac-Man background sound: 0 none, 1..3 siren speed, 4 frightened
 extern unsigned char AwtoPmSoundTone(unsigned char ucSc, unsigned int usMs);                  // one tone (S code, audible ms): AWTO_TONE_* result
 #define AWTO_TONE_BUSY                                          0       // another sound
 #define AWTO_TONE_PLAYED                                        1

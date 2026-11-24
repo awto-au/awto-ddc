@@ -337,7 +337,7 @@ static void AwtoKeyRoute(BYTE ucK, BYTE ucEv)
 static void AwtoKeyPress(void)                  // the single key down is a press (not the first key of a combo)
 {
     s_ucKeyState = AWTO_KS_DOWN;
-    AwtoSaverKey();                        // a key ends a screensaver and restarts the idle time
+    AwtoSaverKey();                        // a key ends the boot splash
     AwtoKeyMsgNote(s_ucKeyId);
     AwtoKeyRoute(s_ucKeyId, AWTO_KEV_PRESS);
 }
@@ -479,7 +479,7 @@ unsigned char AwtoLoopBusy(void)
     {
         return 1;                               // power sequencing (AC on)
     }
-    return (g_ucAwtoSaverRun != 0)              // saver draw passes (Scope 2 / Asteroids / Pac-Man / splash / flash screen)
+    return (g_ucAwtoSaverRun != 0)              // splash / flash screen draw passes
         || (g_stAwtoKey.ucOpen != 0)            // key test screen
         || (g_stAwtoGpio.ucOpen == AWTO_CON_GPIO)   // GPIO page (input table)
         || AwtoConBusy()                        // console log with lines to draw; an idle open console sleeps

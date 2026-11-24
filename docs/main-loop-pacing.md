@@ -127,7 +127,7 @@ Inventory (`SysInt.c`, `SysTimer.c`, `fw/diag/dbgisr.c`; cycles [measured: `cloc
 | Timer1, serial | empty (instant event / UART off) | entry only | n/a | could be unvectored |
 | WDT int2 | warning capture, sof_rst | rare | yes | no |
 
-- Diet effect on speed and memory: the worst ISR path is the DP training path through `SysEXINT0`: 32 B of stack; `fw_stack` total 100 B of 128, margin 11 B [measured: `cec.md`, `saver-code-placement.md`]. A thin ISR (flag + status write) would need ~12-15 B [guess], freeing ~17-20 B, margin ~30 B. Overlay / `__data` saving not quantified.
+- Diet effect on speed and memory: the worst ISR path is the DP training path through `SysEXINT0`: 32 B of stack; `fw_stack` total 100 B of 128, margin 11 B [measured: `cec.md`]. A thin ISR (flag + status write) would need ~12-15 B [guess], freeing ~17-20 B, margin ~30 B. Overlay / `__data` saving not quantified.
 - Removing the 5.5 ms TMDS PHY block from EXINT0 removes the longest tick-loss source (#197) and the longest stretch with EA effectively off for lower priority work.
 - Unit-2 DP lock bug (Dan: at 350.8 MHz the training ISR reads DPCD 0x100 / 0x202 before the host's AUX write landed; ring: stale 00/01/82/84 vs host 14/06). Not found in the repo issues by my search; evidence is Dan's.
   - Moving the DPCD config read to the main loop is NOT the fix: the status must be in place within CR 100 us / EQ 400 us of the TP write; a pass is 0.4-1 ms free-run, 4-8 ms paced. Holding the source with AUX defer is bounded (source retries defer a limited number of times [guess: spec 7]) and shorter than one paced pass.

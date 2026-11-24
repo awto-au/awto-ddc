@@ -1,5 +1,5 @@
 """tools/osd_lines (clipped walk, incremental cursor) against the original prototype in docs/osd-prototypes/osd-lines-12x18.zip:
-same pixels and dirty flags after every call, host gcc, several tile sizes (docs/saver-library.md migration step 1)."""
+same pixels and dirty flags after every call, host gcc, several tile sizes."""
 import shutil
 import subprocess
 import zipfile

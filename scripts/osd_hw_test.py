@@ -1,19 +1,14 @@
 #!/usr/bin/env python3
-"""OSD SRAM hardware tests on the test unit (docs/osd-hw-tests.md): write paths, read-back, Scope 2 SRAM vs the simulator.
+"""OSD SRAM hardware tests on the test unit (docs/osd-hw-tests.md): write paths, read-back, ladder, OT-8 cell mode.
 
 usage: osd_hw_test.py --bus B --serial S --map MAP [--bin BIN] TEST [TEST ...]
   Image built with -D _AWTO_OSD_HWTEST (fw/test/testcmd.c g_stAwtoOsdHw). The host drives the firmware over debug slave 0x35:
   params + ucGo = op, the main loop runs the op and clears ucGo. Read-back = 0x3A33 sram_read_en with the overlay off (the op does it).
   TESTs (PASS/FAIL criteria: docs/osd-hw-tests.md):
     regs   OSD register snapshot
-    t1     pattern write through ScalerOsdDataPort, read back M1 + M2: Scope 2 glyph range, Asteroids range, map range
-    t2     the same through direct back-to-back stores (loop, unrolled triples), OSD hidden / Scope 2 shown, EA on / off
+    t1     pattern write through ScalerOsdDataPort, read back M1 + M2: glyph range, map range
+    t2     the same through direct back-to-back stores (loop, unrolled triples), EA on / off
     t3     direct + gap sweep: the smallest gap with 0 errors (run only when t2 fails)
-    t7     Scope 2 SRAM at the end of frame F on the unit vs the simulator (--bin needed): held from the start, and after a free run
-    t4     t7 started on top of Asteroids (no stop between)
-    t8     Scope 2 held mid-frame: every cell shows its tile of the frame before or of the frame in progress
-    rd     read-back with Scope 2 shown: overlay off / on / scale-up off (rows 0..14 are known)
-    freeze Scope 2 held at a frame end (left on screen) + the sim render of that frame for a photo (+ the 4096-wrap render)
     cycle  T10 for a human: the ladder with a blue digit 1..6, variants 8 s each, looping until `cyclestop` (docs/osd-hw-tests.md)
     cyclestop  stop the cycle; check the ladder glyphs in SRAM are still as written
     ladder 2-bit ids 0..255 as a 16 x 16 grid, plane A solid (left on screen) + sim renders (as built, if the fetch wraps at 4096)
@@ -44,34 +39,28 @@ O_BAD, O_FIRST, O_CRC, O_MS, O_FRAME, O_REGS, O_BADB, O_BUF = 12, 14, 16, 18, 20
 N_REGS, BUF = 9, 54
 O_RUN = O_BUF + BUF
 SIZE = O_RUN + 1
-RUN_SCOPE2 = 3                            # g_ucAwtoSaverRun of Scope 2 (saver.c AWTO_SAVER_SCOPE2)
 REG_NAMES = ["3A02", "3A0B", "3A17", "3A33", "3A34", "3A41", "0093", "0094", "006C"]
-OP_WRITE, OP_VERIFY, OP_READ, OP_CRC, OP_WRBUF, OP_PLANES, OP_S2FRAMES, OP_REGS, OP_SAVER, OP_LADDER, OP_CYCLE, OP_BIG = range(1, 13)
+OP_WRITE, OP_VERIFY, OP_READ, OP_CRC, OP_WRBUF, OP_PLANES, OP_UNUSED7, OP_REGS, OP_SAVER, OP_LADDER, OP_CYCLE, OP_BIG = range(1, 13)
 M_SDK, M_DIRECT, M_GAP, M_TRIPLE = 0, 1, 2, 3
 MODE_NAMES = {M_SDK: "ScalerOsdDataPort", M_DIRECT: "direct loop", M_GAP: "direct+gap", M_TRIPLE: "direct triples"}
 F_EA_OFF, F_M2, F_HIDE, F_HOLD, F_REPEAT, F_RD_OVL, F_RD_SU = 1, 2, 4, 8, 16, 32, 64
 ST_OK = 1
 LFSR_POLY, LFSR_LOW, LFSR_STEPS = 0xB400, 0x5A, 8
 WORD_B = 3
-# SRAM ranges (words): Scope 2 = scope_saver2.c (15 rows, 40 x 15 map from 16, 256 2-bit glyphs of 18 words from 616);
-# Asteroids = AwtoOsdMap1 32 x 12 (1-bit glyph per cell from 12 + 1 + 384 = 397); top = the unused end of the 12288-word SRAM
-S2_ROWS, S2_FS, S2_FONT, S2_IDS, S2_STRIDE = 15, 16, 616, 256, 18
-S2_END = S2_FONT + S2_IDS * S2_STRIDE
-AST_FONT, AST_CELLS = 397, 384
-RANGES = {"s2glyphs": (S2_FONT, S2_IDS * S2_STRIDE), "s2map": (0, S2_FONT), "ast": (AST_FONT, AST_CELLS * 9), "top": (0x2000, 0x1000)}
-SAVER_SCOPE2, SAVER_AST, SAVER_OFF = 4, 8, 0
-WRAP_WORDS = 4096                         # freeze: hypothesis render, 2-bit glyph fetch wraps at 4096 words
-WRAP_ID_MIN = (WRAP_WORDS - S2_FONT + S2_STRIDE - 1) // S2_STRIDE + 8   # a frame where the map uses ids well past that word
+# SRAM ranges (words): the ladder (testcmd.c AWTO_OHW_LD_*: 256 2-bit glyphs of 18 words from 616, map before it); top = the unused end of the 12288-word SRAM
+LD_FONT, LD_IDS, LD_STRIDE = 616, 256, 18
+LD_END = LD_FONT + LD_IDS * LD_STRIDE
+RANGES = {"glyphs": (LD_FONT, LD_IDS * LD_STRIDE), "map": (0, LD_FONT), "top": (0x2000, 0x1000)}
+SAVER_OFF = 0                             # VCP 0xEB value 0 (fw/awto/savers.tsv)
+WRAP_WORDS = 4096                         # ladder: hypothesis render, 2-bit glyph fetch wraps at 4096 words
 # poll limits: 1.25 x the measured worst case on unit 3 (docs/osd-hw-tests.md "op times"); expiry = FAIL, logged with the elapsed time
 US_PER_WRITE_BYTE = {M_SDK: 46.2, M_DIRECT: 46.2, M_GAP: 46.2, M_TRIPLE: 46.2}   # worst per byte incl. the pattern refill (all modes)
 US_GAP_PASS = 1.0                         # not measured (t3 not needed: t2 passed); estimate 1 us per delay pass
 US_PER_READ_BYTE = 200.0                  # verify: 13824 B in 2734 ms worst (circuit off, scale-up off, two 3-byte reads per word)
-SAVER_OP_S = 0.25                         # saver request served in the op: Scope 2 start 214 ms
+SAVER_OP_S = 0.25                         # saver request served in the op (one main-loop pass + the draw)
 OP_FIXED_S = 0.25                         # one main-loop pass (max gap 20 ms, health) + the I2C of param write + polls
-S2_FRAME_S = 0.26                         # Scope 2 frame with the poll held: 228 ms worst (end of frame 1 incl. the first show)
 MARGIN = 1.25
-SIM_SAVER_S = 5.0                         # sim: fw seconds for a saver start (the sim runs slower than the unit, not faster)
-CYCLE_LOOK_S = 58.0                       # cycle: 7 variants x 8 s, then the write counter is read
+CYCLE_LOOK_S = 58.0                       # cycle: 6 variants x 8 s, then the write counter is read
 CYCLE_BAND_S = 0.02                       # cycle: a main pass may hold one 8 ms band or one DVS wait (16.7 ms at 60 Hz)
 LADDER_GLYPH = bytes([0xFF]) * 27 + bytes(27)   # plane A solid, plane B 0
 CAL = 1.0                                 # --cal: limits x 20 for a calibration run that measures the op times above
@@ -158,7 +147,7 @@ class Sim:
         self.sess = R.Session(binp, map_path, "2160p60", devs=[self.eng])
         self.sess.boot()
         ddc = D.Mccs(self.sess.bus, self.eng)
-        ddc.set(0xE0, 32)                     # settings row 32 disp_rotate through the paged pair (saver_dirty_start.py)
+        ddc.set(0xE0, 32)                     # settings row 32 disp_rotate through the paged pair
         ddc.set(0xE1, 1 if rotate else 0)
         self.sess.bus.wait(1.0)
         self.m = self.sess.bus.m
@@ -287,125 +276,9 @@ def sim_image(font: dict, start: int, words: int) -> bytes:
     return b"".join(bytes(font.get(a, [0, 0, 0])) for a in range(start, start + words))
 
 
-def wait_scope2(dev) -> None:
-    """The saver poll serves the request on its next pass (Scope 2 start ~214 ms): wait for it before a hold."""
-    t0 = dev.now()
-    lim = lim_saver() if isinstance(dev, Unit) else SIM_SAVER_S
-    while op(dev, OP_REGS, lim, label="saver run?")["run"] != RUN_SCOPE2:
-        if dev.now() - t0 > lim:
-            raise TimeoutError(f"Scope 2 not running after {dev.now() - t0:.2f} s (limit {lim_saver():.2f} s)")
-
-
-def run_frames(dev, frames: int, free_s: float) -> int:
-    """Scope 2 on (saver request), free run free_s (0 = hold at once), hold, finish the current frame + `frames` more."""
-    op(dev, OP_SAVER, lim_saver(), flags=0, n=SAVER_SCOPE2, label="scope2 on")
-    wait_scope2(dev)
-    t0 = dev.now()
-    while dev.now() - t0 < free_s:
-        dev.idle()
-    set_flags(dev, F_HOLD)
-    r = op(dev, OP_S2FRAMES, MARGIN * (OP_FIXED_S + (frames + 1) * S2_FRAME_S), n=frames, label="s2 frames")
-    if r["state"] != ST_OK:
-        raise RuntimeError(f"S2FRAMES state {r['state']}")
-    return r["frame"]
-
-
-def diff_regions(unit: bytes, sim: bytes, start: int) -> list:
-    """Words that differ: (word, unit bytes, sim bytes)."""
-    return [(start + i // WORD_B, unit[i:i + WORD_B], sim[i:i + WORD_B]) for i in range(0, len(unit), WORD_B) if unit[i:i + WORD_B] != sim[i:i + WORD_B]]
-
-
-def describe(word: int) -> str:
-    if word < S2_ROWS + 1:
-        return f"row cmd {word}"
-    if word < S2_FONT:
-        c = word - S2_FS
-        return f"map cell {c} (row {c // 40} col {c % 40})"
-    g = word - S2_FONT
-    return f"glyph {g // S2_STRIDE} plane {'AB'[g % S2_STRIDE // 9]} word {g % 9}"
-
-
-def t7_compare(unit_dev, a, frame: int, tag: str, prior: int | None, rotate: bool) -> bool:
-    us = dump(unit_dev, 0, S2_END, F_HOLD)
-    OUT.mkdir(parents=True, exist_ok=True)
-    (OUT / f"{tag}_unit_f{frame}.bin").write_bytes(us)
-    sim = Sim(a.bin, a.map, rotate)
-    try:
-        if prior is not None:
-            op(sim, OP_SAVER, 5.0, flags=0, n=prior, label="sim prior")
-            sim.sess.bus.wait(4.0)
-        op(sim, OP_SAVER, 5.0, flags=0, n=SAVER_SCOPE2, label="sim scope2 on")
-        wait_scope2(sim)
-        set_flags(sim, F_HOLD)
-        got = op(sim, OP_S2FRAMES, 600.0, n=0, label="sim frames")["frame"]
-        while got < frame:
-            got = op(sim, OP_S2FRAMES, 600.0, n=0, label="sim frames")["frame"]
-        ss = sim_image(sim.font(), 0, S2_END)
-    finally:
-        sim.close()
-    (OUT / f"{tag}_sim_f{got}.bin").write_bytes(ss)
-    if got != frame:
-        say(f"  FAIL {tag}: sim reached frame {got}, unit frame {frame}: not comparable")
-        return False
-    d = diff_regions(us, ss, 0)
-    regions = {}
-    for w, u, s in d:
-        k = describe(w).split(" ")[0] + (" " + describe(w).split(" ")[1] if describe(w).startswith("row") else "")
-        regions[k] = regions.get(k, 0) + 1
-    say(f"  {'PASS' if not d else 'FAIL'} {tag}: frame {frame}, {S2_END} words, {len(d)} differ {regions}")
-    for w, u, s in d[:40]:
-        say(f"    0x{w:04X} {describe(w)}: unit {u.hex()} sim {s.hex()}")
-    return not d
-
-
-def cells(img: bytes) -> list:
-    """Per map cell: (char command, the 18 glyph words it shows) from an SRAM image of words 0..S2_END."""
-    w = lambda a: img[a * WORD_B:(a + 1) * WORD_B]
-    out = []
-    for c in range(S2_FONT - S2_FS):
-        cmd = w(S2_FS + c)
-        out.append((cmd, b"".join(w(S2_FONT + S2_STRIDE * cmd[1] + k) for k in range(S2_STRIDE))))
-    return out
-
-
-def sim_frame_end(a, frame: int, rotate: bool) -> bytes:
-    sim = Sim(a.bin, a.map, rotate)
-    try:
-        op(sim, OP_SAVER, 5.0, flags=0, n=SAVER_SCOPE2, label="sim scope2 on")
-        wait_scope2(sim)
-        set_flags(sim, F_HOLD)
-        got = 0
-        while got < frame:
-            got = op(sim, OP_S2FRAMES, 600.0, n=0, label="sim frames")["frame"]
-        return sim_image(sim.font(), 0, S2_END)
-    finally:
-        sim.close()
-
-
-def t8_midframe(dev, a, free_s: float, rotate: bool) -> bool:
-    """Hold Scope 2 mid-frame (shown, running), dump; every cell must show its tile of the frame before or of the frame in progress."""
-    set_flags(dev, 0)
-    op(dev, OP_SAVER, lim_saver(), flags=0, n=SAVER_OFF, label="saver off")
-    op(dev, OP_SAVER, lim_saver(), flags=0, n=SAVER_SCOPE2, label="scope2 on")
-    wait_scope2(dev)
-    t0 = dev.now()
-    while dev.now() - t0 < free_s:
-        dev.idle()
-    set_flags(dev, F_HOLD)
-    f = op(dev, OP_REGS, lim_read(0), label="regs")["frame"]
-    mid = dump(dev, 0, S2_END, F_HOLD)
-    e0, e1 = sim_frame_end(a, f - 1, rotate), sim_frame_end(a, f, rotate)
-    cm, c0, c1 = cells(mid), cells(e0), cells(e1)
-    bad = [c for c in range(len(cm)) if cm[c] not in (c0[c], c1[c])]
-    say(f"  {'PASS' if not bad else 'FAIL'} t8 mid-frame (held after {free_s} s, frame {f} in progress): {len(bad)} of {len(cm)} cells show "
-        f"neither their frame {f - 1} nor their frame {f} tile: {bad[:40]}")
-    set_flags(dev, 0)
-    return not bad
-
-
 # ---- OT-8: 24 x 36 cell mode (fw/test/testcmd.c AwtoOhwBig; docs/osd-hw-tests.md OT-8) ----
 BG_ROWS, BG_COLS, BG_FONT, BG_WORDS = 4, 8, 37, 36           # map words 5..36, glyphs from 37, 36 words per glyph
-BG_BUDGET_WORDS = 330 * BG_WORDS + 342                      # docs/asteroids-resolution.md: 12222 of 12288
+BG_BUDGET_WORDS = 330 * BG_WORDS + 342                      # 12222 of 12288 words (docs/osd-hw-tests.md OT-8)
 BG_HI = {226: 3, 227: 5, 328: 2, 329: 0}                    # glyph id -> pattern above the 8 base patterns (226 straddles word 8192)
 BG_ROW2 = [226, 227, 328, 329, 3, 5, 2, 0]                  # row 2: cells 0..3 (high ids) must look like cells 4..7 (low ids)
 BG_MASK = 0xFFFFFF
@@ -459,8 +332,6 @@ def main() -> int:
     ap.add_argument("--map", type=Path, required=True)
     ap.add_argument("--bin", type=Path)
     ap.add_argument("--seed", type=int, default=0x3C)
-    ap.add_argument("--frames", type=int, default=2, help="t7: frames driven after the hold")
-    ap.add_argument("--free-s", type=float, default=6.0, help="t7: free-running seconds before the hold (second case)")
     ap.add_argument("--no-rotate", action="store_true", help="sim without Rotate 180 (unit 3 stores Rotate 180)")
     ap.add_argument("--cal", action="store_true", help="calibration run: poll limits x 20, op times logged")
     ap.add_argument("tests", nargs="+")
@@ -487,94 +358,26 @@ def main() -> int:
                     say("  " + regs_line(op(dev, OP_REGS, lim_read(0), label="regs")))
                     cases = []
                     if t == "t1":
-                        for nm in ("s2glyphs", "ast", "s2map"):
+                        for nm in ("glyphs", "map"):
                             cases.append((f"t1 {nm} hidden", *RANGES[nm], M_SDK, 0))
-                        cases.append(("t1 s2glyphs hidden repeat (timing)", *RANGES["s2glyphs"], M_SDK, F_REPEAT))
+                        cases.append(("t1 glyphs hidden repeat (timing)", *RANGES["glyphs"], M_SDK, F_REPEAT))
                     elif t == "t2":
                         for m in (M_DIRECT, M_TRIPLE):
-                            for nm in ("s2glyphs", "s2map"):
+                            for nm in ("glyphs", "map"):
                                 cases.append((f"t2 {nm} hidden", *RANGES[nm], m, 0))
                                 cases.append((f"t2 {nm} hidden repeat", *RANGES[nm], m, F_REPEAT))
                                 cases.append((f"t2 {nm} hidden repeat EA off", *RANGES[nm], m, F_REPEAT | F_EA_OFF))
                     for c in cases:
                         r = write_verify(dev, *c, a.seed)
                         fails += not r["pass"]
-                    if t == "t2":                           # with Scope 2 on screen (scaled, fetching): write the unused top of SRAM
-                        run_frames(dev, 0, 0.0)
-                        say("  shown: " + regs_line(op(dev, OP_REGS, lim_read(0), label="regs")))
-                        for m in (M_SDK, M_DIRECT, M_TRIPLE):
-                            for fl in (F_HOLD | F_REPEAT, F_HOLD | F_REPEAT | F_EA_OFF):
-                                r = write_verify(dev, f"t2 top shown{' EA off' if fl & F_EA_OFF else ''}", *RANGES["top"], m, fl, a.seed)
-                                fails += not r["pass"]
-                        set_flags(dev, 0)
-                        op(dev, OP_SAVER, lim_saver(), flags=0, n=SAVER_OFF, label="saver off")
                     if t == "t3":
                         for g in (0, 1, 2, 3, 4, 6, 8, 12, 16, 24, 32):
-                            r = write_verify(dev, "t3 gap", *RANGES["s2glyphs"], M_GAP, F_REPEAT, a.seed, gap=g)
+                            r = write_verify(dev, "t3 gap", *RANGES["glyphs"], M_GAP, F_REPEAT, a.seed, gap=g)
                             fails += not r["pass"]
-                elif t in ("t7", "t4"):
-                    if not a.bin:
-                        sys.exit("t7 / t4 need --bin (the same image runs in the simulator)")
-                    prior = SAVER_AST if t == "t4" else None
-                    cases = [("held", 0.0)] if t == "t4" else [("held", 0.0), ("free", a.free_s)]
-                    for tag, free in cases:
-                        set_flags(dev, 0)
-                        op(dev, OP_SAVER, lim_saver(), flags=0, n=SAVER_OFF, label="saver off")
-                        if prior is not None:
-                            op(dev, OP_SAVER, lim_saver(), flags=0, n=prior, label="asteroids on")
-                            t0 = dev.now()
-                            while dev.now() - t0 < 4.0:        # Asteroids runs (writes its glyphs over Scope 2's SRAM)
-                                dev.idle()
-                        fr = run_frames(dev, a.frames, free)
-                        say(f"  unit {tag}: Scope 2 held at the end of frame {fr}")
-                        fails += not t7_compare(dev, a, fr, f"{t}_{tag}", prior, not a.no_rotate)
-                        set_flags(dev, 0)                       # saver runs on (shown) until the next case / stop
-                elif t == "rd":                                 # read-back conditions with Scope 2 shown: row commands are known (80 11 28)
-                    set_flags(dev, 0)
-                    run_frames(dev, 0, 0.0)
-                    for nm, fl in (("overlay off", 0), ("overlay on", F_RD_OVL), ("overlay off + scale-up off", F_RD_SU)):
-                        r = op(dev, OP_READ, lim_read(BUF), flags=F_HOLD | fl, addr=0, n=18, label="rd rows")
-                        ok = r["buf"][:S2_ROWS * WORD_B] == bytes([0x80, 0x11, 0x28]) * S2_ROWS
-                        fails += not ok
-                        say(f"  {'PASS' if ok else 'FAIL'} rd {nm}: words 0..17 = {r['buf'].hex()}")
-                    set_flags(dev, 0)
-                elif t == "t8":
-                    if not a.bin:
-                        sys.exit("t8 needs --bin")
-                    for fs in (a.free_s, a.free_s + 1.37):
-                        fails += not t8_midframe(dev, a, fs, not a.no_rotate)
-                elif t == "freeze":                             # for a photo: Scope 2 held (static) at a frame end + the sim render of that frame
-                    set_flags(dev, 0)
-                    op(dev, OP_SAVER, lim_saver(), flags=0, n=SAVER_OFF, label="saver off")
-                    fr = run_frames(dev, 0, a.free_s)
-                    us = dump(dev, 0, S2_END, F_HOLD)
-                    while max(c[0][1] for c in cells(us)) < WRAP_ID_MIN:          # a frame that shows glyphs past word 4096 too
-                        fr = op(dev, OP_S2FRAMES, MARGIN * (OP_FIXED_S + S2_FRAME_S), n=0, label="s2 frame")["frame"]
-                        us = dump(dev, 0, S2_END, F_HOLD)
-                    sim = Sim(a.bin, a.map, not a.no_rotate)
-                    try:
-                        op(sim, OP_SAVER, 5.0, flags=0, n=SAVER_SCOPE2, label="sim scope2 on")
-                        wait_scope2(sim)
-                        set_flags(sim, F_HOLD)
-                        got = 0
-                        while got < fr:
-                            got = op(sim, OP_S2FRAMES, 600.0, n=0, label="sim frames")["frame"]
-                        import osd_render as R
-                        OUT.mkdir(parents=True, exist_ok=True)
-                        png = OUT / f"freeze_sim_f{fr}_viewer.png"
-                        st = sim.sess.snap()
-                        R.render_snap(st, "black", 4).rotate(180).save(png)    # panel turned 180 for the viewer (Rotate 180)
-                        for a_ in [x for x in st.font if S2_FONT <= x < S2_END and x >= WRAP_WORDS]:   # hypothesis render: glyph fetch wraps at 4096 words
-                            st.font[a_] = list(st.font.get(a_ % WRAP_WORDS, [0, 0, 0]))
-                        R.render_snap(st, "black", 4).rotate(180).save(png.with_name(png.stem + "_if_wrap4096.png"))
-                        same = sim_image(sim.font(), 0, S2_END) == us
-                    finally:
-                        sim.close()
-                    say(f"  frozen at the end of frame {fr} (shown, saver poll held); unit SRAM {'==' if same else '!='} sim SRAM; sim render as the viewer sees it: {png}")
                 elif t == "cycle":
                     set_flags(dev, 0)
                     op(dev, OP_SAVER, lim_saver(), flags=0, n=SAVER_OFF, label="saver off")
-                    op(dev, OP_CYCLE, lim_write(M_SDK, S2_IDS * BUF + 2 * BUF), n=1, label="cycle on")
+                    op(dev, OP_CYCLE, lim_write(M_SDK, LD_IDS * BUF + 2 * BUF), n=1, label="cycle on")
                     t0 = dev.now()
                     while dev.now() - t0 < CYCLE_LOOK_S:            # one full round: writes per variant
                         dev.idle()
@@ -582,18 +385,18 @@ def main() -> int:
                     say(f"  cycle running: {r['bad']} writes after {CYCLE_LOOK_S:.0f} s (variants 2, 3, 4, 6 count glyphs / map passes / address sets)")
                 elif t == "cyclestop":
                     op(dev, OP_CYCLE, lim_read(0) + CYCLE_BAND_S, n=0, label="cycle off")
-                    img = dump(dev, 0, S2_END, 0)
-                    bad = [g for g in range(S2_IDS) if img[(S2_FONT + S2_STRIDE * g) * WORD_B:(S2_FONT + S2_STRIDE * g + S2_STRIDE) * WORD_B] != LADDER_GLYPH]
+                    img = dump(dev, 0, LD_END, 0)
+                    bad = [g for g in range(LD_IDS) if img[(LD_FONT + LD_STRIDE * g) * WORD_B:(LD_FONT + LD_STRIDE * g + LD_STRIDE) * WORD_B] != LADDER_GLYPH]
                     fails += bool(bad)
-                    say(f"  {'PASS' if not bad else 'FAIL'} cycle stopped; ladder glyphs in SRAM: {len(bad)} of {S2_IDS} differ {bad[:20]}")
+                    say(f"  {'PASS' if not bad else 'FAIL'} cycle stopped; ladder glyphs in SRAM: {len(bad)} of {LD_IDS} differ {bad[:20]}")
                     for g in bad[:3]:
-                        say(f"    glyph {g}: {img[(S2_FONT + S2_STRIDE * g) * WORD_B:(S2_FONT + S2_STRIDE * g + S2_STRIDE) * WORD_B].hex()}")
+                        say(f"    glyph {g}: {img[(LD_FONT + LD_STRIDE * g) * WORD_B:(LD_FONT + LD_STRIDE * g + LD_STRIDE) * WORD_B].hex()}")
                 elif t == "ladder":                             # T9 for a human: 2-bit ids 0..255 (16 x 16), plane A solid; left on screen
                     set_flags(dev, 0)
                     op(dev, OP_SAVER, lim_saver(), flags=0, n=SAVER_OFF, label="saver off")
-                    op(dev, OP_LADDER, lim_write(M_SDK, S2_IDS * BUF + 2 * BUF), label="ladder")
-                    img = dump(dev, 0, S2_END, 0)
-                    glyphs_ok = all(img[(S2_FONT + S2_STRIDE * g) * WORD_B:(S2_FONT + S2_STRIDE * g + S2_STRIDE) * WORD_B] == b"\xff" * 27 + b"\x00" * 27 for g in range(S2_IDS))
+                    op(dev, OP_LADDER, lim_write(M_SDK, LD_IDS * BUF + 2 * BUF), label="ladder")
+                    img = dump(dev, 0, LD_END, 0)
+                    glyphs_ok = all(img[(LD_FONT + LD_STRIDE * g) * WORD_B:(LD_FONT + LD_STRIDE * g + LD_STRIDE) * WORD_B] == b"\xff" * 27 + b"\x00" * 27 for g in range(LD_IDS))
                     ids = [img[(17 + c) * WORD_B + 1] for c in range(256)]
                     say(f"  ladder stored: {'all 256 glyphs = plane A solid, plane B 0' if glyphs_ok else 'GLYPHS DIFFER'}; map ids {'0..255 (turned 180)' if ids == list(range(255, -1, -1)) else ids[:20]}")
                     sim = Sim(a.bin, a.map, not a.no_rotate)
@@ -604,7 +407,7 @@ def main() -> int:
                         png = OUT / "ladder_sim_viewer.png"
                         OUT.mkdir(parents=True, exist_ok=True)
                         R.render_snap(st, "black", 4).rotate(180).save(png)
-                        for a_ in [x for x in st.font if S2_FONT <= x < S2_END and x >= WRAP_WORDS]:
+                        for a_ in [x for x in st.font if LD_FONT <= x < LD_END and x >= WRAP_WORDS]:
                             st.font[a_] = list(st.font.get(a_ % WRAP_WORDS, [0, 0, 0]))
                         R.render_snap(st, "black", 4).rotate(180).save(png.with_name(png.stem + "_if_wrap4096.png"))
                     finally:

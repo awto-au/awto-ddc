@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
-"""OSD data port write cost: the unit-3 hardware write tests (docs/osd-hw-tests.md) replayed in the sim (docs/saver-fps-budget.md).
+"""OSD data port write cost: the unit-3 hardware write tests (docs/osd-hw-tests.md) replayed in the sim.
 
 usage: osd_port_cal.py BIN [--mhz F]
   BIN built with -D _AWTO_OSD_HWTEST. Runs OP_WRITE (F_REPEAT: one 54 B chunk refilled once, then pure port writes) on the
-  Scope 2 glyph range (13824 B, OSD hidden) per write mode, EA on / off, as `osd_hw_test.py t1 t2` does on the unit.
+  ladder glyph range (13824 B, OSD hidden) per write mode, EA on / off, as `osd_hw_test.py t1 t2` does on the unit.
   Per case: the firmware's own ms (AwtoMs, as the unit reports it) and the precise sim time per byte between AwtoOhwPut
   entries (one 54 B chunk + its WDT kick + loop), instructions, CPU clocks and flash-fetch stall clocks per byte.
   HW = unit 3 values (osd_hw_test.log 2026-11-18, image ohw6) for the side-by-side ratio.
@@ -24,7 +24,6 @@ from _log import log_line as _log_line
 LOG = H.ROOT / "tmp/logs/osd_port_cal.log"
 CHUNK = H.BUF
 OP_LIMIT_S = 5.0                # fw time for one 13824 B write: unit worst 57 ms; sim generous, expiry = TimeoutError
-HW_S2_FRAME = ((6.0, 31), (7.37, 37))    # osd_hw_test t8 on unit 3 (ohw6): host seconds of free run -> frame in progress
 HW_US_PER_B = {(H.M_SDK, 0): 4.12, (H.M_DIRECT, 0): 2.60, (H.M_DIRECT, 1): 2.39, (H.M_TRIPLE, 0): 2.75, (H.M_TRIPLE, 1): 2.46}
 
 
@@ -40,7 +39,7 @@ def main() -> int:
     m = dev.m
     marks = []
     m.stub("AwtoOhwPut", lambda mm, r: marks.append((mm.wall_ms, mm.p.instr, mm.p.clk, mm.p.fm_stall)) and None)
-    addr, words = H.RANGES["s2glyphs"]
+    addr, words = H.RANGES["glyphs"]
     say(f"{a.bin.name}: f_cpu {m.clock.f_cpu / 1e6:.2f} MHz ({m.clock.src}); 13824 B per case, chunk {CHUNK} B")
     for mode in (H.M_SDK, H.M_DIRECT, H.M_TRIPLE):
         for ea_off in (0, 1):
@@ -56,16 +55,6 @@ def main() -> int:
                 f"(fetch stall {sum(x[3] for x in d) / 4 / n:.1f}); hw {hw if hw else '-'} us/B"
                 + (f" -> hw / sim {hw / us:.2f}" if hw else ""))
     dev.close()
-    for free_s, hw_frame in HW_S2_FRAME:                                  # whole-saver check: Scope 2 frame in progress after a free run
-        dev = H.Sim(a.bin, a.bin.with_suffix(".map"), True)               # unit 3 stores Rotate 180
-        H.op(dev, H.OP_SAVER, OP_LIMIT_S, flags=0, n=H.SAVER_SCOPE2, label="scope2 on")
-        t0 = dev.now()
-        while dev.now() - t0 < free_s:
-            dev.idle()
-        H.set_flags(dev, H.F_HOLD)
-        f = H.op(dev, H.OP_REGS, OP_LIMIT_S, label="regs")["frame"]
-        say(f"  Scope 2 free run {free_s} s (Rotate 180): sim frame {f} in progress, unit 3 frame {hw_frame}")
-        dev.close()
     return 0
 
 

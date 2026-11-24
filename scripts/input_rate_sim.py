@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Input-monitor scan rates in the firmware sim (fw/awto/inputs.tsv `rate`, docs/saver-mode.md D7).
+"""Input-monitor scan rates in the firmware sim (fw/awto/inputs.tsv `rate`, docs/input-scan-rates.md).
 
 usage: input_rate_sim.py BIN [MAP] [--pulses N]
   - Calibrates: reads of each tested row (hook on AwtoInRow) over CAL_S; the worst gap between two reads (idle window + DPS17 pulses at the sweep's phases) x WIDTH_MARGIN is the test pulse width.

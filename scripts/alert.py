@@ -4,7 +4,7 @@
 usage: alert.py --bus N [--wait] [--auto]      DDC/CI VCP 0xEB = 6 (screensaver_now "Alert tone"); firmware plays the 1 s rising beep-beep-BEEEP
   --wait: return after the tone has finished (a flash must not start while the generator is on: a held tone stays on while the MCU is halted).
   Old firmware (VCP 0xEB max < 6): logged, nothing played, exit 0.
-  --auto: automatic callers (flash warning, saver tour): skipped when the unit is muted (VCP 0x8D = 1), when the mute state can't be read,
+  --auto: automatic callers (flash warning): skipped when the unit is muted (VCP 0x8D = 1), when the mute state can't be read,
   or when env AWTO_SOUND=off; one log line either way. Without --auto (explicit `./dev.py alert`) the tone always plays.
 Library: alert(bus, wait=False) -> bool; alert_auto(bus, wait=False) -> bool. Volume = the monitor's own (VCP 0x62).
 Log: ./tmp/logs/alert.log
@@ -24,7 +24,7 @@ VCP_SAVER = 0xEB
 VCP_ALERT = 6                   # screensaver_now option "Alert tone" (registry row 121)
 VCP_MUTE = 0x8D                 # Audio Mute: sl 1 = muted, 2 = unmuted
 MUTED = 1
-TONE_S = 1.0                    # the track length (scripts/pacman_sound.py ALERT: 150+50+150+50+600 ms)
+TONE_S = 1.0                    # the track length (scripts/snd_data_gen.py ALERT: 150+50+150+50+600 ms)
 TAIL_S = 0.3                    # + the main-loop pass that starts it (<= 0.1 s) and the DDC write time, with margin
 
 

@@ -98,7 +98,6 @@ def main() -> int:
         keep = (lambda: None)
         try:
             if a.step:
-                C.OPTS["fps"] = False
                 f, f2, m, fl = C.STEPS[a.step]
                 r = C.send(ctx, C.OP_APPLY, 6.0, f, f2, m, fl, hold_s=20.0, label=f"apply {a.step}", name_=a.step)
                 if r is None or r[C.C_STATE] != C.ST_HELD:

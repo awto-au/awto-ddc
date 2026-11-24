@@ -700,7 +700,7 @@ def _flashed(u: dict) -> dict:
 
 
 @command("build firmware (the only build entry; engine scripts/fwimage.py): FRC + rotation by default; frozen to tmp/fw/<serial>-<tag>-be.{bin,map,sync.tsv,settings_table.py}; tag = <commit>[+][-freeze|-nofrc][-audio-test] unless --tag",
-         args="[--unit N | --serial S] [--tree DIR] [--layout dev|release] [--freeze | --no-frc] [--audio-test] [--savers pacman,scope2,asteroids] [-D NAME[=VAL] ...] [--tag T] [--force] [--bin DIR --src DIR --level N --expect STAMP --flags F --fw-args A]",
+         args="[--unit N | --serial S] [--tree DIR] [--layout dev|release] [--freeze | --no-frc] [--audio-test] [-D NAME[=VAL] ...] [--tag T] [--force] [--bin DIR --src DIR --level N --expect STAMP --flags F --fw-args A]",
          kind="action")
 def cmd_build(extra: list[str]) -> int:
     serial = _opt(extra, "--serial")
@@ -718,15 +718,6 @@ def cmd_build(extra: list[str]) -> int:
     if audio_test:
         defs.append("_AWTO_AUDIO_TEST")
     defs += [extra[i + 1] for i, x in enumerate(extra) if x == "-D" and i + 1 < len(extra)]
-    keep = _opt(extra, "--savers")                                   # savers in the image (fw/awto/savers.tsv option column); the rest are _OFF
-    if isinstance(keep, str):
-        import saver_names
-        opts = saver_names.options()
-        bad = [k for k in keep.split(",") if k not in opts]
-        if bad:
-            raise SystemExit(f"build: --savers takes a comma list of {sorted(opts)}; got {bad}; nothing done")
-        defs += [f"{o}=_OFF" for k, o in opts.items() if k not in keep.split(",")]
-        opt += "-sv-" + keep.replace(",", "-")
     tree = Path(_opt(extra, "--tree") or REPO)
     commit = subprocess.run(["git", "rev-parse", "--short", "HEAD"], cwd=tree, capture_output=True, text=True, check=False).stdout.strip()
     dirty = "+" if subprocess.run(["git", "diff", "--quiet"], cwd=tree, check=False).returncode else ""
@@ -1078,7 +1069,7 @@ def cmd_reset(extra: list[str]) -> int:
 def _dbg_py(bus: int, script: str, *args, keep_console: bool = False, **kw) -> int:
     """_py with debug slave 0x35 on the unit's DDC for the run (#79 runtime swap: DDC/CI owns it by default); swapped
     back afterwards only if this call swapped it (scripts/dbg_link.py). A console / pop-up the run opened is closed
-    again unless keep_console (osd, gpio, menu, pacman: the pop-up is the point)."""
+    again unless keep_console (osd, gpio, menu: the pop-up is the point)."""
     import dbg_link
     with dbg_link.linked(int(bus), keep_console=keep_console):
         return _py(script, *args, **kw)
@@ -1271,18 +1262,15 @@ def cmd_note(extra: list[str]) -> int:
     return _thin("note", extra, lambda e: unit_ops.note(sys.modules[__name__], e))
 
 
-@command("start / stop a saver by name (VCP 0xEB from fw/awto/savers.tsv: off stop selected pacman scope2 flash splash alert "
-         "asteroids) or `tour` = every saver 10 s each with the alert tone, volume 50 % then restored",
-         args="[--unit N] NAME | tour [--hold S] [--volume PCT]", kind="action")
+@command("start / stop a full-screen screen or the alert tone by name (VCP 0xEB from fw/awto/savers.tsv: stop flash splash alert)",
+         args="[--unit N] NAME", kind="action")
 def cmd_saver(extra: list[str]) -> int:
     import saver_names
     _n, u = _unit(extra)
-    hold, vol = _opt(extra, "--hold"), _opt(extra, "--volume")
-    rest = [x for i, x in enumerate(extra) if not x.startswith("-") and (i == 0 or extra[i - 1] not in ("--unit", "--hold", "--volume"))]
-    if len(rest) != 1 or (rest[0] != "tour" and rest[0] not in saver_names.names()):
-        raise SystemExit(f"saver: one of {saver_names.names()} or tour; got {rest}; nothing done")
-    more = [*(["--hold", hold] if hold else []), *(["--volume", vol] if vol else [])]
-    return _py("saver_ctl.py", _live_bus(u), rest[0], *more)
+    rest = [x for i, x in enumerate(extra) if not x.startswith("-") and (i == 0 or extra[i - 1] != "--unit")]
+    if len(rest) != 1 or rest[0] not in saver_names.names():
+        raise SystemExit(f"saver: one of {saver_names.names()}; got {rest}; nothing done")
+    return _py("saver_ctl.py", _live_bus(u), rest[0])
 
 
 @command("our OSD menu over I2C (#67): keyboard uses the computer arrows; state | key K | hold KEYS MS | open PAGE | "
@@ -1298,54 +1286,6 @@ def cmd_menu(extra: list[str]) -> int:
     b = _live_bus(u)
     return _dbg_py(b, "menu_cli.py", "--bus", str(b), "--serial", u["serial"], "--map", _fwmap(u, given), *pa, *extra,
                    keep_console=True)
-
-
-@command("full-screen landscape Pac-Man demo: computer arrow keys steer; Escape/Q closes",
-         args="[--unit N] [--map F]", kind="action")
-def cmd_pacman(extra: list[str]) -> int:
-    _n, u = _unit(extra)
-    given = _opt(extra, "--map")
-    _done(extra, "pacman")
-    b = _live_bus(u)
-    return _dbg_py(b, "pacman_cli.py", b, "--serial", u["serial"], "--map", _fwmap(u, given),
-                   keep_console=True)
-
-
-@command("Pygame RTD OSD emulator using the linked firmware's actual glyph/map/palette bytes",
-         args="[BIN] [--map F] [--cols N] [--rows N] [--char-width N] [--row-height N] [--steps N] "
-              "[--no-font24] [--no-double-x] [--no-double-y] [--fullscreen] [--screenshot PNG]", kind="action")
-def cmd_pacman_sim(extra: list[str]) -> int:
-    given, shot = _opt(extra, "--map"), _opt(extra, "--screenshot")
-    fullscreen = _flag(extra, "--fullscreen")
-    geometry = []
-    for flag in ("--cols", "--rows", "--char-width", "--row-height", "--steps"):
-        if (value := _opt(extra, flag)) is not None:
-            if value is True:
-                raise SystemExit(f"pacman-sim: {flag} needs a value")
-            geometry += [flag, str(value)]
-    for flag in ("--no-font24", "--no-double-x", "--no-double-y"):
-        if _flag(extra, flag):
-            geometry.append(flag)
-    image = _image_arg(extra)
-    if image:
-        img = Path(image[0])
-        mp = Path(str(given)) if given else img.with_suffix(".map")
-    else:
-        # Unit 2 is the declared test monitor; its flash manifest identifies
-        # the exact linked image without probing or touching hardware.
-        u = _units()["2"]
-        state = _flashed(u)
-        img = Path(state.get("image", ""))
-        mp = Path(str(given)) if given else (state.get("map") or Path(""))
-    if not img.is_file() or not mp.is_file():
-        raise SystemExit(f"pacman-sim: need matching BIN+MAP, got {img} and {mp}")
-    py = "/usr/bin/python3"                         # Fedora pygame package; project CPython 3.15t has no wheel
-    cmd = [py, str(REPO / "scripts/pacman_emulator.py"), str(img.resolve()), str(mp.resolve()),
-           *geometry, *(["--fullscreen"] if fullscreen else []), *(["--screenshot", str(shot)] if shot else [])]
-    log("run: " + " ".join(cmd[1:]))
-    rc = subprocess.call(cmd, cwd=REPO)
-    log(f"rc={rc}: pacman emulator", "INFO" if rc == 0 else "ERROR")
-    return rc
 
 
 @command("eyes-free health of a running unit (debug slave 0x35, 100 kHz): diag stage, loop rate, mode/power state, "
@@ -1498,7 +1438,7 @@ def cmd_osd_port_loss(extra: list[str]) -> int:
     return _py("osd_port_loss.py", *opts, "--map", m, "--bin", m.with_suffix(".bin"), *extra)
 
 
-@command("clock step soak with the savers cycling (image built with -D _AWTO_OSD_HWTEST; docs/clock-sweep.md): STEP MINUTES; checks, IOSC trim, resets every 30 s",
+@command("clock step soak (image built with -D _AWTO_OSD_HWTEST; docs/clock-sweep.md): STEP MINUTES; checks, IOSC trim, resets every 30 s",
          args="[--unit N] [--map F] [--nvram 0|7] STEP MINUTES", kind="action")
 def cmd_clk_soak(extra: list[str]) -> int:
     _n, u = _unit(extra)

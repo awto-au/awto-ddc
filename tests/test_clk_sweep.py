@@ -33,10 +33,10 @@ def test_stock_step_is_the_stock_clock():
 def test_struct_offsets_do_not_overlap():
     offs = [C.C_GO, C.C_SEQ, C.C_STATE, C.C_F, C.C_F2, C.C_M, C.C_CKCON, C.C_FLAGS, C.C_HOLD, C.C_RCAP, C.C_D5, C.C_DX, C.C_D5P, C.C_DXP,
             C.C_TICK, C.C_CRC, C.C_CRCBAD, C.C_XDBAD, C.C_ALU, C.C_MISS, C.C_CRCMS, C.C_FFED, C.C_PLL, C.C_DEB, C.C_REF, C.C_MISSN,
-            C.C_RST, C.C_NOW, C.C_DRIVE, C.C_AST, C.C_TUNE, C.C_PASSES, C.C_SC, C.C_FLN, C.C_FLCK, C.C_FLDONE, C.C_FLFAIL, C.C_FLBADE,
+            C.C_RST, C.C_NOW, C.C_DRIVE, C.C_TUNE, C.C_PASSES, C.C_FLN, C.C_FLCK, C.C_FLDONE, C.C_FLFAIL, C.C_FLBADE,
             C.C_FLBADP, C.C_FLERMS, C.C_FLPRMS, C.C_FLMAX, C.C_IMGN, C.C_IMGDONE, C.C_IMGBAD, C.C_IMGMASK, C.C_IMGMS]
     assert offs == sorted(offs) and len(set(offs)) == len(offs)
-    assert C.C_SC + 2 == C.C_SIZE
+    assert C.C_PASSES + 1 == C.C_SIZE
     assert C.C_IMGMS + 2 == C.C_END and C.C_FLN == C.C_SIZE2
 
 

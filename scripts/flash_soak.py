@@ -2,11 +2,9 @@
 """Production-image checks of the flash clock default on the test unit (docs/clock-sweep.md "Default flash clock"). Only ./dev.py touches the unit.
 
 usage: flash_soak.py MODE [N] [--unit 3] [--map MAP] [--tag T]
-  soak MIN   every PERIOD_S: `dev.py health` (diag stage, main loop rate, mode / power state, input timing, delay cal, monitor row), next saver
-             (VCP 0xEB 3 / 4 / 8 / 2, then 0), uptime check (a WDT reset shows as the Timer2 heartbeat going backwards / a boot in the sync log); TSV per period
+  soak MIN   every PERIOD_S: `dev.py health` (diag stage, main loop rate, mode / power state, input timing, delay cal, monitor row), uptime check (a WDT reset shows as the Timer2 heartbeat going backwards / a boot in the sync log); TSV per period
   wakes N    N x host DPMS off (Mutter PowerSaveMode 3) -> on (0): firmware must be ACTIVE again (health) within WAKE_S
   nv N       N x (brightness VCP 0x10 changed and restored: wait for the flush gate, read back); g_stAwtoNv deltas: items programmed, flash ops, erases, bytes
-  fps        Scope 2 (g_usAwtoS2Frame) and Asteroids (g_usAwtoAstStep) per second over FPS_S, each saver on, then off
 Logs: ./tmp/logs/flash_soak.log, ./tmp/logs/flash_soak.tsv
 """
 from __future__ import annotations
@@ -25,11 +23,8 @@ from _repo import ROOT
 
 LOG = ROOT / "tmp/logs/flash_soak.log"
 TSV = ROOT / "tmp/logs/flash_soak.tsv"
-PERIOD_S = 60            # one health run is ~4 s; a saver runs ~1 min each: 30 periods cover the savers 7 x
-SAVERS = (4, 8, 2, 0)  # Scope 2, Asteroids, Pac-Man, off (VCP 0xEB)
+PERIOD_S = 60            # one health run is ~4 s
 WAKE_S = 15              # host DPMS on -> ACTIVE: wake_time.py measures ~2 s; 15 s = a failed wake, not a slow one
-FPS_S = 10               # counter delta window: +-1 frame of ~300
-S2, AST = "0xF038", "0xE95C"
 
 
 def say(s: str) -> None:
@@ -52,12 +47,6 @@ def uptime_ms(unit: str) -> int | None:
     """Firmware ms since reset (dev.py synclog 'fw now N ms'): going backwards = a reset (WDT or crash)."""
     m = re.search(r"fw now (\d+) ms", dev("synclog", "--unit", unit)[1])
     return int(m.group(1)) if m else None
-
-
-def word(unit: str, mp: str, addr: str) -> int | None:
-    _rc, out = dev("dbg-read", "--unit", unit, "--map", mp, f"{addr}:2")
-    m = re.search(rf"{addr} @0x[0-9a-f]+: ([0-9a-f]{{2}}) ([0-9a-f]{{2}})", out)
-    return int(m.group(1) + m.group(2), 16) if m else None
 
 
 NV = "0xE09A"            # g_stAwtoNv (RL6449_Project.h StAwtoNv): flush +6, items +8, ops +10, erases +16, bytes +18
@@ -100,7 +89,7 @@ def row(f: str, *c) -> None:
 
 def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    ap.add_argument("mode", choices=("soak", "wakes", "fps", "nv"))
+    ap.add_argument("mode", choices=("soak", "wakes", "nv"))
     ap.add_argument("n", nargs="?", type=int, default=30)
     ap.add_argument("--unit", default="3")
     ap.add_argument("--map", required=True)
@@ -113,19 +102,16 @@ def main() -> int:
         up0, tup0 = uptime_ms(a.unit), time.time()
         while time.time() < t_end:
             t0 = time.time()
-            s = SAVERS[n % len(SAVERS)]
-            vcp(a.unit, "0xEB", s)
             ok, d = health(a.unit, a.map)
             up, tup = uptime_ms(a.unit), time.time()
             if up is None or up0 is None or up < up0 + (tup - tup0) * 1000 * 0.5:
                 ok, d = False, d + f"; RESET or no uptime (fw ms {up0} -> {up} in {tup - tup0:.0f} s)"
             up0, tup0 = up, tup
             bad += not ok
-            say(f"{a.tag} period {n} saver {s}: {'PASS' if ok else 'FAIL'} {d}")
+            say(f"{a.tag} period {n}: {'PASS' if ok else 'FAIL'} {d}")
             row("soak", n, int(ok), d)
             n += 1
             time.sleep(max(0.0, PERIOD_S - (time.time() - t0)))
-        vcp(a.unit, "0xEB", 0)
         say(f"{a.tag} SUMMARY soak {n} periods, {bad} failed")
     elif a.mode == "wakes":
         for n in range(a.n):
@@ -161,21 +147,6 @@ def main() -> int:
             row("nv", n, int(ok), d)
         c1 = nv_counters(a.unit, a.map)
         say(f"{a.tag} SUMMARY nv {a.n} cycles, {bad} failed; counters {c0} -> {c1}; brightness now {vcp_get(a.unit, '0x10')}")
-    else:
-        for name, code, addr in (("scope2", 4, S2), ("asteroids", 8, AST)):
-            vcp(a.unit, "0xEB", code)
-            time.sleep(3)
-            t0, c0 = time.time(), word(a.unit, a.map, addr)
-            time.sleep(FPS_S)
-            t1, c1 = time.time(), word(a.unit, a.map, addr)
-            if c0 is None or c1 is None:
-                say(f"{a.tag} fps {name}: counter unreadable")
-                bad += 1
-                continue
-            fps = ((c1 - c0) & 0xFFFF) / (t1 - t0)
-            say(f"{a.tag} fps {name}: {fps:.2f} / s (counter {c0} -> {c1} in {t1 - t0:.1f} s)")
-            row("fps", name, 1, f"{fps:.2f}")
-        vcp(a.unit, "0xEB", 0)
     return 1 if bad else 0
 
 

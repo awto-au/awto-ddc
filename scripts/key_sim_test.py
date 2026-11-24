@@ -11,7 +11,7 @@ usage: AWTO_SIM_CORE=fast key_sim_test.py BIN MAP [--mode 1080p60] [--shots DIR]
   - console: UP+DOWN opens (no single-key leak); main page only MENU / POWER act; GPIO page DOWN scrolls + repeats.
   - injected test cmd keys (0x01..0x05 = AUTO UP DOWN MENU SOURCE) under the same rules; MENU+DOWN no combo; POWER off / on.
 - Key click (#229, registry key_click): the call to AwtoPmSoundTone per press (every build); the 1200 Hz tone from the
-  audio tap: ~30 ms, once per press (no repeat), none for POWER / muted / default off / while Pac-Man sound plays, generator off at the end.
+  audio tap: ~30 ms, once per press (no repeat), none for POWER / muted / default off / while another sound plays, generator off at the end.
 - Physical key = ADC_A0 (0xFF09) / ADC_A1 (0xFF0A) cell value in a fw/awto/inputs.tsv band; idle = regdb reset 0xF8; POWER = P3.0 low.
 - Actions are counted with call watches (fw_sim Machine.watch): the assertions name the function that must / must not run.
 - --shots DIR: PNG renders of the screens (menu, inert row, backlight bar, selector, auto select result).
@@ -40,7 +40,7 @@ PWR = "SysPowerSetTargetPowerStatus"             # power requests: counted from 
 SET_ID_MUTE, SET_ID_KEY_CLICK = 89, 123          # registry ids mute, key_click (AwtoSetIds.h)
 CLICK_SC, CLICK_MS, CLICK_TOL_MS = 40, 30, 10    # RL6449_Project.h AWTO_KEY_CLICK_SC / _MS; main-pass resolution (~4 ms) x 2.5
 CLICK_HZ = 48000 // CLICK_SC                     # audio_sim K = 48 kHz sample rate / S code
-SND_WAKA, SND_STOP = 0xBB, 0xBE                  # test cmd AWTO_TC_PACMAN_SND + 1 waka (loops), + 4 stop
+SND_CAL, SND_STOP = 0xBD, 0xBE                   # test cmd AWTO_TC_SND + 0 calibration tone (held), + 1 stop
 ADC_DEADBAND = 2                                 # RL6449_Project.h AWTO_ADC_DEADBAND: the stored ADC rows may lag a live value by less than this
 REPEAT_MS, RATE_MS = 500, 100                    # RL6449_Project.h AWTO_KEY_REPEAT_MS / AWTO_KEY_RATE_MS
 
@@ -496,7 +496,7 @@ def key_click(k):
         if k.osd_state() == 0 and k.menu() == 0:
             break
         k.tap("MENU")
-    k.cmd(SND_WAKA)
+    k.cmd(SND_CAL)
     b, t0 = k.snap(), k.s.bus.now()
     k.tap("SOURCE")
     k.tap("MENU")
@@ -505,7 +505,7 @@ def key_click(k):
     k.wait(200)
     ln, silent = clicks(k, t0)
     st[SET_ID_KEY_CLICK] = 0
-    k.check("key click audio: no click while the Pac-Man sound plays (skipped lines logged), generator off after its stop",
+    k.check("key click audio: no click while another sound plays (skipped lines logged), generator off after its stop",
             not ln and silent and n_busy >= 2, f"tones {len(ln)}, skipped lines {n_busy}")
     for _ in range(4):
         if k.osd_state() == 0 and k.menu() == 0:

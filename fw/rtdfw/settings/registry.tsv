@@ -4,7 +4,8 @@
 # - retired ids (never reuse): 64 menu_select, 93 vendor_menu (Realtek SDK menu built out, awto-ddc#120); 65 logo,
 #   66 logo_ms (boot logo removed, the console shows the power-on log, awto-ddc#144); 69 panel_t3, 70 panel_t3_own
 #   (backlight no longer waits for video: 118 bl_on_delay, Dan 2026-11-13, awto-ddc#162); 118 bl_on_delay (counted from wanted,
-#   default 0) replaced by 127 backlight_on_delay (Dan 2026-11-20): old stored values must not carry over.
+#   default 0) replaced by 127 backlight_on_delay (Dan 2026-11-20): old stored values must not carry over;
+#   119 screensaver, 120 screensaver_s (the game screensavers were removed, Dan 2026-11-25, docs/games.md).
 # - type: bool | enum | int | action. unit: none percent ms s step hz dhz (0.1 Hz).
 # - flags: nv (saved), live (applied on every change, else on confirm), risky (can blank or cut access: auto-revert
 #   unless confirmed), reboot (takes effect after a restart), ro (status, read from the firmware), inert (stored only:
@@ -79,7 +80,7 @@
 77	pwr_l2_en	bool	none	power	nv	0	1	1	1	auto	0xF8	power	L2 panel off	-
 78	pwr_l2_s	int	s	power	nv	0	3600	10	60	auto	0xF9	power	L2 delay	-
 79	pwr_l3_en	bool	none	power	nv	0	1	1	1	auto	0xFA	power	L3 deep sleep	-
-80	pwr_l3_s	int	s	power	nv	0	7200	30	600	auto	0xFB	power	L3 delay	-	seconds the no-signal screensaver runs before power saving (docs/saver-mode.md D1); 0 = power saving as without a saver
+80	pwr_l3_s	int	s	power	nv,inert	0	7200	30	600	auto	0xFB	power	L3 delay	-	stored only: it timed the no-signal screensaver, removed with the games (docs/games.md); power saving follows the SDK chain
 81	wake_d1	bool	none	power	nv,inert	0	1	1	1	auto	-	power	Wake on D1	-
 82	wake_d2	bool	none	power	nv,inert	0	1	1	1	auto	-	power	Wake on D2	-
 83	wake_d3	bool	none	power	nv,inert	0	1	1	1	auto	-	power	Wake on D3	-
@@ -134,9 +135,7 @@
 114	ssc	int	none	service	nv,reboot,sdk	0	15	1	0	auto	-	sdk_sys	Spread spectrum	-	dot-clock spread range [sdk-value]
 115	panel_hours	int	none	service	nv,sdk	0	32767	1	0	auto	-	sdk_sys	Panel hours	-	backlight-on time; stored with the next other write, never alone (awto-ddc#151)
 116	panel_min	int	none	service	nv,sdk	0	59	1	0	auto	-	sdk_sys	Panel minutes	-
-119	screensaver	enum	none	osd	nv,live	0	5	1	0	auto	-	screensaver	Screensaver	Off|Pac-Man|(old) Scope 2|Scope 2|Alternate|Asteroids	which screensaver runs on no signal / idle (docs/screensaver.md); 2 = the retired Scope 1, runs Scope 2 (stored values stay valid); Alternate cycles Pac-Man / Scope 2 / Asteroids every AWTO_SAVER_ALT_S
-120	screensaver_s	int	s	osd	nv,live	0	3600	10	0	auto	-	screensaver_s	Screensaver idle	-	seconds without a key or DDC/CI command before the screensaver covers a live picture; 0 = no idle start (no-signal start stays)
-121	screensaver_now	enum	none	osd	live	0	8	1	0	auto	0xEB	screensaver_now	Screensaver now	Stop|Selected|Pac-Man|(retired)|Scope 2|Flash warning|Alert tone|Boot splash|Asteroids=8	DDC/CI VCP 0xEB starts / stops now (an action row cannot carry a value): Selected = the screensaver row, Off counts as Alternate; not saved
+121	screensaver_now	enum	none	osd	live	0	7	1	0	auto	0xEB	screensaver_now	Screensaver now	Stop|(retired)|(retired)|(retired)|(retired)|Flash warning|Alert tone|Boot splash	DDC/CI VCP 0xEB starts / stops now (an action row cannot carry a value); not saved. 1..4 and 8 were the game screensavers (docs/games.md): ignored
 122	boot_splash	bool	none	osd	nv,live	0	1	1	1	auto	-	-	Boot splash	-	big Pac-Man at power-on until the console / picture OSD opens, a key, or AWTO_SPLASH_MAX_MS (docs/flash-screen.md); apply - : the splash start reads it
 123	key_click	bool	none	audio	nv,live	0	1	1	0	auto	-	-	Key click	-	30 ms tone on a front-key press (not POWER), only unmuted and with no other sound; fw/keys/key_click.c, docs/keys.md (awto-ddc#229)
 124	monitor	bool	none	debug	nv,live	0	1	1	1	auto	-	-	Health monitor	-	every AWTO_MON_MS: ADC A0-A3, IOSC trim, loop rate + longest gap, uptime, stack -> sync log rows (changes + heartbeat) and g_stAwtoMon; fw/diag/monitor.c, docs/monitoring.md

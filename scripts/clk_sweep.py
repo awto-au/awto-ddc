@@ -36,16 +36,14 @@ TSV = ROOT / "tmp/logs/clk_sweep.tsv"
  C_XDBAD, C_ALU, C_MISS, C_CRCMS, C_FFED, C_FFE9, C_FFEE, C_FF6C, C_FDA1, C_CKNOW, C_FORM, C_REFUSE, C_PLL, C_DEB, C_REF, C_MISSN,
  C_RST, C_NOW) = (0, 1, 2, 3, 4, 5, 6, 7, 8, 10, 12, 13, 14, 16, 18, 20, 24, 25, 26, 28, 30, 32, 34, 35, 36, 37, 38, 39, 40, 41, 42, 46, 48, 52, 56, 60)
 C_DRIVE, C_SLEW, C_CHIP, C_DRNOW, C_SLNOW = 62, 63, 64, 65, 66
-C_AST = 67
-C_TUNE, C_PASSES = 69, 70
-C_SC = 71                                 # reserved word (was the Scope 1 frame counter)
-C_SIZE = 73
+C_TUNE, C_PASSES = 67, 68
+C_SIZE = 69
 (C_PLLM, C_PLLN, C_PLLO, C_MAXMHZ, C_KEEP, C_OVIDX, C_OVVAL, C_WDOS, C_WDON, C_MOVED, C_PTMO, C_E0, C_E1, C_E7, C_DIVOLD, C_DIVNEW, C_PWMOLD, C_PWMNEW) = \
-    (73, 74, 75, 76, 78, 80, 81, 82, 83, 84, 85, 86, 87, 88, 89, 100, 111, 123)
-C_SIZE2 = 135
-C_FLN, C_FLCK, C_FLDONE, C_FLFAIL, C_FLBADE, C_FLBADP, C_FLERMS, C_FLPRMS, C_FLMAX = 135, 136, 137, 138, 139, 141, 143, 145, 147
-C_IMGN, C_IMGDONE, C_IMGBAD, C_IMGMASK, C_IMGMS = 149, 150, 151, 153, 155
-C_END = 157                               # end of the struct: crd() reads C_SIZE (the old part) + the flash / image part
+    (69, 70, 71, 72, 74, 76, 77, 78, 79, 80, 81, 82, 83, 84, 85, 96, 107, 119)
+C_SIZE2 = 131
+C_FLN, C_FLCK, C_FLDONE, C_FLFAIL, C_FLBADE, C_FLBADP, C_FLERMS, C_FLPRMS, C_FLMAX = 131, 132, 133, 134, 135, 137, 139, 141, 143
+C_IMGN, C_IMGDONE, C_IMGBAD, C_IMGMASK, C_IMGMS = 145, 146, 147, 149, 151
+C_END = 153                               # end of the struct: crd() reads C_SIZE (the old part) + the flash / image part
 FL_ERR = {0: "none", 1: "erase call failed", 2: "not blank after erase", 3: "write call failed", 4: "read-back differs", 5: "read call failed",
           8: "flash clock above the rating, nothing written", 0xA1: "erase call", 0xA2: "blank check read", 0xA3: "program calls", 0xA4: "read-back", 9: "spare sector holds foreign data, nothing erased"}
 N_DIV, N_PWM = 11, 6
@@ -190,11 +188,9 @@ DELAY_PCT_MIN, DELAY_PCT_MAX = 97, 150    # unit_health.py delay-cal limits
 RT_READS = 300                            # debug-link block reads per step (24 B each, the ISR + main loop at the step clock)
 WALL_S = 2.0                              # heartbeat vs host clock window
 WALL_TOL_PCT = 1.5                        # usNowMs is refreshed once per main pass (~3 ms): 2 s window, +- 0.2 % plus I2C jitter
-FPS_SETTLE_S = 2.5                        # Scope 2 first frame hidden (docs/saver-fps-hw.md baseline)
-FPS_WINDOW_S = 6.0
 APPLY_LIMIT_S = 3.0                       # apply op at stock ~1.2 s (calibrated by the first stock run, --cal); x (stock MCU / step MCU)
 HOLD_S = 25.0                             # fw-side revert: apply + host checks (~10 s) x 2.5; the WDT reset is the backstop
-SAVER_SCOPE2, SAVER_AST, SAVER_OFF = H.SAVER_SCOPE2, H.SAVER_AST, H.SAVER_OFF
+SAVER_OFF = H.SAVER_OFF
 SYNC_EV_ODEMO = 0xE9
 
 
@@ -286,8 +282,6 @@ def send(ctx, go: int, limit_s: float, f=0, f2=0, m=0, flags=0, hold_s=HOLD_S, l
             return None
 
 
-PM_CTRL, PM_REF, PM_MISS, PM_RST = 0xFDB3, 0xFDB9, 0xFDBD, 0xFDC1      # flash-cache performance meter (regdb FDB3..FDC6): control, program reads, misses, memory restarts
-PM_EN_BIT, PM_RESET_BIT = 0x01, 0x02
 IOSC_FROM, IOSC_N = 0x06A0, 7                                             # IOSC trim block (regdb OSC_TRIM_CTRL0..EMB_BGRES): read-only temperature proxy
 
 
@@ -310,49 +304,6 @@ def iosc(ctx, tag: str) -> dict | None:
     cnt = ((b[5] >> 4) << 8) | b[4]
     say(f"  info iosc {tag}: 06A0.. = {b.hex(' ')}; trim_cnt {cnt}, vc {(b[2] >> 3) & 7}, mos {b[2] & 7}, lt {(b[2] >> 6) & 1}, trim_done {(b[0] >> 6) & 1}")
     return {"cnt": cnt, "raw": b.hex()}
-
-
-def meter_read(ctx) -> tuple[int, int, int]:
-    return tuple(int.from_bytes(ctx.rdabs(a, 4), "big") for a in (PM_REF, PM_MISS, PM_RST))
-
-
-def fps_scope2(ctx) -> tuple[float, int]:
-    dev = ctx.dev
-    H.op(dev, H.OP_SAVER, H.lim_saver(), flags=0, n=SAVER_SCOPE2, label="scope2 on")
-    H.wait_scope2(dev)
-    wait(dev, FPS_SETTLE_S)
-    r0 = H.op(dev, H.OP_REGS, H.lim_read(0), label="frame0")
-    t0 = dev.now()
-    if not ctx.sim:
-        xwr(ctx, PM_CTRL, PM_RESET_BIT)
-        xwr(ctx, PM_CTRL, PM_EN_BIT)
-    wait(dev, FPS_WINDOW_S)
-    if not ctx.sim:
-        xwr(ctx, PM_CTRL, 0)
-        ctx.scope2_meter = meter_read(ctx)
-    r1 = H.op(dev, H.OP_REGS, H.lim_read(0), label="frame1")
-    t1 = dev.now()
-    if not ctx.sim:
-        nf = max((r1["frame"] - r0["frame"]) & 0xFFFF, 1)
-        ref, mis, rst = ctx.scope2_meter
-        say(f"  info cache meter during Scope 2: {nf} frames in the window: {ref / nf:.0f} program reads, {mis / nf:.0f} misses ({100 * mis / max(ref, 1):.2f} %), {rst / nf:.0f} memory restarts per frame; totals {ref} / {mis} / {rst}")
-        ctx.scope2_miss_per_frame = mis / nf
-    H.op(dev, H.OP_SAVER, H.lim_saver(), flags=0, n=SAVER_OFF, label="saver off")
-    n = (r1["frame"] - r0["frame"]) & 0xFFFF
-    return n / (t1 - t0), n
-
-
-def fps_ast(ctx) -> tuple[float, int]:
-    """Asteroids frames drawn: the fw counts the wraps of the column counter (its sync line is a game tick, not a frame)."""
-    dev, ck = ctx.dev, ctx.ck
-    H.op(dev, H.OP_SAVER, H.lim_saver(), flags=0, n=SAVER_AST, label="asteroids on")
-    wait(dev, FPS_SETTLE_S)
-    a0, t0 = be(ck.rd(C_AST, 2), 0, 2), ck.now()
-    wait(dev, FPS_WINDOW_S)
-    a1, t1 = be(ck.rd(C_AST, 2), 0, 2), ck.now()
-    H.op(dev, H.OP_SAVER, H.lim_saver(), flags=0, n=SAVER_OFF, label="saver off")
-    n = (a1 - a0) & 0xFFFF
-    return n / (t1 - t0), n
 
 
 def pll_checks(ctx, name: str, t: bytes, pll: int, chk) -> None:
@@ -379,7 +330,7 @@ def pll_checks(ctx, name: str, t: bytes, pll: int, chk) -> None:
         c = pll / 1000 / new[1]
         say(f"  {'!!!! sync processor clock OVER the regdb 0x4006 cap' if c > SYNC_CAP_MHZ else 'info sync processor clock under the regdb 0x4006 cap'}: {c:.2f} MHz vs {SYNC_CAP_MHZ} MHz (divider 4 bit, max 15: above {SYNC_CAP_MHZ * 15:.0f} MHz M2PLL the cap cannot be kept; a documented 'should', not a check)")
 
-OPTS = {"allow_oc": False, "tune_first": False, "fps": True, "rb": False}      # set by main(): --allow-overclock-flash, --tune-first, --no-fps
+OPTS = {"allow_oc": False, "tune_first": False, "rb": False}      # set by main(): --allow-overclock-flash, --tune-first, --rb-probe
 IMG_PASS_S = 25.0                          # one whole-image pass at the stock clock, first guess: refined by the first run
 FL_CYCLE_S = 3.0                           # one flash erase + 4 KB program + 2 read-backs, first guess: refined by the first run
 
@@ -504,7 +455,7 @@ def run_step(ctx, name: str, ck_checks: bool = True) -> dict | None:
         H.set_flags(dev, 0)
         H.op(dev, H.OP_SAVER, H.lim_saver(), flags=0, n=SAVER_OFF, label="saver off")
         bad = 0
-        for nm, mode in (("s2map", H.M_TRIPLE), ("s2map", H.M_SDK)):
+        for nm, mode in (("map", H.M_TRIPLE), ("map", H.M_SDK)):
             w = H.op(dev, H.OP_WRITE, H.lim_write(mode, 616 * 3) * scale, mode=mode, flags=H.F_REPEAT, seed=0x3C, addr=0, n=616 * 3, label="osd write")
             for fl in (0, H.F_M2):
                 v = H.op(dev, H.OP_VERIFY, H.lim_read(616 * 3) * scale, flags=H.F_REPEAT | fl, seed=0x3C, addr=0, n=616 * 3, label="osd verify")
@@ -513,20 +464,6 @@ def run_step(ctx, name: str, ck_checks: bool = True) -> dict | None:
         chk("osd-port", bad == 0, f"616 words written (direct triples, ScalerOsdDataPort) and read back M1 + M2: {bad} bad bytes", sim_info=True)
     except (TimeoutError, RuntimeError) as e:
         chk("osd-port", False, str(e))
-    try:
-        if not OPTS["fps"]:
-            raise StopIteration
-        fps2, n2 = fps_scope2(ctx)
-        say(f"  info Scope 2: {n2} frames in {FPS_WINDOW_S:.0f} s = {fps2:.2f} frames/s ({1000 / max(fps2, 1e-9):.0f} ms/frame)")
-        res["scope2_fps"] = fps2
-        res["s2_miss_frame"] = getattr(ctx, "scope2_miss_per_frame", "")
-        fpsa, na = fps_ast(ctx)
-        say(f"  info Asteroids: {na} frames in {FPS_WINDOW_S:.0f} s = {fpsa:.2f} frames/s ({1000 / max(fpsa, 1e-9):.0f} ms/frame)")
-        res["ast_fps"] = fpsa
-    except StopIteration:
-        pass
-    except (TimeoutError, RuntimeError) as e:
-        chk("saver", False, str(e))
     r = send(ctx, OP_REVERT, 2.0, label=f"revert {name}")
     if r is None or r[C_STATE] not in (ST_REVERTED, ST_AUTO):
         chk("revert", False, "no answer / not reverted")
@@ -544,7 +481,7 @@ def run_step(ctx, name: str, ck_checks: bool = True) -> dict | None:
 
 
 def tsv(row: dict) -> None:
-    keys = ["step", "rbn", "rb_raw", "rb_helper", "rb_stale", "rb_elig", "rb_bad", "pll_mhz", "mcu", "spi", "dual", "pass", "fl_done", "fl_fail", "fl_bad", "fl_erase_ms", "fl_prog_ms", "img_bad", "img_ms", "crc_ms", "alu_ms", "miss_ms", "ref", "misses", "scope2_fps", "s2_miss_frame", "ast_fps", "fail"]
+    keys = ["step", "rbn", "rb_raw", "rb_helper", "rb_stale", "rb_elig", "rb_bad", "pll_mhz", "mcu", "spi", "dual", "pass", "fl_done", "fl_fail", "fl_bad", "fl_erase_ms", "fl_prog_ms", "img_bad", "img_ms", "crc_ms", "alu_ms", "miss_ms", "ref", "misses", "fail"]
     TSV.parent.mkdir(parents=True, exist_ok=True)
     new = not TSV.exists()
     with TSV.open("a") as f:
@@ -583,11 +520,10 @@ def main() -> int:
     ap.add_argument("--stop-after", type=int, default=1, help="stop after N consecutive reproducible failed steps (default 1)")
     ap.add_argument("--allow-overclock-flash", action="store_true", help="allow the oc* steps: SPI above the MX25L8006E fast-read rating (86 MHz); never write / erase there (the fw refuses)")
     ap.add_argument("--tune-first", action="store_true", help="write the FF6C latch / delay tune at the stock clock, before the dividers change")
-    ap.add_argument("--no-fps", action="store_true", help="skip the Scope 2 / Asteroids frame-rate part")
     ap.add_argument("--rb-probe", action="store_true", help="per step: count stale first reads of new dwords on the read-behind pages (debug slave byte path)")
     ap.add_argument("steps", nargs="+")
     a = ap.parse_args()
-    OPTS.update(allow_oc=a.allow_overclock_flash, tune_first=a.tune_first, fps=not a.no_fps, rb=a.rb_probe)
+    OPTS.update(allow_oc=a.allow_overclock_flash, tune_first=a.tune_first, rb=a.rb_probe)
     keep = 0
     for nm in [x for x in a.keep.split(",") if x]:
         if nm not in DIV_NAMES:

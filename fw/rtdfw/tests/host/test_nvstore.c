@@ -55,7 +55,7 @@ static int ap_calls;
 AP(aspect) AP(backlight) AP(black_level) AP(colour_temp) AP(contrast) AP(debug_msgs) AP(debug_popup)
 AP(dp_edid) AP(dp_version) AP(factory_menu) AP(gamma) AP(gpio_test) AP(input_mode) AP(input_select)
 AP(key_test) AP(msg_log) AP(osd_font) AP(osd_pos) AP(osd_scale) AP(osd_transparency) AP(overscan) AP(power)
-AP(rotate) AP(screensaver) AP(screensaver_now) AP(screensaver_s)
+AP(rotate) AP(screensaver_now)
 AP(power_mode) AP(sdk_language) AP(sdk_sys) AP(search_time) AP(user_rgb) AP(mute) AP(volume) AP(port)
 static int veto_id;                                 /* set_veto refuses this id (0 = none) */
 uint8_t set_veto(uint8_t id, int16_t v) { (void)v; return id == veto_id; }

@@ -44,8 +44,8 @@ STATUS_S = 2                                             # pause between status-
 FLASH_POLL_S = 1                                         # flash progress poll: the log gains a line every few sectors (SAVE_EVERY), 1 s keeps the bar live
 ROUTED = ("ddc", "settings", "synclog", "note", "kvm", "i2c", "flash")   # dev.py commands that are thin port clients: workers add --direct
 PROBE_VCP = VCP_VOLUME                                   # status dot: cheapest read-only call, dev.py ddc get (EDID guard inside)
-# VCP 0xEB start / stop values; the registry row screensaver_now lists 0..4, 5 = flash warning
-SAVER_NOW = (("Stop", 0), ("Selected", 1), ("Pac-Man", 2), ("Scope 2", 4), ("Flash warning", 5), ("Boot splash", 7), ("Asteroids", 8))
+# VCP 0xEB start / stop values (registry row screensaver_now: 5 flash warning, 6 alert tone, 7 boot splash)
+SAVER_NOW = (("Stop", 0), ("Flash warning", 5), ("Boot splash", 7))
 QUICK_ROWS = ("volume", "mute", "brightness")            # registry rows reused as widgets in the Quick strip
 VCP_ROW = {"volume": VCP_VOLUME, "mute": VCP_MUTE}       # quick rows written through DDC/CI, the rest through the mailbox
 QUICK_VCP = ("volume", "mute", "brightness", "input", "screensaver_now")   # registry rows read by DDC/CI VCP code

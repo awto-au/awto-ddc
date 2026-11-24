@@ -11,7 +11,7 @@ Status 2026-11-16. Code: `fw/sdk/Kernel/System/Code/SysJudge.c` (system machine)
 | 77 | `pwr_l2_en` | hold ends after `pwr_l2_s` and goes to the SDK no-signal path (`ucL2`) |
 | 78 | `pwr_l2_s` | seconds in the hold before L2 (`usL2Sec`); default 60 (`AWTO_L2_SEC`) |
 | 79 | `pwr_l3_en` | **off = every power saving request is ignored, the monitor stays on** (`g_ucAwtoSleepOk`) |
-| 80 | `pwr_l3_s` | seconds the no-signal screensaver runs before power saving (default 600; 0 = no no-signal saver); not the hold's L3 (`AWTO_L3_SEC`) |
+| 80 | `pwr_l3_s` | inert (stored only): it timed the no-signal screensaver, removed with the games (`docs/games.md`); not the hold's L3 (`AWTO_L3_SEC`) |
 | 81-83 | `wake_d1..d3` | inert |
 
 - Registry source: `fw/rtdfw/settings/registry.tsv` -> generated `fw/rtdfw/awto/settings/set_table.c` (`scripts/settings_gen.py`).
@@ -20,7 +20,7 @@ Status 2026-11-16. Code: `fw/sdk/Kernel/System/Code/SysJudge.c` (system machine)
 
 - Every power saving request ends in `SysMachineRequest(_POWER_STATUS_SAVING, who)`. With `pwr_l3_en` = 0 the outcome is `AWTO_SYS_IGNORED` (sync.tsv `18 06`): target not set, state unchanged.
 - Sources (who codes): DDC/CI VCP 0xD6 standby/suspend/off (`BY_VCP`; the force-saving flag is not set), OSD no-signal power-saving card (`BY_OSD_PS`; the card is not shown, the NO SIGNAL card stays), SDK wake that found no source (`BY_WAKE_EMPTY`).
-- No other fallback: no timer. A no-signal screensaver (row 119 != Off) delays the request by `pwr_l3_s` (`docs/saver-mode.md` D1). If L3 is off the monitor stays lit.
+- No other fallback: no timer. If L3 is off the monitor stays lit.
 - Log line: `power saving by <who> (IGNORED:power saving is off in the settings (L3 deep sleep), the monitor stays on)`.
 - Tested: VCP 0xD6 = 4 on unit 3 (2026-11-16). Not tested: host DPMS / no-signal timer, wake-empty.
 

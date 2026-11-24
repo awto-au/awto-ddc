@@ -111,7 +111,7 @@ class FakeBackend:
                 return hit[1], hit[2]
         if "ddc" in a and "get" in a:
             vals = {"0x62": "VCP 62 CNC x00 x64 x00 x25", "0x8D": "VCP 8D CNC x00 x01 x00 x01", "0x10": "VCP 10 C 64 100",
-                    "0x60": "VCP 60 SNC x11", "0xEB": "VCP EB CNC x00 x08 x00 x00"}
+                    "0x60": "VCP 60 SNC x11", "0xEB": "VCP EB CNC x00 x07 x00 x00"}
             codes = a[a.index("get") + 1:a.index("--unit") if "--unit" in a else None]
             return 0, "".join(f"HDMI-A-2         bus=11  {vals[c]}\n" for c in codes)
         if "settings" in a and "list" in a:
@@ -135,7 +135,7 @@ def quick_test(app, pg, fb):
     """Quick group, read-only rows, enum labels, refresh vs drag, limits, error banner"""
     pg.select_unit("3", read=False)
     n = len(fb.calls)
-    pg.saver.setCurrentText("Scope 2")
+    pg.saver.setCurrentText("Boot splash")
     pg.saver_start()
     pg.saver_stop()
     pg.saver.setCurrentText("Flash warning")
@@ -148,7 +148,7 @@ def quick_test(app, pg, fb):
     pg.set_row(pg.rows["disp_rotate"])
     settle(app, pg)
     sent = [" ".join(c[2:]) for c in fb.calls[n:]]
-    assert sent == ["ddc set 0xEB 4 --unit 3", "ddc set 0xEB 0 --unit 3", "ddc set 0xEB 5 --unit 3", "ddc set 0x62 33 --unit 3",
+    assert sent == ["ddc set 0xEB 7 --unit 3", "ddc set 0xEB 0 --unit 3", "ddc set 0xEB 5 --unit 3", "ddc set 0x62 33 --unit 3",
                     "ddc set 0x8D 1 --unit 3", "settings set disp_rotate 0 --unit 3", "ddc get 0x8D --unit 3",
                     "settings get disp_rotate --unit 3"], sent          # the two one-click rows read back after their write
     pg.quick["brightness"].set_value(70)                         # quick brightness: mailbox row like the tree

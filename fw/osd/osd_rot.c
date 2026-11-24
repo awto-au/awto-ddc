@@ -1,6 +1,6 @@
 #include "UserCommonInclude.h"
 
-// OSD 180 degree rotation helpers for full-screen OSD users that draw their own map + glyphs (Pac-Man, scope savers): docs/osd/rotation.md.
+// OSD 180 degree rotation helpers for full-screen OSD users that draw their own map + glyphs (flash screen, test screens): docs/osd/rotation.md.
 // The OSD circuit is not rotated with the picture: with display Rotate 180 (panel mounted turned) an upright map shows upside down.
 // Same rule as the menu text layer (fw/osd/text_layer.c): map cell c -> cells - 1 - c, glyph bitmaps turned 180 degrees.
 
@@ -28,25 +28,6 @@ static const __code BYTE s_aucRev[256] = { AWTO_REV6(0), AWTO_REV6(2), AWTO_REV6
 BYTE AwtoOsdRevByte(BYTE ucB)                           // bit order of one byte reversed
 {
     return s_aucRev[ucB];
-}
-
-#pragma place group(osdrot_13)
-void AwtoOsdTurn(BYTE __xdata *pucB, BYTE ucN)
-{
-    BYTE ucLo = 0;
-    BYTE ucHi = ucN - 1;
-    BYTE ucT;
-
-    while(ucLo < ucHi)
-    {
-        ucT = s_aucRev[pucB[ucLo]];
-        pucB[ucLo++] = s_aucRev[pucB[ucHi]];
-        pucB[ucHi--] = ucT;
-    }
-    if(ucLo == ucHi)
-    {
-        pucB[ucLo] = s_aucRev[pucB[ucLo]];
-    }
 }
 
 WORD AwtoOsdRotCell(WORD usCell, WORD usCells)          // map cell index when the whole map is turned 180

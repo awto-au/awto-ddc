@@ -1,4 +1,4 @@
-"""Automatic alert tone (flash warning, saver tour) honours mute and AWTO_SOUND=off; explicit alert always plays."""
+"""Automatic alert tone (flash warning) honours mute and AWTO_SOUND=off; explicit alert always plays."""
 import sys
 from pathlib import Path
 from types import SimpleNamespace
@@ -62,4 +62,3 @@ def test_explicit_alert_ignores_mute(monkeypatch, tmp_path):
 
 def test_auto_call_sites_pass_auto():
     assert '"--wait", "--auto"' in (ROOT / "dev.py").read_text()
-    assert '"--wait", "--auto"' in (ROOT / "scripts/saver_ctl.py").read_text()

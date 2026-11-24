@@ -2,11 +2,10 @@
 
 - Clock and delays: `clock-sweep.md`, `delay-audit.md` (owner of the delay decisions), `delays.md` (SDK constants, sources).
 - Hardware investigations: `monitoring.md` (health monitor, ADC), `temperature.md`, `register-audit.md`, `monitors/README.md` (I2C roles), `reversing/dahua-fw/register-audit.md`.
-- OSD / savers: `osd/` (manual), `osd-write-sweep.md`, `saver-fps-hw.md`, `saver-fps-plan.md`.
+- OSD: `osd/` (manual), `osd-write-sweep.md`, `saver-fps-hw.md` (OSD hardware levers; its saver numbers are of the removed games, `games.md`).
 - Interfaces: `cec.md` (HDMI CEC sink, RPi5 test plan).
 - Registers: `../re/regmap/README.md` (one row per register; docs link by key `PPAA`).
 - Reports (research, no hardware):
-  - `scope-realism.md` (2026-11-19): scope savers vs real scopes without a trigger.
   - `clock-scaling-review.md` (2026-11-19): what depends on the MCU / flash / timer clock at 350.8 / 116.9 MHz.
   - `read-behind-research.md` (2026-11-19): read-behind latch, internet + SDK + local research.
   - `monitors/mstar-vs-realtek.md` (2026-11-19): MStar vs Realtek monitor scalers.

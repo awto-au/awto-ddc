@@ -223,8 +223,8 @@ def save_and_kvm():
     st = r.state()
     assert st["quick"]["input"]["widget"] == 1 and "D2" in st["quick"]["input"]["text"] and r.fb.vcp["3"][0x60] == 0x11
     assert not r.call("kvm", {"unit": "3", "target": "vga"})["ok"]
-    assert r.call("saver", {"unit": "3", "name": "pac-man"})["ok"] and r.fb.vcp["3"][0xEB] == 2
-    assert r.state()["quick"]["screensaver"]["text"] == "Pac-Man"
+    assert r.call("saver", {"unit": "3", "name": "flash warning"})["ok"] and r.fb.vcp["3"][0xEB] == 5
+    assert r.state()["quick"]["screensaver"]["text"] == "Flash warning"
     # Dan's example: --serial S --kvm hdmi-1 --save  (GUI changes, device changes, setting saved + read back)
     lines = []
     box = {}

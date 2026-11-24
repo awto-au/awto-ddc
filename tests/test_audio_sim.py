@@ -54,18 +54,22 @@ def test_pitch_change_and_mute_gating():
     assert abs(peak_hz(at(1.55, 2.5)) - K / 30) <= 1.5
 
 
-def test_ghost_track_bytes_render_rising_pitches():
-    import pacman_sound as P
-    data = P.encode("ghost", K)[0]
+def test_alert_track_bytes_render_rising_pitches():
+    import snd_data_gen as P
+    data = P.encode("alert", K)[0]
     ev, t, want = [(0.0, "pin", "amp_en", 1), (0.0, "pin", "amp_mute", 0)], 0.1, []
     for i in range(0, len(data) - 2, 2):
         sc, ms = data[i] & 0x7F, data[i + 1] * P.PS_TICK_MS
         octave = bool(data[i] & P.PS_OCT_FLAG)
+        if sc == 0:                                             # rest
+            t += ms / 1000.0
+            continue
         ev += [(t, "reg", A.IDX_AFCR, AFCR_ON_OCT if octave else AFCR_ON_FULL), (t, "reg", A.IDX_SCAPR, 0x80 | sc), (t, "reg", A.IDX_CMCR, A.CMCR_DBDCB)]
         want.append((t, t + ms / 1000.0, K / (2 if octave else 1) / sc))
         t += ms / 1000.0
     pcm = A.synth(ev, 0.1, t)
     got = [peak_hz(pcm[int((a - 0.1) * RATE):int((b - 0.1) * RATE)]) for a, b, _ in want]
+    assert len(got) == 3
     assert all(y > x for x, y in itertools.pairwise(got))
     assert all(abs(g - f) / f < 0.12 for g, (_, _, f) in zip(got, want))
 

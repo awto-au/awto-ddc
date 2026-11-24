@@ -117,8 +117,6 @@
 #define AWTO_SET_SSC                  114
 #define AWTO_SET_PANEL_HOURS          115
 #define AWTO_SET_PANEL_MIN            116
-#define AWTO_SET_SCREENSAVER          119
-#define AWTO_SET_SCREENSAVER_S        120
 #define AWTO_SET_SCREENSAVER_NOW      121
 #define AWTO_SET_BOOT_SPLASH          122
 #define AWTO_SET_KEY_CLICK            123
@@ -182,6 +180,6 @@
 #define AWTO_SET_DEF_SSC              0
 #define AWTO_SET_DEF_PANEL_HOURS      0
 #define AWTO_SET_DEF_PANEL_MIN        0
-#define AWTO_SET_SCHEMA              0x53B5
-#define AWTO_SET_AUX_MAX             51
+#define AWTO_SET_SCHEMA              0x5B82
+#define AWTO_SET_AUX_MAX             48
 #endif

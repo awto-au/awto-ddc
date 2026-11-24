@@ -14,7 +14,7 @@ Code is the reference; this lists what exists and who owns what. Hardware facts 
 | `AwtoOsdTile(cell, bytes)` | canvas tile into the glyph of its cell (mirrored when turned) |
 | `AwtoOsdPlaceScaleUp(posH, posV, cols, rows, factor)` | position, scale-up window = OSD position, factor, boundary neighbourhood, on |
 - At most 3 parameters where possible: the 4th and later go to XDATA (scarce).
-- Users: scope savers, Asteroids, Pac-Man, QC pattern, flash screen (adopting). Library of the savers: `docs/saver-library.md`; their budgets and frame rates: `docs/saver-fps-*.md`.
+- Users: scope savers, Asteroids, Pac-Man, QC pattern, flash screen (adopting). Library of the savers: removed doc `docs/saver-library.md` (git 3d271b99, `docs/games.md`); their budgets and frame rates: `docs/saver-fps-*.md`.
 
 ## Rotation helpers: `fw/osd/osd_rot.c`
 `AwtoOsdRot180()`, `AwtoOsdRotCell(cell, cells)`, `AwtoOsdRevByte(b)`, `AwtoOsdRotSrc(out, words)`, `AwtoOsdTurn(ptr, n)`.
