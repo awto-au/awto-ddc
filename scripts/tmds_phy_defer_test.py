@@ -60,7 +60,7 @@ def run_port(bin_: Path, mapp: Path, port: int) -> int:
         say("FAIL never reached ACTIVE")
         return 1
     m = bus.m
-    pend, info, clk_irq = m.addr("isr_g_ucTMDSRxPhyPend") + port - 2, m.addr(f"g_stTMDSRx{port}CtrlInfo"), m.addr("isr_g_ucTMDSRxClkIRQ") + port - 2
+    pend, info, clk_irq = m.addr("isr_g_ucTMDSRxPhyPend") + port - 2, m.addr(f"d_g_stTMDSRx{port}CtrlInfo"), m.addr("isr_g_ucTMDSRxClkIRQ") + port - 2
     ev = {"phy": [], "cdr": []}
     port_addr = m.addr("d_isr_g_ucTMDSRxPort")
 
@@ -74,7 +74,7 @@ def run_port(bin_: Path, mapp: Path, port: int) -> int:
         return {}
 
     def cdr(m_, r):
-        ev["cdr"].append({"info": m_.rd(info)[0], "ex0": ex0()})
+        ev["cdr"].append({"info": m_.rd(info, 1, "iram")[0], "ex0": ex0()})
         return {"val": 0}                       # not stable: scan takes its failure path and returns
 
     for fn, f in (("ScalerTMDSRxSetPhy_EXINT0", phy), ("ScalerTMDSRxCheckCDRStable", cdr),

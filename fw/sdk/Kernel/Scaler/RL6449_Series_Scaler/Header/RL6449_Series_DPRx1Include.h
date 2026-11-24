@@ -173,7 +173,7 @@ extern __xdata _Bool g_bDpRx1AuxCommandNoReply;
 
 extern DPRX_T1(BYTE, g_pucDpRxLinkStatus01, g_ucDpRx1LinkStatus01);
 extern DPRX_T1(BYTE, g_pucDpRxLinkStatus23, g_ucDpRx1LinkStatus23);
-extern DPRX_T1(BYTE, g_pucDpRxLinkRequest01, g_ucDpRx1LinkRequest01);
+extern DPRX_T1(BYTE __data, g_pucDpRxLinkRequest01, d_g_ucDpRx1LinkRequest01);  // awto: IRAM direct, hot variable (#335)
 extern DPRX_T1(BYTE, g_pucDpRxLinkRequest23, g_ucDpRx1LinkRequest23);
 extern DPRX_T3(BYTE, g_ppucDpRxBackup, g_pucDpRx1Backup);
 

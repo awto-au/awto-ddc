@@ -4,7 +4,8 @@ keytest	0xd700	170	154
 awto_settings_menu	0xd700	324	135
 ScalerMDomain	0xd700	459	132
 awto_osd_ui	0xd700	591	125
-RL6449_Series_DPRx1	0xd700	716	95
+ScalerCommonDPRx1	0xd700	716	24
+RL6449_Series_DPRx1_INT	0xd700	740	6
 RTD2014NVRamOsd	0xd700	811	89
 ddcci	0xd700	900	88
 UserCommonNVRamSystem	0xd700	988	85
@@ -46,7 +47,6 @@ RTD2014Osd	0xd700	2598	20
 awto_shim_sdk_boundary	0xd700	2618	20
 keys	0xd700	2638	20
 RL6449_Series_Memory	0xd700	2658	19
-ScalerCommonDPRx1	0xd700	2677	19
 awto_reg_reg	0xd700	2696	18
 osd_demo	0xd700	2714	18
 RL6449_Series_Measure	0xd700	2732	15
@@ -84,7 +84,6 @@ SysTimer	0xe380	63	5
 awto_dataport_dataport	0xe380	68	5
 keyinject	0xe380	73	5
 OsdSramAddressCount	0xe380	78	4
-RL6449_Series_DPRx1_INT	0xe380	82	4
 RL6449_Series_OsdPositionOffsetCorrection	0xe380	86	4
 ScalerTMDSRx2_SeptPhy	0xe380	90	4
 ScalerVGIP	0xe380	94	4
@@ -98,7 +97,6 @@ RL6449_Series_Osd	0xe380	119	3
 RL6449_Series_TMDSRx3	0xe380	122	3
 RTD2014Key	0xe380	125	3
 RTD2014UserInterface	0xe380	128	3
-ScalerCommonColor	0xe380	131	3
 ScalerCommonFlashRead	0xe380	134	3
 SysMode	0xe380	137	3
 _gptrget_isr	0xe380	140	3
@@ -130,6 +128,7 @@ SysCec	0xe380	183	1
 __ovl	0xe380	184	1
 flash_screen	0xe380	185	1
 RL6449_Series_GDIPhy	0xe380	252	3
+RL6449_Series_DPRx1	0xe580	0	99
 sync	0xe780	37	733
 asteroids	0xe780	770	515
 ScalerCommonDebug	0xe780	1285	363

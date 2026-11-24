@@ -737,8 +737,8 @@ void RTDFactoryMainMenu(void)
     g_ucAutoColotTypeFontPointer = g_ucFontPointer0;
     RTDFactoryOsdFuncPutStringProp(ROW(_FACTORY_AUTOCOLOR_TYPE_ROW), COL(_FACTORY_ON_OFF_COL), _PFONT_FACTORY_AUTO_COLOR_TYPE, tFONT_FACTORY_EUROPE, tOSD_FACTORY_AUTO_COLOR_TYPE_TABLE[GET_OSD_FACTORY_AUTO_COLOR_TYPE()], _ENGLISH);
 
-    RTDFactoryOsdFuncShowNumber(ROW(_FACTORY_BURNIN_TIME_ROW), COL(_FACTORY_BURNIN_TIME_HOUR_NUMBER_COL), g_usAdjustValue, (_ALIGN_LEFT | _FORCE_SHOW_NUMBER_OFF | _SHOW_5), _PFONT_FACTORY_BURNIN_TIME_HOUR);
-    RTDFactoryOsdFuncShowNumber(ROW(_FACTORY_BURNIN_TIME_ROW), COL(_FACTORY_BURNIN_TIME_MIN_NUMBER_COL), g_usAdjustValue, (_ALIGN_LEFT | _FORCE_SHOW_NUMBER_OFF | _SHOW_3), _PFONT_FACTORY_BURNIN_TIME_MIN);
+    RTDFactoryOsdFuncShowNumber(ROW(_FACTORY_BURNIN_TIME_ROW), COL(_FACTORY_BURNIN_TIME_HOUR_NUMBER_COL), d_g_usAdjustValue, (_ALIGN_LEFT | _FORCE_SHOW_NUMBER_OFF | _SHOW_5), _PFONT_FACTORY_BURNIN_TIME_HOUR);
+    RTDFactoryOsdFuncShowNumber(ROW(_FACTORY_BURNIN_TIME_ROW), COL(_FACTORY_BURNIN_TIME_MIN_NUMBER_COL), d_g_usAdjustValue, (_ALIGN_LEFT | _FORCE_SHOW_NUMBER_OFF | _SHOW_3), _PFONT_FACTORY_BURNIN_TIME_MIN);
     RTDFactoryOsdFuncShowNumber(ROW(_FACTORY_PANEL_TIME_ROW), COL(_FACTORY_PANEL_TIME_HOUR_NUMBER_COL), GET_PANEL_TIME_HOUR(), (_ALIGN_LEFT | _FORCE_SHOW_NUMBER_OFF | _SHOW_5), _PFONT_FACTORY_PANEL_TIME_HOUR);
     RTDFactoryOsdFuncShowNumber(ROW(_FACTORY_PANEL_TIME_ROW), COL(_FACTORY_PANEL_TIME_MIN_NUMBER_COL), GET_PANEL_TIME_MIN(), (_ALIGN_LEFT | _FORCE_SHOW_NUMBER_OFF | _SHOW_3), _PFONT_FACTORY_PANEL_TIME_MIN);
     // OSD Page value
@@ -788,7 +788,7 @@ void RTDFactoryMainMenu1(void)
     RTDFactoryOsdFuncPutStringProp(ROW(_FACTORY_BG_COLOR_ROW), COL(_FACTORY_B_COL), _PFONT_FACTORY_PAGE_0, tFONT_FACTORY_EUROPE, tOSD_FACTORY_RGB_TABLE[2], _ENGLISH);
 
     // Background on/off value
-    RTDFactoryOsdFuncShowNumber(ROW(_FACTORY_BG_ROW), COL(_FACTORY_ON_OFF_COL), g_usAdjustValue, (_ALIGN_LEFT | _FORCE_SHOW_NUMBER_OFF | _SHOW_3), _PFONT_FACTORY_BACKGROUND_ON_OFF);
+    RTDFactoryOsdFuncShowNumber(ROW(_FACTORY_BG_ROW), COL(_FACTORY_ON_OFF_COL), d_g_usAdjustValue, (_ALIGN_LEFT | _FORCE_SHOW_NUMBER_OFF | _SHOW_3), _PFONT_FACTORY_BACKGROUND_ON_OFF);
 
     RTDFactoryOsdFuncPutStringProp(ROW(_FACTORY_BG_ROW), COL(_FACTORY_ON_OFF_COL), _PFONT_FACTORY_BACKGROUND_ON_OFF, tFONT_FACTORY_EUROPE, tOSD_FACTORY_ON_OFF_TABLE[0], _ENGLISH);
 
@@ -901,7 +901,7 @@ void RTDFactoryAutoColorExit(void)
 //============= Auto Color Type =======================
 void RTDFactoryAutoColorTypeEnter(void)
 {
-    g_usAdjustValue = GET_OSD_FACTORY_AUTO_COLOR_TYPE();
+    d_g_usAdjustValue = GET_OSD_FACTORY_AUTO_COLOR_TYPE();
     RTDFactoryOsdFuncSelectItem(_MENU_FACTORY_AUTO_COLOR_TYPE);
 }
 
@@ -923,7 +923,7 @@ void RTDFactoryAutoColorTypeExit(void)
 //============= Burnin =======================
 void RTDFactoryBurninEnter(void)
 {
-    g_usAdjustValue = 0;
+    d_g_usAdjustValue = 0;
     RTDFactoryOsdFuncSelectItem(_MENU_FACTORY_BURNIN_ON_OFF);
 }
 
@@ -992,7 +992,7 @@ void RTDFactoryResetPanelTimeExit(void)
 //============= Colortemp 1 R=======================
 void RTDFactoryColortemp1REnter(void)
 {
-    g_usBackupValue = g_stColorProcData.usColorTempR;
+    d_g_usBackupValue = g_stColorProcData.usColorTempR;
     RTDFactoryOsdFuncSelectItem(_MENU_FACTORY_CT1_RED_ADJ);
 }
 
@@ -1014,7 +1014,7 @@ void RTDFactoryColortemp1RExit(void)
 //============= Colortemp 1 G=======================
 void RTDFactoryColortemp1GEnter(void)
 {
-    g_usBackupValue = g_stColorProcData.usColorTempG;
+    d_g_usBackupValue = g_stColorProcData.usColorTempG;
     RTDFactoryOsdFuncSelectItem(_MENU_FACTORY_CT1_GREEN_ADJ);
 }
 
@@ -1036,7 +1036,7 @@ void RTDFactoryColortemp1GExit(void)
 //============= Colortemp 1 B=======================
 void RTDFactoryColortemp1BEnter(void)
 {
-    g_usBackupValue = g_stColorProcData.usColorTempB;
+    d_g_usBackupValue = g_stColorProcData.usColorTempB;
     RTDFactoryOsdFuncSelectItem(_MENU_FACTORY_CT1_BLUE_ADJ);
 }
 
@@ -1059,7 +1059,7 @@ void RTDFactoryColortemp1BExit(void)
 //============= Colortemp 2 R=======================
 void RTDFactoryColortemp2REnter(void)
 {
-    g_usBackupValue = g_stColorProcData.usColorTempR;
+    d_g_usBackupValue = g_stColorProcData.usColorTempR;
     RTDFactoryOsdFuncSelectItem(_MENU_FACTORY_CT2_RED_ADJ);
 }
 
@@ -1082,7 +1082,7 @@ void RTDFactoryColortemp2RExit(void)
 //============= Colortemp 2 G=======================
 void RTDFactoryColortemp2GEnter(void)
 {
-    g_usBackupValue = g_stColorProcData.usColorTempG;
+    d_g_usBackupValue = g_stColorProcData.usColorTempG;
     RTDFactoryOsdFuncSelectItem(_MENU_FACTORY_CT2_GREEN_ADJ);
 }
 
@@ -1104,7 +1104,7 @@ void RTDFactoryColortemp2GExit(void)
 //============= Colortemp 2 B=======================
 void RTDFactoryColortemp2BEnter(void)
 {
-    g_usBackupValue = g_stColorProcData.usColorTempB;
+    d_g_usBackupValue = g_stColorProcData.usColorTempB;
     RTDFactoryOsdFuncSelectItem(_MENU_FACTORY_CT2_BLUE_ADJ);
 }
 
@@ -1127,7 +1127,7 @@ void RTDFactoryColortemp2BExit(void)
 //============= Colortemp 3 R=======================
 void RTDFactoryColortemp3REnter(void)
 {
-    g_usBackupValue = g_stColorProcData.usColorTempR;
+    d_g_usBackupValue = g_stColorProcData.usColorTempR;
     RTDFactoryOsdFuncSelectItem(_MENU_FACTORY_CT3_RED_ADJ);
 }
 
@@ -1150,7 +1150,7 @@ void RTDFactoryColortemp3RExit(void)
 //============= Colortemp 3 G=======================
 void RTDFactoryColortemp3GEnter(void)
 {
-    g_usBackupValue = g_stColorProcData.usColorTempG;
+    d_g_usBackupValue = g_stColorProcData.usColorTempG;
     RTDFactoryOsdFuncSelectItem(_MENU_FACTORY_CT3_GREEN_ADJ);
 }
 
@@ -1172,7 +1172,7 @@ void RTDFactoryColortemp3GExit(void)
 //============= Colortemp 3 B=======================
 void RTDFactoryColortemp3BEnter(void)
 {
-    g_usBackupValue = g_stColorProcData.usColorTempB;
+    d_g_usBackupValue = g_stColorProcData.usColorTempB;
     RTDFactoryOsdFuncSelectItem(_MENU_FACTORY_CT3_BLUE_ADJ);
 }
 
@@ -1195,7 +1195,7 @@ void RTDFactoryColortemp3BExit(void)
 //============= Colortemp 4 R=======================
 void RTDFactoryColortemp4REnter(void)
 {
-    g_usBackupValue = g_stColorProcData.usColorTempR;
+    d_g_usBackupValue = g_stColorProcData.usColorTempR;
     RTDFactoryOsdFuncSelectItem(_MENU_FACTORY_CT4_RED_ADJ);
 }
 
@@ -1218,7 +1218,7 @@ void RTDFactoryColortemp4RExit(void)
 //============= Colortemp 4 G=======================
 void RTDFactoryColortemp4GEnter(void)
 {
-    g_usBackupValue = g_stColorProcData.usColorTempG;
+    d_g_usBackupValue = g_stColorProcData.usColorTempG;
     RTDFactoryOsdFuncSelectItem(_MENU_FACTORY_CT4_GREEN_ADJ);
 }
 
@@ -1240,7 +1240,7 @@ void RTDFactoryColortemp4GExit(void)
 //============= Colortemp 4 B=======================
 void RTDFactoryColortemp4BEnter(void)
 {
-    g_usBackupValue = g_stColorProcData.usColorTempB;
+    d_g_usBackupValue = g_stColorProcData.usColorTempB;
     RTDFactoryOsdFuncSelectItem(_MENU_FACTORY_CT4_BLUE_ADJ);
 }
 
@@ -1263,7 +1263,7 @@ void RTDFactoryColortemp4BExit(void)
 //============= Colortemp 5 R=======================
 void RTDFactoryColortemp5REnter(void)
 {
-    g_usBackupValue = g_stColorProcData.usColorTempR;
+    d_g_usBackupValue = g_stColorProcData.usColorTempR;
     RTDFactoryOsdFuncSelectItem(_MENU_FACTORY_CT5_RED_ADJ);
 }
 
@@ -1286,7 +1286,7 @@ void RTDFactoryColortemp5RExit(void)
 //============= Colortemp 5 G=======================
 void RTDFactoryColortemp5GEnter(void)
 {
-    g_usBackupValue = g_stColorProcData.usColorTempG;
+    d_g_usBackupValue = g_stColorProcData.usColorTempG;
     RTDFactoryOsdFuncSelectItem(_MENU_FACTORY_CT5_GREEN_ADJ);
 }
 
@@ -1308,7 +1308,7 @@ void RTDFactoryColortemp5GExit(void)
 //============= Colortemp 5 B=======================
 void RTDFactoryColortemp5BEnter(void)
 {
-    g_usBackupValue = g_stColorProcData.usColorTempB;
+    d_g_usBackupValue = g_stColorProcData.usColorTempB;
     RTDFactoryOsdFuncSelectItem(_MENU_FACTORY_CT5_BLUE_ADJ);
 }
 
@@ -1331,7 +1331,7 @@ void RTDFactoryColortemp5BExit(void)
 //============= Colortemp 6 R=======================
 void RTDFactoryColortemp6REnter(void)
 {
-    g_usBackupValue = g_stColorProcData.usColorTempR;
+    d_g_usBackupValue = g_stColorProcData.usColorTempR;
     RTDFactoryOsdFuncSelectItem(_MENU_FACTORY_CT6_RED_ADJ);
 }
 
@@ -1354,7 +1354,7 @@ void RTDFactoryColortemp6RExit(void)
 //============= Colortemp 6 G=======================
 void RTDFactoryColortemp6GEnter(void)
 {
-    g_usBackupValue = g_stColorProcData.usColorTempG;
+    d_g_usBackupValue = g_stColorProcData.usColorTempG;
     RTDFactoryOsdFuncSelectItem(_MENU_FACTORY_CT6_GREEN_ADJ);
 }
 
@@ -1376,7 +1376,7 @@ void RTDFactoryColortemp6GExit(void)
 //============= Colortemp 6 B=======================
 void RTDFactoryColortemp6BEnter(void)
 {
-    g_usBackupValue = g_stColorProcData.usColorTempB;
+    d_g_usBackupValue = g_stColorProcData.usColorTempB;
     RTDFactoryOsdFuncSelectItem(_MENU_FACTORY_CT6_BLUE_ADJ);
 }
 
@@ -1404,7 +1404,7 @@ void RTDFactoryColortemp6BExit(void)
 void RTDFactoryAdcGainREnter(void)
 {
 #if(_VGA_SUPPORT == _ON)
-    g_usBackupValue = g_stAdcData.pucAdcGainMSB[_AUTO_RED_CHANNEL];
+    d_g_usBackupValue = g_stAdcData.pucAdcGainMSB[_AUTO_RED_CHANNEL];
     RTDFactoryOsdFuncSelectItem(_MENU_FACTORY_GAIN_RED_ADJ);
 #endif
 }
@@ -1429,7 +1429,7 @@ void RTDFactoryAdcGainRExit(void)
 void RTDFactoryAdcGainGEnter(void)
 {
 #if(_VGA_SUPPORT == _ON)
-    g_usBackupValue = g_stAdcData.pucAdcGainMSB[_AUTO_GREEN_CHANNEL];
+    d_g_usBackupValue = g_stAdcData.pucAdcGainMSB[_AUTO_GREEN_CHANNEL];
     RTDFactoryOsdFuncSelectItem(_MENU_FACTORY_GAIN_GREEN_ADJ);
 #endif
 }
@@ -1453,7 +1453,7 @@ void RTDFactoryAdcGainGExit(void)
 void RTDFactoryAdcGainBEnter(void)
 {
 #if(_VGA_SUPPORT == _ON)
-    g_usBackupValue = g_stAdcData.pucAdcGainMSB[_AUTO_BLUE_CHANNEL];
+    d_g_usBackupValue = g_stAdcData.pucAdcGainMSB[_AUTO_BLUE_CHANNEL];
     RTDFactoryOsdFuncSelectItem(_MENU_FACTORY_GAIN_BLUE_ADJ);
 #endif
 }
@@ -1477,7 +1477,7 @@ void RTDFactoryAdcGainBExit(void)
 void RTDFactoryAdcOffsetREnter(void)
 {
 #if(_VGA_SUPPORT == _ON)
-    g_usBackupValue = g_stAdcData.pucAdcOffsetMSB[_AUTO_RED_CHANNEL];
+    d_g_usBackupValue = g_stAdcData.pucAdcOffsetMSB[_AUTO_RED_CHANNEL];
     RTDFactoryOsdFuncSelectItem(_MENU_FACTORY_OFFSET_RED_ADJ);
 #endif
 }
@@ -1501,7 +1501,7 @@ void RTDFactoryAdcOffsetRExit(void)
 void RTDFactoryAdcOffsetGEnter(void)
 {
 #if(_VGA_SUPPORT == _ON)
-    g_usBackupValue = g_stAdcData.pucAdcOffsetMSB[_AUTO_GREEN_CHANNEL];
+    d_g_usBackupValue = g_stAdcData.pucAdcOffsetMSB[_AUTO_GREEN_CHANNEL];
     RTDFactoryOsdFuncSelectItem(_MENU_FACTORY_OFFSET_GREEN_ADJ);
 #endif
 }
@@ -1525,7 +1525,7 @@ void RTDFactoryAdcOffsetGExit(void)
 void RTDFactoryAdcOffsetBEnter(void)
 {
 #if(_VGA_SUPPORT == _ON)
-    g_usBackupValue = g_stAdcData.pucAdcOffsetMSB[_AUTO_BLUE_CHANNEL];
+    d_g_usBackupValue = g_stAdcData.pucAdcOffsetMSB[_AUTO_BLUE_CHANNEL];
     RTDFactoryOsdFuncSelectItem(_MENU_FACTORY_OFFSET_BLUE_ADJ);
 #endif
 }
@@ -1601,9 +1601,9 @@ void RTDFactoryExitExit(void)
 //============= Auto Color Type Select =======================
 void RTDFactoryAutoColorTypeSelectEnter(void)
 {
-    if(g_usAdjustValue != GET_OSD_FACTORY_AUTO_COLOR_TYPE())
+    if(d_g_usAdjustValue != GET_OSD_FACTORY_AUTO_COLOR_TYPE())
     {
-        SET_OSD_FACTORY_AUTO_COLOR_TYPE(g_usAdjustValue);
+        SET_OSD_FACTORY_AUTO_COLOR_TYPE(d_g_usAdjustValue);
         RTDNVRamSaveOSDData();
     }
 
@@ -1612,7 +1612,7 @@ void RTDFactoryAutoColorTypeSelectEnter(void)
 
 void RTDFactoryAutoColorTypeSelectLeft(void)
 {
-    RTDFactoryOsdDispNumber(_MENU_FACTORY_AUTO_COLOR_TYPE, g_usAdjustValue);
+    RTDFactoryOsdDispNumber(_MENU_FACTORY_AUTO_COLOR_TYPE, d_g_usAdjustValue);
 }
 
 void RTDFactoryAutoColorTypeSelectRight(void)
@@ -1633,12 +1633,12 @@ void RTDFactoryBurninOnOffEnter(void)
 
 void RTDFactoryBurninOnOffLeft(void)
 {
-    RTDFactoryOsdDispNumber(_MENU_FACTORY_BURNIN_ON_OFF, g_usAdjustValue);
+    RTDFactoryOsdDispNumber(_MENU_FACTORY_BURNIN_ON_OFF, d_g_usAdjustValue);
 }
 
 void RTDFactoryBurninOnOffRight(void)
 {
-    RTDFactoryOsdDispNumber(_MENU_FACTORY_BURNIN_ON_OFF, g_usAdjustValue);
+    RTDFactoryOsdDispNumber(_MENU_FACTORY_BURNIN_ON_OFF, d_g_usAdjustValue);
 }
 
 void RTDFactoryBurninOnOffExit(void)
@@ -1649,7 +1649,7 @@ void RTDFactoryBurninOnOffExit(void)
 //============= Colortemp 1 R Adjust=======================
 void RTDFactoryColortemp1RAdjustEnter(void)
 {
-    if(g_usBackupValue != g_stColorProcData.usColorTempR)
+    if(d_g_usBackupValue != g_stColorProcData.usColorTempR)
     {
         RTDNVRamSaveColorSetting(GET_COLOR_TEMP_TYPE());
     }
@@ -1668,9 +1668,9 @@ void RTDFactoryColortemp1RAdjustRight(void)
 
 void RTDFactoryColortemp1RAdjustExit(void)
 {
-    if(g_usBackupValue != g_stColorProcData.usColorTempR)
+    if(d_g_usBackupValue != g_stColorProcData.usColorTempR)
     {
-        g_stColorProcData.usColorTempR = g_usBackupValue;
+        g_stColorProcData.usColorTempR = d_g_usBackupValue;
         RTDFactoryOsdDispNumber(_MENU_FACTORY_CT1_RED_ADJ, g_stColorProcData.usColorTempR);
     }
     RTDFactoryOsdFuncSelectItem(_MENU_FACTORY_CT1_RED);
@@ -1679,7 +1679,7 @@ void RTDFactoryColortemp1RAdjustExit(void)
 //============= Colortemp 1 G Adjust=======================
 void RTDFactoryColortemp1GAdjustEnter(void)
 {
-    if(g_usBackupValue != g_stColorProcData.usColorTempG)
+    if(d_g_usBackupValue != g_stColorProcData.usColorTempG)
     {
         RTDNVRamSaveColorSetting(GET_COLOR_TEMP_TYPE());
     }
@@ -1698,9 +1698,9 @@ void RTDFactoryColortemp1GAdjustRight(void)
 
 void RTDFactoryColortemp1GAdjustExit(void)
 {
-    if(g_usBackupValue != g_stColorProcData.usColorTempG)
+    if(d_g_usBackupValue != g_stColorProcData.usColorTempG)
     {
-        g_stColorProcData.usColorTempG = g_usBackupValue;
+        g_stColorProcData.usColorTempG = d_g_usBackupValue;
         RTDFactoryOsdDispNumber(_MENU_FACTORY_CT1_GREEN_ADJ, g_stColorProcData.usColorTempG);
     }
     RTDFactoryOsdFuncSelectItem(_MENU_FACTORY_CT1_GREEN);
@@ -1709,7 +1709,7 @@ void RTDFactoryColortemp1GAdjustExit(void)
 //============= Colortemp 1 B Adjust=======================
 void RTDFactoryColortemp1BAdjustEnter(void)
 {
-    if(g_usBackupValue != g_stColorProcData.usColorTempB)
+    if(d_g_usBackupValue != g_stColorProcData.usColorTempB)
     {
         RTDNVRamSaveColorSetting(GET_COLOR_TEMP_TYPE());
     }
@@ -1728,9 +1728,9 @@ void RTDFactoryColortemp1BAdjustRight(void)
 
 void RTDFactoryColortemp1BAdjustExit(void)
 {
-    if(g_usBackupValue != g_stColorProcData.usColorTempB)
+    if(d_g_usBackupValue != g_stColorProcData.usColorTempB)
     {
-        g_stColorProcData.usColorTempB = g_usBackupValue;
+        g_stColorProcData.usColorTempB = d_g_usBackupValue;
         RTDFactoryOsdDispNumber(_MENU_FACTORY_CT1_BLUE_ADJ, g_stColorProcData.usColorTempB);
     }
     RTDFactoryOsdFuncSelectItem(_MENU_FACTORY_CT1_BLUE);
@@ -1739,7 +1739,7 @@ void RTDFactoryColortemp1BAdjustExit(void)
 //============= Colortemp 2 R Adjust=======================
 void RTDFactoryColortemp2RAdjustEnter(void)
 {
-    if(g_usBackupValue != g_stColorProcData.usColorTempR)
+    if(d_g_usBackupValue != g_stColorProcData.usColorTempR)
     {
         RTDNVRamSaveColorSetting(GET_COLOR_TEMP_TYPE());
     }
@@ -1758,9 +1758,9 @@ void RTDFactoryColortemp2RAdjustRight(void)
 
 void RTDFactoryColortemp2RAdjustExit(void)
 {
-    if(g_usBackupValue != g_stColorProcData.usColorTempR)
+    if(d_g_usBackupValue != g_stColorProcData.usColorTempR)
     {
-        g_stColorProcData.usColorTempR = g_usBackupValue;
+        g_stColorProcData.usColorTempR = d_g_usBackupValue;
         RTDFactoryOsdDispNumber(_MENU_FACTORY_CT2_RED_ADJ, g_stColorProcData.usColorTempR);
     }
     RTDFactoryOsdFuncSelectItem(_MENU_FACTORY_CT2_RED);
@@ -1769,7 +1769,7 @@ void RTDFactoryColortemp2RAdjustExit(void)
 //============= Colortemp 2 G Adjust=======================
 void RTDFactoryColortemp2GAdjustEnter(void)
 {
-    if(g_usBackupValue != g_stColorProcData.usColorTempG)
+    if(d_g_usBackupValue != g_stColorProcData.usColorTempG)
     {
         RTDNVRamSaveColorSetting(GET_COLOR_TEMP_TYPE());
     }
@@ -1788,9 +1788,9 @@ void RTDFactoryColortemp2GAdjustRight(void)
 
 void RTDFactoryColortemp2GAdjustExit(void)
 {
-    if(g_usBackupValue != g_stColorProcData.usColorTempG)
+    if(d_g_usBackupValue != g_stColorProcData.usColorTempG)
     {
-        g_stColorProcData.usColorTempG = g_usBackupValue;
+        g_stColorProcData.usColorTempG = d_g_usBackupValue;
         RTDFactoryOsdDispNumber(_MENU_FACTORY_CT2_GREEN_ADJ, g_stColorProcData.usColorTempG);
     }
     RTDFactoryOsdFuncSelectItem(_MENU_FACTORY_CT2_GREEN);
@@ -1799,7 +1799,7 @@ void RTDFactoryColortemp2GAdjustExit(void)
 //============= Colortemp 2 B Adjust=======================
 void RTDFactoryColortemp2BAdjustEnter(void)
 {
-    if(g_usBackupValue != g_stColorProcData.usColorTempB)
+    if(d_g_usBackupValue != g_stColorProcData.usColorTempB)
     {
         RTDNVRamSaveColorSetting(GET_COLOR_TEMP_TYPE());
     }
@@ -1818,9 +1818,9 @@ void RTDFactoryColortemp2BAdjustRight(void)
 
 void RTDFactoryColortemp2BAdjustExit(void)
 {
-    if(g_usBackupValue != g_stColorProcData.usColorTempB)
+    if(d_g_usBackupValue != g_stColorProcData.usColorTempB)
     {
-        g_stColorProcData.usColorTempB = g_usBackupValue;
+        g_stColorProcData.usColorTempB = d_g_usBackupValue;
         RTDFactoryOsdDispNumber(_MENU_FACTORY_CT2_BLUE_ADJ, g_stColorProcData.usColorTempB);
     }
     RTDFactoryOsdFuncSelectItem(_MENU_FACTORY_CT2_BLUE);
@@ -1829,7 +1829,7 @@ void RTDFactoryColortemp2BAdjustExit(void)
 //============= Colortemp 3 R Adjust=======================
 void RTDFactoryColortemp3RAdjustEnter(void)
 {
-    if(g_usBackupValue != g_stColorProcData.usColorTempR)
+    if(d_g_usBackupValue != g_stColorProcData.usColorTempR)
     {
         RTDNVRamSaveColorSetting(GET_COLOR_TEMP_TYPE());
     }
@@ -1848,9 +1848,9 @@ void RTDFactoryColortemp3RAdjustRight(void)
 
 void RTDFactoryColortemp3RAdjustExit(void)
 {
-    if(g_usBackupValue != g_stColorProcData.usColorTempR)
+    if(d_g_usBackupValue != g_stColorProcData.usColorTempR)
     {
-        g_stColorProcData.usColorTempR = g_usBackupValue;
+        g_stColorProcData.usColorTempR = d_g_usBackupValue;
         RTDFactoryOsdDispNumber(_MENU_FACTORY_CT3_RED_ADJ, g_stColorProcData.usColorTempR);
     }
     RTDFactoryOsdFuncSelectItem(_MENU_FACTORY_CT3_RED);
@@ -1859,7 +1859,7 @@ void RTDFactoryColortemp3RAdjustExit(void)
 //============= Colortemp 3 G Adjust=======================
 void RTDFactoryColortemp3GAdjustEnter(void)
 {
-    if(g_usBackupValue != g_stColorProcData.usColorTempG)
+    if(d_g_usBackupValue != g_stColorProcData.usColorTempG)
     {
         RTDNVRamSaveColorSetting(GET_COLOR_TEMP_TYPE());
     }
@@ -1878,9 +1878,9 @@ void RTDFactoryColortemp3GAdjustRight(void)
 
 void RTDFactoryColortemp3GAdjustExit(void)
 {
-    if(g_usBackupValue != g_stColorProcData.usColorTempG)
+    if(d_g_usBackupValue != g_stColorProcData.usColorTempG)
     {
-        g_stColorProcData.usColorTempG = g_usBackupValue;
+        g_stColorProcData.usColorTempG = d_g_usBackupValue;
         RTDFactoryOsdDispNumber(_MENU_FACTORY_CT3_GREEN_ADJ, g_stColorProcData.usColorTempG);
     }
     RTDFactoryOsdFuncSelectItem(_MENU_FACTORY_CT3_GREEN);
@@ -1889,7 +1889,7 @@ void RTDFactoryColortemp3GAdjustExit(void)
 //============= Colortemp 3 B Adjust=======================
 void RTDFactoryColortemp3BAdjustEnter(void)
 {
-    if(g_usBackupValue != g_stColorProcData.usColorTempB)
+    if(d_g_usBackupValue != g_stColorProcData.usColorTempB)
     {
         RTDNVRamSaveColorSetting(GET_COLOR_TEMP_TYPE());
     }
@@ -1908,9 +1908,9 @@ void RTDFactoryColortemp3BAdjustRight(void)
 
 void RTDFactoryColortemp3BAdjustExit(void)
 {
-    if(g_usBackupValue != g_stColorProcData.usColorTempB)
+    if(d_g_usBackupValue != g_stColorProcData.usColorTempB)
     {
-        g_stColorProcData.usColorTempB = g_usBackupValue;
+        g_stColorProcData.usColorTempB = d_g_usBackupValue;
         RTDFactoryOsdDispNumber(_MENU_FACTORY_CT3_BLUE_ADJ, g_stColorProcData.usColorTempB);
     }
     RTDFactoryOsdFuncSelectItem(_MENU_FACTORY_CT3_BLUE);
@@ -1919,7 +1919,7 @@ void RTDFactoryColortemp3BAdjustExit(void)
 //============= Colortemp 4 R Adjust=======================
 void RTDFactoryColortemp4RAdjustEnter(void)
 {
-    if(g_usBackupValue != g_stColorProcData.usColorTempR)
+    if(d_g_usBackupValue != g_stColorProcData.usColorTempR)
     {
         RTDNVRamSaveColorSetting(GET_COLOR_TEMP_TYPE());
     }
@@ -1938,9 +1938,9 @@ void RTDFactoryColortemp4RAdjustRight(void)
 
 void RTDFactoryColortemp4RAdjustExit(void)
 {
-    if(g_usBackupValue != g_stColorProcData.usColorTempR)
+    if(d_g_usBackupValue != g_stColorProcData.usColorTempR)
     {
-        g_stColorProcData.usColorTempR = g_usBackupValue;
+        g_stColorProcData.usColorTempR = d_g_usBackupValue;
         RTDFactoryOsdDispNumber(_MENU_FACTORY_CT4_RED_ADJ, g_stColorProcData.usColorTempR);
     }
     RTDFactoryOsdFuncSelectItem(_MENU_FACTORY_CT4_RED);
@@ -1949,7 +1949,7 @@ void RTDFactoryColortemp4RAdjustExit(void)
 //============= Colortemp 4 G Adjust=======================
 void RTDFactoryColortemp4GAdjustEnter(void)
 {
-    if(g_usBackupValue != g_stColorProcData.usColorTempG)
+    if(d_g_usBackupValue != g_stColorProcData.usColorTempG)
     {
         RTDNVRamSaveColorSetting(GET_COLOR_TEMP_TYPE());
     }
@@ -1968,9 +1968,9 @@ void RTDFactoryColortemp4GAdjustRight(void)
 
 void RTDFactoryColortemp4GAdjustExit(void)
 {
-    if(g_usBackupValue != g_stColorProcData.usColorTempG)
+    if(d_g_usBackupValue != g_stColorProcData.usColorTempG)
     {
-        g_stColorProcData.usColorTempG = g_usBackupValue;
+        g_stColorProcData.usColorTempG = d_g_usBackupValue;
         RTDFactoryOsdDispNumber(_MENU_FACTORY_CT4_GREEN_ADJ, g_stColorProcData.usColorTempG);
     }
     RTDFactoryOsdFuncSelectItem(_MENU_FACTORY_CT4_GREEN);
@@ -1979,7 +1979,7 @@ void RTDFactoryColortemp4GAdjustExit(void)
 //============= Colortemp 4 B Adjust=======================
 void RTDFactoryColortemp4BAdjustEnter(void)
 {
-    if(g_usBackupValue != g_stColorProcData.usColorTempB)
+    if(d_g_usBackupValue != g_stColorProcData.usColorTempB)
     {
         RTDNVRamSaveColorSetting(GET_COLOR_TEMP_TYPE());
     }
@@ -1998,9 +1998,9 @@ void RTDFactoryColortemp4BAdjustRight(void)
 
 void RTDFactoryColortemp4BAdjustExit(void)
 {
-    if(g_usBackupValue != g_stColorProcData.usColorTempB)
+    if(d_g_usBackupValue != g_stColorProcData.usColorTempB)
     {
-        g_stColorProcData.usColorTempB = g_usBackupValue;
+        g_stColorProcData.usColorTempB = d_g_usBackupValue;
         RTDFactoryOsdDispNumber(_MENU_FACTORY_CT4_BLUE_ADJ, g_stColorProcData.usColorTempB);
     }
     RTDFactoryOsdFuncSelectItem(_MENU_FACTORY_CT4_BLUE);
@@ -2009,7 +2009,7 @@ void RTDFactoryColortemp4BAdjustExit(void)
 //============= Colortemp 5 R Adjust=======================
 void RTDFactoryColortemp5RAdjustEnter(void)
 {
-    if(g_usBackupValue != g_stColorProcData.usColorTempR)
+    if(d_g_usBackupValue != g_stColorProcData.usColorTempR)
     {
         RTDNVRamSaveColorSetting(GET_COLOR_TEMP_TYPE());
     }
@@ -2028,9 +2028,9 @@ void RTDFactoryColortemp5RAdjustRight(void)
 
 void RTDFactoryColortemp5RAdjustExit(void)
 {
-    if(g_usBackupValue != g_stColorProcData.usColorTempR)
+    if(d_g_usBackupValue != g_stColorProcData.usColorTempR)
     {
-        g_stColorProcData.usColorTempR = g_usBackupValue;
+        g_stColorProcData.usColorTempR = d_g_usBackupValue;
         RTDFactoryOsdDispNumber(_MENU_FACTORY_CT5_RED_ADJ, g_stColorProcData.usColorTempR);
     }
     RTDFactoryOsdFuncSelectItem(_MENU_FACTORY_CT5_RED);
@@ -2039,7 +2039,7 @@ void RTDFactoryColortemp5RAdjustExit(void)
 //============= Colortemp 5 G Adjust=======================
 void RTDFactoryColortemp5GAdjustEnter(void)
 {
-    if(g_usBackupValue != g_stColorProcData.usColorTempG)
+    if(d_g_usBackupValue != g_stColorProcData.usColorTempG)
     {
         RTDNVRamSaveColorSetting(GET_COLOR_TEMP_TYPE());
     }
@@ -2058,9 +2058,9 @@ void RTDFactoryColortemp5GAdjustRight(void)
 
 void RTDFactoryColortemp5GAdjustExit(void)
 {
-    if(g_usBackupValue != g_stColorProcData.usColorTempG)
+    if(d_g_usBackupValue != g_stColorProcData.usColorTempG)
     {
-        g_stColorProcData.usColorTempG = g_usBackupValue;
+        g_stColorProcData.usColorTempG = d_g_usBackupValue;
         RTDFactoryOsdDispNumber(_MENU_FACTORY_CT5_GREEN_ADJ, g_stColorProcData.usColorTempG);
     }
     RTDFactoryOsdFuncSelectItem(_MENU_FACTORY_CT5_GREEN);
@@ -2069,7 +2069,7 @@ void RTDFactoryColortemp5GAdjustExit(void)
 //============= Colortemp 5 B Adjust=======================
 void RTDFactoryColortemp5BAdjustEnter(void)
 {
-    if(g_usBackupValue != g_stColorProcData.usColorTempB)
+    if(d_g_usBackupValue != g_stColorProcData.usColorTempB)
     {
         RTDNVRamSaveColorSetting(GET_COLOR_TEMP_TYPE());
     }
@@ -2088,9 +2088,9 @@ void RTDFactoryColortemp5BAdjustRight(void)
 
 void RTDFactoryColortemp5BAdjustExit(void)
 {
-    if(g_usBackupValue != g_stColorProcData.usColorTempB)
+    if(d_g_usBackupValue != g_stColorProcData.usColorTempB)
     {
-        g_stColorProcData.usColorTempB = g_usBackupValue;
+        g_stColorProcData.usColorTempB = d_g_usBackupValue;
         RTDFactoryOsdDispNumber(_MENU_FACTORY_CT5_BLUE_ADJ, g_stColorProcData.usColorTempB);
     }
     RTDFactoryOsdFuncSelectItem(_MENU_FACTORY_CT5_BLUE);
@@ -2099,7 +2099,7 @@ void RTDFactoryColortemp5BAdjustExit(void)
 //============= Colortemp 6 R Adjust=======================
 void RTDFactoryColortemp6RAdjustEnter(void)
 {
-    if(g_usBackupValue != g_stColorProcData.usColorTempR)
+    if(d_g_usBackupValue != g_stColorProcData.usColorTempR)
     {
         RTDNVRamSaveColorSetting(GET_COLOR_TEMP_TYPE());
     }
@@ -2118,9 +2118,9 @@ void RTDFactoryColortemp6RAdjustRight(void)
 
 void RTDFactoryColortemp6RAdjustExit(void)
 {
-    if(g_usBackupValue != g_stColorProcData.usColorTempR)
+    if(d_g_usBackupValue != g_stColorProcData.usColorTempR)
     {
-        g_stColorProcData.usColorTempR = g_usBackupValue;
+        g_stColorProcData.usColorTempR = d_g_usBackupValue;
         RTDFactoryOsdDispNumber(_MENU_FACTORY_CT6_RED_ADJ, g_stColorProcData.usColorTempR);
     }
     RTDFactoryOsdFuncSelectItem(_MENU_FACTORY_CT6_RED);
@@ -2129,7 +2129,7 @@ void RTDFactoryColortemp6RAdjustExit(void)
 //============= Colortemp 6 G Adjust=======================
 void RTDFactoryColortemp6GAdjustEnter(void)
 {
-    if(g_usBackupValue != g_stColorProcData.usColorTempG)
+    if(d_g_usBackupValue != g_stColorProcData.usColorTempG)
     {
         RTDNVRamSaveColorSetting(GET_COLOR_TEMP_TYPE());
     }
@@ -2148,9 +2148,9 @@ void RTDFactoryColortemp6GAdjustRight(void)
 
 void RTDFactoryColortemp6GAdjustExit(void)
 {
-    if(g_usBackupValue != g_stColorProcData.usColorTempG)
+    if(d_g_usBackupValue != g_stColorProcData.usColorTempG)
     {
-        g_stColorProcData.usColorTempG = g_usBackupValue;
+        g_stColorProcData.usColorTempG = d_g_usBackupValue;
         RTDFactoryOsdDispNumber(_MENU_FACTORY_CT6_GREEN_ADJ, g_stColorProcData.usColorTempG);
     }
     RTDFactoryOsdFuncSelectItem(_MENU_FACTORY_CT6_GREEN);
@@ -2159,7 +2159,7 @@ void RTDFactoryColortemp6GAdjustExit(void)
 //============= Colortemp 6 B Adjust=======================
 void RTDFactoryColortemp6BAdjustEnter(void)
 {
-    if(g_usBackupValue != g_stColorProcData.usColorTempB)
+    if(d_g_usBackupValue != g_stColorProcData.usColorTempB)
     {
         RTDNVRamSaveColorSetting(GET_COLOR_TEMP_TYPE());
     }
@@ -2178,9 +2178,9 @@ void RTDFactoryColortemp6BAdjustRight(void)
 
 void RTDFactoryColortemp6BAdjustExit(void)
 {
-    if(g_usBackupValue != g_stColorProcData.usColorTempB)
+    if(d_g_usBackupValue != g_stColorProcData.usColorTempB)
     {
-        g_stColorProcData.usColorTempB = g_usBackupValue;
+        g_stColorProcData.usColorTempB = d_g_usBackupValue;
         RTDFactoryOsdDispNumber(_MENU_FACTORY_CT6_BLUE_ADJ, g_stColorProcData.usColorTempB);
     }
     RTDFactoryOsdFuncSelectItem(_MENU_FACTORY_CT6_BLUE);
@@ -2190,7 +2190,7 @@ void RTDFactoryColortemp6BAdjustExit(void)
 void RTDFactoryAdcGainRAdjustEnter(void)
 {
 #if(_VGA_SUPPORT == _ON)
-    if(g_usBackupValue != g_stAdcData.pucAdcGainMSB[_AUTO_RED_CHANNEL])
+    if(d_g_usBackupValue != g_stAdcData.pucAdcGainMSB[_AUTO_RED_CHANNEL])
     {
         UserCommonNVRamSaveADCSetting(_COLOR_SPACE_RGB);
     }
@@ -2216,9 +2216,9 @@ void RTDFactoryAdcGainRAdjustRight(void)
 void RTDFactoryAdcGainRAdjustExit(void)
 {
 #if(_VGA_SUPPORT == _ON)
-    if(g_usBackupValue != g_stAdcData.pucAdcGainMSB[_AUTO_RED_CHANNEL])
+    if(d_g_usBackupValue != g_stAdcData.pucAdcGainMSB[_AUTO_RED_CHANNEL])
     {
-        g_stAdcData.pucAdcGainMSB[_AUTO_RED_CHANNEL] = g_usBackupValue;
+        g_stAdcData.pucAdcGainMSB[_AUTO_RED_CHANNEL] = d_g_usBackupValue;
         RTDFactoryOsdDispNumber(_MENU_FACTORY_GAIN_RED_ADJ, g_stAdcData.pucAdcGainMSB[_AUTO_RED_CHANNEL]);
     }
     RTDFactoryOsdFuncSelectItem(_MENU_FACTORY_GAIN_RED);
@@ -2229,7 +2229,7 @@ void RTDFactoryAdcGainRAdjustExit(void)
 void RTDFactoryAdcGainGAdjustEnter(void)
 {
 #if(_VGA_SUPPORT == _ON)
-    if(g_usBackupValue != g_stAdcData.pucAdcGainMSB[_AUTO_GREEN_CHANNEL])
+    if(d_g_usBackupValue != g_stAdcData.pucAdcGainMSB[_AUTO_GREEN_CHANNEL])
     {
         UserCommonNVRamSaveADCSetting(_COLOR_SPACE_RGB);
     }
@@ -2255,9 +2255,9 @@ void RTDFactoryAdcGainGAdjustRight(void)
 void RTDFactoryAdcGainGAdjustExit(void)
 {
 #if(_VGA_SUPPORT == _ON)
-    if(g_usBackupValue != g_stAdcData.pucAdcGainMSB[_AUTO_GREEN_CHANNEL])
+    if(d_g_usBackupValue != g_stAdcData.pucAdcGainMSB[_AUTO_GREEN_CHANNEL])
     {
-        g_stAdcData.pucAdcGainMSB[_AUTO_GREEN_CHANNEL] = g_usBackupValue;
+        g_stAdcData.pucAdcGainMSB[_AUTO_GREEN_CHANNEL] = d_g_usBackupValue;
         RTDFactoryOsdDispNumber(_MENU_FACTORY_GAIN_GREEN_ADJ, g_stAdcData.pucAdcGainMSB[_AUTO_GREEN_CHANNEL]);
     }
     RTDFactoryOsdFuncSelectItem(_MENU_FACTORY_GAIN_GREEN);
@@ -2268,7 +2268,7 @@ void RTDFactoryAdcGainGAdjustExit(void)
 void RTDFactoryAdcGainBAdjustEnter(void)
 {
 #if(_VGA_SUPPORT == _ON)
-    if(g_usBackupValue != g_stAdcData.pucAdcGainMSB[_AUTO_BLUE_CHANNEL])
+    if(d_g_usBackupValue != g_stAdcData.pucAdcGainMSB[_AUTO_BLUE_CHANNEL])
     {
         UserCommonNVRamSaveADCSetting(_COLOR_SPACE_RGB);
     }
@@ -2294,9 +2294,9 @@ void RTDFactoryAdcGainBAdjustRight(void)
 void RTDFactoryAdcGainBAdjustExit(void)
 {
 #if(_VGA_SUPPORT == _ON)
-    if(g_usBackupValue != g_stAdcData.pucAdcGainMSB[_AUTO_BLUE_CHANNEL])
+    if(d_g_usBackupValue != g_stAdcData.pucAdcGainMSB[_AUTO_BLUE_CHANNEL])
     {
-        g_stAdcData.pucAdcGainMSB[_AUTO_BLUE_CHANNEL] = g_usBackupValue;
+        g_stAdcData.pucAdcGainMSB[_AUTO_BLUE_CHANNEL] = d_g_usBackupValue;
         RTDFactoryOsdDispNumber(_MENU_FACTORY_GAIN_BLUE_ADJ, g_stAdcData.pucAdcGainMSB[_AUTO_BLUE_CHANNEL]);
     }
     RTDFactoryOsdFuncSelectItem(_MENU_FACTORY_GAIN_BLUE);
@@ -2307,7 +2307,7 @@ void RTDFactoryAdcGainBAdjustExit(void)
 void RTDFactoryAdcOffsetRAdjustEnter(void)
 {
 #if(_VGA_SUPPORT == _ON)
-    if(g_usBackupValue != g_stAdcData.pucAdcOffsetMSB[_AUTO_RED_CHANNEL])
+    if(d_g_usBackupValue != g_stAdcData.pucAdcOffsetMSB[_AUTO_RED_CHANNEL])
     {
         UserCommonNVRamSaveADCSetting(_COLOR_SPACE_RGB);
     }
@@ -2333,9 +2333,9 @@ void RTDFactoryAdcOffsetRAdjustRight(void)
 void RTDFactoryAdcOffsetRAdjustExit(void)
 {
 #if(_VGA_SUPPORT == _ON)
-    if(g_usBackupValue != g_stAdcData.pucAdcOffsetMSB[_AUTO_RED_CHANNEL])
+    if(d_g_usBackupValue != g_stAdcData.pucAdcOffsetMSB[_AUTO_RED_CHANNEL])
     {
-        g_stAdcData.pucAdcOffsetMSB[_AUTO_RED_CHANNEL] = g_usBackupValue;
+        g_stAdcData.pucAdcOffsetMSB[_AUTO_RED_CHANNEL] = d_g_usBackupValue;
         RTDFactoryOsdDispNumber(_MENU_FACTORY_OFFSET_RED_ADJ, g_stAdcData.pucAdcOffsetMSB[_AUTO_RED_CHANNEL]);
     }
     RTDFactoryOsdFuncSelectItem(_MENU_FACTORY_OFFSET_RED);
@@ -2346,7 +2346,7 @@ void RTDFactoryAdcOffsetRAdjustExit(void)
 void RTDFactoryAdcOffsetGAdjustEnter(void)
 {
 #if(_VGA_SUPPORT == _ON)
-    if(g_usBackupValue != g_stAdcData.pucAdcOffsetMSB[_AUTO_GREEN_CHANNEL])
+    if(d_g_usBackupValue != g_stAdcData.pucAdcOffsetMSB[_AUTO_GREEN_CHANNEL])
     {
         UserCommonNVRamSaveADCSetting(_COLOR_SPACE_RGB);
     }
@@ -2372,9 +2372,9 @@ void RTDFactoryAdcOffsetGAdjustRight(void)
 void RTDFactoryAdcOffsetGAdjustExit(void)
 {
 #if(_VGA_SUPPORT == _ON)
-    if(g_usBackupValue != g_stAdcData.pucAdcOffsetMSB[_AUTO_GREEN_CHANNEL])
+    if(d_g_usBackupValue != g_stAdcData.pucAdcOffsetMSB[_AUTO_GREEN_CHANNEL])
     {
-        g_stAdcData.pucAdcOffsetMSB[_AUTO_GREEN_CHANNEL] = g_usBackupValue;
+        g_stAdcData.pucAdcOffsetMSB[_AUTO_GREEN_CHANNEL] = d_g_usBackupValue;
         RTDFactoryOsdDispNumber(_MENU_FACTORY_OFFSET_GREEN_ADJ, g_stAdcData.pucAdcOffsetMSB[_AUTO_GREEN_CHANNEL]);
     }
     RTDFactoryOsdFuncSelectItem(_MENU_FACTORY_OFFSET_GREEN);
@@ -2385,7 +2385,7 @@ void RTDFactoryAdcOffsetGAdjustExit(void)
 void RTDFactoryAdcOffsetBAdjustEnter(void)
 {
 #if(_VGA_SUPPORT == _ON)
-    if(g_usBackupValue != g_stAdcData.pucAdcOffsetMSB[_AUTO_BLUE_CHANNEL])
+    if(d_g_usBackupValue != g_stAdcData.pucAdcOffsetMSB[_AUTO_BLUE_CHANNEL])
     {
         UserCommonNVRamSaveADCSetting(_COLOR_SPACE_RGB);
     }
@@ -2411,9 +2411,9 @@ void RTDFactoryAdcOffsetBAdjustRight(void)
 void RTDFactoryAdcOffsetBAdjustExit(void)
 {
 #if(_VGA_SUPPORT == _ON)
-    if(g_usBackupValue != g_stAdcData.pucAdcOffsetMSB[_AUTO_BLUE_CHANNEL])
+    if(d_g_usBackupValue != g_stAdcData.pucAdcOffsetMSB[_AUTO_BLUE_CHANNEL])
     {
-        g_stAdcData.pucAdcOffsetMSB[_AUTO_BLUE_CHANNEL] = g_usBackupValue;
+        g_stAdcData.pucAdcOffsetMSB[_AUTO_BLUE_CHANNEL] = d_g_usBackupValue;
         RTDFactoryOsdDispNumber(_MENU_FACTORY_OFFSET_BLUE_ADJ, g_stAdcData.pucAdcOffsetMSB[_AUTO_BLUE_CHANNEL]);
     }
     RTDFactoryOsdFuncSelectItem(_MENU_FACTORY_OFFSET_BLUE);
@@ -2617,7 +2617,7 @@ void RTDFactoryPatternExit(void)
 //============= Hot Plug DP DC Off High=======================
 void RTDFactoryHotPlugDPDCOffHighEnter(void)
 {
-    g_usBackupValue = UserCommonNVRamGetSystemData(_DP_HOT_PLUG_DC_OFF_HIGH);
+    d_g_usBackupValue = UserCommonNVRamGetSystemData(_DP_HOT_PLUG_DC_OFF_HIGH);
     RTDFactoryOsdFuncSelectItem(_MENU_FACTORY_HOT_PLUG_DP_DC_OFF_HIGH_ON_OFF);
 }
 void RTDFactoryHotPlugDPDCOffHighLeft(void)
@@ -2638,7 +2638,7 @@ void RTDFactoryHotPlugDPDCOffHighExit(void)
 //============= Hot Plug HDMI Support=======================
 void RTDFactoryHotPlugHDMISupportEnter(void)
 {
-    g_usBackupValue = UserCommonNVRamGetSystemData(_HDMI_HOT_PLUG_SUPPORT);
+    d_g_usBackupValue = UserCommonNVRamGetSystemData(_HDMI_HOT_PLUG_SUPPORT);
     RTDFactoryOsdFuncSelectItem(_MENU_FACTORY_HOT_PLUG_HDMI_SUPPORT_ON_OFF);
 }
 void RTDFactoryHotPlugHDMISupportLeft(void)
@@ -2659,7 +2659,7 @@ void RTDFactoryHotPlugHDMISupportExit(void)
 //============= Hot Plug HDMI Support Time=======================
 void RTDFactoryHotPlugHDMISupportTimeEnter(void)
 {
-    g_usBackupValue = UserCommonNVRamGetSystemData(_HDMI_HOT_PLUG_SUPPORT_TIME);
+    d_g_usBackupValue = UserCommonNVRamGetSystemData(_HDMI_HOT_PLUG_SUPPORT_TIME);
     RTDFactoryOsdFuncSelectItem(_MENU_FACTORY_HOT_PLUG_HDMI_SUPPORT_TIME_ADJ);
 }
 void RTDFactoryHotPlugHDMISupportTimeLeft(void)
@@ -2680,8 +2680,8 @@ void RTDFactoryHotPlugHDMISupportTimeExit(void)
 //============= DP Aux Mode=======================
 void RTDFactoryDPAuxModeEnter(void)
 {
-    g_usBackupValue = UserCommonNVRamGetSystemData(_DP_AUX_DIFF_MODE);
-    g_usAdjustValue = g_usBackupValue;
+    d_g_usBackupValue = UserCommonNVRamGetSystemData(_DP_AUX_DIFF_MODE);
+    d_g_usAdjustValue = d_g_usBackupValue;
     RTDFactoryOsdFuncSelectItem(_MENU_FACTORY_DP_AUX_MODE_ON_OFF);
 }
 
@@ -2703,7 +2703,7 @@ void RTDFactoryDPAuxModeExit(void)
 //============= OSD Double Size======================
 void RTDFactoryOsdDoubleEnter(void)
 {
-    g_usBackupValue = GET_OSD_DOUBLE_SIZE();
+    d_g_usBackupValue = GET_OSD_DOUBLE_SIZE();
     RTDFactoryOsdFuncSelectItem(_MENU_FACTORY_OSD_DOUBLE_SIZE_ON_OFF);
 }
 
@@ -2729,8 +2729,8 @@ void RTDFactoryOsdDoubleExit(void)
 void RTDFactoryColorimetrySeamlessEnter(void)
 {
 #if(_COLORIMETRY_SEAMLESS_CHANGE_SUPPORT == _ON)
-    g_usBackupValue = UserCommonNVRamGetSystemData(_COLORIMETRY_SEAMLESS_CHANGE);
-    g_usAdjustValue = g_usBackupValue;
+    d_g_usBackupValue = UserCommonNVRamGetSystemData(_COLORIMETRY_SEAMLESS_CHANGE);
+    d_g_usAdjustValue = d_g_usBackupValue;
     RTDFactoryOsdFuncSelectItem(_MENU_FACTORY_COLORIMETRY_SEAMLESS_ON_OFF);
 #endif
 }
@@ -2753,8 +2753,8 @@ void RTDFactoryColorimetrySeamlessExit(void)
 
 void RTDFactoryDPAuxSettingEnter(void)
 {
-    g_usBackupValue = UserCommonNVRamGetSystemData(_DP_AUX_ADJR_SETTING);
-    g_usAdjustValue = g_usBackupValue;
+    d_g_usBackupValue = UserCommonNVRamGetSystemData(_DP_AUX_ADJR_SETTING);
+    d_g_usAdjustValue = d_g_usBackupValue;
 
     if(UserCommonNVRamGetSystemData(_DP_AUX_DIFF_MODE) == _TRUE)
     {
@@ -2781,7 +2781,7 @@ void RTDFactoryDPAuxSettingExit(void)
 
 void RTDFactoryDPIrqHpdEnter(void)
 {
-    g_usBackupValue = g_usAdjustValue = UserCommonNVRamGetSystemData(_DP_IRQ_TIME);
+    d_g_usBackupValue = d_g_usAdjustValue = UserCommonNVRamGetSystemData(_DP_IRQ_TIME);
     RTDFactoryOsdFuncSelectItem(_MENU_FACTORY_DP_IRQ_TIME_ADJ);
 }
 void RTDFactoryDPIrqHpdLeft(void)
@@ -2849,12 +2849,12 @@ void RTDFactoryBgOnOffEnter(void)
 
 void RTDFactoryBgOnOffLeft(void)
 {
-    RTDFactoryOsdDispNumber(_MENU_FACTORY_BG_ON_OFF, g_usAdjustValue);
+    RTDFactoryOsdDispNumber(_MENU_FACTORY_BG_ON_OFF, d_g_usAdjustValue);
 }
 
 void RTDFactoryBgOnOffRight(void)
 {
-    RTDFactoryOsdDispNumber(_MENU_FACTORY_BG_ON_OFF, g_usAdjustValue);
+    RTDFactoryOsdDispNumber(_MENU_FACTORY_BG_ON_OFF, d_g_usAdjustValue);
 }
 
 void RTDFactoryBgOnOffExit(void)
@@ -2933,12 +2933,12 @@ void RTDFactorySSCAdjustEnter(void)
 
 void RTDFactorySSCAdjustLeft(void)
 {
-    RTDFactoryOsdDispNumber(_MENU_FACTORY_SSC_ADJ, g_usAdjustValue);
+    RTDFactoryOsdDispNumber(_MENU_FACTORY_SSC_ADJ, d_g_usAdjustValue);
 }
 
 void RTDFactorySSCAdjustRight(void)
 {
-    RTDFactoryOsdDispNumber(_MENU_FACTORY_SSC_ADJ, g_usAdjustValue);
+    RTDFactoryOsdDispNumber(_MENU_FACTORY_SSC_ADJ, d_g_usAdjustValue);
 }
 
 void RTDFactorySSCAdjustExit(void)
@@ -2954,12 +2954,12 @@ void RTDFactoryLVDSClockCurrentAdjustEnter(void)
 
 void RTDFactoryLVDSClockCurrentAdjustLeft(void)
 {
-    RTDFactoryOsdDispNumber(_MENU_FACTORY_LVDS_CLOCK_CURRENT_ADJ, g_usAdjustValue);
+    RTDFactoryOsdDispNumber(_MENU_FACTORY_LVDS_CLOCK_CURRENT_ADJ, d_g_usAdjustValue);
 }
 
 void RTDFactoryLVDSClockCurrentAdjustRight(void)
 {
-    RTDFactoryOsdDispNumber(_MENU_FACTORY_LVDS_CLOCK_CURRENT_ADJ, g_usAdjustValue);
+    RTDFactoryOsdDispNumber(_MENU_FACTORY_LVDS_CLOCK_CURRENT_ADJ, d_g_usAdjustValue);
 }
 
 void RTDFactoryLVDSClockCurrentAdjustExit(void)
@@ -2975,12 +2975,12 @@ void RTDFactoryLVDSDataCurrentAdjustEnter(void)
 
 void RTDFactoryLVDSDataCurrentAdjustLeft(void)
 {
-    RTDFactoryOsdDispNumber(_MENU_FACTORY_LVDS_DATA_CURRENT_ADJ, g_usAdjustValue);
+    RTDFactoryOsdDispNumber(_MENU_FACTORY_LVDS_DATA_CURRENT_ADJ, d_g_usAdjustValue);
 }
 
 void RTDFactoryLVDSDataCurrentAdjustRight(void)
 {
-    RTDFactoryOsdDispNumber(_MENU_FACTORY_LVDS_DATA_CURRENT_ADJ, g_usAdjustValue);
+    RTDFactoryOsdDispNumber(_MENU_FACTORY_LVDS_DATA_CURRENT_ADJ, d_g_usAdjustValue);
 }
 
 void RTDFactoryLVDSDataCurrentAdjustExit(void)
@@ -2992,7 +2992,7 @@ void RTDFactoryLVDSDataCurrentAdjustExit(void)
 //============= Hot Plug DP DC Off High Adjust=======================
 void RTDFactoryHotPlugDPDCOffHighAdjustEnter(void)
 {
-    if(g_usBackupValue != UserCommonNVRamGetSystemData(_DP_HOT_PLUG_DC_OFF_HIGH))
+    if(d_g_usBackupValue != UserCommonNVRamGetSystemData(_DP_HOT_PLUG_DC_OFF_HIGH))
     {
         SET_OSD_EVENT_MESSAGE(_OSDEVENT_SAVE_NVRAM_SYSTEMDATA_MSG);
     }
@@ -3008,9 +3008,9 @@ void RTDFactoryHotPlugDPDCOffHighAdjustRight(void)
 }
 void RTDFactoryHotPlugDPDCOffHighAdjustExit(void)
 {
-    if(g_usBackupValue != UserCommonNVRamGetSystemData(_DP_HOT_PLUG_DC_OFF_HIGH))
+    if(d_g_usBackupValue != UserCommonNVRamGetSystemData(_DP_HOT_PLUG_DC_OFF_HIGH))
     {
-        UserCommonNVRamSetSystemData(_DP_HOT_PLUG_DC_OFF_HIGH, g_usBackupValue);
+        UserCommonNVRamSetSystemData(_DP_HOT_PLUG_DC_OFF_HIGH, d_g_usBackupValue);
         RTDFactoryOsdDispNumber(_MENU_FACTORY_HOT_PLUG_DP_DC_OFF_HIGH_ON_OFF, UserCommonNVRamGetSystemData(_DP_HOT_PLUG_DC_OFF_HIGH));
     }
     RTDFactoryOsdFuncSelectItem(_MENU_FACTORY_HOT_PLUG_DP_DC_OFF_HIGH);
@@ -3019,7 +3019,7 @@ void RTDFactoryHotPlugDPDCOffHighAdjustExit(void)
 //============= Hot Plug HDMI Support Adjus=======================
 void RTDFactoryHotPlugHDMISupportAdjustEnter(void)
 {
-    if(g_usBackupValue != UserCommonNVRamGetSystemData(_HDMI_HOT_PLUG_SUPPORT))
+    if(d_g_usBackupValue != UserCommonNVRamGetSystemData(_HDMI_HOT_PLUG_SUPPORT))
     {
         SET_OSD_EVENT_MESSAGE(_OSDEVENT_SAVE_NVRAM_SYSTEMDATA_MSG);
     }
@@ -3035,9 +3035,9 @@ void RTDFactoryHotPlugHDMISupportAdjustRight(void)
 }
 void RTDFactoryHotPlugHDMISupportAdjustExit(void)
 {
-    if(g_usBackupValue != UserCommonNVRamGetSystemData(_HDMI_HOT_PLUG_SUPPORT))
+    if(d_g_usBackupValue != UserCommonNVRamGetSystemData(_HDMI_HOT_PLUG_SUPPORT))
     {
-        UserCommonNVRamSetSystemData(_HDMI_HOT_PLUG_SUPPORT, g_usBackupValue);
+        UserCommonNVRamSetSystemData(_HDMI_HOT_PLUG_SUPPORT, d_g_usBackupValue);
         RTDFactoryOsdDispNumber(_MENU_FACTORY_HOT_PLUG_HDMI_SUPPORT_ON_OFF, UserCommonNVRamGetSystemData(_HDMI_HOT_PLUG_SUPPORT));
     }
     RTDFactoryOsdFuncSelectItem(_MENU_FACTORY_HOT_PLUG_HDMI_SUPPORT);
@@ -3046,7 +3046,7 @@ void RTDFactoryHotPlugHDMISupportAdjustExit(void)
 //============= Hot Plug HDMI Support Time Adjust=======================
 void RTDFactoryHotPlugHDMISupportTimeAdjustEnter(void)
 {
-    if(g_usBackupValue != UserCommonNVRamGetSystemData(_HDMI_HOT_PLUG_SUPPORT_TIME))
+    if(d_g_usBackupValue != UserCommonNVRamGetSystemData(_HDMI_HOT_PLUG_SUPPORT_TIME))
     {
         SET_OSD_EVENT_MESSAGE(_OSDEVENT_SAVE_NVRAM_SYSTEMDATA_MSG);
     }
@@ -3062,9 +3062,9 @@ void RTDFactoryHotPlugHDMISupportTimeAdjustRight(void)
 }
 void RTDFactoryHotPlugHDMISupportTimeAdjustExit(void)
 {
-    if(g_usBackupValue != UserCommonNVRamGetSystemData(_HDMI_HOT_PLUG_SUPPORT_TIME))
+    if(d_g_usBackupValue != UserCommonNVRamGetSystemData(_HDMI_HOT_PLUG_SUPPORT_TIME))
     {
-        UserCommonNVRamSetSystemData(_HDMI_HOT_PLUG_SUPPORT_TIME, g_usBackupValue);
+        UserCommonNVRamSetSystemData(_HDMI_HOT_PLUG_SUPPORT_TIME, d_g_usBackupValue);
         RTDFactoryOsdDispNumber(_MENU_FACTORY_HOT_PLUG_HDMI_SUPPORT_TIME_ADJ, UserCommonNVRamGetSystemData(_HDMI_HOT_PLUG_SUPPORT_TIME));
     }
     RTDFactoryOsdFuncSelectItem(_MENU_FACTORY_HOT_PLUG_HDMI_SUPPORT_TIME);
@@ -3073,7 +3073,7 @@ void RTDFactoryHotPlugHDMISupportTimeAdjustExit(void)
 //============= DP/HDMI FREESYNC  Adjust=======================
 void RTDFactoryDPAuxModeAdjustEnter(void)
 {
-    if(g_usBackupValue != g_usAdjustValue)
+    if(d_g_usBackupValue != d_g_usAdjustValue)
     {
         SET_OSD_EVENT_MESSAGE(_OSDEVENT_SAVE_NVRAM_SYSTEMDATA_MSG);
     }
@@ -3082,26 +3082,26 @@ void RTDFactoryDPAuxModeAdjustEnter(void)
 
 void RTDFactoryDPAuxModeAdjustLeft(void)
 {
-    RTDFactoryOsdDispNumber(_MENU_FACTORY_DP_AUX_MODE_ON_OFF, g_usAdjustValue);
+    RTDFactoryOsdDispNumber(_MENU_FACTORY_DP_AUX_MODE_ON_OFF, d_g_usAdjustValue);
 }
 
 void RTDFactoryDPAuxModeAdjustRight(void)
 {
-    RTDFactoryOsdDispNumber(_MENU_FACTORY_DP_AUX_MODE_ON_OFF, g_usAdjustValue);
+    RTDFactoryOsdDispNumber(_MENU_FACTORY_DP_AUX_MODE_ON_OFF, d_g_usAdjustValue);
 }
 
 void RTDFactoryDPAuxModeAdjustExit(void)
 {
-    if(g_usBackupValue != g_usAdjustValue)
+    if(d_g_usBackupValue != d_g_usAdjustValue)
     {
-        RTDFactoryOsdDispNumber(_MENU_FACTORY_DP_AUX_MODE_ON_OFF, g_usBackupValue);
+        RTDFactoryOsdDispNumber(_MENU_FACTORY_DP_AUX_MODE_ON_OFF, d_g_usBackupValue);
     }
     RTDFactoryOsdFuncSelectItem(_MENU_FACTORY_DP_AUX_MODE);
 }
 //============= OSD Double Size=======================
 void RTDFactoryOsdDoubleAdjustEnter(void)
 {
-    if(g_usBackupValue != GET_OSD_DOUBLE_SIZE())
+    if(d_g_usBackupValue != GET_OSD_DOUBLE_SIZE())
     {
         SET_OSD_NVRAM_DOUBLE_SIZE(GET_OSD_DOUBLE_SIZE());
         SET_OSD_EVENT_MESSAGE(_OSDEVENT_SAVE_NVRAM_OSDUSERDATA_MSG);
@@ -3121,7 +3121,7 @@ void RTDFactoryOsdDoubleAdjustRight(void)
 
 void RTDFactoryOsdDoubleAdjustExit(void)
 {
-    if(g_usBackupValue != GET_OSD_DOUBLE_SIZE())
+    if(d_g_usBackupValue != GET_OSD_DOUBLE_SIZE())
     {
         RTDFactoryOsdDispNumber(_MENU_FACTORY_OSD_DOUBLE_SIZE_ON_OFF, GET_OSD_DOUBLE_SIZE());
     }
@@ -3130,7 +3130,7 @@ void RTDFactoryOsdDoubleAdjustExit(void)
 //============= COLORIMETRY SEAMLESS=======================
 void RTDFactoryColorimetrySeamlessAdjustEnter(void)
 {
-    if(g_usBackupValue != UserCommonNVRamGetSystemData(_COLORIMETRY_SEAMLESS_CHANGE))
+    if(d_g_usBackupValue != UserCommonNVRamGetSystemData(_COLORIMETRY_SEAMLESS_CHANGE))
     {
         SET_OSD_EVENT_MESSAGE(_OSDEVENT_SAVE_NVRAM_OSDUSERDATA_MSG);
     }
@@ -3139,12 +3139,12 @@ void RTDFactoryColorimetrySeamlessAdjustEnter(void)
 
 void RTDFactoryColorimetrySeamlessAdjustLeft(void)
 {
-    RTDFactoryOsdDispNumber(_MENU_FACTORY_COLORIMETRY_SEAMLESS_ON_OFF, g_usAdjustValue);
+    RTDFactoryOsdDispNumber(_MENU_FACTORY_COLORIMETRY_SEAMLESS_ON_OFF, d_g_usAdjustValue);
 }
 
 void RTDFactoryColorimetrySeamlessAdjustRight(void)
 {
-    RTDFactoryOsdDispNumber(_MENU_FACTORY_COLORIMETRY_SEAMLESS_ON_OFF, g_usAdjustValue);
+    RTDFactoryOsdDispNumber(_MENU_FACTORY_COLORIMETRY_SEAMLESS_ON_OFF, d_g_usAdjustValue);
 }
 
 void RTDFactoryColorimetrySeamlessAdjustExit(void)
@@ -3155,7 +3155,7 @@ void RTDFactoryColorimetrySeamlessAdjustExit(void)
 
 void RTDFactoryDPAuxAdjustEnter(void)
 {
-    if(g_usBackupValue != g_usAdjustValue)
+    if(d_g_usBackupValue != d_g_usAdjustValue)
     {
         SET_OSD_EVENT_MESSAGE(_OSDEVENT_SAVE_NVRAM_SYSTEMDATA_MSG);
     }
@@ -3163,17 +3163,17 @@ void RTDFactoryDPAuxAdjustEnter(void)
 }
 void RTDFactoryDPAuxAdjustLeft(void)
 {
-    RTDFactoryOsdDispNumber(_MENU_FACTORY_DP_AUX_SETTING_ADJR, g_usAdjustValue);
+    RTDFactoryOsdDispNumber(_MENU_FACTORY_DP_AUX_SETTING_ADJR, d_g_usAdjustValue);
 }
 void RTDFactoryDPAuxAdjustRight(void)
 {
-    RTDFactoryOsdDispNumber(_MENU_FACTORY_DP_AUX_SETTING_ADJR, g_usAdjustValue);
+    RTDFactoryOsdDispNumber(_MENU_FACTORY_DP_AUX_SETTING_ADJR, d_g_usAdjustValue);
 }
 void RTDFactoryDPAuxAdjustExit(void)
 {
-    if(g_usBackupValue != g_usAdjustValue)
+    if(d_g_usBackupValue != d_g_usAdjustValue)
     {
-        RTDFactoryOsdDispNumber(_MENU_FACTORY_DP_AUX_SETTING_ADJR, g_usBackupValue);
+        RTDFactoryOsdDispNumber(_MENU_FACTORY_DP_AUX_SETTING_ADJR, d_g_usBackupValue);
     }
     RTDFactoryOsdFuncSelectItem(_MENU_FACTORY_DP_AUX_SETTING);
 }
@@ -3181,9 +3181,9 @@ void RTDFactoryDPAuxAdjustExit(void)
 
 void RTDFactoryDPIrqHpdAdjEnter(void)
 {
-    if(g_usBackupValue != g_usAdjustValue)
+    if(d_g_usBackupValue != d_g_usAdjustValue)
     {
-        UserCommonNVRamSetSystemData(_DP_IRQ_TIME, g_usAdjustValue);
+        UserCommonNVRamSetSystemData(_DP_IRQ_TIME, d_g_usAdjustValue);
 
         SET_OSD_EVENT_MESSAGE(_OSDEVENT_SAVE_NVRAM_SYSTEMDATA_MSG);
     }
@@ -3192,15 +3192,15 @@ void RTDFactoryDPIrqHpdAdjEnter(void)
 }
 void RTDFactoryDPIrqHpdAdjLeft(void)
 {
-    RTDFactoryOsdDispNumber(_MENU_FACTORY_DP_IRQ_TIME_ADJ, g_usAdjustValue);
+    RTDFactoryOsdDispNumber(_MENU_FACTORY_DP_IRQ_TIME_ADJ, d_g_usAdjustValue);
 }
 void RTDFactoryDPIrqHpdAdjRight(void)
 {
-    RTDFactoryOsdDispNumber(_MENU_FACTORY_DP_IRQ_TIME_ADJ, g_usAdjustValue);
+    RTDFactoryOsdDispNumber(_MENU_FACTORY_DP_IRQ_TIME_ADJ, d_g_usAdjustValue);
 }
 void RTDFactoryDPIrqHpdAdjExit(void)
 {
-    if(g_usAdjustValue != UserCommonNVRamGetSystemData(_DP_IRQ_TIME))
+    if(d_g_usAdjustValue != UserCommonNVRamGetSystemData(_DP_IRQ_TIME))
     {
         RTDFactoryOsdDispNumber(_MENU_FACTORY_DP_IRQ_TIME_ADJ, UserCommonNVRamGetSystemData(_DP_IRQ_TIME));
     }

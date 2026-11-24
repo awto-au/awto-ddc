@@ -32,61 +32,61 @@
 //--------------------------------------------------
 // Macro of TMDS Video Detecting Flag
 //--------------------------------------------------
-#define GET_TMDS_RX3_RGBHV_DETECTING()                  (g_stTMDSRx3CtrlInfo.b1RGBHVDetecting)
-#define SET_TMDS_RX3_RGBHV_DETECTING()                  (g_stTMDSRx3CtrlInfo.b1RGBHVDetecting = _TRUE)
-#define CLR_TMDS_RX3_RGBHV_DETECTING()                  (g_stTMDSRx3CtrlInfo.b1RGBHVDetecting = _FALSE)
+#define GET_TMDS_RX3_RGBHV_DETECTING()                  (d_g_stTMDSRx3CtrlInfo.b1RGBHVDetecting)
+#define SET_TMDS_RX3_RGBHV_DETECTING()                  (d_g_stTMDSRx3CtrlInfo.b1RGBHVDetecting = _TRUE)
+#define CLR_TMDS_RX3_RGBHV_DETECTING()                  (d_g_stTMDSRx3CtrlInfo.b1RGBHVDetecting = _FALSE)
 
 //--------------------------------------------------
 // Macro of Packet Detecting Flag
 //--------------------------------------------------
-#define GET_HDMI_RX3_PACKET_DETECTING()                 (g_stTMDSRx3CtrlInfo.b1PacketDetecting)
-#define SET_HDMI_RX3_PACKET_DETECTING()                 (g_stTMDSRx3CtrlInfo.b1PacketDetecting = _TRUE)
-#define CLR_HDMI_RX3_PACKET_DETECTING()                 (g_stTMDSRx3CtrlInfo.b1PacketDetecting = _FALSE)
+#define GET_HDMI_RX3_PACKET_DETECTING()                 (d_g_stTMDSRx3CtrlInfo.b1PacketDetecting)
+#define SET_HDMI_RX3_PACKET_DETECTING()                 (d_g_stTMDSRx3CtrlInfo.b1PacketDetecting = _TRUE)
+#define CLR_HDMI_RX3_PACKET_DETECTING()                 (d_g_stTMDSRx3CtrlInfo.b1PacketDetecting = _FALSE)
 
 //--------------------------------------------------
 // Macro of AVI Info Frame Received Flag
 //--------------------------------------------------
-#define GET_HDMI_RX3_AVI_INFO_FRAME_RECEIVED()          (g_stTMDSRx3CtrlInfo.b1AVIInfoFrameReceived)
-#define SET_HDMI_RX3_AVI_INFO_FRAME_RECEIVED()          (g_stTMDSRx3CtrlInfo.b1AVIInfoFrameReceived = _TRUE)
-#define CLR_HDMI_RX3_AVI_INFO_FRAME_RECEIVED()          (g_stTMDSRx3CtrlInfo.b1AVIInfoFrameReceived = _FALSE)
+#define GET_HDMI_RX3_AVI_INFO_FRAME_RECEIVED()          (d_g_stTMDSRx3CtrlInfo.b1AVIInfoFrameReceived)
+#define SET_HDMI_RX3_AVI_INFO_FRAME_RECEIVED()          (d_g_stTMDSRx3CtrlInfo.b1AVIInfoFrameReceived = _TRUE)
+#define CLR_HDMI_RX3_AVI_INFO_FRAME_RECEIVED()          (d_g_stTMDSRx3CtrlInfo.b1AVIInfoFrameReceived = _FALSE)
 
 //--------------------------------------------------
 // Macro of GCP Received Flag
 //--------------------------------------------------
-#define GET_HDMI_RX3_GCP_RECEIVED()                     (g_stTMDSRx3CtrlInfo.b1GCPReceived)
-#define SET_HDMI_RX3_GCP_RECEIVED()                     (g_stTMDSRx3CtrlInfo.b1GCPReceived = _TRUE)
-#define CLR_HDMI_RX3_GCP_RECEIVED()                     (g_stTMDSRx3CtrlInfo.b1GCPReceived = _FALSE)
+#define GET_HDMI_RX3_GCP_RECEIVED()                     (d_g_stTMDSRx3CtrlInfo.b1GCPReceived)
+#define SET_HDMI_RX3_GCP_RECEIVED()                     (d_g_stTMDSRx3CtrlInfo.b1GCPReceived = _TRUE)
+#define CLR_HDMI_RX3_GCP_RECEIVED()                     (d_g_stTMDSRx3CtrlInfo.b1GCPReceived = _FALSE)
 
 //--------------------------------------------------
 // Macro of HDR Received Flag
 //--------------------------------------------------
 #if(_HDMI_HDR10_SUPPORT == _ON)
-#define GET_HDMI_RX3_HDR10_INFO_FRAME_RECEIVED()        (g_stTMDSRx3CtrlInfo.b1HDRInfoFrameReceived)
-#define SET_HDMI_RX3_HDR10_INFO_FRAME_RECEIVED()        (g_stTMDSRx3CtrlInfo.b1HDRInfoFrameReceived = _TRUE)
-#define CLR_HDMI_RX3_HDR10_INFO_FRAME_RECEIVED()        (g_stTMDSRx3CtrlInfo.b1HDRInfoFrameReceived = _FALSE)
+#define GET_HDMI_RX3_HDR10_INFO_FRAME_RECEIVED()        (d_g_stTMDSRx3CtrlInfo.b1HDRInfoFrameReceived)
+#define SET_HDMI_RX3_HDR10_INFO_FRAME_RECEIVED()        (d_g_stTMDSRx3CtrlInfo.b1HDRInfoFrameReceived = _TRUE)
+#define CLR_HDMI_RX3_HDR10_INFO_FRAME_RECEIVED()        (d_g_stTMDSRx3CtrlInfo.b1HDRInfoFrameReceived = _FALSE)
 #endif
 
 //--------------------------------------------------
 // Macro of the Fiset Time of Z0 Asserted
 //--------------------------------------------------
-#define GET_TMDS_RX3_Z0_ASSERTED()                      (g_stTMDSRx3CtrlInfo.b1Z0Asserted)
-#define SET_TMDS_RX3_Z0_ASSERTED()                      (g_stTMDSRx3CtrlInfo.b1Z0Asserted = _TRUE)
-#define CLR_TMDS_RX3_Z0_ASSERTED()                      (g_stTMDSRx3CtrlInfo.b1Z0Asserted = _FALSE)
+#define GET_TMDS_RX3_Z0_ASSERTED()                      (d_g_stTMDSRx3CtrlInfo.b1Z0Asserted)
+#define SET_TMDS_RX3_Z0_ASSERTED()                      (d_g_stTMDSRx3CtrlInfo.b1Z0Asserted = _TRUE)
+#define CLR_TMDS_RX3_Z0_ASSERTED()                      (d_g_stTMDSRx3CtrlInfo.b1Z0Asserted = _FALSE)
 
 //--------------------------------------------------
 // Macro of HPD Evnet Trigger
 //--------------------------------------------------
-#define GET_TMDS_RX3_HPD_TRIGGER_EVENT()                (g_stTMDSRx3CtrlInfo.b3HPDTriggerEvent)
-#define SET_TMDS_RX3_HPD_TRIGGER_EVENT(x)               (g_stTMDSRx3CtrlInfo.b3HPDTriggerEvent = (x))
-#define CLR_TMDS_RX3_HPD_TRIGGER_EVENT()                (g_stTMDSRx3CtrlInfo.b3HPDTriggerEvent = _TMDS_HPD_NONE)
+#define GET_TMDS_RX3_HPD_TRIGGER_EVENT()                (d_g_stTMDSRx3CtrlInfo.b3HPDTriggerEvent)
+#define SET_TMDS_RX3_HPD_TRIGGER_EVENT(x)               (d_g_stTMDSRx3CtrlInfo.b3HPDTriggerEvent = (x))
+#define CLR_TMDS_RX3_HPD_TRIGGER_EVENT()                (d_g_stTMDSRx3CtrlInfo.b3HPDTriggerEvent = _TMDS_HPD_NONE)
 
 #if(_D3_HDMI_2_0_SUPPORT == _ON)
 //--------------------------------------------------
 // Macro of HDMI 2.0 Format Reset Check Wait
 //--------------------------------------------------
-#define GET_TMDS_RX3_HDMI_2_0_FORMAT_RESET_WAITING()    (g_stTMDSRx3CtrlInfo.b1HDMI2FormatResetWaiting)
-#define SET_TMDS_RX3_HDMI_2_0_FORMAT_RESET_WAITING()    (g_stTMDSRx3CtrlInfo.b1HDMI2FormatResetWaiting = _TRUE)
-#define CLR_TMDS_RX3_HDMI_2_0_FORMAT_RESET_WAITING()    (g_stTMDSRx3CtrlInfo.b1HDMI2FormatResetWaiting = _FALSE)
+#define GET_TMDS_RX3_HDMI_2_0_FORMAT_RESET_WAITING()    (d_g_stTMDSRx3CtrlInfo.b1HDMI2FormatResetWaiting)
+#define SET_TMDS_RX3_HDMI_2_0_FORMAT_RESET_WAITING()    (d_g_stTMDSRx3CtrlInfo.b1HDMI2FormatResetWaiting = _TRUE)
+#define CLR_TMDS_RX3_HDMI_2_0_FORMAT_RESET_WAITING()    (d_g_stTMDSRx3CtrlInfo.b1HDMI2FormatResetWaiting = _FALSE)
 
 //--------------------------------------------------
 // Macro of HDMI 2.0 Read Request Enable Flag
@@ -120,7 +120,7 @@
 //****************************************************************************
 // VARIABLE EXTERN
 //****************************************************************************
-extern StructTMDSCtrlInfo g_stTMDSRx3CtrlInfo;
+extern StructTMDSCtrlInfo __data d_g_stTMDSRx3CtrlInfo;  // awto: IRAM direct, hot variable (#335)
 extern volatile bit d_g_bTMDSRx3HDMI2RREnable;
 extern volatile bit d_isr_g_bTMDSRx3HDMI2HighSpeedMode;
 extern volatile bit d_isr_g_bTMDSRx3TMDSPhySet;

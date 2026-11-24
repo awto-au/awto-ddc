@@ -43,8 +43,8 @@
 //****************************************************************************
 StructOsdInfo g_stOsdInfo;
 
-WORD g_usAdjustValue;
-WORD g_usBackupValue;
+WORD __data d_g_usAdjustValue;  // awto: IRAM direct, hot variable (#335)
+WORD __data d_g_usBackupValue;  // awto: IRAM direct, hot variable (#335)
 
 //****************************************************************************
 // FUNCTION DECLARATIONS
@@ -253,7 +253,7 @@ void RTDOsdEventMsgProc(void)
             ScalerTimerCancelTimerEvent(_USER_TIMER_EVENT_OSD_SHOW_NO_SIGNAL);
             SET_OSD_STATE(_MENU_HOTKEY_SOURCE);
             OsdFuncSetOsdItemFlag();
-            g_usBackupValue = GET_OSD_INPUT_PORT_OSD_ITEM();
+            d_g_usBackupValue = GET_OSD_INPUT_PORT_OSD_ITEM();
             AwtoSourceOpen(AWTO_SEL_EV_OPEN_CARD);
 
             UserCommonInterfacePanelPowerAction(AWTO_PNL_REQ(_BACKLIGHT_ON, AWTO_PNL_BY_OSD_SOURCE));
@@ -469,10 +469,10 @@ void MenuAdvanceTypeCModeD0(void)
         case _MENU_KEY_MESSAGE:
 
 #if(_D0_DP_TYPE_C_CONNECTOR_SUPPORT == _ON)
-            g_usBackupValue = GET_OSD_D0_TYPE_C_U3_MODE();
+            d_g_usBackupValue = GET_OSD_D0_TYPE_C_U3_MODE();
             SET_OSD_STATE(_MENU_ADVANCE_D0_TYPE_C_MODE_ADJUST);
             OsdDispMainMenuCursor(GET_OSD_STATE(), GET_OSD_STATE_PREVIOUS(), _INSUBSET);
-            OsdDispMainMenuOptionSetting(_OPTION_TYPE_C_MODE_SELECT, _SELECT, g_usBackupValue);
+            OsdDispMainMenuOptionSetting(_OPTION_TYPE_C_MODE_SELECT, _SELECT, d_g_usBackupValue);
 #endif
             break;
 
@@ -512,11 +512,11 @@ void MenuAdvanceTypeCModeD1(void)
         case _MENU_KEY_MESSAGE:
 
 #if(_D1_DP_TYPE_C_CONNECTOR_SUPPORT == _ON)
-            g_usBackupValue = GET_OSD_D1_TYPE_C_U3_MODE();
+            d_g_usBackupValue = GET_OSD_D1_TYPE_C_U3_MODE();
 
             SET_OSD_STATE(_MENU_ADVANCE_D1_TYPE_C_MODE_ADJUST);
             OsdDispMainMenuCursor(GET_OSD_STATE(), GET_OSD_STATE_PREVIOUS(), _INSUBSET);
-            OsdDispMainMenuOptionSetting(_OPTION_TYPE_C_MODE_SELECT, _SELECT, g_usBackupValue);
+            OsdDispMainMenuOptionSetting(_OPTION_TYPE_C_MODE_SELECT, _SELECT, d_g_usBackupValue);
 #endif
 
             break;
@@ -594,10 +594,10 @@ void MenuAdvanceTypeCModeD6(void)
     {
         case _MENU_KEY_MESSAGE:
 #if(_D6_DP_TYPE_C_CONNECTOR_SUPPORT == _ON)
-            g_usBackupValue = GET_OSD_D6_TYPE_C_U3_MODE();
+            d_g_usBackupValue = GET_OSD_D6_TYPE_C_U3_MODE();
             SET_OSD_STATE(_MENU_ADVANCE_D6_TYPE_C_MODE_ADJUST);
             OsdDispMainMenuCursor(GET_OSD_STATE(), GET_OSD_STATE_PREVIOUS(), _INSUBSET);
-            OsdDispMainMenuOptionSetting(_OPTION_TYPE_C_MODE_SELECT, _SELECT, g_usBackupValue);
+            OsdDispMainMenuOptionSetting(_OPTION_TYPE_C_MODE_SELECT, _SELECT, d_g_usBackupValue);
 #endif
 
             break;
@@ -636,7 +636,7 @@ void MenuAdvanceHdrMode(void)
     switch(GET_KEYMESSAGE())
     {
         case _MENU_KEY_MESSAGE:
-            g_usBackupValue = GET_OSD_HDR_MODE();
+            d_g_usBackupValue = GET_OSD_HDR_MODE();
 
             SET_OSD_STATE(_MENU_ADVANCE_HDR_MODE_ADJUST);
             OsdDispMainMenuCursor(GET_OSD_STATE(), GET_OSD_STATE_PREVIOUS(), _INSUBSET);
@@ -674,7 +674,7 @@ void MenuAdvanceHdrDarkEnhanceOnOff(void)
     switch(GET_KEYMESSAGE())
     {
         case _MENU_KEY_MESSAGE:
-            g_usBackupValue = GET_OSD_DARK_ENHANCE_STATUS();
+            d_g_usBackupValue = GET_OSD_DARK_ENHANCE_STATUS();
             SET_OSD_STATE(_MENU_ADVANCE_HDR_DARK_ENHANCE_ONOFF_ADJUST);
             OsdDispMainMenuCursor(GET_OSD_STATE(), GET_OSD_STATE_PREVIOUS(), _INSUBSET);
             OsdDispMainMenuOptionSetting(_OPTION_ON_OFF, _SELECT, GET_OSD_DARK_ENHANCE_STATUS());
@@ -711,7 +711,7 @@ void MenuAdvanceHdrSharpnessOnOff(void)
     switch(GET_KEYMESSAGE())
     {
         case _MENU_KEY_MESSAGE:
-            g_usBackupValue = GET_OSD_HDR_SHARPNESS();
+            d_g_usBackupValue = GET_OSD_HDR_SHARPNESS();
             SET_OSD_STATE(_MENU_ADVANCE_HDR_SHARPNESS_ONOFF_ADJUST);
             OsdDispMainMenuCursor(GET_OSD_STATE(), GET_OSD_STATE_PREVIOUS(), _INSUBSET);
             OsdDispMainMenuOptionSetting(_OPTION_ON_OFF, _SELECT, GET_OSD_HDR_SHARPNESS());
@@ -748,7 +748,7 @@ void MenuAdvanceHdrContrast(void)
     switch(GET_KEYMESSAGE())
     {
         case _MENU_KEY_MESSAGE:
-            g_usBackupValue = GET_OSD_HDR_CONTRAST();
+            d_g_usBackupValue = GET_OSD_HDR_CONTRAST();
             SET_OSD_STATE(_MENU_ADVANCE_HDR_CONTRAST_ADJUST);
             OsdDispMainMenuCursor(GET_OSD_STATE(), GET_OSD_STATE_PREVIOUS(), _INSUBSET);
             OsdWindowSlider(ROW(_SLIDER_0_ROW), COL(_SLIDER_0_COL), GET_OSD_HDR_CONTRAST(), _SLIDER_0, _SELECT);
@@ -802,7 +802,7 @@ void MenuAdvanceHdrColorEnhance(void)
     switch(GET_KEYMESSAGE())
     {
         case _MENU_KEY_MESSAGE:
-            g_usBackupValue = GET_OSD_HDR_COLOR_ENHANCE();
+            d_g_usBackupValue = GET_OSD_HDR_COLOR_ENHANCE();
 
             SET_OSD_STATE(_MENU_ADVANCE_HDR_COLOR_ENHANCE_ADJUST);
             OsdDispMainMenuCursor(GET_OSD_STATE(), GET_OSD_STATE_PREVIOUS(), _INSUBSET);
@@ -847,7 +847,7 @@ void MenuAdvanceHdrLightEnhance(void)
     switch(GET_KEYMESSAGE())
     {
         case _MENU_KEY_MESSAGE:
-            g_usBackupValue = GET_OSD_HDR_LIGHT_ENHANCE();
+            d_g_usBackupValue = GET_OSD_HDR_LIGHT_ENHANCE();
 
             SET_OSD_STATE(_MENU_ADVANCE_HDR_LIGHT_ENHANCE_ADJUST);
             OsdDispMainMenuCursor(GET_OSD_STATE(), GET_OSD_STATE_PREVIOUS(), _INSUBSET);
@@ -898,53 +898,53 @@ void MenuAdvanceHDMIVersionAdjust(void)
     switch(GET_KEYMESSAGE())
     {
         case _MENU_KEY_MESSAGE:
-            switch(GET_PORT_TYPE(SysSourceGetInputPortType(_D0_INPUT_PORT + g_usAdjustValue)))
+            switch(GET_PORT_TYPE(SysSourceGetInputPortType(_D0_INPUT_PORT + d_g_usAdjustValue)))
             {
                 case _PORT_HDMI20:
                 case _PORT_HDMI:
                 case _PORT_MHL:
 
 #if(_D0_HDMI_MULTI_EDID_SUPPORT == _OFF)
-                    if(g_usAdjustValue == 0)
+                    if(d_g_usAdjustValue == 0)
                     {
                         break;
                     }
 #endif
 #if(_D1_HDMI_MULTI_EDID_SUPPORT == _OFF)
-                    if(g_usAdjustValue == 1)
+                    if(d_g_usAdjustValue == 1)
                     {
                         break;
                     }
 #endif
 #if(_D2_HDMI_MULTI_EDID_SUPPORT == _OFF)
-                    if(g_usAdjustValue == 2)
+                    if(d_g_usAdjustValue == 2)
                     {
                         break;
                     }
 #endif
 #if(_D3_HDMI_MULTI_EDID_SUPPORT == _OFF)
-                    if(g_usAdjustValue == 3)
+                    if(d_g_usAdjustValue == 3)
                     {
                         break;
                     }
 #endif
 #if(_D4_HDMI_MULTI_EDID_SUPPORT == _OFF)
-                    if(g_usAdjustValue == 4)
+                    if(d_g_usAdjustValue == 4)
                     {
                         break;
                     }
 #endif
 #if(_D5_HDMI_MULTI_EDID_SUPPORT == _OFF)
-                    if(g_usAdjustValue == 5)
+                    if(d_g_usAdjustValue == 5)
                     {
                         break;
                     }
 #endif
 
                     SET_OSD_STATE(_MENU_ADVANCE_DX_HDMI_VERSION_ADJUST);
-                    OsdDispMainMenuItemSelection((g_usAdjustValue % 4), _OSD_PRE_SELECT);
-                    g_usBackupValue = OsdFuncGetHdmiPortVersion(_D0_INPUT_PORT + g_usAdjustValue);// UserCommonNVRamGetSystemData(_EDID_D0_SELECT + );
-                    OsdDispMainMenuOptionSetting(_OPTION_HDMI_VERSIONS_TYPE, _SELECT, g_usBackupValue);
+                    OsdDispMainMenuItemSelection((d_g_usAdjustValue % 4), _OSD_PRE_SELECT);
+                    d_g_usBackupValue = OsdFuncGetHdmiPortVersion(_D0_INPUT_PORT + d_g_usAdjustValue);// UserCommonNVRamGetSystemData(_EDID_D0_SELECT + );
+                    OsdDispMainMenuOptionSetting(_OPTION_HDMI_VERSIONS_TYPE, _SELECT, d_g_usBackupValue);
                     break;
 
                 default:
@@ -954,59 +954,59 @@ void MenuAdvanceHDMIVersionAdjust(void)
             break;
 
         case _RIGHT_KEY_MESSAGE:
-            if(g_usAdjustValue == 3)
+            if(d_g_usAdjustValue == 3)
             {
                 OsdDispMainMenuIconPage(_UP, _ICON_PAGE_EDID_PORT_1);
             }
 
-            if(g_usAdjustValue < 5) // D0-D5
+            if(d_g_usAdjustValue < 5) // D0-D5
             {
-                g_usAdjustValue++;
+                d_g_usAdjustValue++;
                 OsdDispMainMenuCursor(GET_OSD_STATE(), GET_OSD_STATE_PREVIOUS(), _OUTSUBSET);
                 OsdDispMainMenuIconPage(_DOWN, _ICON_PAGE_CLEAR);
-                switch(GET_PORT_TYPE(SysSourceGetInputPortType(_D0_INPUT_PORT + g_usAdjustValue)))
+                switch(GET_PORT_TYPE(SysSourceGetInputPortType(_D0_INPUT_PORT + d_g_usAdjustValue)))
                 {
                     case _PORT_HDMI20:
                     case _PORT_HDMI:
                     case _PORT_MHL:
 #if(_D0_HDMI_MULTI_EDID_SUPPORT == _OFF)
-                        if(g_usAdjustValue == 0)
+                        if(d_g_usAdjustValue == 0)
                         {
                             break;
                         }
 #endif
 #if(_D1_HDMI_MULTI_EDID_SUPPORT == _OFF)
-                        if(g_usAdjustValue == 1)
+                        if(d_g_usAdjustValue == 1)
                         {
                             break;
                         }
 #endif
 #if(_D2_HDMI_MULTI_EDID_SUPPORT == _OFF)
-                        if(g_usAdjustValue == 2)
+                        if(d_g_usAdjustValue == 2)
                         {
                             break;
                         }
 #endif
 #if(_D3_HDMI_MULTI_EDID_SUPPORT == _OFF)
-                        if(g_usAdjustValue == 3)
+                        if(d_g_usAdjustValue == 3)
                         {
                             break;
                         }
 #endif
 #if(_D4_HDMI_MULTI_EDID_SUPPORT == _OFF)
-                        if(g_usAdjustValue == 4)
+                        if(d_g_usAdjustValue == 4)
                         {
                             break;
                         }
 #endif
 #if(_D5_HDMI_MULTI_EDID_SUPPORT == _OFF)
-                        if(g_usAdjustValue == 5)
+                        if(d_g_usAdjustValue == 5)
                         {
                             break;
                         }
 #endif
                         OsdDispMainMenuIconPage(_DOWN, _ICON_PAGE_HDMI_VERSIONS );
-                        OsdDispMainMenuOptionSetting(_OPTION_HDMI_VERSIONS_TYPE, _UNSELECT, OsdFuncGetHdmiPortVersion(_D0_INPUT_PORT + g_usAdjustValue));
+                        OsdDispMainMenuOptionSetting(_OPTION_HDMI_VERSIONS_TYPE, _UNSELECT, OsdFuncGetHdmiPortVersion(_D0_INPUT_PORT + d_g_usAdjustValue));
                         break;
                     default:
                         break;
@@ -1016,58 +1016,58 @@ void MenuAdvanceHDMIVersionAdjust(void)
             break;
 
         case _LEFT_KEY_MESSAGE:
-            if(g_usAdjustValue == 4)
+            if(d_g_usAdjustValue == 4)
             {
                 OsdDispMainMenuIconPage(_UP, _ICON_PAGE_EDID_PORT_0);
             }
-            if(g_usAdjustValue > 0) // D0-D6
+            if(d_g_usAdjustValue > 0) // D0-D6
             {
-                g_usAdjustValue--;
+                d_g_usAdjustValue--;
                 OsdDispMainMenuCursor(GET_OSD_STATE(), GET_OSD_STATE_PREVIOUS(), _OUTSUBSET);
                 OsdDispMainMenuIconPage(_DOWN, _ICON_PAGE_CLEAR);
-                switch(GET_PORT_TYPE(SysSourceGetInputPortType(_D0_INPUT_PORT + g_usAdjustValue)))
+                switch(GET_PORT_TYPE(SysSourceGetInputPortType(_D0_INPUT_PORT + d_g_usAdjustValue)))
                 {
                     case _PORT_HDMI20:
                     case _PORT_HDMI:
                     case _PORT_MHL:
 #if(_D0_HDMI_MULTI_EDID_SUPPORT == _OFF)
-                        if(g_usAdjustValue == 0)
+                        if(d_g_usAdjustValue == 0)
                         {
                             break;
                         }
 #endif
 #if(_D1_HDMI_MULTI_EDID_SUPPORT == _OFF)
-                        if(g_usAdjustValue == 1)
+                        if(d_g_usAdjustValue == 1)
                         {
                             break;
                         }
 #endif
 #if(_D2_HDMI_MULTI_EDID_SUPPORT == _OFF)
-                        if(g_usAdjustValue == 2)
+                        if(d_g_usAdjustValue == 2)
                         {
                             break;
                         }
 #endif
 #if(_D3_HDMI_MULTI_EDID_SUPPORT == _OFF)
-                        if(g_usAdjustValue == 3)
+                        if(d_g_usAdjustValue == 3)
                         {
                             break;
                         }
 #endif
 #if(_D4_HDMI_MULTI_EDID_SUPPORT == _OFF)
-                        if(g_usAdjustValue == 4)
+                        if(d_g_usAdjustValue == 4)
                         {
                             break;
                         }
 #endif
 #if(_D5_HDMI_MULTI_EDID_SUPPORT == _OFF)
-                        if(g_usAdjustValue == 5)
+                        if(d_g_usAdjustValue == 5)
                         {
                             break;
                         }
 #endif
                         OsdDispMainMenuIconPage(_DOWN, _ICON_PAGE_HDMI_VERSIONS );
-                        OsdDispMainMenuOptionSetting(_OPTION_HDMI_VERSIONS_TYPE, _UNSELECT, OsdFuncGetHdmiPortVersion(_D0_INPUT_PORT + g_usAdjustValue));
+                        OsdDispMainMenuOptionSetting(_OPTION_HDMI_VERSIONS_TYPE, _UNSELECT, OsdFuncGetHdmiPortVersion(_D0_INPUT_PORT + d_g_usAdjustValue));
                         break;
                     default:
                         break;
@@ -1090,21 +1090,21 @@ void MenuAdvanceDxHDMIVersionAdjust(void)
     {
         case _MENU_KEY_MESSAGE:
             SET_OSD_STATE(_MENU_ADVANCE_HDMI_VERSION_ADJUST);
-            OsdDispMainMenuItemSelection((g_usAdjustValue % 4), _OSD_SELECT);
-            switch(GET_PORT_TYPE(SysSourceGetInputPortType(_D0_INPUT_PORT + g_usAdjustValue)))
+            OsdDispMainMenuItemSelection((d_g_usAdjustValue % 4), _OSD_SELECT);
+            switch(GET_PORT_TYPE(SysSourceGetInputPortType(_D0_INPUT_PORT + d_g_usAdjustValue)))
             {
                 case _PORT_HDMI20:
                 case _PORT_HDMI:
                 case _PORT_MHL:
-                    OsdDispMainMenuOptionSetting(_OPTION_HDMI_VERSIONS_TYPE, _UNSELECT, g_usBackupValue);
-                    if(g_usBackupValue != OsdFuncGetHdmiPortVersion(_D0_INPUT_PORT + g_usAdjustValue))
+                    OsdDispMainMenuOptionSetting(_OPTION_HDMI_VERSIONS_TYPE, _UNSELECT, d_g_usBackupValue);
+                    if(d_g_usBackupValue != OsdFuncGetHdmiPortVersion(_D0_INPUT_PORT + d_g_usAdjustValue))
                     {
-                        //UserCommonNVRamSetSystemData(_EDID_D0_SELECT + g_usAdjustValue, g_usBackupValue);
-                        OsdFuncSetHdmiPortVersion(_D0_INPUT_PORT + g_usAdjustValue, g_usBackupValue);
+                        //UserCommonNVRamSetSystemData(_EDID_D0_SELECT + d_g_usAdjustValue, d_g_usBackupValue);
+                        OsdFuncSetHdmiPortVersion(_D0_INPUT_PORT + d_g_usAdjustValue, d_g_usBackupValue);
                         SET_OSD_EVENT_MESSAGE(_OSDEVENT_SAVE_NVRAM_OSDUSERDATA_MSG);
 
                         // Add EDID DDCRAM Switch & HPD event
-                        UserCommonInterfaceHDMISwitchEdid(_D0_INPUT_PORT + g_usAdjustValue, UserInterfaceGetMultiHdmiEdidIndex(_D0_INPUT_PORT + g_usAdjustValue));
+                        UserCommonInterfaceHDMISwitchEdid(_D0_INPUT_PORT + d_g_usAdjustValue, UserInterfaceGetMultiHdmiEdidIndex(_D0_INPUT_PORT + d_g_usAdjustValue));
                     }
                     break;
                 default:
@@ -1114,16 +1114,16 @@ void MenuAdvanceDxHDMIVersionAdjust(void)
             break;
 
         case _RIGHT_KEY_MESSAGE:
-            switch(GET_PORT_TYPE(SysSourceGetInputPortType(_D0_INPUT_PORT + g_usAdjustValue)))
+            switch(GET_PORT_TYPE(SysSourceGetInputPortType(_D0_INPUT_PORT + d_g_usAdjustValue)))
             {
                 case _PORT_HDMI20:
                 case _PORT_HDMI:
                 case _PORT_MHL:
-                    if(g_usBackupValue < _EDID_INDEX_2)
+                    if(d_g_usBackupValue < _EDID_INDEX_2)
                     {
-                        g_usBackupValue++;
+                        d_g_usBackupValue++;
                     }
-                    OsdDispMainMenuOptionSetting(_OPTION_HDMI_VERSIONS_TYPE, _SELECT, g_usBackupValue);
+                    OsdDispMainMenuOptionSetting(_OPTION_HDMI_VERSIONS_TYPE, _SELECT, d_g_usBackupValue);
                     break;
                 default:
                     break;
@@ -1133,16 +1133,16 @@ void MenuAdvanceDxHDMIVersionAdjust(void)
             break;
 
         case _LEFT_KEY_MESSAGE:
-            switch(GET_PORT_TYPE(SysSourceGetInputPortType(_D0_INPUT_PORT + g_usAdjustValue)))
+            switch(GET_PORT_TYPE(SysSourceGetInputPortType(_D0_INPUT_PORT + d_g_usAdjustValue)))
             {
                 case _PORT_HDMI20:
                 case _PORT_HDMI:
                 case _PORT_MHL:
-                    if(g_usBackupValue > _EDID_INDEX_0)
+                    if(d_g_usBackupValue > _EDID_INDEX_0)
                     {
-                        g_usBackupValue--;
+                        d_g_usBackupValue--;
                     }
-                    OsdDispMainMenuOptionSetting(_OPTION_HDMI_VERSIONS_TYPE, _SELECT, g_usBackupValue);
+                    OsdDispMainMenuOptionSetting(_OPTION_HDMI_VERSIONS_TYPE, _SELECT, d_g_usBackupValue);
                     break;
                 default:
                     break;
@@ -1153,13 +1153,13 @@ void MenuAdvanceDxHDMIVersionAdjust(void)
         case _EXIT_KEY_MESSAGE:
 
             SET_OSD_STATE(_MENU_ADVANCE_HDMI_VERSION_ADJUST);
-            OsdDispMainMenuItemSelection((g_usAdjustValue % 4), _OSD_SELECT);
-            switch(GET_PORT_TYPE(SysSourceGetInputPortType(_D0_INPUT_PORT + g_usAdjustValue)))
+            OsdDispMainMenuItemSelection((d_g_usAdjustValue % 4), _OSD_SELECT);
+            switch(GET_PORT_TYPE(SysSourceGetInputPortType(_D0_INPUT_PORT + d_g_usAdjustValue)))
             {
                 case _PORT_HDMI20:
                 case _PORT_HDMI:
                 case _PORT_MHL:
-                    OsdDispMainMenuOptionSetting(_OPTION_HDMI_VERSIONS_TYPE, _UNSELECT, OsdFuncGetHdmiPortVersion(_D0_INPUT_PORT + g_usAdjustValue));
+                    OsdDispMainMenuOptionSetting(_OPTION_HDMI_VERSIONS_TYPE, _UNSELECT, OsdFuncGetHdmiPortVersion(_D0_INPUT_PORT + d_g_usAdjustValue));
                     break;
                 default:
                     break;
@@ -1204,7 +1204,7 @@ void MenuAdvanceSdrToHdrAdjust(void)
     switch(GET_KEYMESSAGE())
     {
         case _MENU_KEY_MESSAGE:
-            if(g_usBackupValue != GET_OSD_SDR_TO_HDR())
+            if(d_g_usBackupValue != GET_OSD_SDR_TO_HDR())
             {
                 SET_OSD_EVENT_MESSAGE(_OSDEVENT_SAVE_NVRAM_OSDUSERDATA_MSG);
             }
@@ -1231,10 +1231,10 @@ void MenuAdvanceSdrToHdrAdjust(void)
             break;
 
         case _EXIT_KEY_MESSAGE:
-            if(g_usBackupValue != GET_OSD_SDR_TO_HDR())
+            if(d_g_usBackupValue != GET_OSD_SDR_TO_HDR())
             {
-                g_usAdjustValue = g_usBackupValue;
-                SET_OSD_SDR_TO_HDR(g_usAdjustValue);
+                d_g_usAdjustValue = d_g_usBackupValue;
+                SET_OSD_SDR_TO_HDR(d_g_usAdjustValue);
             }
 
             OsdDispAdvanceMenuReDraw(_LOW);
@@ -1253,7 +1253,7 @@ void MenuAdvanceMBRMode(void)
     switch(GET_KEYMESSAGE())
     {
         case _MENU_KEY_MESSAGE:
-            g_usBackupValue = GET_OSD_MBR_STATUS();
+            d_g_usBackupValue = GET_OSD_MBR_STATUS();
             OsdDispMainMenuCursor(GET_OSD_STATE(), GET_OSD_STATE_PREVIOUS(), _INSUBSET);
             SET_OSD_STATE(_MENU_ADVANCE_MBR_MODE_ADJUST);
             OsdDispMainMenuOptionSetting(_OPTION_MBR_MODE, _SELECT, GET_OSD_MBR_STATUS());
@@ -1264,9 +1264,9 @@ void MenuAdvanceMBRMode(void)
             OsdDispMainMenuCursor(GET_OSD_STATE(), GET_OSD_STATE_PREVIOUS(), _OUTSUBSET);
             OsdDispMainMenuIconPage(_DOWN, _ICON_PAGE_CLEAR);
             OsdDispClearSelectColor(_DOWN);
-            g_usAdjustValue = UserCommonAdjustRealValueToPercent(GET_OSD_MBR_DUTY(), 100, 0, 50);
-            OsdWindowSlider(ROW(_SLIDER_0_ROW), COL(_SLIDER_0_COL), g_usAdjustValue, _SLIDER_0, _UNSELECT);
-            OsdPropShowNumber(ROW(_OSD_NUMBER_1_ROW), COL(_OSD_NUMBER_1_COL), g_usAdjustValue, (_ALIGN_LEFT | _FORCE_SHOW_NUMBER_OFF | _SHOW_3), _PFONT_PAGE_ITEM_1, _OSD_NUMBER_UNSTLECT_COLOR);
+            d_g_usAdjustValue = UserCommonAdjustRealValueToPercent(GET_OSD_MBR_DUTY(), 100, 0, 50);
+            OsdWindowSlider(ROW(_SLIDER_0_ROW), COL(_SLIDER_0_COL), d_g_usAdjustValue, _SLIDER_0, _UNSELECT);
+            OsdPropShowNumber(ROW(_OSD_NUMBER_1_ROW), COL(_OSD_NUMBER_1_COL), d_g_usAdjustValue, (_ALIGN_LEFT | _FORCE_SHOW_NUMBER_OFF | _SHOW_3), _PFONT_PAGE_ITEM_1, _OSD_NUMBER_UNSTLECT_COLOR);
             break;
 
         case _LEFT_KEY_MESSAGE:
@@ -1289,10 +1289,10 @@ void MenuAdvanceMBRDuty(void)
     switch(GET_KEYMESSAGE())
     {
         case _MENU_KEY_MESSAGE:
-            g_usBackupValue = GET_OSD_MBR_DUTY();
+            d_g_usBackupValue = GET_OSD_MBR_DUTY();
             OsdDispMainMenuCursor(GET_OSD_STATE(), GET_OSD_STATE_PREVIOUS(), _INSUBSET);
             SET_OSD_STATE(_MENU_ADVANCE_MBR_DUTY_ADJUST);
-            OsdWindowSlider(ROW(_SLIDER_0_ROW), COL(_SLIDER_0_COL), g_usAdjustValue, _SLIDER_0, _SELECT);
+            OsdWindowSlider(ROW(_SLIDER_0_ROW), COL(_SLIDER_0_COL), d_g_usAdjustValue, _SLIDER_0, _SELECT);
             break;
 
         case _RIGHT_KEY_MESSAGE:
@@ -1300,9 +1300,9 @@ void MenuAdvanceMBRDuty(void)
             OsdDispMainMenuCursor(GET_OSD_STATE(), GET_OSD_STATE_PREVIOUS(), _OUTSUBSET);
             OsdDispMainMenuIconPage(_DOWN, _ICON_PAGE_CLEAR);
             OsdDispClearSelectColor(_DOWN);
-            g_usAdjustValue = UserCommonAdjustRealValueToPercent(GET_OSD_MBR_POSITION(), 100, 0, 50);
-            OsdWindowSlider(ROW(_SLIDER_0_ROW), COL(_SLIDER_0_COL), g_usAdjustValue, _SLIDER_0, _UNSELECT);
-            OsdPropShowNumber(ROW(_OSD_NUMBER_1_ROW), COL(_OSD_NUMBER_1_COL), g_usAdjustValue, (_ALIGN_LEFT | _FORCE_SHOW_NUMBER_OFF | _SHOW_3), _PFONT_PAGE_ITEM_1, _OSD_NUMBER_UNSTLECT_COLOR);
+            d_g_usAdjustValue = UserCommonAdjustRealValueToPercent(GET_OSD_MBR_POSITION(), 100, 0, 50);
+            OsdWindowSlider(ROW(_SLIDER_0_ROW), COL(_SLIDER_0_COL), d_g_usAdjustValue, _SLIDER_0, _UNSELECT);
+            OsdPropShowNumber(ROW(_OSD_NUMBER_1_ROW), COL(_OSD_NUMBER_1_COL), d_g_usAdjustValue, (_ALIGN_LEFT | _FORCE_SHOW_NUMBER_OFF | _SHOW_3), _PFONT_PAGE_ITEM_1, _OSD_NUMBER_UNSTLECT_COLOR);
             break;
 
         case _LEFT_KEY_MESSAGE:
@@ -1328,10 +1328,10 @@ void MenuAdvanceMBRPosition(void)
     switch(GET_KEYMESSAGE())
     {
         case _MENU_KEY_MESSAGE:
-            g_usBackupValue = GET_OSD_MBR_POSITION();
+            d_g_usBackupValue = GET_OSD_MBR_POSITION();
             OsdDispMainMenuCursor(GET_OSD_STATE(), GET_OSD_STATE_PREVIOUS(), _INSUBSET);
             SET_OSD_STATE(_MENU_ADVANCE_MBR_POSITION_ADJUST);
-            OsdWindowSlider(ROW(_SLIDER_0_ROW), COL(_SLIDER_0_COL), g_usAdjustValue, _SLIDER_0, _SELECT);
+            OsdWindowSlider(ROW(_SLIDER_0_ROW), COL(_SLIDER_0_COL), d_g_usAdjustValue, _SLIDER_0, _SELECT);
             break;
 
         case _RIGHT_KEY_MESSAGE:
@@ -1341,9 +1341,9 @@ void MenuAdvanceMBRPosition(void)
             OsdDispMainMenuCursor(GET_OSD_STATE(), GET_OSD_STATE_PREVIOUS(), _OUTSUBSET);
             OsdDispMainMenuIconPage(_DOWN, _ICON_PAGE_CLEAR);
             OsdDispClearSelectColor(_DOWN);
-            g_usAdjustValue = UserCommonAdjustRealValueToPercent(GET_OSD_MBR_DUTY(), 100, 0, 50);
-            OsdWindowSlider(ROW(_SLIDER_0_ROW), COL(_SLIDER_0_COL), g_usAdjustValue, _SLIDER_0, _UNSELECT);
-            OsdPropShowNumber(ROW(_OSD_NUMBER_1_ROW), COL(_OSD_NUMBER_1_COL), g_usAdjustValue, (_ALIGN_LEFT | _FORCE_SHOW_NUMBER_OFF | _SHOW_3), _PFONT_PAGE_ITEM_1, _OSD_NUMBER_UNSTLECT_COLOR);
+            d_g_usAdjustValue = UserCommonAdjustRealValueToPercent(GET_OSD_MBR_DUTY(), 100, 0, 50);
+            OsdWindowSlider(ROW(_SLIDER_0_ROW), COL(_SLIDER_0_COL), d_g_usAdjustValue, _SLIDER_0, _UNSELECT);
+            OsdPropShowNumber(ROW(_OSD_NUMBER_1_ROW), COL(_OSD_NUMBER_1_COL), d_g_usAdjustValue, (_ALIGN_LEFT | _FORCE_SHOW_NUMBER_OFF | _SHOW_3), _PFONT_PAGE_ITEM_1, _OSD_NUMBER_UNSTLECT_COLOR);
             break;
 
         case _EXIT_KEY_MESSAGE:
@@ -1359,7 +1359,7 @@ void MenuAdvanceMBRModeAdjust(void)
     switch(GET_KEYMESSAGE())
     {
         case _MENU_KEY_MESSAGE:
-            if(g_usBackupValue != GET_OSD_MBR_STATUS())
+            if(d_g_usBackupValue != GET_OSD_MBR_STATUS())
             {
                 SET_OSD_EVENT_MESSAGE(_OSDEVENT_SAVE_NVRAM_OSDUSERDATA_MSG);
             }
@@ -1433,10 +1433,10 @@ void MenuAdvanceMBRModeAdjust(void)
             break;
 
         case _EXIT_KEY_MESSAGE:
-            if(g_usBackupValue != GET_OSD_MBR_STATUS())
+            if(d_g_usBackupValue != GET_OSD_MBR_STATUS())
             {
-                g_usAdjustValue = g_usBackupValue;
-                SET_OSD_MBR_STATUS(g_usAdjustValue);
+                d_g_usAdjustValue = d_g_usBackupValue;
+                SET_OSD_MBR_STATUS(d_g_usAdjustValue);
                 //switch
 
                 // Reset to display setting to re-set backlight parameters
@@ -1462,15 +1462,15 @@ void MenuAdvanceMBRDutyAdjust(void)
     switch(GET_KEYMESSAGE())
     {
         case _MENU_KEY_MESSAGE:
-            if(g_usBackupValue != GET_OSD_MBR_DUTY())
+            if(d_g_usBackupValue != GET_OSD_MBR_DUTY())
             {
                 SET_OSD_EVENT_MESSAGE(_OSDEVENT_SAVE_NVRAM_OSDUSERDATA_MSG);
             }
             SET_OSD_STATE(_MENU_ADVANCE_MBR_DUTY);
             OsdDispMainMenuCursor(GET_OSD_STATE(), GET_OSD_STATE_PREVIOUS(), _OUTSUBSET);
-            g_usAdjustValue = UserCommonAdjustRealValueToPercent(GET_OSD_MBR_DUTY(), _OSD_MBR_DUTY_MAX, _OSD_MBR_DUTY_MIN, _OSD_MBR_DUTY_CENTER);
-            OsdWindowSlider(ROW(_SLIDER_0_ROW), COL(_SLIDER_0_COL), g_usAdjustValue, _SLIDER_0, _UNSELECT);
-            OsdPropShowNumber(ROW(_OSD_NUMBER_1_ROW), COL(_OSD_NUMBER_1_COL), g_usAdjustValue, (_ALIGN_LEFT | _FORCE_SHOW_NUMBER_OFF | _SHOW_3), _PFONT_PAGE_ITEM_1, _OSD_NUMBER_UNSTLECT_COLOR);
+            d_g_usAdjustValue = UserCommonAdjustRealValueToPercent(GET_OSD_MBR_DUTY(), _OSD_MBR_DUTY_MAX, _OSD_MBR_DUTY_MIN, _OSD_MBR_DUTY_CENTER);
+            OsdWindowSlider(ROW(_SLIDER_0_ROW), COL(_SLIDER_0_COL), d_g_usAdjustValue, _SLIDER_0, _UNSELECT);
+            OsdPropShowNumber(ROW(_OSD_NUMBER_1_ROW), COL(_OSD_NUMBER_1_COL), d_g_usAdjustValue, (_ALIGN_LEFT | _FORCE_SHOW_NUMBER_OFF | _SHOW_3), _PFONT_PAGE_ITEM_1, _OSD_NUMBER_UNSTLECT_COLOR);
 
             break;
 
@@ -1491,10 +1491,10 @@ void MenuAdvanceMBRDutyAdjust(void)
             break;
 
         case _EXIT_KEY_MESSAGE:
-            if(g_usBackupValue != GET_OSD_MBR_DUTY())
+            if(d_g_usBackupValue != GET_OSD_MBR_DUTY())
             {
-                g_usAdjustValue = g_usBackupValue;
-                SET_OSD_MBR_DUTY(g_usAdjustValue);
+                d_g_usAdjustValue = d_g_usBackupValue;
+                SET_OSD_MBR_DUTY(d_g_usAdjustValue);
                 //insert Function call
                 if(GET_OSD_MBR_STATUS() == _OSD_MBR_USER_ENABLE)
                 {
@@ -1509,9 +1509,9 @@ void MenuAdvanceMBRDutyAdjust(void)
             }
             SET_OSD_STATE(_MENU_ADVANCE_MBR_DUTY);
             OsdDispMainMenuCursor(GET_OSD_STATE(), GET_OSD_STATE_PREVIOUS(), _OUTSUBSET);
-            g_usAdjustValue = UserCommonAdjustRealValueToPercent(GET_OSD_MBR_DUTY(), _OSD_MBR_DUTY_MAX, _OSD_MBR_DUTY_MIN, _OSD_MBR_DUTY_CENTER);
-            OsdWindowSlider(ROW(_SLIDER_0_ROW), COL(_SLIDER_0_COL), g_usAdjustValue, _SLIDER_0, _UNSELECT);
-            OsdPropShowNumber(ROW(_OSD_NUMBER_1_ROW), COL(_OSD_NUMBER_1_COL), g_usAdjustValue, (_ALIGN_LEFT | _FORCE_SHOW_NUMBER_OFF | _SHOW_3), _PFONT_PAGE_ITEM_1, _OSD_NUMBER_UNSTLECT_COLOR);
+            d_g_usAdjustValue = UserCommonAdjustRealValueToPercent(GET_OSD_MBR_DUTY(), _OSD_MBR_DUTY_MAX, _OSD_MBR_DUTY_MIN, _OSD_MBR_DUTY_CENTER);
+            OsdWindowSlider(ROW(_SLIDER_0_ROW), COL(_SLIDER_0_COL), d_g_usAdjustValue, _SLIDER_0, _UNSELECT);
+            OsdPropShowNumber(ROW(_OSD_NUMBER_1_ROW), COL(_OSD_NUMBER_1_COL), d_g_usAdjustValue, (_ALIGN_LEFT | _FORCE_SHOW_NUMBER_OFF | _SHOW_3), _PFONT_PAGE_ITEM_1, _OSD_NUMBER_UNSTLECT_COLOR);
             break;
 
         default:
@@ -1523,15 +1523,15 @@ void MenuAdvanceMBRPositionAdjust(void)
     switch(GET_KEYMESSAGE())
     {
         case _MENU_KEY_MESSAGE:
-            if(g_usBackupValue != GET_OSD_MBR_POSITION())
+            if(d_g_usBackupValue != GET_OSD_MBR_POSITION())
             {
                 SET_OSD_EVENT_MESSAGE(_OSDEVENT_SAVE_NVRAM_OSDUSERDATA_MSG);
             }
             SET_OSD_STATE(_MENU_ADVANCE_MBR_POSITION);
             OsdDispMainMenuCursor(GET_OSD_STATE(), GET_OSD_STATE_PREVIOUS(), _OUTSUBSET);
-            g_usAdjustValue = UserCommonAdjustRealValueToPercent(GET_OSD_MBR_POSITION(), _OSD_MBR_POS_MAX, _OSD_MBR_POS_MIN, _OSD_MBR_POS_CENTER);
-            OsdWindowSlider(ROW(_SLIDER_0_ROW), COL(_SLIDER_0_COL), g_usAdjustValue, _SLIDER_0, _UNSELECT);
-            OsdPropShowNumber(ROW(_OSD_NUMBER_1_ROW), COL(_OSD_NUMBER_1_COL), g_usAdjustValue, (_ALIGN_LEFT | _FORCE_SHOW_NUMBER_OFF | _SHOW_3), _PFONT_PAGE_ITEM_1, _OSD_NUMBER_UNSTLECT_COLOR);
+            d_g_usAdjustValue = UserCommonAdjustRealValueToPercent(GET_OSD_MBR_POSITION(), _OSD_MBR_POS_MAX, _OSD_MBR_POS_MIN, _OSD_MBR_POS_CENTER);
+            OsdWindowSlider(ROW(_SLIDER_0_ROW), COL(_SLIDER_0_COL), d_g_usAdjustValue, _SLIDER_0, _UNSELECT);
+            OsdPropShowNumber(ROW(_OSD_NUMBER_1_ROW), COL(_OSD_NUMBER_1_COL), d_g_usAdjustValue, (_ALIGN_LEFT | _FORCE_SHOW_NUMBER_OFF | _SHOW_3), _PFONT_PAGE_ITEM_1, _OSD_NUMBER_UNSTLECT_COLOR);
 
             break;
 
@@ -1552,10 +1552,10 @@ void MenuAdvanceMBRPositionAdjust(void)
             break;
 
         case _EXIT_KEY_MESSAGE:
-            if(g_usBackupValue != GET_OSD_MBR_POSITION())
+            if(d_g_usBackupValue != GET_OSD_MBR_POSITION())
             {
-                g_usAdjustValue = g_usBackupValue;
-                SET_OSD_MBR_POSITION(g_usAdjustValue);
+                d_g_usAdjustValue = d_g_usBackupValue;
+                SET_OSD_MBR_POSITION(d_g_usAdjustValue);
                 //insert Function call
                 if(GET_OSD_MBR_STATUS() == _OSD_MBR_USER_ENABLE)
                 {
@@ -1570,9 +1570,9 @@ void MenuAdvanceMBRPositionAdjust(void)
             }
             SET_OSD_STATE(_MENU_ADVANCE_MBR_POSITION);
             OsdDispMainMenuCursor(GET_OSD_STATE(), GET_OSD_STATE_PREVIOUS(), _OUTSUBSET);
-            g_usAdjustValue = UserCommonAdjustRealValueToPercent(GET_OSD_MBR_POSITION(), _OSD_MBR_POS_MAX, _OSD_MBR_POS_MIN, _OSD_MBR_POS_CENTER);
-            OsdWindowSlider(ROW(_SLIDER_0_ROW), COL(_SLIDER_0_COL), g_usAdjustValue, _SLIDER_0, _UNSELECT);
-            OsdPropShowNumber(ROW(_OSD_NUMBER_1_ROW), COL(_OSD_NUMBER_1_COL), g_usAdjustValue, (_ALIGN_LEFT | _FORCE_SHOW_NUMBER_OFF | _SHOW_3), _PFONT_PAGE_ITEM_1, _OSD_NUMBER_UNSTLECT_COLOR);
+            d_g_usAdjustValue = UserCommonAdjustRealValueToPercent(GET_OSD_MBR_POSITION(), _OSD_MBR_POS_MAX, _OSD_MBR_POS_MIN, _OSD_MBR_POS_CENTER);
+            OsdWindowSlider(ROW(_SLIDER_0_ROW), COL(_SLIDER_0_COL), d_g_usAdjustValue, _SLIDER_0, _UNSELECT);
+            OsdPropShowNumber(ROW(_OSD_NUMBER_1_ROW), COL(_OSD_NUMBER_1_COL), d_g_usAdjustValue, (_ALIGN_LEFT | _FORCE_SHOW_NUMBER_OFF | _SHOW_3), _PFONT_PAGE_ITEM_1, _OSD_NUMBER_UNSTLECT_COLOR);
             break;
 
         default:
@@ -1655,13 +1655,13 @@ void MenuAdvanceD0TypeCModeAdjust(void)
         case _MENU_KEY_MESSAGE:
 
 #if(_D0_DP_TYPE_C_CONNECTOR_SUPPORT == _ON)
-            if(g_usBackupValue != GET_OSD_D0_TYPE_C_U3_MODE())
+            if(d_g_usBackupValue != GET_OSD_D0_TYPE_C_U3_MODE())
             {
-                if(g_usBackupValue == _TYPE_C_U3_ON)
+                if(d_g_usBackupValue == _TYPE_C_U3_ON)
                 {
                     SET_OSD_D0_TYPE_C_U3_MODE(_TYPE_C_U3_ON);
                 }
-                else if(g_usBackupValue == _TYPE_C_U3_OFF)
+                else if(d_g_usBackupValue == _TYPE_C_U3_OFF)
                 {
                     SET_OSD_D0_TYPE_C_U3_MODE(_TYPE_C_U3_OFF);
                 }
@@ -1671,7 +1671,7 @@ void MenuAdvanceD0TypeCModeAdjust(void)
             }
             SET_OSD_STATE(_MENU_ADVANCE_TYPE_C_MODE_D0);
             OsdDispMainMenuCursor(GET_OSD_STATE(), GET_OSD_STATE_PREVIOUS(), _OUTSUBSET);
-            OsdDispMainMenuOptionSetting(_OPTION_TYPE_C_MODE_SELECT, _UNSELECT, g_usBackupValue);
+            OsdDispMainMenuOptionSetting(_OPTION_TYPE_C_MODE_SELECT, _UNSELECT, d_g_usBackupValue);
 #endif
 
             break;
@@ -1679,16 +1679,16 @@ void MenuAdvanceD0TypeCModeAdjust(void)
         case _RIGHT_KEY_MESSAGE:
         case _LEFT_KEY_MESSAGE:
 
-            if(g_usBackupValue == _TYPE_C_U3_ON)
+            if(d_g_usBackupValue == _TYPE_C_U3_ON)
             {
-                g_usBackupValue = _TYPE_C_U3_OFF;
+                d_g_usBackupValue = _TYPE_C_U3_OFF;
             }
             else
             {
-                g_usBackupValue = _TYPE_C_U3_ON;
+                d_g_usBackupValue = _TYPE_C_U3_ON;
             }
 
-            OsdDispMainMenuOptionSetting(_OPTION_TYPE_C_MODE_SELECT, _SELECT, g_usBackupValue);
+            OsdDispMainMenuOptionSetting(_OPTION_TYPE_C_MODE_SELECT, _SELECT, d_g_usBackupValue);
             break;
 
         case _EXIT_KEY_MESSAGE:
@@ -1713,9 +1713,9 @@ void MenuAdvanceD1TypeCModeAdjust(void)
         case _MENU_KEY_MESSAGE:
 
 #if(_D1_DP_TYPE_C_CONNECTOR_SUPPORT == _ON)
-            if(g_usBackupValue != GET_OSD_D1_TYPE_C_U3_MODE())
+            if(d_g_usBackupValue != GET_OSD_D1_TYPE_C_U3_MODE())
             {
-                if(g_usBackupValue == _TYPE_C_U3_ON)
+                if(d_g_usBackupValue == _TYPE_C_U3_ON)
                 {
                     SET_OSD_D1_TYPE_C_U3_MODE(_TYPE_C_U3_ON);
                 }
@@ -1731,23 +1731,23 @@ void MenuAdvanceD1TypeCModeAdjust(void)
 
             SET_OSD_STATE(_MENU_ADVANCE_TYPE_C_MODE_D1);
             OsdDispMainMenuCursor(GET_OSD_STATE(), GET_OSD_STATE_PREVIOUS(), _OUTSUBSET);
-            OsdDispMainMenuOptionSetting(_OPTION_TYPE_C_MODE_SELECT, _UNSELECT, g_usBackupValue);
+            OsdDispMainMenuOptionSetting(_OPTION_TYPE_C_MODE_SELECT, _UNSELECT, d_g_usBackupValue);
 #endif
 
             break;
 
         case _RIGHT_KEY_MESSAGE:
         case _LEFT_KEY_MESSAGE:
-            if(g_usBackupValue == _TYPE_C_U3_ON)
+            if(d_g_usBackupValue == _TYPE_C_U3_ON)
             {
-                g_usBackupValue = _TYPE_C_U3_OFF;
+                d_g_usBackupValue = _TYPE_C_U3_OFF;
             }
             else
             {
-                g_usBackupValue = _TYPE_C_U3_ON;
+                d_g_usBackupValue = _TYPE_C_U3_ON;
             }
 
-            OsdDispMainMenuOptionSetting(_OPTION_TYPE_C_MODE_SELECT, _SELECT, g_usBackupValue);
+            OsdDispMainMenuOptionSetting(_OPTION_TYPE_C_MODE_SELECT, _SELECT, d_g_usBackupValue);
             break;
 
         case _EXIT_KEY_MESSAGE:
@@ -1777,15 +1777,15 @@ void MenuAdvanceD2TypeCModeAdjust(void)
 
         case _RIGHT_KEY_MESSAGE:
         case _LEFT_KEY_MESSAGE:
-            if(g_usBackupValue == _TYPE_C_U3_ON)
+            if(d_g_usBackupValue == _TYPE_C_U3_ON)
             {
-                g_usBackupValue = _TYPE_C_U3_OFF;
+                d_g_usBackupValue = _TYPE_C_U3_OFF;
             }
             else
             {
-                g_usBackupValue = _TYPE_C_U3_ON;
+                d_g_usBackupValue = _TYPE_C_U3_ON;
             }
-            OsdDispMainMenuOptionSetting(_OPTION_TYPE_C_MODE_SELECT, _SELECT, g_usBackupValue);
+            OsdDispMainMenuOptionSetting(_OPTION_TYPE_C_MODE_SELECT, _SELECT, d_g_usBackupValue);
             break;
 
         case _EXIT_KEY_MESSAGE:
@@ -1807,9 +1807,9 @@ void MenuAdvanceD6TypeCModeAdjust(void)
         case _MENU_KEY_MESSAGE:
 
 #if(_D6_DP_TYPE_C_CONNECTOR_SUPPORT == _ON)
-            if(g_usBackupValue != GET_OSD_D6_TYPE_C_U3_MODE())
+            if(d_g_usBackupValue != GET_OSD_D6_TYPE_C_U3_MODE())
             {
-                if(g_usBackupValue == _TYPE_C_U3_ON)
+                if(d_g_usBackupValue == _TYPE_C_U3_ON)
                 {
                     SET_OSD_D6_TYPE_C_U3_MODE(_TYPE_C_U3_ON);
                 }
@@ -1823,22 +1823,22 @@ void MenuAdvanceD6TypeCModeAdjust(void)
             }
             SET_OSD_STATE(_MENU_ADVANCE_TYPE_C_MODE_D6);
             OsdDispMainMenuCursor(GET_OSD_STATE(), GET_OSD_STATE_PREVIOUS(), _OUTSUBSET);
-            OsdDispMainMenuOptionSetting(_OPTION_TYPE_C_MODE_SELECT, _UNSELECT, g_usBackupValue);
+            OsdDispMainMenuOptionSetting(_OPTION_TYPE_C_MODE_SELECT, _UNSELECT, d_g_usBackupValue);
 #endif
 
             break;
 
         case _RIGHT_KEY_MESSAGE:
         case _LEFT_KEY_MESSAGE:
-            if(g_usBackupValue == _TYPE_C_U3_ON)
+            if(d_g_usBackupValue == _TYPE_C_U3_ON)
             {
-                g_usBackupValue = _TYPE_C_U3_OFF;
+                d_g_usBackupValue = _TYPE_C_U3_OFF;
             }
             else
             {
-                g_usBackupValue = _TYPE_C_U3_ON;
+                d_g_usBackupValue = _TYPE_C_U3_ON;
             }
-            OsdDispMainMenuOptionSetting(_OPTION_TYPE_C_MODE_SELECT, _SELECT, g_usBackupValue);
+            OsdDispMainMenuOptionSetting(_OPTION_TYPE_C_MODE_SELECT, _SELECT, d_g_usBackupValue);
             break;
 
         case _EXIT_KEY_MESSAGE:
@@ -1862,10 +1862,10 @@ void MenuAdvanceHdrModeAdjust(void)
     switch(GET_KEYMESSAGE())
     {
         case _MENU_KEY_MESSAGE:
-            if(g_usBackupValue != GET_OSD_HDR_MODE())
+            if(d_g_usBackupValue != GET_OSD_HDR_MODE())
             {
-                if(((g_usBackupValue == _HDR10_MODE_OFF) && (GET_OSD_HDR_MODE() != _HDR10_MODE_OFF)) ||
-                   ((g_usBackupValue != _HDR10_MODE_OFF) && (GET_OSD_HDR_MODE() == _HDR10_MODE_OFF)))
+                if(((d_g_usBackupValue == _HDR10_MODE_OFF) && (GET_OSD_HDR_MODE() != _HDR10_MODE_OFF)) ||
+                   ((d_g_usBackupValue != _HDR10_MODE_OFF) && (GET_OSD_HDR_MODE() == _HDR10_MODE_OFF)))
                 {
 #if(_EDID_HDR10_AUTO_SWITCH == _ON)
 
@@ -1914,10 +1914,10 @@ void MenuAdvanceHdrModeAdjust(void)
             break;
 
         case _EXIT_KEY_MESSAGE:
-            if(g_usBackupValue != GET_OSD_HDR_MODE())
+            if(d_g_usBackupValue != GET_OSD_HDR_MODE())
             {
-                g_usAdjustValue = g_usBackupValue;
-                SET_OSD_HDR_MODE(g_usAdjustValue);
+                d_g_usAdjustValue = d_g_usBackupValue;
+                SET_OSD_HDR_MODE(d_g_usAdjustValue);
 
                 UserCommonHDRAdjust(_HDR_FLOW_OSD_MODE_CHANGE);
             }
@@ -1938,7 +1938,7 @@ void MenuAdvanceHdrDarkEnhanceOnOffAdjust(void)
     switch(GET_KEYMESSAGE())
     {
         case _MENU_KEY_MESSAGE:
-            if(g_usBackupValue != GET_OSD_DARK_ENHANCE_STATUS())
+            if(d_g_usBackupValue != GET_OSD_DARK_ENHANCE_STATUS())
             {
                 SET_OSD_EVENT_MESSAGE(_OSDEVENT_SAVE_NVRAM_OSDUSERDATA_MSG);
             }
@@ -1972,10 +1972,10 @@ void MenuAdvanceHdrDarkEnhanceOnOffAdjust(void)
             break;
 
         case _EXIT_KEY_MESSAGE:
-            if(g_usBackupValue != GET_OSD_DARK_ENHANCE_STATUS())
+            if(d_g_usBackupValue != GET_OSD_DARK_ENHANCE_STATUS())
             {
-                g_usAdjustValue = g_usBackupValue;
-                SET_OSD_DARK_ENHANCE_STATUS(g_usAdjustValue);
+                d_g_usAdjustValue = d_g_usBackupValue;
+                SET_OSD_DARK_ENHANCE_STATUS(d_g_usAdjustValue);
 
                 UserCommonHDRAdjust(_HDR_FLOW_OSD_DARK_ENHANCE);
             }
@@ -1994,7 +1994,7 @@ void MenuAdvanceHdrSharpnessOnOffAdjust(void)
     switch(GET_KEYMESSAGE())
     {
         case _MENU_KEY_MESSAGE:
-            if(g_usBackupValue != GET_OSD_HDR_SHARPNESS())
+            if(d_g_usBackupValue != GET_OSD_HDR_SHARPNESS())
             {
                 SET_OSD_EVENT_MESSAGE(_OSDEVENT_SAVE_NVRAM_OSDUSERDATA_MSG);
             }
@@ -2029,10 +2029,10 @@ void MenuAdvanceHdrSharpnessOnOffAdjust(void)
             break;
 
         case _EXIT_KEY_MESSAGE:
-            if(g_usBackupValue != GET_OSD_HDR_SHARPNESS())
+            if(d_g_usBackupValue != GET_OSD_HDR_SHARPNESS())
             {
-                g_usAdjustValue = g_usBackupValue;
-                SET_OSD_HDR_SHARPNESS(g_usAdjustValue);
+                d_g_usAdjustValue = d_g_usBackupValue;
+                SET_OSD_HDR_SHARPNESS(d_g_usAdjustValue);
 
 #if(_ULTRA_VIVID_SUPPORT == _ON)
                 UserCommonAdjustUltraVivid(_FUNCTION_ON, UserCommonInterfaceGetColorFormat(), _DB_APPLY_NO_POLLING);
@@ -2054,14 +2054,14 @@ void MenuAdvanceHdrContrastAdjust(void)
     switch(GET_KEYMESSAGE())
     {
         case _MENU_KEY_MESSAGE:
-            if(g_usBackupValue != GET_OSD_HDR_CONTRAST())
+            if(d_g_usBackupValue != GET_OSD_HDR_CONTRAST())
             {
                 SET_OSD_EVENT_MESSAGE(_OSDEVENT_SAVE_NVRAM_OSDUSERDATA_MSG);
             }
 
             SET_OSD_STATE(_MENU_ADVANCE_HDR_CONTRAST);
             OsdDispMainMenuCursor(GET_OSD_STATE(), GET_OSD_STATE_PREVIOUS(), _OUTSUBSET);
-            OsdWindowSlider(ROW(_SLIDER_0_ROW), COL(_SLIDER_0_COL), g_usAdjustValue, _SLIDER_0, _UNSELECT);
+            OsdWindowSlider(ROW(_SLIDER_0_ROW), COL(_SLIDER_0_COL), d_g_usAdjustValue, _SLIDER_0, _UNSELECT);
             break;
 
         case _RIGHT_KEY_MESSAGE:
@@ -2074,10 +2074,10 @@ void MenuAdvanceHdrContrastAdjust(void)
             break;
 
         case _EXIT_KEY_MESSAGE:
-            if(g_usBackupValue != GET_OSD_HDR_CONTRAST())
+            if(d_g_usBackupValue != GET_OSD_HDR_CONTRAST())
             {
-                g_usAdjustValue = g_usBackupValue;
-                SET_OSD_HDR_CONTRAST(g_usAdjustValue);
+                d_g_usAdjustValue = d_g_usBackupValue;
+                SET_OSD_HDR_CONTRAST(d_g_usAdjustValue);
 
 #if((_CONTRAST_SUPPORT == _ON) && (_HDR10_SUPPORT == _ON))
                 UserCommonHDRAdjustHDR10Contrast(GET_OSD_HDR_CONTRAST());
@@ -2085,8 +2085,8 @@ void MenuAdvanceHdrContrastAdjust(void)
             }
             SET_OSD_STATE(_MENU_ADVANCE_HDR_CONTRAST);
             OsdDispMainMenuCursor(GET_OSD_STATE(), GET_OSD_STATE_PREVIOUS(), _OUTSUBSET);
-            OsdWindowSlider(ROW(_SLIDER_0_ROW), COL(_SLIDER_0_COL), g_usAdjustValue, _SLIDER_0, _UNSELECT);
-            OsdPropShowNumber(ROW(_OSD_NUMBER_1_ROW), COL(_OSD_NUMBER_1_COL), g_usAdjustValue, (_ALIGN_LEFT | _FORCE_SHOW_NUMBER_OFF | _SHOW_3), _PFONT_PAGE_ITEM_1, _OSD_NUMBER_UNSTLECT_COLOR);
+            OsdWindowSlider(ROW(_SLIDER_0_ROW), COL(_SLIDER_0_COL), d_g_usAdjustValue, _SLIDER_0, _UNSELECT);
+            OsdPropShowNumber(ROW(_OSD_NUMBER_1_ROW), COL(_OSD_NUMBER_1_COL), d_g_usAdjustValue, (_ALIGN_LEFT | _FORCE_SHOW_NUMBER_OFF | _SHOW_3), _PFONT_PAGE_ITEM_1, _OSD_NUMBER_UNSTLECT_COLOR);
 
             break;
 
@@ -2100,7 +2100,7 @@ void MenuAdvanceHdrColorEnhanceAdjust(void)
     switch(GET_KEYMESSAGE())
     {
         case _MENU_KEY_MESSAGE:
-            if(g_usBackupValue != GET_OSD_HDR_COLOR_ENHANCE())
+            if(d_g_usBackupValue != GET_OSD_HDR_COLOR_ENHANCE())
             {
                 SET_OSD_EVENT_MESSAGE(_OSDEVENT_SAVE_NVRAM_OSDUSERDATA_MSG);
             }
@@ -2122,10 +2122,10 @@ void MenuAdvanceHdrColorEnhanceAdjust(void)
             break;
 
         case _EXIT_KEY_MESSAGE:
-            if(g_usBackupValue != GET_OSD_HDR_COLOR_ENHANCE())
+            if(d_g_usBackupValue != GET_OSD_HDR_COLOR_ENHANCE())
             {
-                g_usAdjustValue = g_usBackupValue;
-                SET_OSD_HDR_COLOR_ENHANCE(g_usAdjustValue);
+                d_g_usAdjustValue = d_g_usBackupValue;
+                SET_OSD_HDR_COLOR_ENHANCE(d_g_usAdjustValue);
             }
 
 #if(_HDR10_COLOR_ENHANCE_SUPPORT == _ON)
@@ -2148,7 +2148,7 @@ void MenuAdvanceHdrLightEnhanceAdjust(void)
     switch(GET_KEYMESSAGE())
     {
         case _MENU_KEY_MESSAGE:
-            if(g_usBackupValue != GET_OSD_HDR_LIGHT_ENHANCE())
+            if(d_g_usBackupValue != GET_OSD_HDR_LIGHT_ENHANCE())
             {
                 SET_OSD_EVENT_MESSAGE(_OSDEVENT_SAVE_NVRAM_OSDUSERDATA_MSG);
             }
@@ -2169,10 +2169,10 @@ void MenuAdvanceHdrLightEnhanceAdjust(void)
             break;
 
         case _EXIT_KEY_MESSAGE:
-            if(g_usBackupValue != GET_OSD_HDR_LIGHT_ENHANCE())
+            if(d_g_usBackupValue != GET_OSD_HDR_LIGHT_ENHANCE())
             {
-                g_usAdjustValue = g_usBackupValue;
-                SET_OSD_HDR_LIGHT_ENHANCE(g_usAdjustValue);
+                d_g_usAdjustValue = d_g_usBackupValue;
+                SET_OSD_HDR_LIGHT_ENHANCE(d_g_usAdjustValue);
             }
 
 #if(_HDR10_LIGHT_ENHANCE_SUPPORT == _ON)
@@ -2199,7 +2199,7 @@ void MenuAdvanceHdrLDOnOff(void)
     switch(GET_KEYMESSAGE())
     {
         case _MENU_KEY_MESSAGE:
-            g_usBackupValue = GET_OSD_LOCAL_DIMMING();
+            d_g_usBackupValue = GET_OSD_LOCAL_DIMMING();
             SET_OSD_STATE(_MENU_ADVANCE_HDR_LD_ONOFF_ADJUST);
             OsdDispMainMenuCursor(GET_OSD_STATE(), GET_OSD_STATE_PREVIOUS(), _INSUBSET);
             OsdDispMainMenuOptionSetting(_OPTION_OVERDRIVE_ONOFF, _SELECT, GET_OSD_LOCAL_DIMMING());
@@ -2210,9 +2210,9 @@ void MenuAdvanceHdrLDOnOff(void)
             OsdDispMainMenuCursor(GET_OSD_STATE(), GET_OSD_STATE_PREVIOUS(), _OUTSUBSET);
             OsdDispMainMenuIconPage(_DOWN, _ICON_PAGE_CLEAR);
             OsdDispClearSelectColor(_DOWN);
-            g_usAdjustValue = UserCommonAdjustRealValueToPercent(GET_OSD_LD_ADJ(), 100, 0, 50);
-            OsdWindowSlider(ROW(_SLIDER_0_ROW), COL(_SLIDER_0_COL), g_usAdjustValue, _SLIDER_0, _UNSELECT);
-            OsdPropShowNumber(ROW(_OSD_NUMBER_1_ROW), COL(_OSD_NUMBER_1_COL), g_usAdjustValue, (_ALIGN_LEFT | _FORCE_SHOW_NUMBER_OFF | _SHOW_3), _PFONT_PAGE_ITEM_1, _OSD_NUMBER_UNSTLECT_COLOR);
+            d_g_usAdjustValue = UserCommonAdjustRealValueToPercent(GET_OSD_LD_ADJ(), 100, 0, 50);
+            OsdWindowSlider(ROW(_SLIDER_0_ROW), COL(_SLIDER_0_COL), d_g_usAdjustValue, _SLIDER_0, _UNSELECT);
+            OsdPropShowNumber(ROW(_OSD_NUMBER_1_ROW), COL(_OSD_NUMBER_1_COL), d_g_usAdjustValue, (_ALIGN_LEFT | _FORCE_SHOW_NUMBER_OFF | _SHOW_3), _PFONT_PAGE_ITEM_1, _OSD_NUMBER_UNSTLECT_COLOR);
             break;
 
         case _LEFT_KEY_MESSAGE:
@@ -2234,10 +2234,10 @@ void MenuAdvanceHdrLDSmoothAdj(void)
     switch(GET_KEYMESSAGE())
     {
         case _MENU_KEY_MESSAGE:
-            g_usBackupValue = GET_OSD_OD_GAIN();
+            d_g_usBackupValue = GET_OSD_OD_GAIN();
             SET_OSD_STATE(_MENU_ADVANCE_HDR_LD_SMOOTH_ADJ_ADJUST);
             OsdDispMainMenuCursor(GET_OSD_STATE(), GET_OSD_STATE_PREVIOUS(), _INSUBSET);
-            OsdWindowSlider(ROW(_SLIDER_0_ROW), COL(_SLIDER_0_COL), g_usAdjustValue, _SLIDER_0, _SELECT);
+            OsdWindowSlider(ROW(_SLIDER_0_ROW), COL(_SLIDER_0_COL), d_g_usAdjustValue, _SLIDER_0, _SELECT);
             break;
 
         case _RIGHT_KEY_MESSAGE:
@@ -2268,7 +2268,7 @@ void MenuAdvanceHdrLDOnOffAdjust(void)
     switch(GET_KEYMESSAGE())
     {
         case _MENU_KEY_MESSAGE:
-            if(g_usBackupValue != GET_OSD_LOCAL_DIMMING())
+            if(d_g_usBackupValue != GET_OSD_LOCAL_DIMMING())
             {
                 SET_OSD_EVENT_MESSAGE(_OSDEVENT_SAVE_NVRAM_OSDUSERDATA_MSG);
             }
@@ -2302,10 +2302,10 @@ void MenuAdvanceHdrLDOnOffAdjust(void)
             break;
 
         case _EXIT_KEY_MESSAGE:
-            if(g_usBackupValue != GET_OSD_LOCAL_DIMMING())
+            if(d_g_usBackupValue != GET_OSD_LOCAL_DIMMING())
             {
-                g_usAdjustValue = g_usBackupValue;
-                SET_OSD_LOCAL_DIMMING(g_usAdjustValue);
+                d_g_usAdjustValue = d_g_usBackupValue;
+                SET_OSD_LOCAL_DIMMING(d_g_usAdjustValue);
             }
             SET_OSD_STATE(_MENU_ADVANCE_HDR_LD_ONOFF);
             OsdDispMainMenuCursor(GET_OSD_STATE(), GET_OSD_STATE_PREVIOUS(), _OUTSUBSET);
@@ -2324,15 +2324,15 @@ void MenuAdvanceHdrLDSmoothAdjAdjust(void)
     switch(GET_KEYMESSAGE())
     {
         case _MENU_KEY_MESSAGE:
-            if(g_usBackupValue != GET_OSD_LD_ADJ())
+            if(d_g_usBackupValue != GET_OSD_LD_ADJ())
             {
                 SET_OSD_EVENT_MESSAGE(_OSDEVENT_SAVE_NVRAM_OSDUSERDATA_MSG);
             }
             SET_OSD_STATE(_MENU_ADVANCE_HDR_LD_SMOOTH_ADJ);
             OsdDispMainMenuCursor(GET_OSD_STATE(), GET_OSD_STATE_PREVIOUS(), _OUTSUBSET);
-            g_usAdjustValue = UserCommonAdjustRealValueToPercent(GET_OSD_LD_ADJ(), 100, 0, 50);
-            OsdWindowSlider(ROW(_SLIDER_0_ROW), COL(_SLIDER_0_COL), g_usAdjustValue, _SLIDER_0, _UNSELECT);
-            OsdPropShowNumber(ROW(_OSD_NUMBER_1_ROW), COL(_OSD_NUMBER_1_COL), g_usAdjustValue, (_ALIGN_LEFT | _FORCE_SHOW_NUMBER_OFF | _SHOW_3), _PFONT_PAGE_ITEM_1, _OSD_NUMBER_UNSTLECT_COLOR);
+            d_g_usAdjustValue = UserCommonAdjustRealValueToPercent(GET_OSD_LD_ADJ(), 100, 0, 50);
+            OsdWindowSlider(ROW(_SLIDER_0_ROW), COL(_SLIDER_0_COL), d_g_usAdjustValue, _SLIDER_0, _UNSELECT);
+            OsdPropShowNumber(ROW(_OSD_NUMBER_1_ROW), COL(_OSD_NUMBER_1_COL), d_g_usAdjustValue, (_ALIGN_LEFT | _FORCE_SHOW_NUMBER_OFF | _SHOW_3), _PFONT_PAGE_ITEM_1, _OSD_NUMBER_UNSTLECT_COLOR);
 
             break;
 
@@ -2343,16 +2343,16 @@ void MenuAdvanceHdrLDSmoothAdjAdjust(void)
             break;
 
         case _EXIT_KEY_MESSAGE:
-            if(g_usBackupValue != GET_OSD_LD_ADJ())
+            if(d_g_usBackupValue != GET_OSD_LD_ADJ())
             {
-                g_usAdjustValue = g_usBackupValue;
-                SET_OSD_LD_ADJ(g_usAdjustValue);
+                d_g_usAdjustValue = d_g_usBackupValue;
+                SET_OSD_LD_ADJ(d_g_usAdjustValue);
             }
             SET_OSD_STATE(_MENU_ADVANCE_HDR_LD_SMOOTH_ADJ);
             OsdDispMainMenuCursor(GET_OSD_STATE(), GET_OSD_STATE_PREVIOUS(), _OUTSUBSET);
-            g_usAdjustValue = UserCommonAdjustRealValueToPercent(GET_OSD_LD_ADJ(), 100, 0, 50);
-            OsdWindowSlider(ROW(_SLIDER_0_ROW), COL(_SLIDER_0_COL), g_usAdjustValue, _SLIDER_0, _UNSELECT);
-            OsdPropShowNumber(ROW(_OSD_NUMBER_1_ROW), COL(_OSD_NUMBER_1_COL), g_usAdjustValue, (_ALIGN_LEFT | _FORCE_SHOW_NUMBER_OFF | _SHOW_3), _PFONT_PAGE_ITEM_1, _OSD_NUMBER_UNSTLECT_COLOR);
+            d_g_usAdjustValue = UserCommonAdjustRealValueToPercent(GET_OSD_LD_ADJ(), 100, 0, 50);
+            OsdWindowSlider(ROW(_SLIDER_0_ROW), COL(_SLIDER_0_COL), d_g_usAdjustValue, _SLIDER_0, _UNSELECT);
+            OsdPropShowNumber(ROW(_OSD_NUMBER_1_ROW), COL(_OSD_NUMBER_1_COL), d_g_usAdjustValue, (_ALIGN_LEFT | _FORCE_SHOW_NUMBER_OFF | _SHOW_3), _PFONT_PAGE_ITEM_1, _OSD_NUMBER_UNSTLECT_COLOR);
             break;
 
         default:

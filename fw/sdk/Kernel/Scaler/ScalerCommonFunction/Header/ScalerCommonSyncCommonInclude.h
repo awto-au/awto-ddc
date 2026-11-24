@@ -78,7 +78,7 @@
 #define g_pucDpRxLaneCount_P(p) g_ucDpRx1LaneCount
 #define g_pucDpRxLinkStatus01_P(p) g_ucDpRx1LinkStatus01
 #define g_pucDpRxLinkStatus23_P(p) g_ucDpRx1LinkStatus23
-#define g_pucDpRxLinkRequest01_P(p) g_ucDpRx1LinkRequest01
+#define g_pucDpRxLinkRequest01_P(p) d_g_ucDpRx1LinkRequest01
 #define g_pucDpRxLinkRequest23_P(p) g_ucDpRx1LinkRequest23
 #define g_pucDpRxEQCRC_P(p) g_ucDpRx1EQCRC
 #define isr_g_pucDpRxLTStatus_P(p) isr_g_ucDpRx1LTStatus

@@ -1724,7 +1724,7 @@ fn	_ScalerDpRx1HpdIrqAssert	2	0x4e85	72
 fn	_ScalerDpRx1Initial	2	0x643a	114
 fn	_ScalerDpRx1IntHandler_EXINT0	11	0x43f7	869
 fn	_ScalerDpRx1InterlaceCheck	4	0x4ed7	3365
-fn	_ScalerDpRx1LinkRateCheck	13	0x3541	190
+fn	_ScalerDpRx1LinkRateCheck	13	0x7b7f	224
 fn	_ScalerDpRx1LinkRateDetect	13	0x35ff	107
 fn	_ScalerDpRx1LinkStatusIRQ	2	0x64ac	138
 fn	_ScalerDpRx1MSAActiveChange	4	0x7701	166

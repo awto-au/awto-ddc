@@ -2975,263 +2975,263 @@ void RTDFactoryOsdDispNumber(WORD usOsdState, WORD usValue)
 {
     BYTE ucTemp = 0;
 
-    g_usAdjustValue = usValue;
+    d_g_usAdjustValue = usValue;
 
     switch(usOsdState)
     {
         case _MENU_FACTORY_AUTO_COLOR_TYPE:
-            g_usAdjustValue = (BYTE)RTDFactoryDetOverRange(g_usAdjustValue, _AUTO_COLOR_TYPE_EXTERNAL, _AUTO_COLOR_TYPE_INTERNAL, _ON);
+            d_g_usAdjustValue = (BYTE)RTDFactoryDetOverRange(d_g_usAdjustValue, _AUTO_COLOR_TYPE_EXTERNAL, _AUTO_COLOR_TYPE_INTERNAL, _ON);
 
             usValue = g_ucFontPointer0;
             g_ucFontPointer0 = g_ucAutoColotTypeFontPointer;
-            RTDFactoryOsdFuncPutStringProp(ROW(_FACTORY_AUTOCOLOR_TYPE_ROW), COL(_FACTORY_ON_OFF_COL), _PFONT_FACTORY_AUTO_COLOR_TYPE, tFONT_FACTORY_EUROPE, tOSD_FACTORY_AUTO_COLOR_TYPE_TABLE[g_usAdjustValue], _ENGLISH);
+            RTDFactoryOsdFuncPutStringProp(ROW(_FACTORY_AUTOCOLOR_TYPE_ROW), COL(_FACTORY_ON_OFF_COL), _PFONT_FACTORY_AUTO_COLOR_TYPE, tFONT_FACTORY_EUROPE, tOSD_FACTORY_AUTO_COLOR_TYPE_TABLE[d_g_usAdjustValue], _ENGLISH);
             g_ucFontPointer0 = usValue;
             break;
 
         case _MENU_FACTORY_BURNIN_ON_OFF:
-            g_usAdjustValue = (BYTE)RTDFactoryDetOverRange(g_usAdjustValue, _ON, _OFF, _ON);
-            RTDFactoryOsdFuncPutStringProp(_FACTORY_BURNIN_ROW, _FACTORY_ON_OFF_COL, _PFONT_FACTORY_BURNIN, tFONT_FACTORY_EUROPE, tOSD_FACTORY_ON_OFF_TABLE[g_usAdjustValue], _ENGLISH);
+            d_g_usAdjustValue = (BYTE)RTDFactoryDetOverRange(d_g_usAdjustValue, _ON, _OFF, _ON);
+            RTDFactoryOsdFuncPutStringProp(_FACTORY_BURNIN_ROW, _FACTORY_ON_OFF_COL, _PFONT_FACTORY_BURNIN, tFONT_FACTORY_EUROPE, tOSD_FACTORY_ON_OFF_TABLE[d_g_usAdjustValue], _ENGLISH);
             break;
 
         case _MENU_FACTORY_CT1_RED_ADJ:
-            g_usAdjustValue = (BYTE)RTDFactoryDetOverRange((g_usAdjustValue >> 4), _FACTORY_RBG_MAX, _FACTORY_RBG_MIN, _OFF);
-            g_stColorProcData.usColorTempR = g_usAdjustValue;
+            d_g_usAdjustValue = (BYTE)RTDFactoryDetOverRange((d_g_usAdjustValue >> 4), _FACTORY_RBG_MAX, _FACTORY_RBG_MIN, _OFF);
+            g_stColorProcData.usColorTempR = d_g_usAdjustValue;
             g_stColorProcData.usColorTempR = (g_stColorProcData.usColorTempR << 4);
 
 #if(_CONTRAST_SUPPORT == _ON)
             UserAdjustContrast(GET_OSD_CONTRAST());
 #endif
-            RTDFactoryOsdFuncShowNumber(ROW(_FACTORY_COLORTEMP1_ROW), COL(_FACTORY_R_NUMBER_COL), g_usAdjustValue, (_ALIGN_RIGHT | _FORCE_SHOW_NUMBER_OFF | _SHOW_3), _PFONT_FACTORY_COLORTEMP1_R);
+            RTDFactoryOsdFuncShowNumber(ROW(_FACTORY_COLORTEMP1_ROW), COL(_FACTORY_R_NUMBER_COL), d_g_usAdjustValue, (_ALIGN_RIGHT | _FORCE_SHOW_NUMBER_OFF | _SHOW_3), _PFONT_FACTORY_COLORTEMP1_R);
             break;
 
         case _MENU_FACTORY_CT1_GREEN_ADJ:
-            g_usAdjustValue = (BYTE)RTDFactoryDetOverRange((g_usAdjustValue >> 4), _FACTORY_RBG_MAX, _FACTORY_RBG_MIN, _OFF);
-            g_stColorProcData.usColorTempG = g_usAdjustValue;
+            d_g_usAdjustValue = (BYTE)RTDFactoryDetOverRange((d_g_usAdjustValue >> 4), _FACTORY_RBG_MAX, _FACTORY_RBG_MIN, _OFF);
+            g_stColorProcData.usColorTempG = d_g_usAdjustValue;
             g_stColorProcData.usColorTempG = (g_stColorProcData.usColorTempG << 4);
 
 #if(_CONTRAST_SUPPORT == _ON)
             UserAdjustContrast(GET_OSD_CONTRAST());
 #endif
-            RTDFactoryOsdFuncShowNumber(ROW(_FACTORY_COLORTEMP1_ROW), COL(_FACTORY_G_NUMBER_COL), g_usAdjustValue, (_ALIGN_RIGHT | _FORCE_SHOW_NUMBER_OFF | _SHOW_3), _PFONT_FACTORY_COLORTEMP1_G);
+            RTDFactoryOsdFuncShowNumber(ROW(_FACTORY_COLORTEMP1_ROW), COL(_FACTORY_G_NUMBER_COL), d_g_usAdjustValue, (_ALIGN_RIGHT | _FORCE_SHOW_NUMBER_OFF | _SHOW_3), _PFONT_FACTORY_COLORTEMP1_G);
             break;
 
         case _MENU_FACTORY_CT1_BLUE_ADJ:
-            g_usAdjustValue = (BYTE)RTDFactoryDetOverRange((g_usAdjustValue >> 4), _FACTORY_RBG_MAX, _FACTORY_RBG_MIN, _OFF);
-            g_stColorProcData.usColorTempB = g_usAdjustValue;
+            d_g_usAdjustValue = (BYTE)RTDFactoryDetOverRange((d_g_usAdjustValue >> 4), _FACTORY_RBG_MAX, _FACTORY_RBG_MIN, _OFF);
+            g_stColorProcData.usColorTempB = d_g_usAdjustValue;
             g_stColorProcData.usColorTempB = (g_stColorProcData.usColorTempB << 4);
 
 #if(_CONTRAST_SUPPORT == _ON)
             UserAdjustContrast(GET_OSD_CONTRAST());
 #endif
-            RTDFactoryOsdFuncShowNumber(ROW(_FACTORY_COLORTEMP1_ROW), COL(_FACTORY_B_NUMBER_COL), g_usAdjustValue, (_ALIGN_RIGHT | _FORCE_SHOW_NUMBER_OFF | _SHOW_3), _PFONT_FACTORY_COLORTEMP1_B);
+            RTDFactoryOsdFuncShowNumber(ROW(_FACTORY_COLORTEMP1_ROW), COL(_FACTORY_B_NUMBER_COL), d_g_usAdjustValue, (_ALIGN_RIGHT | _FORCE_SHOW_NUMBER_OFF | _SHOW_3), _PFONT_FACTORY_COLORTEMP1_B);
             break;
 
         case _MENU_FACTORY_CT2_RED_ADJ:
-            g_usAdjustValue = (BYTE)RTDFactoryDetOverRange((g_usAdjustValue >> 4), _FACTORY_RBG_MAX, _FACTORY_RBG_MIN, _OFF);
-            g_stColorProcData.usColorTempR = g_usAdjustValue;
+            d_g_usAdjustValue = (BYTE)RTDFactoryDetOverRange((d_g_usAdjustValue >> 4), _FACTORY_RBG_MAX, _FACTORY_RBG_MIN, _OFF);
+            g_stColorProcData.usColorTempR = d_g_usAdjustValue;
             g_stColorProcData.usColorTempR = (g_stColorProcData.usColorTempR << 4);
 
 #if(_CONTRAST_SUPPORT == _ON)
             UserAdjustContrast(GET_OSD_CONTRAST());
 #endif
-            RTDFactoryOsdFuncShowNumber(ROW(_FACTORY_COLORTEMP2_ROW), COL(_FACTORY_R_NUMBER_COL), g_usAdjustValue, (_ALIGN_RIGHT | _FORCE_SHOW_NUMBER_OFF | _SHOW_3), _PFONT_FACTORY_COLORTEMP2_R);
+            RTDFactoryOsdFuncShowNumber(ROW(_FACTORY_COLORTEMP2_ROW), COL(_FACTORY_R_NUMBER_COL), d_g_usAdjustValue, (_ALIGN_RIGHT | _FORCE_SHOW_NUMBER_OFF | _SHOW_3), _PFONT_FACTORY_COLORTEMP2_R);
             break;
 
         case _MENU_FACTORY_CT2_GREEN_ADJ:
-            g_usAdjustValue = (BYTE)RTDFactoryDetOverRange((g_usAdjustValue >> 4), _FACTORY_RBG_MAX, _FACTORY_RBG_MIN, _OFF);
-            g_stColorProcData.usColorTempG = g_usAdjustValue;
+            d_g_usAdjustValue = (BYTE)RTDFactoryDetOverRange((d_g_usAdjustValue >> 4), _FACTORY_RBG_MAX, _FACTORY_RBG_MIN, _OFF);
+            g_stColorProcData.usColorTempG = d_g_usAdjustValue;
             g_stColorProcData.usColorTempG = (g_stColorProcData.usColorTempG << 4);
 
 #if(_CONTRAST_SUPPORT == _ON)
             UserAdjustContrast(GET_OSD_CONTRAST());
 #endif
-            RTDFactoryOsdFuncShowNumber(ROW(_FACTORY_COLORTEMP2_ROW), COL(_FACTORY_G_NUMBER_COL), g_usAdjustValue, (_ALIGN_RIGHT | _FORCE_SHOW_NUMBER_OFF | _SHOW_3), _PFONT_FACTORY_COLORTEMP2_G);
+            RTDFactoryOsdFuncShowNumber(ROW(_FACTORY_COLORTEMP2_ROW), COL(_FACTORY_G_NUMBER_COL), d_g_usAdjustValue, (_ALIGN_RIGHT | _FORCE_SHOW_NUMBER_OFF | _SHOW_3), _PFONT_FACTORY_COLORTEMP2_G);
             break;
 
         case _MENU_FACTORY_CT2_BLUE_ADJ:
-            g_usAdjustValue = (BYTE)RTDFactoryDetOverRange((g_usAdjustValue >> 4), _FACTORY_RBG_MAX, _FACTORY_RBG_MIN, _OFF);
-            g_stColorProcData.usColorTempB = g_usAdjustValue;
+            d_g_usAdjustValue = (BYTE)RTDFactoryDetOverRange((d_g_usAdjustValue >> 4), _FACTORY_RBG_MAX, _FACTORY_RBG_MIN, _OFF);
+            g_stColorProcData.usColorTempB = d_g_usAdjustValue;
             g_stColorProcData.usColorTempB = (g_stColorProcData.usColorTempB << 4);
 
 #if(_CONTRAST_SUPPORT == _ON)
             UserAdjustContrast(GET_OSD_CONTRAST());
 #endif
-            RTDFactoryOsdFuncShowNumber(ROW(_FACTORY_COLORTEMP2_ROW), COL(_FACTORY_B_NUMBER_COL), g_usAdjustValue, (_ALIGN_RIGHT | _FORCE_SHOW_NUMBER_OFF | _SHOW_3), _PFONT_FACTORY_COLORTEMP2_B);
+            RTDFactoryOsdFuncShowNumber(ROW(_FACTORY_COLORTEMP2_ROW), COL(_FACTORY_B_NUMBER_COL), d_g_usAdjustValue, (_ALIGN_RIGHT | _FORCE_SHOW_NUMBER_OFF | _SHOW_3), _PFONT_FACTORY_COLORTEMP2_B);
             break;
 
         case _MENU_FACTORY_CT3_RED_ADJ:
-            g_usAdjustValue = (BYTE)RTDFactoryDetOverRange((g_usAdjustValue >> 4), _FACTORY_RBG_MAX, _FACTORY_RBG_MIN, _OFF);
-            g_stColorProcData.usColorTempR = g_usAdjustValue;
+            d_g_usAdjustValue = (BYTE)RTDFactoryDetOverRange((d_g_usAdjustValue >> 4), _FACTORY_RBG_MAX, _FACTORY_RBG_MIN, _OFF);
+            g_stColorProcData.usColorTempR = d_g_usAdjustValue;
             g_stColorProcData.usColorTempR = (g_stColorProcData.usColorTempR << 4);
 
 #if(_CONTRAST_SUPPORT == _ON)
             UserAdjustContrast(GET_OSD_CONTRAST());
 #endif
-            RTDFactoryOsdFuncShowNumber(ROW(_FACTORY_COLORTEMP3_ROW), COL(_FACTORY_R_NUMBER_COL), g_usAdjustValue, (_ALIGN_RIGHT | _FORCE_SHOW_NUMBER_OFF | _SHOW_3), _PFONT_FACTORY_COLORTEMP3_R);
+            RTDFactoryOsdFuncShowNumber(ROW(_FACTORY_COLORTEMP3_ROW), COL(_FACTORY_R_NUMBER_COL), d_g_usAdjustValue, (_ALIGN_RIGHT | _FORCE_SHOW_NUMBER_OFF | _SHOW_3), _PFONT_FACTORY_COLORTEMP3_R);
             break;
 
         case _MENU_FACTORY_CT3_GREEN_ADJ:
-            g_usAdjustValue = (BYTE)RTDFactoryDetOverRange((g_usAdjustValue >> 4), _FACTORY_RBG_MAX, _FACTORY_RBG_MIN, _OFF);
-            g_stColorProcData.usColorTempG = g_usAdjustValue;
+            d_g_usAdjustValue = (BYTE)RTDFactoryDetOverRange((d_g_usAdjustValue >> 4), _FACTORY_RBG_MAX, _FACTORY_RBG_MIN, _OFF);
+            g_stColorProcData.usColorTempG = d_g_usAdjustValue;
             g_stColorProcData.usColorTempG = (g_stColorProcData.usColorTempG << 4);
 
 #if(_CONTRAST_SUPPORT == _ON)
             UserAdjustContrast(GET_OSD_CONTRAST());
 #endif
-            RTDFactoryOsdFuncShowNumber(ROW(_FACTORY_COLORTEMP3_ROW), COL(_FACTORY_G_NUMBER_COL), g_usAdjustValue, (_ALIGN_RIGHT | _FORCE_SHOW_NUMBER_OFF | _SHOW_3), _PFONT_FACTORY_COLORTEMP3_G);
+            RTDFactoryOsdFuncShowNumber(ROW(_FACTORY_COLORTEMP3_ROW), COL(_FACTORY_G_NUMBER_COL), d_g_usAdjustValue, (_ALIGN_RIGHT | _FORCE_SHOW_NUMBER_OFF | _SHOW_3), _PFONT_FACTORY_COLORTEMP3_G);
             break;
 
         case _MENU_FACTORY_CT3_BLUE_ADJ:
-            g_usAdjustValue = (BYTE)RTDFactoryDetOverRange((g_usAdjustValue >> 4), _FACTORY_RBG_MAX, _FACTORY_RBG_MIN, _OFF);
-            g_stColorProcData.usColorTempB = g_usAdjustValue;
+            d_g_usAdjustValue = (BYTE)RTDFactoryDetOverRange((d_g_usAdjustValue >> 4), _FACTORY_RBG_MAX, _FACTORY_RBG_MIN, _OFF);
+            g_stColorProcData.usColorTempB = d_g_usAdjustValue;
             g_stColorProcData.usColorTempB = (g_stColorProcData.usColorTempB << 4);
 
 #if(_CONTRAST_SUPPORT == _ON)
             UserAdjustContrast(GET_OSD_CONTRAST());
 #endif
-            RTDFactoryOsdFuncShowNumber(ROW(_FACTORY_COLORTEMP3_ROW), COL(_FACTORY_B_NUMBER_COL), g_usAdjustValue, (_ALIGN_RIGHT | _FORCE_SHOW_NUMBER_OFF | _SHOW_3), _PFONT_FACTORY_COLORTEMP3_B);
+            RTDFactoryOsdFuncShowNumber(ROW(_FACTORY_COLORTEMP3_ROW), COL(_FACTORY_B_NUMBER_COL), d_g_usAdjustValue, (_ALIGN_RIGHT | _FORCE_SHOW_NUMBER_OFF | _SHOW_3), _PFONT_FACTORY_COLORTEMP3_B);
             break;
 
         case _MENU_FACTORY_CT4_RED_ADJ:
-            g_usAdjustValue = (BYTE)RTDFactoryDetOverRange((g_usAdjustValue >> 4), _FACTORY_RBG_MAX, _FACTORY_RBG_MIN, _OFF);
-            g_stColorProcData.usColorTempR = g_usAdjustValue;
+            d_g_usAdjustValue = (BYTE)RTDFactoryDetOverRange((d_g_usAdjustValue >> 4), _FACTORY_RBG_MAX, _FACTORY_RBG_MIN, _OFF);
+            g_stColorProcData.usColorTempR = d_g_usAdjustValue;
             g_stColorProcData.usColorTempR = (g_stColorProcData.usColorTempR << 4);
 
 #if(_CONTRAST_SUPPORT == _ON)
             UserAdjustContrast(GET_OSD_CONTRAST());
 #endif
-            RTDFactoryOsdFuncShowNumber(ROW(_FACTORY_COLORTEMP4_ROW), COL(_FACTORY_R_NUMBER_COL), g_usAdjustValue, (_ALIGN_RIGHT | _FORCE_SHOW_NUMBER_OFF | _SHOW_3), _PFONT_FACTORY_COLORTEMP4_R);
+            RTDFactoryOsdFuncShowNumber(ROW(_FACTORY_COLORTEMP4_ROW), COL(_FACTORY_R_NUMBER_COL), d_g_usAdjustValue, (_ALIGN_RIGHT | _FORCE_SHOW_NUMBER_OFF | _SHOW_3), _PFONT_FACTORY_COLORTEMP4_R);
             break;
 
         case _MENU_FACTORY_CT4_GREEN_ADJ:
-            g_usAdjustValue = (BYTE)RTDFactoryDetOverRange((g_usAdjustValue >> 4), _FACTORY_RBG_MAX, _FACTORY_RBG_MIN, _OFF);
-            g_stColorProcData.usColorTempG = g_usAdjustValue;
+            d_g_usAdjustValue = (BYTE)RTDFactoryDetOverRange((d_g_usAdjustValue >> 4), _FACTORY_RBG_MAX, _FACTORY_RBG_MIN, _OFF);
+            g_stColorProcData.usColorTempG = d_g_usAdjustValue;
             g_stColorProcData.usColorTempG = (g_stColorProcData.usColorTempG << 4);
 
 #if(_CONTRAST_SUPPORT == _ON)
             UserAdjustContrast(GET_OSD_CONTRAST());
 #endif
-            RTDFactoryOsdFuncShowNumber(ROW(_FACTORY_COLORTEMP4_ROW), COL(_FACTORY_G_NUMBER_COL), g_usAdjustValue, (_ALIGN_RIGHT | _FORCE_SHOW_NUMBER_OFF | _SHOW_3), _PFONT_FACTORY_COLORTEMP4_G);
+            RTDFactoryOsdFuncShowNumber(ROW(_FACTORY_COLORTEMP4_ROW), COL(_FACTORY_G_NUMBER_COL), d_g_usAdjustValue, (_ALIGN_RIGHT | _FORCE_SHOW_NUMBER_OFF | _SHOW_3), _PFONT_FACTORY_COLORTEMP4_G);
             break;
 
         case _MENU_FACTORY_CT4_BLUE_ADJ:
-            g_usAdjustValue = (BYTE)RTDFactoryDetOverRange((g_usAdjustValue >> 4), _FACTORY_RBG_MAX, _FACTORY_RBG_MIN, _OFF);
-            g_stColorProcData.usColorTempB = g_usAdjustValue;
+            d_g_usAdjustValue = (BYTE)RTDFactoryDetOverRange((d_g_usAdjustValue >> 4), _FACTORY_RBG_MAX, _FACTORY_RBG_MIN, _OFF);
+            g_stColorProcData.usColorTempB = d_g_usAdjustValue;
             g_stColorProcData.usColorTempB = (g_stColorProcData.usColorTempB << 4);
 
 #if(_CONTRAST_SUPPORT == _ON)
             UserAdjustContrast(GET_OSD_CONTRAST());
 #endif
-            RTDFactoryOsdFuncShowNumber(ROW(_FACTORY_COLORTEMP4_ROW), COL(_FACTORY_B_NUMBER_COL), g_usAdjustValue, (_ALIGN_RIGHT | _FORCE_SHOW_NUMBER_OFF | _SHOW_3), _PFONT_FACTORY_COLORTEMP4_B);
+            RTDFactoryOsdFuncShowNumber(ROW(_FACTORY_COLORTEMP4_ROW), COL(_FACTORY_B_NUMBER_COL), d_g_usAdjustValue, (_ALIGN_RIGHT | _FORCE_SHOW_NUMBER_OFF | _SHOW_3), _PFONT_FACTORY_COLORTEMP4_B);
             break;
 
         case _MENU_FACTORY_CT5_RED_ADJ:
-            g_usAdjustValue = (BYTE)RTDFactoryDetOverRange((g_usAdjustValue >> 4), _FACTORY_RBG_MAX, _FACTORY_RBG_MIN, _OFF);
-            g_stColorProcData.usColorTempR = g_usAdjustValue;
+            d_g_usAdjustValue = (BYTE)RTDFactoryDetOverRange((d_g_usAdjustValue >> 4), _FACTORY_RBG_MAX, _FACTORY_RBG_MIN, _OFF);
+            g_stColorProcData.usColorTempR = d_g_usAdjustValue;
             g_stColorProcData.usColorTempR = (g_stColorProcData.usColorTempR << 4);
 
 #if(_CONTRAST_SUPPORT == _ON)
             UserAdjustContrast(GET_OSD_CONTRAST());
 #endif
-            RTDFactoryOsdFuncShowNumber(ROW(_FACTORY_COLORTEMP5_ROW), COL(_FACTORY_R_NUMBER_COL), g_usAdjustValue, (_ALIGN_RIGHT | _FORCE_SHOW_NUMBER_OFF | _SHOW_3), _PFONT_FACTORY_COLORTEMP5_R);
+            RTDFactoryOsdFuncShowNumber(ROW(_FACTORY_COLORTEMP5_ROW), COL(_FACTORY_R_NUMBER_COL), d_g_usAdjustValue, (_ALIGN_RIGHT | _FORCE_SHOW_NUMBER_OFF | _SHOW_3), _PFONT_FACTORY_COLORTEMP5_R);
             break;
 
         case _MENU_FACTORY_CT5_GREEN_ADJ:
-            g_usAdjustValue = (BYTE)RTDFactoryDetOverRange((g_usAdjustValue >> 4), _FACTORY_RBG_MAX, _FACTORY_RBG_MIN, _OFF);
-            g_stColorProcData.usColorTempG = g_usAdjustValue;
+            d_g_usAdjustValue = (BYTE)RTDFactoryDetOverRange((d_g_usAdjustValue >> 4), _FACTORY_RBG_MAX, _FACTORY_RBG_MIN, _OFF);
+            g_stColorProcData.usColorTempG = d_g_usAdjustValue;
             g_stColorProcData.usColorTempG = (g_stColorProcData.usColorTempG << 4);
 
 #if(_CONTRAST_SUPPORT == _ON)
             UserAdjustContrast(GET_OSD_CONTRAST());
 #endif
-            RTDFactoryOsdFuncShowNumber(ROW(_FACTORY_COLORTEMP5_ROW), COL(_FACTORY_G_NUMBER_COL), g_usAdjustValue, (_ALIGN_RIGHT | _FORCE_SHOW_NUMBER_OFF | _SHOW_3), _PFONT_FACTORY_COLORTEMP5_G);
+            RTDFactoryOsdFuncShowNumber(ROW(_FACTORY_COLORTEMP5_ROW), COL(_FACTORY_G_NUMBER_COL), d_g_usAdjustValue, (_ALIGN_RIGHT | _FORCE_SHOW_NUMBER_OFF | _SHOW_3), _PFONT_FACTORY_COLORTEMP5_G);
             break;
 
         case _MENU_FACTORY_CT5_BLUE_ADJ:
-            g_usAdjustValue = (BYTE)RTDFactoryDetOverRange((g_usAdjustValue >> 4), _FACTORY_RBG_MAX, _FACTORY_RBG_MIN, _OFF);
-            g_stColorProcData.usColorTempB = g_usAdjustValue;
+            d_g_usAdjustValue = (BYTE)RTDFactoryDetOverRange((d_g_usAdjustValue >> 4), _FACTORY_RBG_MAX, _FACTORY_RBG_MIN, _OFF);
+            g_stColorProcData.usColorTempB = d_g_usAdjustValue;
             g_stColorProcData.usColorTempB = (g_stColorProcData.usColorTempB << 4);
 
 #if(_CONTRAST_SUPPORT == _ON)
             UserAdjustContrast(GET_OSD_CONTRAST());
 #endif
-            RTDFactoryOsdFuncShowNumber(ROW(_FACTORY_COLORTEMP5_ROW), COL(_FACTORY_B_NUMBER_COL), g_usAdjustValue, (_ALIGN_RIGHT | _FORCE_SHOW_NUMBER_OFF | _SHOW_3), _PFONT_FACTORY_COLORTEMP5_B);
+            RTDFactoryOsdFuncShowNumber(ROW(_FACTORY_COLORTEMP5_ROW), COL(_FACTORY_B_NUMBER_COL), d_g_usAdjustValue, (_ALIGN_RIGHT | _FORCE_SHOW_NUMBER_OFF | _SHOW_3), _PFONT_FACTORY_COLORTEMP5_B);
             break;
 
         case _MENU_FACTORY_CT6_RED_ADJ:
-            g_usAdjustValue = (BYTE)RTDFactoryDetOverRange((g_usAdjustValue >> 4), _FACTORY_RBG_MAX, _FACTORY_RBG_MIN, _OFF);
-            g_stColorProcData.usColorTempR = g_usAdjustValue;
+            d_g_usAdjustValue = (BYTE)RTDFactoryDetOverRange((d_g_usAdjustValue >> 4), _FACTORY_RBG_MAX, _FACTORY_RBG_MIN, _OFF);
+            g_stColorProcData.usColorTempR = d_g_usAdjustValue;
             g_stColorProcData.usColorTempR = (g_stColorProcData.usColorTempR << 4);
 
 #if(_CONTRAST_SUPPORT == _ON)
             UserAdjustContrast(GET_OSD_CONTRAST());
 #endif
-            RTDFactoryOsdFuncShowNumber(ROW(_FACTORY_COLORTEMP6_ROW), COL(_FACTORY_R_NUMBER_COL), g_usAdjustValue, (_ALIGN_RIGHT | _FORCE_SHOW_NUMBER_OFF | _SHOW_3), _PFONT_FACTORY_COLORTEMP6_R);
+            RTDFactoryOsdFuncShowNumber(ROW(_FACTORY_COLORTEMP6_ROW), COL(_FACTORY_R_NUMBER_COL), d_g_usAdjustValue, (_ALIGN_RIGHT | _FORCE_SHOW_NUMBER_OFF | _SHOW_3), _PFONT_FACTORY_COLORTEMP6_R);
             break;
 
         case _MENU_FACTORY_CT6_GREEN_ADJ:
-            g_usAdjustValue = (BYTE)RTDFactoryDetOverRange((g_usAdjustValue >> 4), _FACTORY_RBG_MAX, _FACTORY_RBG_MIN, _OFF);
-            g_stColorProcData.usColorTempG = g_usAdjustValue;
+            d_g_usAdjustValue = (BYTE)RTDFactoryDetOverRange((d_g_usAdjustValue >> 4), _FACTORY_RBG_MAX, _FACTORY_RBG_MIN, _OFF);
+            g_stColorProcData.usColorTempG = d_g_usAdjustValue;
             g_stColorProcData.usColorTempG = (g_stColorProcData.usColorTempG << 4);
 
 #if(_CONTRAST_SUPPORT == _ON)
             UserAdjustContrast(GET_OSD_CONTRAST());
 #endif
-            RTDFactoryOsdFuncShowNumber(ROW(_FACTORY_COLORTEMP6_ROW), COL(_FACTORY_G_NUMBER_COL), g_usAdjustValue, (_ALIGN_RIGHT | _FORCE_SHOW_NUMBER_OFF | _SHOW_3), _PFONT_FACTORY_COLORTEMP6_G);
+            RTDFactoryOsdFuncShowNumber(ROW(_FACTORY_COLORTEMP6_ROW), COL(_FACTORY_G_NUMBER_COL), d_g_usAdjustValue, (_ALIGN_RIGHT | _FORCE_SHOW_NUMBER_OFF | _SHOW_3), _PFONT_FACTORY_COLORTEMP6_G);
             break;
 
         case _MENU_FACTORY_CT6_BLUE_ADJ:
-            g_usAdjustValue = (BYTE)RTDFactoryDetOverRange((g_usAdjustValue >> 4), _FACTORY_RBG_MAX, _FACTORY_RBG_MIN, _OFF);
-            g_stColorProcData.usColorTempB = g_usAdjustValue;
+            d_g_usAdjustValue = (BYTE)RTDFactoryDetOverRange((d_g_usAdjustValue >> 4), _FACTORY_RBG_MAX, _FACTORY_RBG_MIN, _OFF);
+            g_stColorProcData.usColorTempB = d_g_usAdjustValue;
             g_stColorProcData.usColorTempB = (g_stColorProcData.usColorTempB << 4);
 
 #if(_CONTRAST_SUPPORT == _ON)
             UserAdjustContrast(GET_OSD_CONTRAST());
 #endif
-            RTDFactoryOsdFuncShowNumber(ROW(_FACTORY_COLORTEMP6_ROW), COL(_FACTORY_B_NUMBER_COL), g_usAdjustValue, (_ALIGN_RIGHT | _FORCE_SHOW_NUMBER_OFF | _SHOW_3), _PFONT_FACTORY_COLORTEMP6_B);
+            RTDFactoryOsdFuncShowNumber(ROW(_FACTORY_COLORTEMP6_ROW), COL(_FACTORY_B_NUMBER_COL), d_g_usAdjustValue, (_ALIGN_RIGHT | _FORCE_SHOW_NUMBER_OFF | _SHOW_3), _PFONT_FACTORY_COLORTEMP6_B);
             break;
 
 #if(_VGA_SUPPORT == _ON)
         case _MENU_FACTORY_GAIN_RED_ADJ:
-            g_usAdjustValue = (BYTE)RTDFactoryDetOverRange(g_usAdjustValue, _FACTORY_RBG_MAX, _FACTORY_RBG_MIN, _OFF);
-            g_stAdcData.pucAdcGainMSB[_AUTO_RED_CHANNEL] = g_usAdjustValue;
+            d_g_usAdjustValue = (BYTE)RTDFactoryDetOverRange(d_g_usAdjustValue, _FACTORY_RBG_MAX, _FACTORY_RBG_MIN, _OFF);
+            g_stAdcData.pucAdcGainMSB[_AUTO_RED_CHANNEL] = d_g_usAdjustValue;
             UserCommonInterfaceAdjustADCData();
-            RTDFactoryOsdFuncShowNumber(ROW(_FACTORY_ADC_GAIN_ROW), COL(_FACTORY_R_NUMBER_COL), g_usAdjustValue, (_ALIGN_RIGHT | _FORCE_SHOW_NUMBER_OFF | _SHOW_3), _PFONT_FACTORY_ADC_GAIN_R);
+            RTDFactoryOsdFuncShowNumber(ROW(_FACTORY_ADC_GAIN_ROW), COL(_FACTORY_R_NUMBER_COL), d_g_usAdjustValue, (_ALIGN_RIGHT | _FORCE_SHOW_NUMBER_OFF | _SHOW_3), _PFONT_FACTORY_ADC_GAIN_R);
             break;
 
         case _MENU_FACTORY_GAIN_GREEN_ADJ:
-            g_usAdjustValue = (BYTE)RTDFactoryDetOverRange(g_usAdjustValue, _FACTORY_RBG_MAX, _FACTORY_RBG_MIN, _OFF);
-            g_stAdcData.pucAdcGainMSB[_AUTO_GREEN_CHANNEL] = g_usAdjustValue;
+            d_g_usAdjustValue = (BYTE)RTDFactoryDetOverRange(d_g_usAdjustValue, _FACTORY_RBG_MAX, _FACTORY_RBG_MIN, _OFF);
+            g_stAdcData.pucAdcGainMSB[_AUTO_GREEN_CHANNEL] = d_g_usAdjustValue;
             UserCommonInterfaceAdjustADCData();
-            RTDFactoryOsdFuncShowNumber(ROW(_FACTORY_ADC_GAIN_ROW), COL(_FACTORY_G_NUMBER_COL), g_usAdjustValue, (_ALIGN_RIGHT | _FORCE_SHOW_NUMBER_OFF | _SHOW_3), _PFONT_FACTORY_ADC_GAIN_G);
+            RTDFactoryOsdFuncShowNumber(ROW(_FACTORY_ADC_GAIN_ROW), COL(_FACTORY_G_NUMBER_COL), d_g_usAdjustValue, (_ALIGN_RIGHT | _FORCE_SHOW_NUMBER_OFF | _SHOW_3), _PFONT_FACTORY_ADC_GAIN_G);
             break;
 
         case _MENU_FACTORY_GAIN_BLUE_ADJ:
-            g_usAdjustValue = (BYTE)RTDFactoryDetOverRange(g_usAdjustValue, _FACTORY_RBG_MAX, _FACTORY_RBG_MIN, _OFF);
-            g_stAdcData.pucAdcGainMSB[_AUTO_BLUE_CHANNEL] = g_usAdjustValue;
+            d_g_usAdjustValue = (BYTE)RTDFactoryDetOverRange(d_g_usAdjustValue, _FACTORY_RBG_MAX, _FACTORY_RBG_MIN, _OFF);
+            g_stAdcData.pucAdcGainMSB[_AUTO_BLUE_CHANNEL] = d_g_usAdjustValue;
             UserCommonInterfaceAdjustADCData();
-            RTDFactoryOsdFuncShowNumber(ROW(_FACTORY_ADC_GAIN_ROW), COL(_FACTORY_B_NUMBER_COL), g_usAdjustValue, (_ALIGN_RIGHT | _FORCE_SHOW_NUMBER_OFF | _SHOW_3), _PFONT_FACTORY_ADC_GAIN_B);
+            RTDFactoryOsdFuncShowNumber(ROW(_FACTORY_ADC_GAIN_ROW), COL(_FACTORY_B_NUMBER_COL), d_g_usAdjustValue, (_ALIGN_RIGHT | _FORCE_SHOW_NUMBER_OFF | _SHOW_3), _PFONT_FACTORY_ADC_GAIN_B);
             break;
 
         case _MENU_FACTORY_OFFSET_RED_ADJ:
-            g_usAdjustValue = (BYTE)RTDFactoryDetOverRange(g_usAdjustValue, _FACTORY_RBG_MAX, _FACTORY_RBG_MIN, _OFF);
-            g_stAdcData.pucAdcOffsetMSB[_AUTO_RED_CHANNEL] = g_usAdjustValue;
+            d_g_usAdjustValue = (BYTE)RTDFactoryDetOverRange(d_g_usAdjustValue, _FACTORY_RBG_MAX, _FACTORY_RBG_MIN, _OFF);
+            g_stAdcData.pucAdcOffsetMSB[_AUTO_RED_CHANNEL] = d_g_usAdjustValue;
             UserCommonInterfaceAdjustADCData();
-            RTDFactoryOsdFuncShowNumber(ROW(_FACTORY_ADC_OFFSET_ROW), COL(_FACTORY_R_NUMBER_COL), g_usAdjustValue, (_ALIGN_RIGHT | _FORCE_SHOW_NUMBER_OFF | _SHOW_3), _PFONT_FACTORY_ADC_OFFSET_R);
+            RTDFactoryOsdFuncShowNumber(ROW(_FACTORY_ADC_OFFSET_ROW), COL(_FACTORY_R_NUMBER_COL), d_g_usAdjustValue, (_ALIGN_RIGHT | _FORCE_SHOW_NUMBER_OFF | _SHOW_3), _PFONT_FACTORY_ADC_OFFSET_R);
             break;
 
         case _MENU_FACTORY_OFFSET_GREEN_ADJ:
-            g_usAdjustValue = (BYTE)RTDFactoryDetOverRange(g_usAdjustValue, _FACTORY_RBG_MAX, _FACTORY_RBG_MIN, _OFF);
-            g_stAdcData.pucAdcOffsetMSB[_AUTO_GREEN_CHANNEL] = g_usAdjustValue;
+            d_g_usAdjustValue = (BYTE)RTDFactoryDetOverRange(d_g_usAdjustValue, _FACTORY_RBG_MAX, _FACTORY_RBG_MIN, _OFF);
+            g_stAdcData.pucAdcOffsetMSB[_AUTO_GREEN_CHANNEL] = d_g_usAdjustValue;
             UserCommonInterfaceAdjustADCData();
-            RTDFactoryOsdFuncShowNumber(ROW(_FACTORY_ADC_OFFSET_ROW), COL(_FACTORY_G_NUMBER_COL), g_usAdjustValue, (_ALIGN_RIGHT | _FORCE_SHOW_NUMBER_OFF | _SHOW_3), _PFONT_FACTORY_ADC_OFFSET_G);
+            RTDFactoryOsdFuncShowNumber(ROW(_FACTORY_ADC_OFFSET_ROW), COL(_FACTORY_G_NUMBER_COL), d_g_usAdjustValue, (_ALIGN_RIGHT | _FORCE_SHOW_NUMBER_OFF | _SHOW_3), _PFONT_FACTORY_ADC_OFFSET_G);
             break;
 
         case _MENU_FACTORY_OFFSET_BLUE_ADJ:
-            g_usAdjustValue = (BYTE)RTDFactoryDetOverRange(g_usAdjustValue, _FACTORY_RBG_MAX, _FACTORY_RBG_MIN, _OFF);
-            g_stAdcData.pucAdcOffsetMSB[_AUTO_BLUE_CHANNEL] = g_usAdjustValue;
+            d_g_usAdjustValue = (BYTE)RTDFactoryDetOverRange(d_g_usAdjustValue, _FACTORY_RBG_MAX, _FACTORY_RBG_MIN, _OFF);
+            g_stAdcData.pucAdcOffsetMSB[_AUTO_BLUE_CHANNEL] = d_g_usAdjustValue;
             UserCommonInterfaceAdjustADCData();
-            RTDFactoryOsdFuncShowNumber(ROW(_FACTORY_ADC_OFFSET_ROW), COL(_FACTORY_B_NUMBER_COL), g_usAdjustValue, (_ALIGN_RIGHT | _FORCE_SHOW_NUMBER_OFF | _SHOW_3), _PFONT_FACTORY_ADC_OFFSET_B);
+            RTDFactoryOsdFuncShowNumber(ROW(_FACTORY_ADC_OFFSET_ROW), COL(_FACTORY_B_NUMBER_COL), d_g_usAdjustValue, (_ALIGN_RIGHT | _FORCE_SHOW_NUMBER_OFF | _SHOW_3), _PFONT_FACTORY_ADC_OFFSET_B);
             break;
 #endif // End of #if(_VGA_SUPPORT == _ON)
 
@@ -3242,106 +3242,106 @@ void RTDFactoryOsdDispNumber(WORD usOsdState, WORD usValue)
             break;
 
         case _MENU_FACTORY_BG_ON_OFF:
-            g_usAdjustValue = (BYTE)RTDFactoryDetOverRange(g_usAdjustValue, _ON, _OFF, _ON);
-            RTDFactoryOsdFuncPutStringProp(_FACTORY_BG_ROW, _FACTORY_ON_OFF_COL, _PFONT_FACTORY_BACKGROUND_ON_OFF, tFONT_FACTORY_EUROPE, tOSD_FACTORY_ON_OFF_TABLE[g_usAdjustValue], _ENGLISH);
-            ScalerDDomainBackgroundEnable(g_usAdjustValue);
+            d_g_usAdjustValue = (BYTE)RTDFactoryDetOverRange(d_g_usAdjustValue, _ON, _OFF, _ON);
+            RTDFactoryOsdFuncPutStringProp(_FACTORY_BG_ROW, _FACTORY_ON_OFF_COL, _PFONT_FACTORY_BACKGROUND_ON_OFF, tFONT_FACTORY_EUROPE, tOSD_FACTORY_ON_OFF_TABLE[d_g_usAdjustValue], _ENGLISH);
+            ScalerDDomainBackgroundEnable(d_g_usAdjustValue);
             break;
 
         case _MENU_FACTORY_BG_RED_ADJ:
-            g_ucBgColorR = (BYTE)RTDFactoryDetOverRange(g_usAdjustValue, _FACTORY_RBG_MAX, _FACTORY_RBG_MIN, _OFF);
-            RTDFactoryOsdFuncShowNumber(ROW(_FACTORY_BG_COLOR_ROW), COL(_FACTORY_R_NUMBER_COL), g_usAdjustValue, (_ALIGN_LEFT | _FORCE_SHOW_NUMBER_OFF | _SHOW_3), _PFONT_FACTORY_BACKGROUND_COLOR_R);
+            g_ucBgColorR = (BYTE)RTDFactoryDetOverRange(d_g_usAdjustValue, _FACTORY_RBG_MAX, _FACTORY_RBG_MIN, _OFF);
+            RTDFactoryOsdFuncShowNumber(ROW(_FACTORY_BG_COLOR_ROW), COL(_FACTORY_R_NUMBER_COL), d_g_usAdjustValue, (_ALIGN_LEFT | _FORCE_SHOW_NUMBER_OFF | _SHOW_3), _PFONT_FACTORY_BACKGROUND_COLOR_R);
             ScalerDDomainBackgroundSetColor(g_ucBgColorR, g_ucBgColorG, g_ucBgColorB);
             break;
 
         case _MENU_FACTORY_BG_GREEN_ADJ:
-            g_ucBgColorG = (BYTE)RTDFactoryDetOverRange(g_usAdjustValue, _FACTORY_RBG_MAX, _FACTORY_RBG_MIN, _OFF);
-            RTDFactoryOsdFuncShowNumber(ROW(_FACTORY_BG_COLOR_ROW), COL(_FACTORY_G_NUMBER_COL), g_usAdjustValue, (_ALIGN_LEFT | _FORCE_SHOW_NUMBER_OFF | _SHOW_3), _PFONT_FACTORY_BACKGROUND_COLOR_G);
+            g_ucBgColorG = (BYTE)RTDFactoryDetOverRange(d_g_usAdjustValue, _FACTORY_RBG_MAX, _FACTORY_RBG_MIN, _OFF);
+            RTDFactoryOsdFuncShowNumber(ROW(_FACTORY_BG_COLOR_ROW), COL(_FACTORY_G_NUMBER_COL), d_g_usAdjustValue, (_ALIGN_LEFT | _FORCE_SHOW_NUMBER_OFF | _SHOW_3), _PFONT_FACTORY_BACKGROUND_COLOR_G);
             ScalerDDomainBackgroundSetColor(g_ucBgColorR, g_ucBgColorG, g_ucBgColorB);
             break;
 
         case _MENU_FACTORY_BG_BLUE_ADJ:
-            g_ucBgColorB = (BYTE)RTDFactoryDetOverRange(g_usAdjustValue, _FACTORY_RBG_MAX, _FACTORY_RBG_MIN, _OFF);
-            RTDFactoryOsdFuncShowNumber(ROW(_FACTORY_BG_COLOR_ROW), COL(_FACTORY_B_NUMBER_COL), g_usAdjustValue, (_ALIGN_LEFT | _FORCE_SHOW_NUMBER_OFF | _SHOW_3), _PFONT_FACTORY_BACKGROUND_COLOR_B);
+            g_ucBgColorB = (BYTE)RTDFactoryDetOverRange(d_g_usAdjustValue, _FACTORY_RBG_MAX, _FACTORY_RBG_MIN, _OFF);
+            RTDFactoryOsdFuncShowNumber(ROW(_FACTORY_BG_COLOR_ROW), COL(_FACTORY_B_NUMBER_COL), d_g_usAdjustValue, (_ALIGN_LEFT | _FORCE_SHOW_NUMBER_OFF | _SHOW_3), _PFONT_FACTORY_BACKGROUND_COLOR_B);
             ScalerDDomainBackgroundSetColor(g_ucBgColorR, g_ucBgColorG, g_ucBgColorB);
             break;
 
         case _MENU_FACTORY_SSC_ADJ:
-            g_usAdjustValue = (BYTE)RTDFactoryDetOverRange(g_usAdjustValue, _FACTORY_SSC_MAX, _FACTORY_SSC_MIN, _OFF);
-            RTDFactoryOsdFuncShowNumber(ROW(_FACTORY_SSC_ROW), COL(_FACTORY_SSC_NUMBER_COL), g_usAdjustValue, (_ALIGN_LEFT | _FORCE_SHOW_NUMBER_OFF | _SHOW_2), _PFONT_FACTORY_SSC);
+            d_g_usAdjustValue = (BYTE)RTDFactoryDetOverRange(d_g_usAdjustValue, _FACTORY_SSC_MAX, _FACTORY_SSC_MIN, _OFF);
+            RTDFactoryOsdFuncShowNumber(ROW(_FACTORY_SSC_ROW), COL(_FACTORY_SSC_NUMBER_COL), d_g_usAdjustValue, (_ALIGN_LEFT | _FORCE_SHOW_NUMBER_OFF | _SHOW_2), _PFONT_FACTORY_SSC);
             break;
 
         case _MENU_FACTORY_LVDS_CLOCK_CURRENT_ADJ:
-            g_usAdjustValue= (BYTE)RTDFactoryDetOverRange(g_usAdjustValue, _FACTORY_LVDS_CLOCK_CURRENT_MAX, _FACTORY_LVDS_CLOCK_CURRENT_MIN, _OFF);
-            RTDFactoryOsdFuncShowNumber(ROW(_FACTORY_LVDS_CLOCK_ROW), COL(_FACTORY_LVDS_NUMBER_COL), g_usAdjustValue, (_ALIGN_LEFT | _FORCE_SHOW_NUMBER_OFF | _SHOW_2), _PFONT_FACTORY_LVDS_CLOCK);
+            d_g_usAdjustValue= (BYTE)RTDFactoryDetOverRange(d_g_usAdjustValue, _FACTORY_LVDS_CLOCK_CURRENT_MAX, _FACTORY_LVDS_CLOCK_CURRENT_MIN, _OFF);
+            RTDFactoryOsdFuncShowNumber(ROW(_FACTORY_LVDS_CLOCK_ROW), COL(_FACTORY_LVDS_NUMBER_COL), d_g_usAdjustValue, (_ALIGN_LEFT | _FORCE_SHOW_NUMBER_OFF | _SHOW_2), _PFONT_FACTORY_LVDS_CLOCK);
             break;
 
         case _MENU_FACTORY_LVDS_DATA_CURRENT_ADJ:
-            g_usAdjustValue = (BYTE)RTDFactoryDetOverRange(g_usAdjustValue, _FACTORY_LVDS_DATA_CURRENT_MAX, _FACTORY_LVDS_DATA_CURRENT_MIN, _OFF);
-            RTDFactoryOsdFuncShowNumber(ROW(_FACTORY_LVDS_DATA_ROW), COL(_FACTORY_LVDS_NUMBER_COL), g_usAdjustValue, (_ALIGN_LEFT | _FORCE_SHOW_NUMBER_OFF | _SHOW_2), _PFONT_FACTORY_LVDS_DATA);
+            d_g_usAdjustValue = (BYTE)RTDFactoryDetOverRange(d_g_usAdjustValue, _FACTORY_LVDS_DATA_CURRENT_MAX, _FACTORY_LVDS_DATA_CURRENT_MIN, _OFF);
+            RTDFactoryOsdFuncShowNumber(ROW(_FACTORY_LVDS_DATA_ROW), COL(_FACTORY_LVDS_NUMBER_COL), d_g_usAdjustValue, (_ALIGN_LEFT | _FORCE_SHOW_NUMBER_OFF | _SHOW_2), _PFONT_FACTORY_LVDS_DATA);
             break;
 /*
         case _MENU_FACTORY_PATTERN_ADJ:
-            g_usAdjustValue = (BYTE)RTDFactoryDetOverRange(g_usAdjustValue, _FACTORY_PATTERN_MAX, _FACTORY_PATTERN_MIN, _ON);
-            RTDFactoryOsdFuncShowNumber(ROW(_FACTORY_PATTERN_ROW), COL(_FACTORY_PATTERN_NUMBER_COL), g_usAdjustValue, (_ALIGN_LEFT | _FORCE_SHOW_NUMBER_OFF | _SHOW_3), _PFONT_FACTORY_PATTERN);
+            d_g_usAdjustValue = (BYTE)RTDFactoryDetOverRange(d_g_usAdjustValue, _FACTORY_PATTERN_MAX, _FACTORY_PATTERN_MIN, _ON);
+            RTDFactoryOsdFuncShowNumber(ROW(_FACTORY_PATTERN_ROW), COL(_FACTORY_PATTERN_NUMBER_COL), d_g_usAdjustValue, (_ALIGN_LEFT | _FORCE_SHOW_NUMBER_OFF | _SHOW_3), _PFONT_FACTORY_PATTERN);
             break;
 */
 
 #if(_DP_SUPPORT == _ON)
         case _MENU_FACTORY_HOT_PLUG_DP_DC_OFF_HIGH_ON_OFF:
-            g_usAdjustValue = (BYTE)RTDFactoryDetOverRange(g_usAdjustValue, _ON, _OFF, _ON);
-            UserCommonNVRamSetSystemData(_DP_HOT_PLUG_DC_OFF_HIGH, g_usAdjustValue);
-            RTDFactoryOsdFuncPutStringProp(_FACTORY_HOT_PLUG_DP_DC_OFF_HIGH_ROW, COL(_FACTORY_HOT_PLUG_OPTION_VALUE_COL), _PFONT_FACTORY_HOT_PLUG_DP_DC_OFF_HIGH, tFONT_FACTORY_EUROPE, tOSD_FACTORY_ON_OFF_TABLE[g_usAdjustValue], _ENGLISH);
+            d_g_usAdjustValue = (BYTE)RTDFactoryDetOverRange(d_g_usAdjustValue, _ON, _OFF, _ON);
+            UserCommonNVRamSetSystemData(_DP_HOT_PLUG_DC_OFF_HIGH, d_g_usAdjustValue);
+            RTDFactoryOsdFuncPutStringProp(_FACTORY_HOT_PLUG_DP_DC_OFF_HIGH_ROW, COL(_FACTORY_HOT_PLUG_OPTION_VALUE_COL), _PFONT_FACTORY_HOT_PLUG_DP_DC_OFF_HIGH, tFONT_FACTORY_EUROPE, tOSD_FACTORY_ON_OFF_TABLE[d_g_usAdjustValue], _ENGLISH);
             break;
 
 #if(_HW_DP_AUX_SINGLE_ENDED_MODE_SUPPORT == _ON)
         case _MENU_FACTORY_DP_AUX_MODE_ON_OFF:
-            g_usAdjustValue = (BYTE)RTDFactoryDetOverRange(g_usAdjustValue, _ON, _OFF, _ON);
-            UserCommonNVRamSetSystemData(_DP_AUX_DIFF_MODE, g_usAdjustValue);
+            d_g_usAdjustValue = (BYTE)RTDFactoryDetOverRange(d_g_usAdjustValue, _ON, _OFF, _ON);
+            UserCommonNVRamSetSystemData(_DP_AUX_DIFF_MODE, d_g_usAdjustValue);
             UserCommonInterfaceDpAuxSet();
-            RTDFactoryOsdFuncPutStringProp(_FACTORY_DP_AUX_MODE_ROW, COL(_FACTORY_ON_OFF_COL), _PFONT_FACTORY_DP_AUX_MODE_SEL, tFONT_FACTORY_EUROPE, tOSD_FACTORY_ON_OFF_TABLE[g_usAdjustValue], _ENGLISH);
+            RTDFactoryOsdFuncPutStringProp(_FACTORY_DP_AUX_MODE_ROW, COL(_FACTORY_ON_OFF_COL), _PFONT_FACTORY_DP_AUX_MODE_SEL, tFONT_FACTORY_EUROPE, tOSD_FACTORY_ON_OFF_TABLE[d_g_usAdjustValue], _ENGLISH);
             break;
 #endif
 
         case _MENU_FACTORY_DP_AUX_SETTING_ADJR:
-            g_usAdjustValue = (BYTE)RTDFactoryDetOverRange(g_usAdjustValue, 0x0F, 0x00, _ON);
-            UserCommonNVRamSetSystemData(_DP_AUX_ADJR_SETTING, g_usAdjustValue);
+            d_g_usAdjustValue = (BYTE)RTDFactoryDetOverRange(d_g_usAdjustValue, 0x0F, 0x00, _ON);
+            UserCommonNVRamSetSystemData(_DP_AUX_ADJR_SETTING, d_g_usAdjustValue);
             UserCommonInterfaceDpAuxSet();
-            RTDFactoryOsdFuncShowNumber(ROW(_FACTORY_DP_AUX_ADJR_ROW), COL(_FACTORY_ON_OFF_COL), g_usAdjustValue, (_ALIGN_LEFT | _FORCE_SHOW_NUMBER_OFF | _SHOW_3), _PFONT_FACTORY_DP_AUX_ADJR);
+            RTDFactoryOsdFuncShowNumber(ROW(_FACTORY_DP_AUX_ADJR_ROW), COL(_FACTORY_ON_OFF_COL), d_g_usAdjustValue, (_ALIGN_LEFT | _FORCE_SHOW_NUMBER_OFF | _SHOW_3), _PFONT_FACTORY_DP_AUX_ADJR);
             break;
 #endif // End of #if(_DP_SUPPORT == _ON)
 
         case _MENU_FACTORY_HOT_PLUG_HDMI_SUPPORT_ON_OFF:
-            g_usAdjustValue = (BYTE)RTDFactoryDetOverRange(g_usAdjustValue, _ON, _OFF, _ON);
-            UserCommonNVRamSetSystemData(_HDMI_HOT_PLUG_SUPPORT, g_usAdjustValue);
-            RTDFactoryOsdFuncPutStringProp(_FACTORY_HOT_PLUG_HDMI_SUPPORT_ROW, COL(_FACTORY_HOT_PLUG_OPTION_VALUE_COL), _PFONT_FACTORY_HOT_PLUG_HDMI_SUPPORT, tFONT_FACTORY_EUROPE, tOSD_FACTORY_ON_OFF_TABLE[g_usAdjustValue], _ENGLISH);
+            d_g_usAdjustValue = (BYTE)RTDFactoryDetOverRange(d_g_usAdjustValue, _ON, _OFF, _ON);
+            UserCommonNVRamSetSystemData(_HDMI_HOT_PLUG_SUPPORT, d_g_usAdjustValue);
+            RTDFactoryOsdFuncPutStringProp(_FACTORY_HOT_PLUG_HDMI_SUPPORT_ROW, COL(_FACTORY_HOT_PLUG_OPTION_VALUE_COL), _PFONT_FACTORY_HOT_PLUG_HDMI_SUPPORT, tFONT_FACTORY_EUROPE, tOSD_FACTORY_ON_OFF_TABLE[d_g_usAdjustValue], _ENGLISH);
             break;
 
         case _MENU_FACTORY_HOT_PLUG_HDMI_SUPPORT_TIME_ADJ:
-            g_usAdjustValue = (BYTE)RTDFactoryDetOverRange(g_usAdjustValue, _FACTORY_HOT_PLUG_HDMI_TIME_MAX, _FACTORY_HOT_PLUG_HDMI_TIME_MIN, _OFF);
-            UserCommonNVRamSetSystemData(_HDMI_HOT_PLUG_SUPPORT_TIME, g_usAdjustValue);
-            RTDFactoryOsdFuncShowNumber(ROW(_FACTORY_HOT_PLUG_HDMI_SUPPORT_TIME_ROW), COL(_FACTORY_HOT_PLUG_OPTION_VALUE_COL), (g_usAdjustValue), (_ALIGN_LEFT | _FORCE_SHOW_NUMBER_OFF | _SHOW_3), _PFONT_FACTORY_HOT_PLUG_HDMI_TIME);
+            d_g_usAdjustValue = (BYTE)RTDFactoryDetOverRange(d_g_usAdjustValue, _FACTORY_HOT_PLUG_HDMI_TIME_MAX, _FACTORY_HOT_PLUG_HDMI_TIME_MIN, _OFF);
+            UserCommonNVRamSetSystemData(_HDMI_HOT_PLUG_SUPPORT_TIME, d_g_usAdjustValue);
+            RTDFactoryOsdFuncShowNumber(ROW(_FACTORY_HOT_PLUG_HDMI_SUPPORT_TIME_ROW), COL(_FACTORY_HOT_PLUG_OPTION_VALUE_COL), (d_g_usAdjustValue), (_ALIGN_LEFT | _FORCE_SHOW_NUMBER_OFF | _SHOW_3), _PFONT_FACTORY_HOT_PLUG_HDMI_TIME);
             break;
 
         case _MENU_FACTORY_OSD_DOUBLE_SIZE_ON_OFF:
-            g_usAdjustValue = (BYTE)RTDFactoryDetOverRange(g_usAdjustValue, _ON, _OFF, _ON);
-            SET_OSD_DOUBLE_SIZE(g_usAdjustValue);
-            RTDFactoryOsdFuncPutStringProp(_FACTORY_OSD_DOUBLE_ROW, COL(_FACTORY_ON_OFF_COL), _PFONT_FACTORY_OSD_DOUBLE_ON_OFF, tFONT_FACTORY_EUROPE, tOSD_FACTORY_ON_OFF_TABLE[g_usAdjustValue], _ENGLISH);
+            d_g_usAdjustValue = (BYTE)RTDFactoryDetOverRange(d_g_usAdjustValue, _ON, _OFF, _ON);
+            SET_OSD_DOUBLE_SIZE(d_g_usAdjustValue);
+            RTDFactoryOsdFuncPutStringProp(_FACTORY_OSD_DOUBLE_ROW, COL(_FACTORY_ON_OFF_COL), _PFONT_FACTORY_OSD_DOUBLE_ON_OFF, tFONT_FACTORY_EUROPE, tOSD_FACTORY_ON_OFF_TABLE[d_g_usAdjustValue], _ENGLISH);
             break;
 
         case _MENU_FACTORY_COLORIMETRY_SEAMLESS_ON_OFF:
-            g_usAdjustValue = (BYTE)RTDFactoryDetOverRange(g_usAdjustValue, _ON, _OFF, _ON);
-            UserCommonNVRamSetSystemData(_COLORIMETRY_SEAMLESS_CHANGE, g_usAdjustValue);
-            RTDFactoryOsdFuncPutStringProp(_FACTORY_COLORIMETRY_SEAMLESS_ROW, COL(_FACTORY_ON_OFF_COL), _PFONT_FACTORY_COLORIMETRY_SEAMLESS, tFONT_FACTORY_EUROPE, tOSD_FACTORY_ON_OFF_TABLE[g_usAdjustValue], _ENGLISH);
+            d_g_usAdjustValue = (BYTE)RTDFactoryDetOverRange(d_g_usAdjustValue, _ON, _OFF, _ON);
+            UserCommonNVRamSetSystemData(_COLORIMETRY_SEAMLESS_CHANGE, d_g_usAdjustValue);
+            RTDFactoryOsdFuncPutStringProp(_FACTORY_COLORIMETRY_SEAMLESS_ROW, COL(_FACTORY_ON_OFF_COL), _PFONT_FACTORY_COLORIMETRY_SEAMLESS, tFONT_FACTORY_EUROPE, tOSD_FACTORY_ON_OFF_TABLE[d_g_usAdjustValue], _ENGLISH);
             break;
 
         case _MENU_FACTORY_DP_IRQ_TIME_ADJ:
 
             for(ucTemp = 0; ucTemp < 5; ucTemp++)
             {
-                g_usAdjustValue = (BYTE)RTDFactoryDetOverRange(g_usAdjustValue, 95, 55, _OFF);
+                d_g_usAdjustValue = (BYTE)RTDFactoryDetOverRange(d_g_usAdjustValue, 95, 55, _OFF);
             }
 
-            RTDFactoryOsdFuncShowNumber(ROW(_FACTORY_DP_IRQ_ROW), COL(_FACTORY_ON_OFF_COL), (g_usAdjustValue*10), (_ALIGN_LEFT| _FORCE_SHOW_NUMBER_OFF | _SHOW_4), _PFONT_FACTORY_DP_IRQ_ADJ);
+            RTDFactoryOsdFuncShowNumber(ROW(_FACTORY_DP_IRQ_ROW), COL(_FACTORY_ON_OFF_COL), (d_g_usAdjustValue*10), (_ALIGN_LEFT| _FORCE_SHOW_NUMBER_OFF | _SHOW_4), _PFONT_FACTORY_DP_IRQ_ADJ);
 
             break;
 

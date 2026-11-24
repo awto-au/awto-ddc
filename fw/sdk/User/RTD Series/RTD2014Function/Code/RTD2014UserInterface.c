@@ -3155,7 +3155,7 @@ bit UserInterfaceGetFirstAutoConfigStatus(void)
 void UserInterfaceGetAutoConfigPercentage(BYTE ucAutoPercentage)
 {
     ucAutoPercentage = ucAutoPercentage;
-    g_usAdjustValue = ucAutoPercentage;
+    d_g_usAdjustValue = ucAutoPercentage;
 }
 
 #if(_VGA_FORCE_DISPLAY == _ON)

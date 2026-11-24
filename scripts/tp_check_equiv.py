@@ -90,7 +90,7 @@ static BYTE margin[4], pData[8], dpcd[0x400], reg_f0, reg_f2, vth[4], eqcrc_rd, 
 #define g_ucDpRx1LaneCount g_lanes
 #define g_ucDpRx1LinkStatus01 g_status01
 #define g_ucDpRx1LinkStatus23 g_status23
-#define g_ucDpRx1LinkRequest01 g_req01
+#define d_g_ucDpRx1LinkRequest01 g_req01
 #define g_ucDpRx1LinkRequest23 g_req23
 #define g_ucDpRx1EQCRC g_eqcrc_state
 #define g_ucDpRx1Tp1PermitSwingLevel0 g_permit

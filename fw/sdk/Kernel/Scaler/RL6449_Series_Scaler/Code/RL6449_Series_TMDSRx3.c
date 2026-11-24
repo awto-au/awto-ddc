@@ -26,7 +26,7 @@
 //****************************************************************************
 // VARIABLE DECLARATIONS
 //****************************************************************************
-StructTMDSCtrlInfo g_stTMDSRx3CtrlInfo;
+StructTMDSCtrlInfo __data d_g_stTMDSRx3CtrlInfo;  // awto: IRAM direct, hot variable (#335)
 volatile bit d_g_bTMDSRx3HDMI2RREnable = _FALSE;
 volatile bit d_isr_g_bTMDSRx3HDMI2HighSpeedMode = _FALSE;
 volatile bit d_isr_g_bTMDSRx3TMDSPhySet = _FALSE;

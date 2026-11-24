@@ -20,7 +20,7 @@ void AwtoFastScalerSave(BYTE __xdata *pucBuf)
 
     memcpy(&pstS->stTiming, &g_stInputTimingData, sizeof(StructTimingInfo));
     memcpy(&pstS->stSync, &g_stMeasureSyncHV, sizeof(StructMeasureSyncData));
-    memcpy(&pstS->stColor, &isr_g_stColorInfo, sizeof(StructColorInfo));
+    memcpy(&pstS->stColor, &d_isr_g_stColorInfo, sizeof(StructColorInfo));
     pstS->usPixelClk = GET_INPUT_PIXEL_CLK();
     pstS->ucFcSrc = ScalerGetByte(P31_00_FC_INPUT_SEL_P01) & 0xF0;
     pstS->pucIvs2Dvs[0] = ScalerGetByte(P0_3D_IV_DV_DELAY_CLK_FINE);
@@ -31,7 +31,7 @@ void AwtoFastScalerSave(BYTE __xdata *pucBuf)
     pstS->pucIvs2Dvs[5] = ScalerGetByte(P0_42_IVS2DVS_DLY_TUNE_EVEN);
 }
 
-static bit AwtoFastSameBytes(BYTE __xdata *pucA, BYTE __xdata *pucB, BYTE ucN)     // no lib memcmp: it would grow the residual area
+static bit AwtoFastSameBytes(BYTE __xdata *pucA, BYTE __data *pucB, BYTE ucN)     // no lib memcmp: it would grow the residual area; B in IRAM direct (#335)
 {
     while(ucN-- != 0)
     {
@@ -83,7 +83,7 @@ BYTE AwtoFastScalerMatch(BYTE __xdata *pucBuf) // 0 = same geometry, rate and co
     {
         return 7;
     }
-    if(AwtoFastSameBytes((BYTE __xdata *)&pstS->stColor, (BYTE __xdata *)&isr_g_stColorInfo, sizeof(StructColorInfo)) == _FALSE)
+    if(AwtoFastSameBytes((BYTE __xdata *)&pstS->stColor, (BYTE __data *)&d_isr_g_stColorInfo, sizeof(StructColorInfo)) == _FALSE)
     {
         return 8;
     }

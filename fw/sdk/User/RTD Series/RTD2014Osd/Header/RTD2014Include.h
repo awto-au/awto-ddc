@@ -2991,8 +2991,8 @@ extern __xdata _Bool g_bForcePowSavStatus;
 
 // __RTD_OSD__
 extern StructOsdInfo g_stOsdInfo;
-extern WORD g_usAdjustValue;
-extern WORD g_usBackupValue;
+extern WORD __data d_g_usAdjustValue;  // awto: IRAM direct, hot variable (#335)
+extern WORD __data d_g_usBackupValue;  // awto: IRAM direct, hot variable (#335)
 
 // __RTD_OSDFUNC__
 extern WORD g_usFontSelectStart;
