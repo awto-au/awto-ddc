@@ -20,7 +20,7 @@ FAULTS = {
 
 
 def gate(src):
-    return subprocess.run([sys.executable, str(ROOT / "scripts/con_wrap_host.py"), "--src", str(src)], capture_output=True, text=True, timeout=60)
+    return subprocess.run([sys.executable, str(ROOT / "scripts/con_wrap_host.py"), "--src", str(src)], capture_output=True, text=True, timeout=60, check=False)
 
 
 def test_real_source_passes():

@@ -16,8 +16,9 @@ import re
 import subprocess
 import sys
 import time
-import isostamp  # noqa: E402
 from pathlib import Path
+
+import isostamp
 
 ROOT = Path(__file__).resolve().parents[1]
 LOG = ROOT / "tmp/logs/con_wrap_host.log"
@@ -33,7 +34,7 @@ def say(s: str) -> None:
 
 
 def c_int(name: str) -> int:
-    return int(re.search(rf"^#define {name}\s+(\d+)", (ROOT / "fw/osd/console.c").read_text(), re.M).group(1))
+    return int(re.search(rf"^#define {name}\s+(\d+)", (ROOT / "fw/osd/console.c").read_text(), re.MULTILINE).group(1))
 
 
 def load(src: Path):
