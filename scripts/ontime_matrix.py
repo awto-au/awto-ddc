@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 """Display-on-time matrix (internal module of `./dev.py ontime`): time-to-ACTIVE per trigger, stage splits, health.
 
-usage (via dev.py): ./dev.py ontime --unit N --trigger reset|ddc|switch [--runs 3] [--label L]
+usage (via dev.py): ./dev.py ontime --unit N --trigger reset|ddc|key|switch [--runs 3] [--label L]
                     ./dev.py ontime --units 1,2,3 --trigger dpms [--label L]
-- reset: ISP reset; ddc: DDC/CI power sleep then wake; switch: input --away then --back (default D1 then D2; the --back episode is the row);
+- reset: ISP reset; ddc: DDC/CI power sleep then wake; key: POWER key off then on (test cmd 0x3E; the OFF -> NORMAL path); switch: input --away then --back (default D1 then D2; the --back episode is the row);
   dpms: host Mutter PowerSaveMode 3 then 0 once (all units wake together; scripts/host_dpms.py guard).
 - Row = the newest sync episode (`./dev.py synclog`) after the trigger, polled until its `sync DONE` line is there.
 - Columns (ms from the episode start): init = INITIAL length, reached = first search visit, scan_ok, timing, disp = display
@@ -205,6 +205,13 @@ def run_one(label: str, unit: int, trig: str, run: int, away: str, back: str) ->
         time.sleep(SLEEP_S)
         dev("ddc", "--unit", str(unit), "wake")
         txt = wait_episode(unit, before, ("sync episode: wake", "sync DONE"))
+    elif trig == "key":
+        for k in range(2):  # POWER key (test cmd 0x3E) off, then on: the OFF -> NORMAL path (#193)
+            dev("osd", "--unit", str(unit), "--cmd", "power-key")
+            dev("link", "off", "--unit", str(unit))
+            if k == 0:
+                time.sleep(SLEEP_S)
+        txt = wait_episode(unit, before)
     elif trig == "switch":
         dev("kvm", away, "--units", str(unit))
         time.sleep(AWAY_S)
@@ -259,7 +266,7 @@ def main() -> int:
     ap.add_argument("--unit", type=int)
     ap.add_argument("--units", default="")
     ap.add_argument(
-        "--trigger", required=True, choices=["reset", "ddc", "switch", "dpms"]
+        "--trigger", required=True, choices=["reset", "ddc", "key", "switch", "dpms"]
     )
     ap.add_argument("--runs", type=int, default=3)
     ap.add_argument(

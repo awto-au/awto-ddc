@@ -1221,8 +1221,8 @@ def cmd_syncbench(extra: list[str]) -> int:
     return _py("sync_bench.py", "--unit", str(_n), "--map", _fwmap(u, given), "--runs", runs or "5", "--label", label or "run", *(["--switch", sw] if sw else []))
 
 
-@command("display on-time matrix: time-to-ACTIVE + stage splits per trigger (reset | ddc | switch | dpms), health after each (scripts/ontime_matrix.py)",
-         args="--unit N | --units 1,2,3 --trigger reset|ddc|switch|dpms [--runs 3] [--label L]", kind="action")
+@command("display on-time matrix: time-to-ACTIVE + stage splits per trigger (reset | ddc | key | switch | dpms), health after each (scripts/ontime_matrix.py)",
+         args="--unit N | --units 1,2,3 --trigger reset|ddc|key|switch|dpms [--runs 3] [--label L]", kind="action")
 def cmd_ontime(extra: list[str]) -> int:
     return _py("ontime_matrix.py", *extra)
 
