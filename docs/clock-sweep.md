@@ -308,3 +308,8 @@ Status: open. Unit 2 (Intel DP-1 source, i915) with the default image (350.8 / 1
   - Default: `AWTO_DPCD_SETTLE_RD` = `AWTO_GAP_025US` for `AWTO_CLOCK_MHZ` 350, 0 otherwise (`ScalerCommonMcuInclude.h`). The default build (tag `dflt`) differs from the flashed `g6` image only in the 5 tag-string bytes; gates ALL PASS. Flashes this round: 1 (g6) + 0 restores, about 2 minutes of blank; unit 2 stays on the g6 image (locking).
   - Next (one build): in the expiry entry log DPCD 0x000 / 0x001 (constants `12` / `14`): wrong values prove the ISR port read is broken independent of the host write. Do not flash more variants without Dan's go (each DP-AUX flash blanks his screen about 2 minutes).
   - Stock-clock image on unit 2: host negotiates 3840x2160@60 on DP-1 (health 12/12, 3840x2160@59.991).
+
+## Flash-cache sets in the DpRx1 ISR checks (#335)
+- `scripts/isr_cache_sets.py BIN MAP`: hot call of Tp1Check / Tp2Check / DFECheck `_EXINT0` (lanes 1 / 2 / 4 x HBR / HBR2) stepped per instruction; lists clk, line fills, stall clk and every cache set holding more lines than ways, with the functions. `scripts/isr_call_cycles.py` gives clk only.
+- Geometry is the sim's: 16 B lines, 64 sets, 2 ways, LRU (`scripts/dw8051_model.py` `flash_fetch`). ASSUMED, not verified on hardware; the output says so.
+- Why it exists: a 2 B variable move shifted code inside Tp1Check so two of its blocks sat 0x400 apart on the same sets as common-region code (3 lines in 2 ways); +6.5k clk per hot call in the sim, same instruction count.
