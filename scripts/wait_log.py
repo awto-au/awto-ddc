@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Blocking-wait log of the running image (awto-ddc#216): every ScalerTimerDelayXms / PollingFlagProc / WaitForEvent call.
 
-usage: wait_log.py BUS --serial S --map MAP [--min-ms N]
+usage: wait_log.py BUS --serial S --map MAP [--min-ms N] [--n 32 for a -D _AWTO_OSD_HWTEST image]
   Waits under 2 ms (and not expired) are only counted.
   Reads g_stAwtoWait (fw/log/sync.c, struct in RL6449_Project.h) over the debug link: the newest AWTO_WAIT_N waits, oldest first,
   with fw time at the start, ms waited, kind and argument (ms asked / register polled / event type). TIMEOUT = the poll or
@@ -51,13 +51,13 @@ def caller_name(table, pc: int, bank: int) -> str:
     return names[i] if i >= 0 else f"?{flat:x}"
 
 
-def decode(raw: bytes):
+def decode(raw: bytes, n_ring: int = N):
     """(total, quick, [(end_ms, kind, timeout, arg, dur, pc, bank)] oldest first)"""
     total, rows = raw[0], []
-    n = min(total, N)                               # total >= N: ring full
-    start = (total - n) % N
+    n = min(total, n_ring)                          # total >= n_ring: ring full
+    start = (total - n) % n_ring
     for k in range(n):
-        o = HDR + ((start + k) % N) * EV
+        o = HDR + ((start + k) % n_ring) * EV
         rows.append((raw[o] << 8 | raw[o + 1], raw[o + 2] & 0x03, bool(raw[o + 2] & 0x80), raw[o + 3] << 8 | raw[o + 4], raw[o + 5],
                      raw[o + 6] << 8 | raw[o + 7], (raw[o + 2] >> 3) & 0x0F))
     return total, raw[1], rows
@@ -69,6 +69,7 @@ def main() -> int:
     ap.add_argument("--serial", required=True)
     ap.add_argument("--map", required=True, type=Path)
     ap.add_argument("--min-ms", type=int, default=0)
+    ap.add_argument("--n", type=int, default=N, help="AWTO_WAIT_N of the image (32 on a -D _AWTO_OSD_HWTEST image)")
     a = ap.parse_args()
     sys.path.insert(0, str(Path(__file__).resolve().parent))
     import dbg_link
@@ -82,14 +83,14 @@ def main() -> int:
     with dbg_link.linked(a.bus, 2):
         io = B.Real(a.bus, allow_write=False, regread=True)
         for _ in range(3):
-            raw = X.read_blocks(io, base, HDR + EV * N)
+            raw = X.read_blocks(io, base, HDR + EV * a.n)
             if raw is not None:
                 break
         io.close()
     if raw is None:
         say("wait log read failed")
         return 1
-    total, quick, rows = decode(raw)
+    total, quick, rows = decode(raw, a.n)
     say(f"stack: highest SP inside a wait 0x{raw[2]:02X} (guard 0xF0, {0xF0 - raw[2]} B below it; includes the logger's own frame)")
     say(f"{a.map.name}: {total} waits >= 2 ms or expired + {quick} that answered under 2 ms (quick wraps at 256), last {len(rows)} shown")
     table = chunk_table(a.map)

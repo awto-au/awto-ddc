@@ -2991,8 +2991,15 @@ extern __xdata _Bool g_bForcePowSavStatus;
 
 // __RTD_OSD__
 extern StructOsdInfo g_stOsdInfo;
-extern WORD __data d_g_usAdjustValue;  // awto: IRAM direct, hot variable (#335)
-extern WORD __data d_g_usBackupValue;  // awto: IRAM direct, hot variable (#335)
+#ifdef _AWTO_OSD_HWTEST                 // test image: the 6 direct bytes of its M_GAP word and delays need the room (#340); XDATA names carry no d_
+#define d_g_usAdjustValue                       g_usAdjustValue
+#define d_g_usBackupValue                       g_usBackupValue
+#define AWTO_OSD_HOT                            __xdata
+#else
+#define AWTO_OSD_HOT                            __data
+#endif
+extern WORD AWTO_OSD_HOT d_g_usAdjustValue;  // awto: IRAM direct, hot variable (#335)
+extern WORD AWTO_OSD_HOT d_g_usBackupValue;  // awto: IRAM direct, hot variable (#335)
 
 // __RTD_OSDFUNC__
 extern WORD g_usFontSelectStart;

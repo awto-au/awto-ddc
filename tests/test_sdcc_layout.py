@@ -184,3 +184,17 @@ def test_map_text_has_regions_only():
     lay.rows[("stub", "S")] = ("C", 0, 8)
     txt = lay.map_text()
     assert "fn\tA\t3\n" in txt and "stub" not in txt
+
+
+def test_fixed_stub_takes_room_from_slack_in_dev_layout(tmp_path):
+    """#340: a new local stub (fixed to its caller's bank) finds the bank full of growth slack: the slack gives way, no exit."""
+    lay = L.Layout()
+    lay.rows[("fn", "A")] = (0, 0, 100)                       # 90 B function with 10 B slack, bank 0 = 100 B
+    a = L.Item("fn", "A", 90, 0, "m", slot=90)
+    a.fixed = True
+    stub = L.Item("stub", "0_B", 8, 0, "m", slot=8)
+    stub.fixed = True
+    placed, _ = L.assign([a, stub], lay, 0, 0, 1, 100, log=lambda *_: None, sticky=True)
+    assert placed[("fn", "A")][2] == 90 and placed[("stub", "0_B")][1] == 90
+    with pytest.raises(SystemExit, match="no room"):
+        L.assign([a, stub], L.Layout(), 0, 0, 1, 95, log=lambda *_: None, sticky=True)

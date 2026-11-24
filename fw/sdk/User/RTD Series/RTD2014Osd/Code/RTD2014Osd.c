@@ -43,8 +43,8 @@
 //****************************************************************************
 StructOsdInfo g_stOsdInfo;
 
-WORD __data d_g_usAdjustValue;  // awto: IRAM direct, hot variable (#335)
-WORD __data d_g_usBackupValue;  // awto: IRAM direct, hot variable (#335)
+WORD AWTO_OSD_HOT d_g_usAdjustValue;  // awto: IRAM direct, hot variable (#335)
+WORD AWTO_OSD_HOT d_g_usBackupValue;  // awto: IRAM direct, hot variable (#335)
 
 //****************************************************************************
 // FUNCTION DECLARATIONS

@@ -122,6 +122,9 @@ class Region:
             return True
         return False
 
+    def place_probe(self, slot):
+        return next((o for o, n in self.holes() if n >= slot), None)
+
     def place(self, key, slot):
         """Best-fit hole (smallest that fits, lowest offset on ties); returns offset or None."""
         best = None
@@ -137,6 +140,18 @@ class Region:
 def slack_slot(rid, size):
     """Dev layout slot: room to grow in place. Common is tight (it is copied into every bank); banks have a free tail."""
     return size + 4 + size // 32 if rid == "C" else size + 8 + size // 8
+
+
+def _reclaim_slack(reg, need, by_key):
+    """Dev layout: a fixed item that finds no room takes it from kept slots' growth slack (slot -> exact size), least slack that suffices first."""
+    while reg.place_probe(need) is None:
+        slack = sorted(((s - by_key[k].slot, k) for k, (o, s) in reg.placed.items() if k in by_key and s > by_key[k].slot), reverse=True)
+        if not slack:
+            return False
+        fit = [x for x in slack if x[0] >= need]
+        _, k = min(fit) if fit else slack[0]
+        reg.placed[k] = (reg.placed[k][0], by_key[k].slot)
+    return True
 
 
 def _put(reg, rid, it, sticky):
@@ -177,6 +192,8 @@ def assign(items, layout, common_lo, common_hi, nbanks, bank_cap, log=print, res
         if any(it.key in r.placed for r in regs.values()):
             continue                                        # kept at its previous offset
         done = next((rid for rid in cands if _put(regs[rid], rid, it, sticky)), None)
+        if done is None and sticky and it.fixed and it.region in regs and _reclaim_slack(regs[it.region], it.slot, by_key):
+            done = it.region if regs[it.region].place(it.key, it.slot) is not None else None
         if done is None:
             why = (labels or {}).get(it.key)
             raise SystemExit(f"{why + ': ' if why else 'layout: '}no room for {it.key[1]} ({it.slot} B) in "

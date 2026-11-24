@@ -1131,7 +1131,11 @@ extern void AwtoSwRec(unsigned char ucId, unsigned char ucArg);
 extern void AwtoSysLog(unsigned char ucArg, unsigned char ucWhy, unsigned long ulMs);
 extern void AwtoSwMode(unsigned char ucMode);
 // #216 blocking-wait log: every ScalerTimerDelayXms / PollingFlagProc / WaitForEvent call, newest last, wraps. Host: scripts/wait_log.py.
+#ifdef _AWTO_OSD_HWTEST
+#define AWTO_WAIT_N                                             32      // test image: 256 B less XDATA for its test ops (#340); wait_log.py --n 32
+#else
 #define AWTO_WAIT_N                                             64      // newest waits kept (XDATA is scarce, #233); ucTotal counts all
+#endif
 #define AWTO_WAIT_DELAY                                         0       // arg = ms asked
 #define AWTO_WAIT_POLL                                          1       // arg = register polled
 #define AWTO_WAIT_EVENT                                         2       // arg = event type
