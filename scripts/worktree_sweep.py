@@ -40,7 +40,7 @@ def log(msg: str) -> None:
 
 
 def git(*args, cwd=MAIN):
-    return subprocess.run(["git", *args], cwd=cwd, capture_output=True, text=True)
+    return subprocess.run(["git", *args], check=False, cwd=cwd, capture_output=True, text=True)
 
 
 def parse():
@@ -57,7 +57,7 @@ def parse():
 
 
 def du(path: str) -> int:
-    r = subprocess.run(["du", "-sk", path], capture_output=True, text=True)
+    r = subprocess.run(["du", "-sk", path], check=False, capture_output=True, text=True)
     return int(r.stdout.split()[0]) * 1024 if r.stdout else 0
 
 
@@ -66,9 +66,7 @@ def dirty(path: str):
     blocking, ignored = [], []
     for ln in git("status", "--porcelain", "-uall", cwd=path).stdout.splitlines():
         code, p = ln[:2], ln[3:]
-        if code == "??" and p.startswith("tmp/"):
-            ignored.append(ln)
-        elif code.strip() == "M" and p in GENERATED_TRACKED:
+        if code == "??" and p.startswith("tmp/") or code.strip() == "M" and p in GENERATED_TRACKED:
             ignored.append(ln)
         else:
             blocking.append(ln)
