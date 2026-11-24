@@ -1566,6 +1566,7 @@ extern void AwtoNvEv(unsigned char ucStep);
 extern void AwtoSyncT2Start(void);
 #define AWTO_SYNC_MARK()                                        AwtoSyncMark()
 extern void AwtoSyncBegin(unsigned char ucKind, unsigned char ucPort);
+extern void AwtoSyncSettle(void);
 extern void AwtoSyncPush(unsigned char ucId, unsigned char ucArg, unsigned long ulVal);
 extern void AwtoSyncSw(unsigned char ucId, unsigned char ucArg);
 extern void AwtoSyncDetect(unsigned char ucPort, unsigned char ucKind, unsigned char ucPre, unsigned char ucType);

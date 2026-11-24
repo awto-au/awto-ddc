@@ -727,6 +727,11 @@ void AwtoSyncBegin(BYTE ucKind, BYTE ucPort)
     AwtoSyncPush(AWTO_SYNC_EV_BEGIN, ucKind, ((AwtoMs() >> 16) << 8) | ucPort);   // #157 anchor: fw ms bits 31..16 above the port
 }
 
+void AwtoSyncSettle(void)                           // fast wake / switch done: ACTIVE with no mode change, so no mode event ends the episode (#313)
+{
+    g_stAwtoSync.ucDone = 1;                        // else ucOpenReq stays set: busy hook on (no pacing), no console open
+}
+
 static __xdata BYTE s_ucAwtoSyncRan;                // 0 until this boot's first AwtoSyncInit (the main loop may re-enter it)
 
 void AwtoSyncInit(void)                             // boot (before SysMainSystemInitial): the power-on episode

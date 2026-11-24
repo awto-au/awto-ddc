@@ -116,6 +116,7 @@ SKIP_IF_MISSING = {      # gate -> map symbols the image must define, else SKIP 
     "monitor": ("_g_stAwtoMon",),
     "panel": ("_g_ucAwtoPanelOwn",),
     "sysm": ("_g_ucAwtoSysOwn",),
+    "pacewake": ("_g_stAwtoHead", "_g_stAwtoSync", "_AwtoWakePoll"),
     "nvlog": ("_g_stAwtoNv", "_AwtoNvLog"),
     "dramlog": ("_AwtoDlFlush",),
 }
@@ -219,6 +220,7 @@ def gates(b: Path, m: Path, ref, tree):
     g["wake"] = [*g["wake_full"], "--quick"]                                          # NORMAL: cable / EDID / AUX / SOURCE-key wakes
     g["panel"] = [*PY, f"{s}/panel_sim.py", b, m, *(["--tree", tree] if tree else [])]
     g["sysm"] = [*PY, f"{s}/sysm_sim.py", b, m, *(["--tree", tree] if tree else [])]
+    g["pacewake"] = [*PY, f"{s}/pacing_wake_sim.py", b, m, "--case", "fast", "--after", "13"]    # #313: the busy hook is off 12 s after a fast wake (~5 s CPU)
     fast = sibling(b, "clk87")                                        # `--build-inputs`: dev.py build --tag <tag>-clk87 -D AWTO_CLOCK_MHZ=87 (stock clock): measured too when present
     base = [*PY, f"{s}/delay_sim.py", b, m, *(["--tree", tree, "--audit", *(["--variant", "hwtest"] if V["hwtest"] else [])] if tree else [])]
     if tree:

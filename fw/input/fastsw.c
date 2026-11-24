@@ -316,6 +316,7 @@ void AwtoSwFastPoll(void)                       // once per main-loop pass: fini
         g_ucAwtoWakePending = 0;
 #endif
         ScalerGlobalFirstActiveProc(GET_SOURCE_TYPE(g_ucSearchIndex), SysSourceGetInputPort());
+        AwtoSyncSettle();
         UserCommonInterfaceOsdActiveProc();     // NVRAM search port, DDC/CI (debug slave) to the new port, info pop-up, unblank
         s_ucAwtoFastWatch = 1;
         SysMachineRequest(AWTO_SYS_REQ_ACTIVE, AWTO_SYS_BY_FAST_DONE);
