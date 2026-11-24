@@ -67,6 +67,7 @@ typedef struct {
     uint32_t xacc[0x10000];     /* tools: MOVX accesses per XDATA address (rd + wr) */
     uint32_t *fm_lacc, *fm_lmiss;   /* tools: per physical line (FM_NLINES): cached fetches / line fills */
     struct san *san;            /* sdcc_san race detector (-DSDCC_SAN builds only; docs/sanitizer.md) */
+    int counted_ffwd;           /* host configuration: exact native DJNZ self-loop batching */
 } core_t;
 #define FM_NLINES 131072
 #define IS_XRAM(a) ((a) >= 0xD000 && (a) < 0xF800)   /* the build's XDATA pool is 0xD700..0xF6xx (map); everything else is scaler registers */
@@ -1184,6 +1185,69 @@ static uint32_t fetch_stall(core_t *c, uint32_t pc, int len)
     }
 }
 
+uint64_t core_ffwd_room(core_t *c);
+void core_ffwd(core_t *c, uint64_t clk, uint64_t cycles, uint64_t instr, int op);
+void core_set_counted_ffwd(core_t *c, int on) { c->counted_ffwd = on != 0; }
+
+/* Called AFTER an ordinary instruction and its IRQ poll. Only side-effect-free
+ * DJNZ self loops qualify: register-bank counters or direct lower IRAM, never
+ * SFRs. Keep the terminating iteration interpreted. No new host stops, so the
+ * caller's instruction budget and Python model deadlines remain unchanged.
+ *
+ * All instruction bytes must be hot when fetch modelling is on. Repeating
+ * this same byte sequence leaves LRU tags unchanged after the ordinary step;
+ * account for every byte hit, including line/bank/common-area boundaries.
+ * Cold, uncached, counter/edge-timer and sanitizer cases fall back.
+ * Stop strictly BEFORE a timer deadline; the ordinary step services that IRQ.
+ */
+static void counted_ffwd(core_t *c, uint32_t pc, uint64_t end)
+{
+    uint8_t op = c->last_op, addr;
+    uint32_t len;
+    uint64_t n, cyc, clk, room;
+    if (!c->counted_ffwd || c->san || c->was_reti || !c->dw)
+        return;
+    if (op >= 0xD8 && op <= 0xDF && c->cur[(pc + 1) & 0xFFFF] == 0xFE) {
+        addr = (PSW & 0x18) + (op & 7);
+        len = 2;
+    } else if (op == 0xD5 && c->cur[(pc + 2) & 0xFFFF] == 0xFD &&
+               c->cur[(pc + 1) & 0xFFFF] < 0x80) {
+        addr = c->cur[(pc + 1) & 0xFFFF];
+        len = 3;
+    } else
+        return;
+    n = (c->iram[addr] ? c->iram[addr] : 256u) - 1u;
+    if (n > end - c->p.instr) n = end - c->p.instr;
+    if (n < 2) return;
+    cyc = c->dwcyc[op];
+    clk = cyc * c->clk_per_cycle;
+    if (!clk) return;
+    room = core_ffwd_room(c) / clk;
+    if (n > room) n = room;
+    if (n < 2) return;
+    if (c->fm) {
+        uint32_t lines[3], i;
+        if (c->oplen[op] != len) return;
+        for (i = 0; i < len; i++) {
+            uint32_t a = (pc + i) & 0xFFFF;
+            uint32_t ph = a < (uint32_t)c->fm_common ? a : (c->p.bank << 16) | a;
+            uint32_t line = lines[i] = ph / c->fm_line;
+            uint32_t *tags = c->fm_tag + (size_t)(line % c->fm_sets) * c->fm_ways;
+            int w;
+            for (w = 0; w < c->fm_ways && tags[w] != line; w++) ;
+            if (w == c->fm_ways) return;
+        }
+        /* The previous ordinary fetch already established the repeated LRU
+         * order. No misses/evictions occur while all these lines are resident. */
+        if (c->fm_lacc)
+            for (i = 0; i < len; i++)
+                if (lines[i] < FM_NLINES) c->fm_lacc[lines[i]] += n;
+    }
+    c->iram[addr] -= n;
+    core_ffwd(c, n * clk, n * cyc, n, op);
+    c->p.irq_tail = 0;
+}
+
 void core_free(core_t *c)
 {
     if (c) {
@@ -1326,6 +1390,9 @@ static int core_run_(core_t *c, uint64_t n)
             c->p.reason = R_EVENT;
             return R_EVENT;
         }
+        if (c->p.pc == pc && c->p.nirq == n0 &&
+            !(c->pch[pc] >> (c->p.bank & 15) & 1))
+            counted_ffwd(c, pc, end);
     }
     return R_DONE;
 }
@@ -1346,6 +1413,7 @@ void core_snap(core_t *c, uint8_t *buf)
 
 void core_restore(core_t *c, const uint8_t *buf)
 {
+    int counted = c->counted_ffwd;
     uint8_t *code = c->code, *cur = c->cur;
     uint32_t *tag = c->fm_tag, *la = c->fm_lacc, *lm = c->fm_lmiss;
     struct san *sn = c->san;
@@ -1355,6 +1423,7 @@ void core_restore(core_t *c, const uint8_t *buf)
     memcpy(hk, c->hook, sizeof hk);                  /* event / PC hooks are host configuration, not machine state: kept as they are now */
     memcpy(pc_, c->pch, sizeof pc_);
     memcpy(c, buf, sizeof *c);
+    c->counted_ffwd = counted;
     memcpy(c->hook, hk, sizeof hk);
     memcpy(c->pch, pc_, sizeof pc_);
     c->code = code; c->fm_tag = tag; c->fm_lacc = la; c->fm_lmiss = lm; c->san = sn;
@@ -1367,7 +1436,7 @@ void core_restore(core_t *c, const uint8_t *buf)
  * are added without executing it, as long as no timer deadline falls inside (then an IRQ arrives at the same iteration as interpreted). ---- */
 uint64_t core_ffwd_room(core_t *c)    /* clk that can be skipped; 0 = none (per-instruction timers, code cache off, or a deadline due) */
 {
-    if (!c->dw || c->tslow || !(c->xram[0xFDA0] & 1) || c->tnext <= c->tnow)
+    if (!c->dw || c->tslow || (c->fm && !(c->xram[0xFDA0] & 1)) || c->tnext <= c->tnow)
         return 0;
     return c->tnext - c->tnow - 1;
 }
