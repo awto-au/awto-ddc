@@ -359,7 +359,7 @@ def gate(path, kind=None, warn_only=False, tool_version=None, reg=None):
             fatal.append("{} version {} is a known variant with no parser ({})".format(kind, sig["version"], vspec.get("note", "")))
         else:
             if sig["size"] < vspec.get("min_size", 0):
-                fatal.append("%s size %d below minimum %d" % (kind, sig["size"], vspec["min_size"]))
+                fatal.append(f"{kind} size {sig['size']:d} below minimum {vspec['min_size']:d}")
             for key, got, rule, ok in compare(sig, vspec):
                 if not ok:
                     fatal.append("{} v{} layout drift: {} = {!r}, registry expects {!r}; refusing "

@@ -7,7 +7,7 @@ Linear sweep only; data in code will decode as garbage.
 """
 import sys
 
-R = ["R%d" % i for i in range(8)]
+R = [f"R{i}" for i in range(8)]
 # (mnemonic template, length); operand kinds: d=direct, i=imm8, I=imm16, r=rel8, a=addr16, b=bit
 T = {}
 def op(code, fmt, n): T[code] = (fmt, n)

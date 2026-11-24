@@ -421,8 +421,8 @@ def apply_place(place, stage):
         for c in cs:
             c.common, c.bank = (True, None) if want == "C" else (False, want)
             k = ("fn" if c.area == "CSEG" else "const", c.name)
-            place["labels"][k] = place["labels"][k].split(" [")[0] + f" [group {tot} B -> {'common' if want == 'C' else 'bank %d' % want}]"
-        log(f"#pragma place group({g}) -> {'common' if want == 'C' else 'bank %d' % want} ({stage}): "
+            place["labels"][k] = place["labels"][k].split(" [")[0] + f" [group {tot} B -> {'common' if want == 'C' else f'bank {want}'}]"
+        log(f"#pragma place group({g}) -> {'common' if want == 'C' else f'bank {want}'} ({stage}): "
             f"{len(cs)} items, {tot} B; moved here: {was or 'none'}")
 
 

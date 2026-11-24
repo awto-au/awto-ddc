@@ -169,7 +169,7 @@ def run_case(ctx, c: Case) -> dict:
     ok = all(b["bad"] == 0 for b in bad.values())
     row["pass"] = ok
     say(f"  {'PASS' if ok else 'FAIL'} {c.name}: {c.region} {'shown' if c.shown else 'hidden'} {nw} words, Ka/K0/K1 {c.ka:02X}/{c.k0:02X}/{c.k1:02X}"
-        f"{' readdr' if c.readdr else ''}{' EAoff' if c.ea_off else ''}{' sync' if c.sync else ''}{' nops %d' % c.nops if c.nops else ''}{' shuf' if c.shuf else ''} x{c.rep}"
+        f"{' readdr' if c.readdr else ''}{' EAoff' if c.ea_off else ''}{' sync' if c.sync else ''}{f' nops {c.nops:d}' if c.nops else ''}{' shuf' if c.shuf else ''} x{c.rep}"
         f"{f' FFF1 {c.fff1:02X}' if c.fff1 is not None else ''}: M1 bad {m1['bad']} (B0/B1/B2 {m1['pos']}, doubled {m1['dup']}) first {m1['first']} {m1['badb'].hex()}"
         + (f"; M2 bad {bad['M2']['bad']}" if "M2" in bad else ""))
     return row

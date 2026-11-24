@@ -43,7 +43,7 @@ def test_rom_shapes():
     assert sum(k.startswith("char_") for k in cat) == 37
     assert sum(k.startswith("hull") for k in cat) == 17 and sum(k.startswith("flame") for k in cat) == 17
     for i in range(4):                                           # rocks: closed outline, 64 x 64 units
-        segs, _ = dvg.decode(cat["rock%d" % i])
+        segs, _ = dvg.decode(cat[f"rock{i}"])
         assert segs[0][:2] == segs[-1][2:4]
         x0, y0, x1, y1 = D.bbox(segs)
         assert (x1 - x0, y1 - y0) == (64, 64)

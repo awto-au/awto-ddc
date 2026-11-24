@@ -120,13 +120,8 @@ def main():
         f.write("edid " + edid + "\n")
         for c in sorted(vals):
             t, cur, mx = vals[c]
-            f.write("vcp %02X %d %d %d\n" % (c, t, cur, mx))
-    msg = "profile %s: caps %d chars, edid %d bytes, %d vcp codes" % (
-        p,
-        len(capstr),
-        len(edid) // 2,
-        len(vals),
-    )
+            f.write(f"vcp {c:02X} {t:d} {cur:d} {mx:d}\n")
+    msg = f"profile {p}: caps {len(capstr)} chars, edid {len(edid) // 2} bytes, {len(vals)} vcp codes"
     with open(os.path.join(root, "tmp/logs/smartcontrol_profile.log"), "a") as _f:
         _f.write(msg + "\n")
     print(msg)

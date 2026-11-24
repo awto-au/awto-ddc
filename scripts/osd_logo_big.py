@@ -119,7 +119,7 @@ def main() -> int:
         body = E.c_array("tAWTO_LOGO_RUNS", rl, per=16, comment=f"{a.cols}x{a.rows} cells, rows of [count, tile id] runs")
         (E.ROOT / "fw/sdcc/awto_logo_maps.inc").write_text(hdr + body + draw)
         (E.ROOT / "fw/sdcc/awto_logo_big.inc").unlink(missing_ok=True)
-        E.log("wrote fw/sdcc/awto_logo_icons.inc, awto_logo_maps.inc; Project.h needs AWTO_LOGO_COLS %d / AWTO_LOGO_ROWS %d" % (a.cols, a.rows) + "")
+        E.log(f"wrote fw/sdcc/awto_logo_icons.inc, awto_logo_maps.inc; Project.h needs AWTO_LOGO_COLS {a.cols:d} / AWTO_LOGO_ROWS {a.rows:d}")
     return 0
 
 

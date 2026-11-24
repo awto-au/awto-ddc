@@ -91,7 +91,7 @@ def parse_dialog(d):
         if u16(d, o) == 0x0000:
             return "", o + 2
         if u16(d, o) == 0xFFFF:
-            return "#%d" % u16(d, o + 2), o + 4
+            return f"#{u16(d, o + 2):d}", o + 4
         return wstr(d, o)
     _, o = skip_sz_or_ord(o)       # menu
     cls, o = skip_sz_or_ord(o)     # class
@@ -116,7 +116,7 @@ def parse_dialog(d):
         else:
             c, o = wstr(d, o)
         if u16(d, o) == 0xFFFF:
-            txt = "#res%d" % u16(d, o + 2)
+            txt = f"#res{u16(d, o + 2):d}"
             o += 4
         else:
             txt, o = wstr(d, o)
@@ -291,7 +291,7 @@ def main():
     with outp.open("w", encoding="utf-8") as f:
         for r in out:
             f.write("\t".join(x.replace("\t", " ").replace("\n", "\\n").replace("\r", "") for x in r) + "\n")
-    log("rows: %d -> %s" % (len(out), outp))
+    log(f"rows: {len(out)} -> {outp}")
 
 
 if __name__ == "__main__":

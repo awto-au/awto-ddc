@@ -48,10 +48,9 @@ class Db:
             raise ValueError("bad magic (expected 0x99552277)")
         self.version, self.hdr_size = struct.unpack_from("<II", data, 4)
         if self.version != 1:
-            raise ValueError("unsupported DB version %d (only v1 decoded; RTD2172/RTD2186 are v3)"
-                             % self.version)
+            raise ValueError(f"unsupported DB version {self.version:d} (only v1 decoded; RTD2172/RTD2186 are v3)")
         n = (self.hdr_size - 8) // 4
-        self.table = struct.unpack_from("<%dI" % n, data, 8)
+        self.table = struct.unpack_from(f"<{n:d}I", data, 8)
         self.pool = None
 
     # -- record recognisers -------------------------------------------------
@@ -93,7 +92,7 @@ class Db:
         if d[t0 + 36:t0 + 44] != b"\xff" * 8 and d[t0 + 44:t0 + 46] != b"\xff\xff":
             logging.warning("unexpected first field layout at 0x%x", t0 + 36)
         self.learn_tags(t0)
-        self.preamble = struct.unpack_from("<%dI" % ((t0 - self.hdr_size) // 4), d, self.hdr_size)
+        self.preamble = struct.unpack_from(f"<{(t0 - self.hdr_size) // 4:d}I", d, self.hdr_size)
         regs = []
         pos = t0
         tail = pos
@@ -276,7 +275,7 @@ def main():
                 ""]) + "\n")
             nreg += 1
             for f in r["fl"]:
-                acc = ACCESS.get(f["acc"], "?%d" % f["acc"])
+                acc = ACCESS.get(f["acc"], f"?{f['acc']:d}")
                 if "write 1 clear" in (f["desc"] or "").lower():
                     acc = "W1C"  # inferred from description text [guess]
                 w = f["wide"]
@@ -286,7 +285,7 @@ def main():
                     w[0] if w else "", w[1] if w else "", esc(f["rgrp"]), esc(f["desc"])]) + "\n")
                 nfld += 1
     logging.info("wrote %d register rows, %d field rows, %d pages", nreg, nfld, len(by_page))
-    print("registers=%d fields=%d pages=%d" % (nreg, nfld, len(by_page)))
+    print(f"registers={nreg:d} fields={nfld:d} pages={len(by_page)}")
 
 
 if __name__ == "__main__":

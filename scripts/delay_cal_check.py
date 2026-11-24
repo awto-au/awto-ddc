@@ -177,7 +177,7 @@ def sync(s, cmd: str = "") -> str:
 
 def iram(s, a: int, n: int) -> bytes:
     out = sync(s, f"dump iram 0x{a:x} 0x{a + n - 1:x}")
-    m = re.search(r"0x[0-9a-f]+\s+((?:[0-9a-f]{2} ){%d})" % n, out or "")
+    m = re.search(rf"0x[0-9a-f]+\s+((?:[0-9a-f]{{2}} ){{{n}}})", out or "")
     if not m:
         raise SystemExit(f"iram dump 0x{a:x}+{n} unreadable: {out!r}")
     return bytes.fromhex(m.group(1).replace(" ", ""))

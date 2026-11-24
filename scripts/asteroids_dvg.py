@@ -201,14 +201,14 @@ def catalog(dvg, words):
     for i, (_, t) in enumerate(tab4):
         cat["char_" + (" " if i == 0 else "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ"[i - 1])] = t
     for i, a in enumerate((0x8F3, 0x8FF, 0x90D, 0x91A)):
-        cat["rock%d" % i] = a
+        cat[f"rock{i}"] = a
     cat["saucer"] = 0x929
     for i, a in enumerate((0x880, 0x896, 0x8B5, 0x8D0)):
-        cat["debris%d" % i] = a
+        cat[f"debris{i}"] = a
     ship = [s for s in sweep(dvg, len(words)) if 0x951 <= s[0] <= 0xA77]
     for i in range(17):
-        cat["flame%02d" % i] = ship[2 * i][0]
-        cat["hull%02d" % i] = ship[2 * i + 1][0]
+        cat[f"flame{i:02d}"] = ship[2 * i][0]
+        cat[f"hull{i:02d}"] = ship[2 * i + 1][0]
     return cat
 
 

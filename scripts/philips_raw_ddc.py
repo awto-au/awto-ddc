@@ -62,7 +62,7 @@ def main():
     os.makedirs(os.path.join(root, "tmp/logs"), exist_ok=True)
     bus = find_bus()
     dev = i2cbus.Bus(bus)
-    lines = ["bus /dev/i2c-%d serial %s" % (bus, SERIAL)]
+    lines = [f"bus /dev/i2c-{bus:d} serial {SERIAL}"]
     for label, payload in FRAMES:
         req = frame(payload)
         dev.raw_write(0x37, req)

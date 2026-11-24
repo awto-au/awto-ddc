@@ -86,7 +86,7 @@ def bits(addr, mask, shift):
 
 
 def fmt_ref(r):
-    return (f"0x{r[0]:04X}", "%d:%d" % (r[1], r[2])) if r else ("", "")
+    return (f"0x{r[0]:04X}", f"{r[1]:d}:{r[2]:d}") if r else ("", "")
 
 
 class Db:
@@ -127,7 +127,7 @@ def parse(d, db):
         raise ValueError("bad magic (expected 0x99552277)")
     ver, = struct.unpack_from("<I", d, 4)
     if ver != 2:
-        raise ValueError("unsupported GPIO.bin version %d (only 2 decoded)" % ver)
+        raise ValueError(f"unsupported GPIO.bin version {ver:d} (only 2 decoded)")
     r = Rd(d)
     r.p = 8
     chip = r.wstr(100)
@@ -280,8 +280,8 @@ def build_rows(g, db):
         row["direction"] = "/".join(x for x, m in (("I", 1), ("O_PP", 2), ("O_OD", 4)) if c & m)
         row["pp_code"] = p["pp"] if c & 2 else ""
         row["od_code"] = p["od"] if c & 4 else ""
-        alt = ["pwm%d=%d/%d" % x for x in p["pwm"]]
-        alt += ["s%d=%d" % x for x in p["slots"]]
+        alt = [f"pwm{a:d}={b:d}/{c:d}" for a, b, c in p["pwm"]]
+        alt += [f"s{a:d}={b:d}" for a, b in p["slots"]]
         row["alt_codes"] = ",".join(alt)
         desc = []
         for key in ("mode", "data", "drive", "pull", "prio"):
@@ -314,7 +314,7 @@ def build_rows(g, db):
     for sec, rid, a, b in g["pairs"]:
         pa = g["by_port"].get(a)
         fn = prio_fn(db.look(pa["prio"])[1], pa["pin"]) if pa and pa["prio"] else ""
-        out.append({"table": "PAIR%d" % (sec + 1), "idx": rid, "pin": g["pin_of"](a), "port": a, "peer": b,
+        out.append({"table": f"PAIR{sec + 1:d}", "idx": rid, "pin": g["pin_of"](a), "port": a, "peer": b,
                         "peer_pin": g["pin_of"](b), "signal": fn})
     for rid, a, ref in g["adc"]:
         reg, bt = fmt_ref(ref)
@@ -361,8 +361,8 @@ def main():
         fo.write("\t".join(COLS) + "\n")
         fo.writelines("\t".join(str(r.get(c, "")) for c in COLS) + "\n" for r in rows)
     logging.info("wrote %d rows (%d pins); regdb field match: %s", len(rows), len(g["pins"]), st)
-    print("%s pins=%d rows=%d db_exact=%d/%d db_names_pin=%d/%d" % (
-        chip, len(g["pins"]), len(rows), st["exact"], st["n"], st["said"], st["said_n"]))
+    print(f"{chip} pins={len(g['pins'])} rows={len(rows)} db_exact={st['exact']:d}/{st['n']:d} "
+          f"db_names_pin={st['said']:d}/{st['said_n']:d}")
 
 
 if __name__ == "__main__":

@@ -96,15 +96,15 @@ def rom_shapes(zip_path):
         segs, _ = dvg.decode(cat[name])
         return [[(round(x), round(y)) for x, y in pl] for pl in D.polylines(segs, 0)]
 
-    sh = {i: lines("rock%d" % i) for i in range(N_ROCKS)}
+    sh = {i: lines(f"rock{i}") for i in range(N_ROCKS)}
     sh[ID_SAUCER] = lines("saucer")
     for r in range(STEPS):
         if r == 0:                                       # tip right = the 90 degree hull turned back a quarter
-            hull = [[quarter(p, 3) for p in pl] for pl in lines("hull%02d" % (STEPS - 1))]
+            hull = [[quarter(p, 3) for p in pl] for pl in lines(f"hull{STEPS - 1:02d}")]
             flame = lines("flame00")
         else:
-            hull = lines("hull%02d" % (r - 1))
-            flame = lines("flame%02d" % r)
+            hull = lines(f"hull{r - 1:02d}")
+            flame = lines(f"flame{r:02d}")
         ex, ey = hull[-1][-1]                            # the flame hangs from the closed hull's end point
         sh[ID_HULL + r] = hull
         sh[ID_FLAME + r] = [[(x + ex, y + ey) for x, y in pl] for pl in flame]

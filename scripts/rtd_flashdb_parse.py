@@ -131,14 +131,14 @@ def parse_flashset_v2(d, swren_names):
         n = struct.unpack_from("<I", d, p)[0]
         body = d[p + 4:p + 4 + n]
         if len(body) != n:
-            raise ValueError("swren script %d truncated" % k)
+            raise ValueError(f"swren script {k:d} truncated")
         ops, unparsed = decode_script(body)
         scripts.append({"index": k, "offset": off, "name": swren_names.get(off), "length": n,
                         "ops": ops, "unparsed": unparsed, "raw": body.hex()})
         off += 4 + n
         p += 4 + n
     if p != len(d):
-        raise ValueError("%d trailing bytes after swren blob" % (len(d) - p))
+        raise ValueError(f"{len(d) - p} trailing bytes after swren blob")
     # offsets in chip records point at the u32 length prefix of a script (cross-check)
     known = {s["offset"] for s in scripts}
     for c in chips:
@@ -191,7 +191,7 @@ def parse_flash_legacy(d):
             "swren_slots": slots, "raw": rec.hex()})
         p = end
     if p != len(d):
-        raise ValueError("record parse ended at %d, file is %d bytes" % (p, len(d)))
+        raise ValueError(f"record parse ended at {p:d}, file is {len(d)} bytes")
     hdr = {"magic": f"0x{magic:08x}", "format_version": ver, "chip_count": count,
            "format": "Flash.dat legacy (variable-length records, ASCII-hex SWREN script per chip)"}
     return hdr, chips, []
@@ -285,7 +285,7 @@ def _keyed(doc):
         for c in doc["chips"]:
             k = c["name"]
             n = seen.get(k, 0); seen[k] = n + 1
-            out[k if n == 0 else "%s#%d" % (k, n + 1)] = {x: y for x, y in c.items() if x not in DIFF_IGNORE}
+            out[k if n == 0 else f"{k}#{n + 1:d}"] = {x: y for x, y in c.items() if x not in DIFF_IGNORE}
         return "chip", out
     if "scalers" in doc:
         return "scaler", {s["dir"]: {x: y for x, y in s.items() if x != "files"} | {"files": {k: v["sha256"] for k, v in s["files"].items()}}
@@ -320,8 +320,8 @@ def cmd_diff(a, b):
         sa = {s["offset"]: s["raw"] for s in da.get("swren_scripts", [])}
         sb = {s["offset"]: s["raw"] for s in db.get("swren_scripts", [])}
         if [s["raw"] for s in da.get("swren_scripts", [])] != [s["raw"] for s in db.get("swren_scripts", [])]:
-            lines.append("~ changed swren_scripts (%d -> %d scripts)" % (len(sa), len(sb)))
-    lines.append("# %d added, %d removed, %d changed" % (len(added), len(removed), len(changed)))
+            lines.append(f"~ changed swren_scripts ({len(sa)} -> {len(sb)} scripts)")
+    lines.append(f"# {len(added)} added, {len(removed)} removed, {len(changed)} changed")
     print("\n".join(lines))
     logging.info("diff %s %s: %d added, %d removed, %d changed", a, b, len(added), len(removed), len(changed))
     return 1 if (added or removed or changed or len(lines) > len(added) + len(removed) + len(changed) + 2) else 0

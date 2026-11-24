@@ -44,7 +44,7 @@ def fix_label(m, seg, fx):
         s = m.segs.get(ref)
         nm = s.name if s else f"seg{ref}"
     part = {0: ".lo", 1: "", 3: ".hi", 4: "", 6: ".bit"}.get(ty, f".t{ty}")
-    return f"{nm}{'+%d' % add if add else ''}{part}"
+    return f"{nm}{f'+{add:d}' if add else ''}{part}"
 
 
 def lib_insns(m, seg, off, size):

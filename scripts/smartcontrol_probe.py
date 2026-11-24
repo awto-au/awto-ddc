@@ -22,7 +22,7 @@ ROOT = os.environ.get("AWTO_DDC_REPO") or os.path.dirname(
     os.path.dirname(os.path.abspath(__file__))
 )
 PORT = 19400
-BASE = "http://127.0.0.1:%d/Main/" % PORT
+BASE = f"http://127.0.0.1:{PORT:d}/Main/"
 HERE = os.path.join(ROOT, "scripts/smartcontrol_wine.py")
 LOG = Logger(os.path.join(ROOT, "tmp/logs/smartcontrol_probe.log"))
 
@@ -52,7 +52,7 @@ def wait_up():
 def get_swagger():
     try:
         urllib.request.urlopen(
-            "http://127.0.0.1:%d/swagger/v1/swagger.json" % PORT, timeout=2
+            f"http://127.0.0.1:{PORT:d}/swagger/v1/swagger.json", timeout=2
         ).read(10)
         return True
     except Exception:  # noqa: BLE001
@@ -63,7 +63,7 @@ def main():
     calls = sys.argv[1:]
     env = dict(os.environ)
     backend = subprocess.Popen(
-        [sys.executable, "-I", HERE, "backend", "--urls", "http://127.0.0.1:%d" % PORT]
+        [sys.executable, "-I", HERE, "backend", "--urls", f"http://127.0.0.1:{PORT:d}"]
     )
     try:
         if not wait_up():
@@ -73,7 +73,7 @@ def main():
         get("Rescan", 15)
         subprocess.run([sys.executable, "-I", HERE, "edid"], check=True, env=env)
         r = get("Rescan", 15)
-        say("Rescan(2) %d bytes; EDID name present: %s" % (len(r), "PHL 288E2" in r))
+        say(f"Rescan(2) {len(r)} bytes; EDID name present: {'PHL 288E2' in r}")
         for c in calls:
             r = get(c, 90)
             with open(

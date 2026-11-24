@@ -109,7 +109,7 @@ def one(name, srcs):
     r = run([sys.executable, str(ROOT / "scripts/sdcc_overlay.py"), "--asm", str(asmA), "--out", str(asmB)],
             env={**os.environ, "AWTO_DDC_REPO": str(ovlroot)})
     if r.returncode:
-        return "BUILD-FAIL", "overlay pass rc=%d" % r.returncode, {}
+        return "BUILD-FAIL", f"overlay pass rc={r.returncode:d}", {}
     ovl = json.loads((ovlroot / "tmp/sdcc-port/overlay.json").read_text())
     info = {"sloc": sloc, "xovl": ovl["overlay_block"]["x"], "dovl": ovl["overlay_block"]["d"],
             "x_before": ovl["frames_before"]["x"], "d_before": ovl["frames_before"]["d"],

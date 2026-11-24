@@ -400,7 +400,7 @@ def main():
     for nm in T.order:
         g = T.agg[nm]
         if g["kind"] == "E":
-            lines.append("E\t%s\t%d\t%s" % (nm, g["size"], ",".join(f"{k}={v}" for k, v in g["vals"])))
+            lines.append(f"E\t{nm}\t{g['size']:d}\t" + ",".join(f"{k}={v}" for k, v in g["vals"]))
         else:
             lines.append(f"{g['kind']}\t{nm}\t{g['size']}")
             for off, fn, ref, cnt, cm in g["fields"]:
