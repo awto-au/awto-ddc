@@ -263,7 +263,7 @@ def obs_text(meta, vals):
             b, i = k.split(":")
             ports[b][int(i, 16)] = v
         else:
-            pages[k[:2]][int(k[2:], 16)] = v
+            pages[k[:2]][int(k[2:], 16)] = v   # noqa: FURB166 (k[:2] is a page byte, not a 0x prefix; int(k, 0) breaks it)
     for p in sorted(pages):
         d = pages[p]
         lo, hi = min(d), max(d)

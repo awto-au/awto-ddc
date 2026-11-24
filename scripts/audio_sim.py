@@ -167,8 +167,7 @@ def order_violations(events, order: dict | None = None) -> list[str]:
                 out.append(f"{t:.4f} s unmuted {'with the amp disabled' if en == 0 else 'less than ' + format(o['amp_wake_s'] * 1e3, 'g') + ' ms after the amp enable'}")
             mute = v
             t_mute = t if v == 1 else None
-        elif kind == "reg" and ((a == IDX_AFCR and (v ^ afcr) & AFCR_AUDIO_TEST_ENABLE) or (a == IDX_CMCR and v & CMCR_DBDCB)):
-            if en == 1 and not muted_for(t):
+        elif kind == "reg" and ((a == IDX_AFCR and (v ^ afcr) & AFCR_AUDIO_TEST_ENABLE) or (a == IDX_CMCR and v & CMCR_DBDCB)) and en == 1 and not muted_for(t):
                 out.append(f"{t:.4f} s generator {'on / off' if a == IDX_AFCR else 'pitch change'} with the amp enabled and not muted for {o['amp_mute_s'] * 1e3:g} ms")
         if kind == "reg" and a == IDX_AFCR:
             afcr = v

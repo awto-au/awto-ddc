@@ -528,12 +528,11 @@ def check(im, xdata=(), regnames=None, proven=None):
             t = i.text
             if t.startswith(("LCALL", "LJMP", "ACALL", "AJMP")) and i.target is not None:
                 T = i.target
-                if reg == "C":
-                    if T >= im.common:
-                        add("call_common_to_banked", src, f"{t.split()[0]} 0x{T:04x}", i.addr,
-                            tgt=short(next((x for r, cs in im.by_reg.items() if r != "C" for x in cs
-                                            if x["addr"] & 0xFFFF == T and x["kind"] == "fn"), None)))
-                        continue
+                if reg == "C" and T >= im.common:
+                    add("call_common_to_banked", src, f"{t.split()[0]} 0x{T:04x}", i.addr,
+                        tgt=short(next((x for r, cs in im.by_reg.items() if r != "C" for x in cs
+                                        if x["addr"] & 0xFFFF == T and x["kind"] == "fn"), None)))
+                    continue
                 tc = im.find(reg if reg != "C" else 0, T)
                 if tc is not None and tc["kind"] == "stub" and tc["addr"] in stubs and stubs[tc["addr"]][2] is not None:
                     callers[stubs[tc["addr"]][2]["addr"]].add(c["addr"])
@@ -546,9 +545,9 @@ def check(im, xdata=(), regnames=None, proven=None):
                 elif tc is not c and tc["area"].startswith("CH") and (tc["addr"] & 0xFFFF) != T and not t.startswith(("LJMP", "AJMP")):
                     add("call_mid_chunk", src, f"{t.split()[0]} {tc['name']}+{T - (tc['addr'] & 0xFFFF)}", i.addr)
             elif i.target is not None and t.split()[0] in ("SJMP", "JC", "JNC", "JZ", "JNZ", "JB", "JNB", "JBC",
-                                                           "CJNE", "DJNZ"):
-                if not (base <= i.target < base + c["size"]) and not resid:
-                    add("rel_leaves_chunk", src, f"{t}", i.addr)
+                                                           "CJNE", "DJNZ") \
+                    and not (base <= i.target < base + c["size"]) and not resid:
+                add("rel_leaves_chunk", src, f"{t}", i.addr)
             if t.startswith("ADD A,#") and not resid and not im.literal(c, i.addr) and im.names_const(c, i.addr) is not False:
                 hi = table_hi(ins[k + 1:k + 10])
                 v = (hi << 8 | int(t[7:9], 16)) if hi is not None else None
@@ -777,7 +776,9 @@ def asm_const_ptr(im, asm_dir):
     for c in im.chunks:
         if c["kind"] in ("fn", "const") and c["area"].startswith("CH_"):
             by_area.setdefault(c["area"], []).append(c)
-    look = lambda s: where.get(s) or (lambda v: v[0] if v and len(v) == 1 else None)(by_area.get(("CH" + s)[:32]))
+    def look(s):
+        v = by_area.get(("CH" + s)[:32])
+        return where.get(s) or (v[0] if v and len(v) == 1 else None)
     texts = {f: f.read_text(errors="replace").splitlines() for f in sorted(d.glob("*.asm"))}
     reader, creader = set(), set()
     for f, ls in texts.items():

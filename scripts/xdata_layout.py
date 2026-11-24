@@ -81,7 +81,7 @@ def place(old: dict, sizes: dict, holes, reserved, compact: bool = False, best: 
             for k in sorted((k for k in rows if k not in moved), key=lambda k: (rows[k][2], k)):
                 tk = [t for t in taken if t != (addr(rows[k]), addr(rows[k]) + rows[k][2])]
                 g1 = find(tk, sizes[m])
-                if g1 and (lambda tk2: find(tk2, sizes[k]))(tk + [(g1[0], g1[0] + sizes[m])]):
+                if g1 and find(tk + [(g1[0], g1[0] + sizes[m])], sizes[k]):
                     old_k = rows.pop(k)
                     taken[:] = tk
                     put(m, g1, taken)

@@ -583,9 +583,8 @@ class FakeRtd(Rtd):
             self.pend = (self._faddr() & ~(PAGE - 1), bytearray())
         elif reg == 0x60 and val & 1:
             self._exec_engine(val >> 5, self.regs.get(0x61), (val >> 3) & 3)
-        elif reg == 0x6F:
-            if val & PROG_BUSY:                     # start page program
-                self._program(val)
+        elif reg == 0x6F and val & PROG_BUSY:       # start page program
+            self._program(val)
 
     def set_retries(self, n):
         pass

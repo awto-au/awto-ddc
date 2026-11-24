@@ -262,10 +262,9 @@ def lint(tree: Path, idx: dict, show_where: bool, structural: bool) -> list[str]
             code_for_ngrams = code
         seen = set()
         for t, ln, k in code:
-            if k == "id" and distinctive(t) and t not in exempt and t not in allow["ident"] and t not in seen:
-                if np.isin(np.uint64(th(t)), idx["ids"]):
-                    seen.add(t)
-                    hits.append(f"{rel}:{ln}: ident {t}" + (f"  [sdk: {where('ident', th(t))}]" if show_where else ""))
+            if k == "id" and distinctive(t) and t not in exempt and t not in allow["ident"] and t not in seen and np.isin(np.uint64(th(t)), idx["ids"]):
+                seen.add(t)
+                hits.append(f"{rel}:{ln}: ident {t}" + (f"  [sdk: {where('ident', th(t))}]" if show_where else ""))
         _, (cg, cl), (pg, pl), (sg, sl) = grams(code_for_ngrams, prose, structural)
         toks = [t for t, _, _ in code_for_ngrams]
         lines = [ln for _, ln, _ in code_for_ngrams]

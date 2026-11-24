@@ -421,7 +421,8 @@ def main():
     # itself, so we avoid rtd_identify's ISP reset (which reboots the monitor and drops the bus).
     info = gather(bus, isp_info=False, as_json=as_json)
     if as_json:
-        import json; print(json.dumps(info, indent=2))
+        import json
+        print(json.dumps(info, indent=2))
 
     if cmd == "probe":
         t = TechOsd(bus); t.enter()

@@ -308,7 +308,7 @@ def build_rows(g, db):
         out.append(row)
     for tb, i, pn, sg, ref, ex in g["spi"]:
         reg, bt = fmt_ref(ref)
-        nm, ds, e = db.look(ref)
+        nm, ds, _e = db.look(ref)
         out.append({"table": tb, "idx": i, "pin": pn, "port": g["by_port"].get(pn, {}).get("port", ""),
                         "signal": sg, "reg": reg, "bits": bt, "reg_field": nm, "raw": ex, "description": esc(ds)})
     for sec, rid, a, b in g["pairs"]:

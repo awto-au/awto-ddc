@@ -221,9 +221,8 @@ def test_unit_lock(tmp_path, monkeypatch):
     UL.acquire("U1", "alice", os.getpid())                      # re-acquire by the owner: ok
     with pytest.raises(SystemExit):
         UL.acquire("U1", "bob", os.getpid())
-    with pytest.raises(SystemExit):
-        with UL.held("U1", "tool"):                             # tool run without the owner's stream id
-            pass
+    with pytest.raises(SystemExit), UL.held("U1", "tool"):      # tool run without the owner's stream id
+        pass
     monkeypatch.setenv("AWTO_UNIT_OWNER", "alice")
     with UL.held("U1", "tool"):                                 # the stream's own lock
         pass

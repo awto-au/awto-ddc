@@ -312,8 +312,10 @@ def gen_c(rows, pages, tree, sch):
 
 
 REDIRECT = """import os as _os
+
 if _os.environ.get("AWTO_SETTINGS_TABLE"):          # image-matched table (settings_gen --host-out; fw_gates sets it)
-    exec(compile(open(_os.environ["AWTO_SETTINGS_TABLE"]).read(), _os.environ["AWTO_SETTINGS_TABLE"], "exec"))
+    with open(_os.environ["AWTO_SETTINGS_TABLE"]) as _f:
+        exec(compile(_f.read(), _os.environ["AWTO_SETTINGS_TABLE"], "exec"))   # noqa: S102
 """
 
 

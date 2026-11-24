@@ -243,7 +243,7 @@ def main():
     ap.add_argument("--calibrate", action="store_true", help="every bound 3000 ms: measure the worst latencies (then set the bounds to 1.25x)")
     a = ap.parse_args()
     if a.calibrate:
-        global KEY_MS, DRAW_MS, CLOSE_MS, MENU_MS, CMD_MS, PS_MS, WAKE_MS, INPUT_MS, DBG_MS
+        global KEY_MS, DRAW_MS, CLOSE_MS, MENU_MS, CMD_MS, PS_MS, WAKE_MS, INPUT_MS
         KEY_MS = DRAW_MS = CLOSE_MS = MENU_MS = CMD_MS = PS_MS = WAKE_MS = INPUT_MS = 3000
     say(f"keys_sim {a.bin.name}: bounds KEY {KEY_MS} DRAW {DRAW_MS} CLOSE {CLOSE_MS} MENU {MENU_MS} CMD {CMD_MS} PS {PS_MS} WAKE {WAKE_MS} INPUT {INPUT_MS} ms, poll {POLL_MS} ms")
     s = R.Session(a.bin, a.map, "2160p60")

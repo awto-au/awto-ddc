@@ -109,8 +109,9 @@ def test_hdmi_input_2160p60_registers_follow_the_data_path():
 
 def test_hdmi_input_60_000_vs_59_940_hs_period():
     """Unit 3 measured 4K60.000 as 60.1 Hz and 4K59.940 as 60.0 (mode_sweep 2026-11-07): HS period whole counts, truncated (#26)."""
-    sdk = lambda h: (lambda hsp: ((87697 * 20 // hsp + 1) // 2, (87697 * 20000 // hsp // h.VTOT + 1) // 2))(
-        w(h.cells(), 0x3005, 0x3006, 0x1F))                                             # _MEASURE_CLK 350791 / 4 (kHz)
+    def sdk(h):
+        hsp = w(h.cells(), 0x3005, 0x3006, 0x1F)                                        # _MEASURE_CLK 350791 / 4 (kHz)
+        return (87697 * 20 // hsp + 1) // 2, (87697 * 20000 // hsp // h.VTOT + 1) // 2
     a, b = fw_sim.HdmiInput("2160p60"), fw_sim.HdmiInput("2160p59.94")
     assert sdk(a) == (1351, 601) and sdk(b) == (1349, 600)
     assert a.PCLK == 5940 and b.PCLK == 5934 and abs(b.vfreq_hz - 59.94006) < 1e-4

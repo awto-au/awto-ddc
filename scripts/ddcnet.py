@@ -497,8 +497,9 @@ def stack(a, io) -> int:
             m.wr(ring + 6 * ((h + k) % 40), struct.pack("!HI", 0x0800 + k, 1000 + k))
         m.wr(head, bytes([(h + 3) % 40]))
         m.wr(seq, struct.pack("!H", s + 3))
-        r, dt, n = (lambda f: (f[0][42:] if f[0] is not None else None, f[1], f[2]))(peer.until(
-            lambda f: f[12:14] == b"\x08\x00" and f[23] == 17 and f[36:38] == struct.pack("!H", 40001) and f[42] == 5, lim))
+        got = peer.until(
+            lambda f: f[12:14] == b"\x08\x00" and f[23] == 17 and f[36:38] == struct.pack("!H", 40001) and f[42] == 5, lim)
+        r, dt, n = (got[0][42:] if got[0] is not None else None, got[1], got[2])
         check("message push (3 injected)", r is not None and r[6] == 3 and r[7:13] == struct.pack("!HI", 0x0800, 1000),
               f"{svc_msgs(r[3:]) if r else ''} ({dt * 1000:.0f} {unit})")
     r, dt, n = svc(b"\x06\x14\x00\x00")

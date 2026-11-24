@@ -790,7 +790,8 @@ def video_stubs(m: "Machine", hdmi: HdmiInput, port: str = "D2"):
     m.stub("ScalerTMDSScanInputPort", scan)
 
     def dclk(m):
-        out = [int.from_bytes(b, "big") for b in (lambda o: (o[0:2], o[4:6], o[14:16]))(m.rd(m.addr("g_stMDomainOutputData"), 16))]
+        o = m.rd(m.addr("g_stMDomainOutputData"), 16)
+        out = [int.from_bytes(b, "big") for b in (o[0:2], o[4:6], o[14:16])]
         return (int.from_bytes(m.rd(m.addr("g_ulDClkFreq"), 4), "big"), out[0], out[1], out[2])
     hdmi.dclk = dclk
 

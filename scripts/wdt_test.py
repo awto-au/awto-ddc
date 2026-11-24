@@ -614,8 +614,13 @@ class Runner:
         pa, ga, wa = (C.site_addr(self.t.map_text, s) for s in ("g_usAwtoPsPolls", "g_usAwtoPsGap", "g_ucAwtoSyncPwr"))
         if pa is None or wa is None:
             return "wake polls: image lacks g_usAwtoPsPolls / g_ucAwtoSyncPwr"
-        rd = lambda a: (lambda b: None if b is None else b[0] << 8 | b[1])(X.read_bytes(self.t.io, a, 2))
-        pw = lambda: (lambda b: None if b is None else b[0])(X.read_bytes(self.t.io, wa, 1))
+        def rd(a):
+            b = X.read_bytes(self.t.io, a, 2)
+            return None if b is None else b[0] << 8 | b[1]
+
+        def pw():
+            b = X.read_bytes(self.t.io, wa, 1)
+            return None if b is None else b[0]
         left = []
         for _ in range(PS_TRIES):                    # the SDK may wake itself (host TMDS clock after DPMS off): next episode
             t0 = time.monotonic()

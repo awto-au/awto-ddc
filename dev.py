@@ -19,6 +19,7 @@ and should not need editing.
 from __future__ import annotations
 
 import contextlib
+import functools
 import hashlib
 import json
 import os
@@ -1876,7 +1877,7 @@ def _register_steps() -> None:
             "summary": summary,
             "args": "[extra args passed through]" if takes_extra else "",
             "kind": "step",
-            "fn": (lambda n: lambda extra: run_step(n, extra))(name),
+            "fn": functools.partial(run_step, name),
         }
 
 

@@ -62,9 +62,9 @@ def dis(buf, pc, base=0):
     while i < len(out):
         c = out[i]
         nxt = out[i+1] if i+1 < len(out) else ""
-        if c in "di" and (i == 0 or out[i-1] in " ,#@/") and not nxt.isalpha():
-            if c == "i" and i > 0 and out[i-1] == "#" or c == "d" and (i == 0 or out[i-1] in " ,"):
-                res += f"{vals[k]:02X}h"; k += 1; i += 1; continue
+        if c in "di" and (i == 0 or out[i-1] in " ,#@/") and not nxt.isalpha() \
+                and (c == "i" and i > 0 and out[i-1] == "#" or c == "d" and (i == 0 or out[i-1] in " ,")):
+            res += f"{vals[k]:02X}h"; k += 1; i += 1; continue
         if c == "I" and out[i-1] == "#":
             res += f"{(vals[k] << 8 | vals[k+1]):04X}h"; k += 2; i += 1; continue
         if c == "a" and out[i-1] == " ":
