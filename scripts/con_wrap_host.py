@@ -18,7 +18,7 @@ import sys
 import time
 from pathlib import Path
 
-import isostamp
+from _log import log_line
 
 ROOT = Path(__file__).resolve().parents[1]
 LOG = ROOT / "tmp/logs/con_wrap_host.log"
@@ -26,11 +26,7 @@ CC_TIMEOUT_S = 20        # one 30-line file: gcc -O1 < 0.1 s; 20 s = the project
 
 
 def say(s: str) -> None:
-    LOG.parent.mkdir(parents=True, exist_ok=True)
-    line = f"{isostamp.now()} {s}"
-    print(line, flush=True)
-    with LOG.open("a") as f:
-        f.write(line + "\n")
+    log_line(s, LOG)
 
 
 def c_int(name: str) -> int:
