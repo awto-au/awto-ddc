@@ -1453,7 +1453,8 @@ void RTDFlashLoadColorSetting(BYTE ucColorTempType)
     else
 #endif
     {
-        if(UserCommonFlashLoadItem(_FLASH_ITEMID_COLORPROC0_9300 + ucColorTempType, pData, sizeof(StructColorProcDataType)) == _TRUE)
+        // Presets always come from the table (generated); only User is a stored value (#278)
+        if((ucColorTempType == _CT_USER) && (UserCommonFlashLoadItem(_FLASH_ITEMID_COLORPROC0_9300 + ucColorTempType, pData, sizeof(StructColorProcDataType)) == _TRUE))
         {
             memcpy(&g_stColorProcData, pData, sizeof(StructColorProcDataType));
         }

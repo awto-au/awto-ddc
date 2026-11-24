@@ -31,7 +31,7 @@ compiled source tree (tmp/sdcc-port/src of the p14sc3 line). Every row here is a
 | Display | Auto, H/V pos, clock, phase, rotate, latency, freeze | | | | VGA-only or compiled out: page unreachable |
 | Color | Panel uniformity | on/off | | on | none; blocks Gamma/PCM while on |
 | Color | Gamma | off/1.8/2.0/2.2/2.4 | | off | output gamma LUT |
-| Color | Color temp | 9300/7500/6500/5800/sRGB/User | | 6500 | presets all 0x800 = equal gains |
+| Color | Color temp | 9300/7500/6500/5800/sRGB/User | | 6500 | preset gains from fw/colour_temp.tsv (#278); presets load from the table, User from the stored value |
 | Color | User R/G/B | 0-255 | x16 in 12 bit | 128 | gains (User only) |
 | Color | Color effect (+ six-axis hue 0-100 / sat 0-200 per R Y G C B M) | 6 options | | Standard | stored only |
 | Color | Color demo | off/type 1-5 | | off | stored only |

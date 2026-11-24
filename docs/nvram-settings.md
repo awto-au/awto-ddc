@@ -151,7 +151,7 @@
 | 2 | contrast | Picture | Contrast - [sdk-ui] | 0..100 percent; def 50 | 50 | 0x12 |  | SDK field | BRI.usContrast |
 | 6 | sharpness | Picture | Sharpness - Realtek SDK item, scaler sharpness not built [sdk-ui] | 0..4 step; def 2 | 2 | 0x87 | inert | SDK field | OSD.b3Sharpness |
 | 7 | gamma | Colour | Gamma - [sdk-ui] | 0..4; def Off (0) | Off (0) | 0xF2 |  | SDK field | OSD.b3Gamma |
-| 8 | colour_temp | Colour | Colour temp - MCCS 0x14 (5800K reported as 5000K); presets 9300K..sRGB give equal gains today [sdk-ui] | 0..5; def 2 | 2 | 0x14 |  | SDK field | OSD.b4ColorTempType |
+| 8 | colour_temp | Colour | Colour temp - MCCS 0x14 (5800K reported as 5000K); preset gains from fw/colour_temp.tsv (#278) [sdk-ui] | 0..5; def 2 | 2 | 0x14 |  | SDK field | OSD.b4ColorTempType |
 | 9 | user_red | Colour | User red - used when Colour temp = User [sdk-ui] | 0..255 step; def 128 | 128 | 0x16 |  | SDK field | CT.usColorTempR |
 | 10 | user_green | Colour | User green - [sdk-ui] | 0..255 step; def 128 | 128 | 0x18 |  | SDK field | CT.usColorTempG |
 | 11 | user_blue | Colour | User blue - [sdk-ui] | 0..255 step; def 128 | 128 | 0x1A |  | SDK field | CT.usColorTempB |

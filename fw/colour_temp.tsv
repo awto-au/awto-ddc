@@ -1,0 +1,9 @@
+# Colour-temperature preset gains, 12-bit (0x800 = 1.0). Source of truth for scripts/colour_temp_gains.py -> ColorTempGains.h (#278).
+# Source: product firmware colour table at flash 0x3A78C (18 B, six R,G,B triples, identical in all 8 original dumps of the product;
+# triple order 9300 / 7500 / 6500 / 5800 / sRGB / User, confidence: medium, order by monotone warm-to-cool trend). Values, not code.
+preset	r	g	b
+9300	0x6D0	0x740	0x7D0
+7500	0x740	0x760	0x770
+6500	0x760	0x760	0x6F0
+5800	0x7A0	0x770	0x690
+SRGB	0x800	0x800	0x800
