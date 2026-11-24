@@ -146,7 +146,7 @@ extern void ScalerTimerActiveTimerEvent(WORD usTime, EnumScalerTimerEventID enum
 extern void ScalerTimerReactiveTimerEvent(WORD usTime, EnumScalerTimerEventID enumEventID);
 extern void ScalerTimerCancelTimerEvent(EnumScalerTimerEventID enumEventID);
 #if((_DP_SUPPORT == _ON) || (_TMDS_HDCP_2_2_SUPPORT == _ON) || ((_DP_TYPE_C_PORT_CTRL_SUPPORT == _ON) && (_PORT_CONTROLLER_EMBEDDED_SUPPORT == _ON)))
-extern void ScalerTimerCancelTimerEvent_EXINT0(EnumScalerTimerEventID enumEventID);
+#define ScalerTimerCancelTimerEvent_EXINT0 ScalerTimerCancelTimerEvent // one register-only body, no static storage (#337)
 #endif
 
 #if((_HDCP_2_2_SUPPORT == _ON) || (_TYPE_C_PMIC_HW_IIC_SUPPORT == _ON))

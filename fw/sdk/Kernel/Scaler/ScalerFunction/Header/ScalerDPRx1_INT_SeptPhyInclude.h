@@ -52,7 +52,7 @@ extern void ScalerDpRx1HDCPSetKsvFifo_EXINT0(void);
 #endif
 
 #if(_WD_TIMER_INT_SUPPORT == _ON)
-extern BYTE ScalerDpRx1GetDpcdInfo_WDINT(BYTE ucDpcdAccessPortH, BYTE ucDpcdAccessPortM, BYTE ucDpcdAccessPortL);
+#define ScalerDpRx1GetDpcdInfo_WDINT ScalerDpRx1GetDpcdInfo_EXINT0 // identical register-only body (#337)
 #if(_DP_HDCP_2_2_SUPPORT == _ON)
 extern BYTE ScalerDpRx1GetDpcdBitInfo_WDINT(BYTE ucDpcdAccessPortH, BYTE ucDpcdAccessPortM, BYTE ucDpcdAccessPortL, BYTE ucDpcdBit);
 #endif

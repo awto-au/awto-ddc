@@ -55,7 +55,6 @@ void ScalerDpRx1HDCPSetKsvFifo_EXINT0(void);
 #endif
 
 #if(_WD_TIMER_INT_SUPPORT == _ON)
-BYTE ScalerDpRx1GetDpcdInfo_WDINT(BYTE ucDpcdAccessPortH, BYTE ucDpcdAccessPortM, BYTE ucDpcdAccessPortL);
 #if(_DP_HDCP_2_2_SUPPORT == _ON)
 BYTE ScalerDpRx1GetDpcdBitInfo_WDINT(BYTE ucDpcdAccessPortH, BYTE ucDpcdAccessPortM, BYTE ucDpcdAccessPortL, BYTE ucDpcdBit);
 #endif
@@ -647,21 +646,6 @@ void ScalerDpRx1HDCPSetKsvFifo_EXINT0(void)
 #endif // End of #if((_DP_TX_SUPPORT == _ON) && (_D1_DP_MST_PORT_SUPPORT == _ON))
 
 #if(_WD_TIMER_INT_SUPPORT == _ON)
-//--------------------------------------------------
-// Description  : Get DPCD Table Information in WDINT
-// Input Value  : ucDpcdAccessPortH --> High Byte of DPCD Address
-//                ucDpcdAccessPortM --> Middle Byte of DPCD Address
-//                ucDpcdAccessPortL --> Low Bye of DPCD Adress
-// Output Value : DPCD Information
-//--------------------------------------------------
-BYTE ScalerDpRx1GetDpcdInfo_WDINT(BYTE ucDpcdAccessPortH, BYTE ucDpcdAccessPortM, BYTE ucDpcdAccessPortL)
-{
-    ScalerSetByte_EXINT(PBA_C1_DPCD_ADDR_PORT_H, ucDpcdAccessPortH);
-    ScalerSetByte_EXINT(PBA_C2_DPCD_ADDR_PORT_M, ucDpcdAccessPortM);
-    ScalerSetByte_EXINT(PBA_C3_DPCD_ADDR_PORT_L, ucDpcdAccessPortL);
-
-    AWTO_DPCD_SETTLE_E() return ScalerGetByte_EXINT(PBA_C4_DPCD_DATA_PORT);
-}
 #if(_DP_HDCP_2_2_SUPPORT == _ON)
 //--------------------------------------------------
 // Description  : Get DPCD Table Information in WDINT

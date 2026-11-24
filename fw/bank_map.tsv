@@ -1700,7 +1700,6 @@ fn	_ScalerDpRx1DFELaneCheck	4	0x6eba	87
 fn	_ScalerDpRx1DFELaneCheck_EXINT0	11	0x433c	96
 fn	_ScalerDpRx1DecodeCheck	2	0x60f2	594
 fn	_ScalerDpRx1DecodeErrorCountReset	2	0x4e6b	26
-fn	_ScalerDpRx1DecodeErrorCountReset_WDINT	12	0x6bfe	26
 fn	_ScalerDpRx1DisplayFormatSetting	4	0x6f11	1802
 fn	_ScalerDpRx1DpcdInitial	2	0x0cfc	467
 fn	_ScalerDpRx1DpcdLinkStatusReset	2	0x6344	190
@@ -1714,7 +1713,6 @@ fn	_ScalerDpRx1GetDpcdBitInfo	2	0x6402	56
 fn	_ScalerDpRx1GetDpcdBitInfo_EXINT0	11	0x439c	49
 fn	_ScalerDpRx1GetDpcdInfo	C	0x0dc2	42
 fn	_ScalerDpRx1GetDpcdInfo_EXINT0	11	0x43cd	42
-fn	_ScalerDpRx1GetDpcdInfo_WDINT	12	0x8503	42
 fn	_ScalerDpRx1GetVideoInfo	4	0x4e5e	121
 fn	_ScalerDpRx1GetVideoStream	4	0x76b5	21
 fn	_ScalerDpRx1HDCPBlockReset	0	0x4431	140
@@ -2240,7 +2238,6 @@ fn	_ScalerTMDSVideoDetectEvent	14	0x3ed7	22
 fn	_ScalerTMDSYUV420SupportCheck	7	0x26c0	26
 fn	_ScalerTimerActiveTimerEvent	0	0x3dec	188
 fn	_ScalerTimerCancelTimerEvent	C	0x0b72	76
-fn	_ScalerTimerCancelTimerEvent_EXINT0	11	0x400f	86
 fn	_ScalerTimerCheckEventValid	0	0x3ea8	35
 fn	_ScalerTimerCheckTimerEvent	0	0x3ecb	237
 fn	_ScalerTimerClrEventStatus	14	0x4264	31
@@ -2825,6 +2822,8 @@ stub	11__vcp_get	11	0x9a9c	8
 stub	11__vcp_set	11	0x9aa4	8
 stub	12__AwtoFlIo	12	0x9e55	8
 stub	12__AwtoNvEv	12	0x9e5d	8
+stub	12__ScalerDpRx1DecodeErrorCountReset	12	0x6bfe	8
+stub	12__ScalerDpRx1GetDpcdInfo_EXINT0	12	0x6c06	8
 stub	13__AwtoSwEvent	13	0x7b6f	8
 stub	13__AwtoSyncPush	13	0x7b77	8
 stub	13__RTDFactoryAdcGainBAdjustEnter	13	0x6f1f	8
