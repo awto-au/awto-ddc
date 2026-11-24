@@ -442,6 +442,7 @@ extern void AwtoWdtPoke(unsigned char ucSite);
 #define AWTO_WDT_S_FREAD                                        9       // ScalerFlashRead
 #define AWTO_WDT_S_FWRITE                                       10      // ScalerFlashWrite sector part
 #define AWTO_WDT_S_OSDSTR                                       11      // OsdPropPutString character
+#define AWTO_WDT_S_APP                                          12      // extra app work loop (fw/apps, AwtoAppFeed; docs/extra-apps.md)
 #define AWTO_WDT_S_CONLINE                                      14      // AwtoConLogSync console log line (#165)
 #define AWTO_WDT_S_STACK                                        15      // halted after a stack canary hit (AwtoStackCheck)
 // Stack canary (#203): free stack (SP at main entry .. 0xFF) painted at boot; the main loop advances a high-water mark over
@@ -1394,6 +1395,14 @@ extern void AwtoSaverPoll(void);
 extern void AwtoSaverKey(void);
 extern void AwtoSaverStart(unsigned char ucWhich, unsigned char ucWhy);
 extern void AwtoSaverStop(void);
+#ifndef _AWTO_EXTRA_APPS
+#define _AWTO_EXTRA_APPS                                        _OFF    // -D _AWTO_EXTRA_APPS=_ON (./dev.py build --extra-fw): app hooks of fw/apps, docs/extra-apps.md
+#endif
+#if(_AWTO_EXTRA_APPS == _ON)
+extern __xdata BYTE g_ucAwtoAppRun;                                                     // 0 = no app, else running app index + 1
+extern void AwtoAppsPoll(void);                                                         // main loop, once per pass (AwtoDiagTestCmd)
+extern BYTE AwtoAppsKey(BYTE ucKey, BYTE ucEv);                                         // key router: 1 = an app took the key
+#endif
 extern void AwtoPmSound(unsigned char ucCmd);
 extern void AwtoPmSoundPoll(void);
 extern unsigned char AwtoPmSoundTone(unsigned char ucSc, unsigned int usMs);                  // one tone (S code, audible ms): AWTO_TONE_* result

@@ -3273,6 +3273,9 @@ void AwtoDiagTestCmd(void)
     if((g_stAwtoOsdHw.ucFlags & AWTO_OHW_F_HOLD) == 0)
 #endif
     AwtoSaverPoll();
+#if(_AWTO_EXTRA_APPS == _ON)
+    AwtoAppsPoll();                             // extra apps (fw/apps): start / stop requests, the running app's step
+#endif
     ucCmd = isr_g_stAwtoDiag.ucTestCmd;
     if(ucCmd == 0)
     {

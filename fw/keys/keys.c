@@ -12,21 +12,6 @@
 #else
 #define AWTO_KEY_HELD_INJ()                     0
 #endif
-// key ids = SDK key messages (menu.h MK_*), test cmd 0x01..0x05 - 1. Inside the menu / selector (Dan 2026-11-08, kept #132):
-// AUTO = enter / take, MENU = back / cancel. Nothing open (#132): MENU opens the menu, AUTO = auto source select.
-#define AWTO_K_AUTO                             _MENU_KEY_MESSAGE
-#define AWTO_K_UP                               _RIGHT_KEY_MESSAGE
-#define AWTO_K_DOWN                             _LEFT_KEY_MESSAGE
-#define AWTO_K_MENU                             _EXIT_KEY_MESSAGE
-#define AWTO_K_SOURCE                           AWTO_KEY_MSG_SOURCE
-#define AWTO_K_POWER                            5
-#define AWTO_K_UP_DOWN                          6       // combo: diagnostic console on / off
-#define AWTO_K_NONE                             0xFF
-#define AWTO_KEV_PRESS                          0
-#define AWTO_KEV_REPEAT                         1
-#define AWTO_KEV_RELEASE                        2
-#define AWTO_KEV_COMBO                          3
-#define AWTO_KEV_INJ                            0x80    // flag: injected (test cmd 0x01..0x05, key_inject)
 #define AWTO_KS_IDLE                            0
 #define AWTO_KS_WAIT                            1       // UP / DOWN down, PRESS held back for AWTO_KEY_COMBO_MS (UP+DOWN partner)
 #define AWTO_KS_DOWN                            2       // PRESS sent: REPEAT timing
@@ -144,6 +129,12 @@ static void AwtoKeyRouteDo(BYTE ucK, BYTE ucEv)
     BYTE ucMode;
     _Bool bRep = ((ucEv & 0x7F) == AWTO_KEV_REPEAT);
 
+#if(_AWTO_EXTRA_APPS == _ON)
+    if(AwtoAppsKey(ucK, ucEv) != 0)             // a running extra app takes every key but POWER (fw/apps)
+    {
+        return;
+    }
+#endif
     if((ucEv & 0x7F) == AWTO_KEV_RELEASE)
     {
         return;                                 // no action uses it
@@ -480,6 +471,9 @@ unsigned char AwtoLoopBusy(void)
         return 1;                               // power sequencing (AC on)
     }
     return (g_ucAwtoSaverRun != 0)              // splash / flash screen draw passes
+#if(_AWTO_EXTRA_APPS == _ON)
+        || (g_ucAwtoAppRun != 0)                // an extra app steps once per pass (fw/apps)
+#endif
         || (g_stAwtoKey.ucOpen != 0)            // key test screen
         || (g_stAwtoGpio.ucOpen == AWTO_CON_GPIO)   // GPIO page (input table)
         || AwtoConBusy()                        // console log with lines to draw; an idle open console sleeps

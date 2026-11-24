@@ -7,6 +7,8 @@ usage: ./dev.py build [--unit N | --serial S] [--tree DIR] --tag T [-D NAME=VAL 
   The install's stamp (awto-sdcc-commit.txt) must start with SDCC_COMMIT and the tree must use --keil-compat
   (fw_compile refuses a compiler without it). A default-env fw_build gives an LE image (byte-swapped diag, #75).
 - -D: extra defines (K2S_SDCC_EXTRA), e.g. -D _AWTO_LOOP_PROF=_ON.
+- --extra-fw DIR: extra source root (dev.py build --extra-fw / $AWTO_EXTRA_FW): its sources join the build, -D _AWTO_EXTRA_APPS=_ON,
+  tmp/fw/<stem>.apps.tsv = the app index -> name table (docs/extra-apps.md).
 - --fw-args: more fw_build args; fresh layout = `--layout <missing file> --cluster fn --cluster-weights fw/cluster_weights.json`.
 - --bin/--src/--level/--flags/--expect: compiler A/B (install bin dir, its source tree for the ISR lib clones, --sdcccall,
   extra flags, stamp prefix; --expect '' skips the stamp check, for unstamped installs).
@@ -53,8 +55,14 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--level", default=SDCCCALL)
     ap.add_argument("--expect", default=SDCC_COMMIT, help="install stamp prefix ('' = no check)")
     ap.add_argument("--flags", default="", help="extra sdcc flags")
+    ap.add_argument("--extra-fw", default="", help="extra source root (docs/extra-apps.md)")
     ap.add_argument("--fw-args", default="", help="more fw_build args (e.g. '--cluster fn --cluster-weights fw/cluster_weights.json')")
     a = ap.parse_args(argv)
+    if a.extra_fw:
+        a.extra_fw = str(Path(a.extra_fw).resolve())
+        a.fw_args = f"{a.fw_args} --extra-fw {a.extra_fw}".strip()
+        if "_AWTO_EXTRA_APPS=_ON" not in a.defs:
+            a.defs.append("_AWTO_EXTRA_APPS=_ON")
     root = repo_root()
     (root / "tmp/logs").mkdir(parents=True, exist_ok=True)
     (a.tree / "tmp/logs").mkdir(parents=True, exist_ok=True)
@@ -91,10 +99,13 @@ def main(argv: list[str] | None = None) -> int:
     (root / "tmp/fw" / f"{a.serial}-{a.tag}-be.build.json").write_text(            # variant + clock of this image (scripts/image_variant.py)
         json.dumps({"defines": [*a.defs, *(f for f in a.flags.split() if f.startswith("-D"))], "xdata_free": bj.get("xdata_free"),
                     "layout_mode": bj.get("layout_mode"), "image_bytes": bj.get("bin_bytes"),      # dev | release (docs/flash-layout.md)
+                    **({"extra_fw": a.extra_fw} if a.extra_fw else {}),               # the gates read the same sources (AWTO_EXTRA_FW)
                     "commit": _tree_git(a.tree, "rev-parse", "--short", "HEAD"),        # #285: provenance of this image
                     "dirty": bool(_tree_git(a.tree, "status", "--porcelain", "--untracked-files=no"))}) + "\n")
     shutil.copy2(a.tree / "tmp/sdcc-port/bank_layout.new.tsv", root / "tmp/fw" / f"{a.serial}-{a.tag}-be.bank_layout.tsv")
     shutil.copy2(a.tree / "tmp/sdcc-port/xdata_layout.new.tsv", root / "tmp/fw" / f"{a.serial}-{a.tag}-be.xdata_layout.tsv")
+    if a.extra_fw and (a.tree / "tmp/sdcc-port/apps_gen.tsv").is_file():
+        shutil.copy2(a.tree / "tmp/sdcc-port/apps_gen.tsv", root / "tmp/fw" / f"{a.serial}-{a.tag}-be.apps.tsv")
     for ext in ("bin", "map"):
         dst = root / "tmp/fw" / f"{a.serial}-{a.tag}-be.{ext}"
         shutil.copy2(a.tree / f"tmp/fw/{a.serial}/fw.{ext}", dst)

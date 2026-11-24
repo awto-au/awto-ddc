@@ -6,6 +6,8 @@ usage: fw_build.py --serial AWT26110003 [--skip-compile] [--common 0x5000]
   --skip-compile  reuse tmp/sdcc-port/asm (skip port/EDID/compile)
   --layout FILE   tracked bank map (fw/bank_map.tsv: region per fn / const, scripts/sdcc_layout.py); offsets are packed
                   compactly every build into tmp/sdcc-port/bank_layout.new.tsv (#44); missing/empty file = create the map
+  --extra-fw DIR  extra source root (or $AWTO_EXTRA_FW): DIR/**/*.c *.h *.inc *.asm join the build like fw/ files and the AWTO_APP table
+                  is generated; adds -D _AWTO_EXTRA_APPS=_ON; the build is a variant (tracked maps untouched), docs/extra-apps.md
   --src-patch F   JSON [{file, old, new}] applied to tmp/sdcc-port/src after `port` (measurement edits, no SDK change)
 Memory (SDK + board, awto-ddc#8):
 - XDATA window 0xD700-0xF6FF; fixed DDC RAM for D1-D3 at E280/E480/E680 (+256 B each) splits it
@@ -36,6 +38,7 @@ LOG = None
 import itertools
 
 import chip_mem as CM
+import fw_dirs as FD
 
 
 def _xram() -> tuple:
@@ -380,12 +383,23 @@ def parse_args(argv=None):
                     "(sdcc_bank --repack; the new fw/bank_map.tsv is a full relocation)")
     ap.add_argument("--headroom", type=lambda x: int(x, 0), default=0, help="--repack: bytes kept free in every bank")
     ap.add_argument("--src-patch", default="")
+    ap.add_argument("--extra-fw", default=os.environ.get(FD.EXTRA_ENV, ""), help="extra source root (default $AWTO_EXTRA_FW), docs/extra-apps.md")
     # 0xc38: the --keil-compat /0 wrappers (_divulong_keil etc.) end the library at 0xc12 (awto-sdcc#36)
     ap.add_argument("--xdata-compact", action="store_true", help="re-place every module's XDATA from scratch (full-churn flash; fw/xdata_layout.tsv rewritten)")
     ap.add_argument("--xdata-floor", type=int, default=0, help="no-op, kept one release for old callers (the floor was removed)")
     ap.add_argument("--resid-end", default=hex(CM.RESID_END), help="passed to sdcc_bank: common bytes kept for vectors/library before "
                     "the chunk slots; a different value needs a new layout file")
     a = ap.parse_args(argv)
+    if a.extra_fw:
+        ex = Path(a.extra_fw).resolve()
+        if not ex.is_dir():
+            sys.exit(f"--extra-fw {a.extra_fw!r} is not a directory; nothing done")
+        a.extra_fw = str(ex)
+        os.environ[FD.EXTRA_ENV] = a.extra_fw                 # fw_compile / pp_audit / lints of this process tree read it (scripts/fw_dirs.py)
+        if "_AWTO_EXTRA_APPS=_ON" not in os.environ.get("K2S_SDCC_EXTRA", ""):
+            os.environ["K2S_SDCC_EXTRA"] = (os.environ.get("K2S_SDCC_EXTRA", "") + " -D_AWTO_EXTRA_APPS=_ON").strip()
+    else:
+        os.environ.pop(FD.EXTRA_ENV, None)
     if a.layout and Path(os.path.normpath(ROOT / a.layout)).is_relative_to(ROOT / "tmp"):
         sys.exit(f"layout: {a.layout!r} is under tmp/: the build uses only the tracked bank map (fw/bank_map.tsv), "
                  "so any worktree rebuilds the same image from git")
@@ -433,6 +447,7 @@ def main() -> int:
     for extra in (ROOT / "fw/sdcc/bank.asm", ROOT / "fw/sdcc/crt_xinit.asm", ROOT / "fw/sdcc/crt_rtd_startup.asm",
                   *([ROOT / "fw/sdcc/a5_probe.asm"] if "_AWTO_PROBES" in os.environ.get("K2S_SDCC_EXTRA", "") else []),   # needs the C buffer: -D _AWTO_PROBES (#233)
                   ROOT / "tmp/sdcc-port/asm_ovl/__ovl.asm",
+                  *sorted(Path(a.extra_fw).rglob("*.asm") if a.extra_fw else []),      # extra root assembler (docs/extra-apps.md)
                   *sorted((ROOT / "tmp/sdcc-port/isr_libs").glob("*_isr*.asm"))):
         (bank_dir / extra.name).write_text(extra.read_text().replace(";@XCLEAR@", xclear_asm()))
         run("bank", [T.tool("sdas8051"), "-plosgffw", bank_dir / extra.with_suffix(".rel").name, bank_dir / extra.name])

@@ -390,6 +390,13 @@ def main() -> int:
     stem = Path(a.stem)
     b = stem.with_suffix(".bin") if stem.suffix != ".bin" else stem
     m = b.with_suffix(".map")
+    bjf = b.with_name(b.stem + ".build.json")
+    xf = json.loads(bjf.read_text()).get("extra_fw", "") if bjf.is_file() else ""
+    if xf:                                              # an --extra-fw image: the static gates read the same extra sources (scripts/fw_dirs.py)
+        os.environ["AWTO_EXTRA_FW"] = xf
+        log(f"extra source root {xf}")
+    else:
+        os.environ.pop("AWTO_EXTRA_FW", None)
     st = b.with_name(b.stem + ".settings_table.py")    # the image's own registry (dev.py build); else scripts/settings_table.py
     if st.is_file():
         os.environ["AWTO_SETTINGS_TABLE"] = str(st.resolve())

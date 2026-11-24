@@ -83,11 +83,19 @@ uint8_t vcp_get(uint8_t code, uint16_t __xdata *cur, uint16_t __xdata *max, uint
     }
 }
 
+#ifdef _AWTO_EXTRA_APPS
+extern uint8_t AwtoAppsVcp(uint8_t code, uint16_t v);
+#endif
+
 uint8_t vcp_set(uint8_t code, uint16_t v)
 {
     uint8_t i;
     int16_t o;
 
+#ifdef _AWTO_EXTRA_APPS
+    if (AwtoAppsVcp(code, v))                    /* 0xEB 0x20.. starts an extra app (fw/apps/apps.c); 0 also stops one */
+        return 1;
+#endif
     switch (code) {
     case VCP_SEL:
         sel = (uint8_t)v;

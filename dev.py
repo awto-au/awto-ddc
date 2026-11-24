@@ -700,7 +700,7 @@ def _flashed(u: dict) -> dict:
 
 
 @command("build firmware (the only build entry; engine scripts/fwimage.py): FRC + rotation by default; frozen to tmp/fw/<serial>-<tag>-be.{bin,map,sync.tsv,settings_table.py}; tag = <commit>[+][-freeze|-nofrc][-audio-test] unless --tag",
-         args="[--unit N | --serial S] [--tree DIR] [--layout dev|release] [--freeze | --no-frc] [--audio-test] [-D NAME[=VAL] ...] [--tag T] [--force] [--bin DIR --src DIR --level N --expect STAMP --flags F --fw-args A]",
+         args="[--unit N | --serial S] [--tree DIR] [--layout dev|release] [--freeze | --no-frc] [--audio-test] [-D NAME[=VAL] ...] [--extra-fw DIR] [--tag T] [--force] [--bin DIR --src DIR --level N --expect STAMP --flags F --fw-args A]",
          kind="action")
 def cmd_build(extra: list[str]) -> int:
     serial = _opt(extra, "--serial")
@@ -719,6 +719,9 @@ def cmd_build(extra: list[str]) -> int:
         defs.append("_AWTO_AUDIO_TEST")
     defs += [extra[i + 1] for i, x in enumerate(extra) if x == "-D" and i + 1 < len(extra)]
     tree = Path(_opt(extra, "--tree") or REPO)
+    extra_fw = _opt(extra, "--extra-fw") or os.environ.get("AWTO_EXTRA_FW", "")    # extra source root + app hooks (docs/extra-apps.md)
+    if extra_fw and not Path(extra_fw).is_dir():
+        raise SystemExit(f"build: --extra-fw {extra_fw!r} is not a directory; nothing done")
     commit = subprocess.run(["git", "rev-parse", "--short", "HEAD"], cwd=tree, capture_output=True, text=True, check=False).stdout.strip()
     dirty = "+" if subprocess.run(["git", "diff", "--quiet"], cwd=tree, check=False).returncode else ""
     layout = _opt(extra, "--layout") or "dev"                          # dev = spread + slots (small edits), release = fewest banks (docs/flash-layout.md)
@@ -726,7 +729,8 @@ def cmd_build(extra: list[str]) -> int:
         raise SystemExit(f"build: --layout takes dev or release, got {layout!r}; nothing done")
     opt += "-rel" if layout == "release" else ""
     tag = _opt(extra, "--tag") or f"{commit}{dirty}{opt}{'-audio-test' if audio_test else ''}"
-    args = ["--tree", str(tree), "--serial", u["serial"], "--tag", tag, *[x for d in defs for x in ("-D", d)]]
+    args = ["--tree", str(tree), "--serial", u["serial"], "--tag", tag, *[x for d in defs for x in ("-D", d)],
+            *(["--extra-fw", extra_fw] if extra_fw else [])]
     fwa = [f"--layout-mode {layout}"]
     for x in [x for x in extra if x.startswith("--fw-args=")]:      # a value that starts with -- (extra fw_build args)
         extra.remove(x)

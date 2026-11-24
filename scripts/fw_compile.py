@@ -155,11 +155,26 @@ if FAR_MODE not in ("list", "all", "off"):
 
 # Our firmware sources by subsystem (#196, scripts/fw_dirs.py): compiled with the SDK project's flags, defines and include path.
 def our_dirs():
-    return FD.our_dirs(ROOT)
+    return FD.build_dirs(ROOT) + ([WORK] if FD.extra_root() else [])   # WORK: generated apps_gen.inc (extra root only)
 
 
 def our_sources():
-    return FD.our_files(ROOT, ("*.c",))
+    extra = FD.extra_root()
+    if extra is not None:                                     # docs/extra-apps.md: AWTO_APP table of the extra root -> WORK/apps_gen.inc (apps.c includes it)
+        import gen_awto_apps
+        gen_awto_apps.generate(extra, WORK / "apps_gen.inc")
+    return FD.build_files(ROOT, ("*.c",))
+
+
+def check_unique(cs):
+    """Two sources with one module name (c.stem) would overwrite each other's .asm / .rel: fail with both paths (extra roots)."""
+    seen, bad = {}, []
+    for c in cs:
+        n = obj_name(Path(c))
+        if n in seen and seen[n] != c:
+            bad.append(f"{n}: {seen[n]} and {c}")
+        seen[n] = c
+    return bad
 
 
 def sdcc_cmd(c: Path, uv2dir: Path, defines, incs, model):
@@ -239,7 +254,7 @@ def compile_one(c: Path, uv2dir: Path, defines, incs, model):
     msg, rc = _run_stage(cmd if off else ["ccache"] + cmd, env=None if off else ccache_env())
     if ASM_MODE and rc == 0:
         PR.normalise(out)                                    # #pragma place sections -> CSEG / CONST + marker (awto-ddc#149)
-    return str(c.relative_to(SRC) if c.is_relative_to(SRC) else c.relative_to(ROOT)), rc, msg
+    return str(c.relative_to(SRC) if c.is_relative_to(SRC) else c.relative_to(ROOT) if c.is_relative_to(ROOT) else c), rc, msg
 
 
 # ---------------- clean-room mixed build (#65, #68) ----------------
@@ -354,6 +369,10 @@ def cmd_compile(uv2_rel, jobs, only, target):
     cs = [c for c in cs if c.exists()]
     if uv2_rel == "STD_FW_1P.Uv2":
         cs += our_sources()                                   # #196: our .c files beside the SDK project
+        dup = check_unique(cs)
+        if dup:
+            log(f"module name clash: {dup}")
+            return 1
     log(f"compile {uv2_rel}: {len(cs)} C files ({len(parked)} parked in fw/sdk-parked, {len(missing) - len(parked)} missing), "
         f"defines {defines}, model {model}")
     if len(missing) > len(parked):                       # a project file in neither tree: a lost source, not a parked one (#165)

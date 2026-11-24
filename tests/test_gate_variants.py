@@ -17,12 +17,12 @@ import xdata_layout as XL
 
 
 def test_parse_defines():
-    assert IV.parse_defines([]) == {"hwtest": False, "t0ev": False, "clock": IV.DEFAULT_CLOCK_MHZ, "variant": False}
-    assert IV.parse_defines(["_AWTO_OSD_HWTEST", "-DAWTO_CLOCK_MHZ=175"]) == {"hwtest": True, "t0ev": False, "clock": 175, "variant": True}
+    assert IV.parse_defines([]) == {"hwtest": False, "t0ev": False, "extra": False, "clock": IV.DEFAULT_CLOCK_MHZ, "variant": False}
+    assert IV.parse_defines(["_AWTO_OSD_HWTEST", "-DAWTO_CLOCK_MHZ=175"]) == {"hwtest": True, "t0ev": False, "extra": False, "clock": 175, "variant": True}
     assert IV.parse_defines(["AWTO_CLOCK_MHZ=87"])["variant"] and not IV.parse_defines(["AWTO_CLOCK_MHZ=350"])["variant"]
     assert IV.parse_defines(["_AWTO_OSD_HWTEST=_ON"])["hwtest"] is True
     assert IV.parse_defines(["AWTO_CLOCK_MHZ=abc"])["clock"] == IV.DEFAULT_CLOCK_MHZ
-    assert IV.parse_defines(["_AWTO_T0EV_TEST"]) == {"hwtest": False, "t0ev": True, "clock": IV.DEFAULT_CLOCK_MHZ, "variant": True}
+    assert IV.parse_defines(["_AWTO_T0EV_TEST"]) == {"hwtest": False, "t0ev": True, "extra": False, "clock": IV.DEFAULT_CLOCK_MHZ, "variant": True}
 
 
 def test_new_red_against_previous_record(tmp_path):

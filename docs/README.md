@@ -2,6 +2,7 @@
 
 - Clock and delays: `clock-sweep.md`, `delay-audit.md` (owner of the delay decisions), `delays.md` (SDK constants, sources).
 - Hardware investigations: `monitoring.md` (health monitor, ADC), `temperature.md`, `register-audit.md`, `monitors/README.md` (I2C roles), `reversing/dahua-fw/register-audit.md`.
+- Extra apps (`--extra-fw`, app hooks): `extra-apps.md`.
 - OSD: `osd/` (manual), `osd-write-sweep.md`, `saver-fps-hw.md` (OSD hardware levers; its saver numbers are of the removed games, `games.md`).
 - Interfaces: `cec.md` (HDMI CEC sink, RPi5 test plan).
 - Registers: `../re/regmap/README.md` (one row per register; docs link by key `PPAA`).
