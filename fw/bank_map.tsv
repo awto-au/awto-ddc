@@ -568,6 +568,7 @@ fn	_AwtoConStepRun	9	0x6194	332
 fn	_AwtoConTitle	7	0x434c	671
 fn	_AwtoConTitleBar	7	0x45eb	372
 fn	_AwtoConTitlePoll	7	0x475f	59
+fn	_AwtoConWrapBreak	13	0x3541	95
 fn	_AwtoConWrapLine	7	0x479a	336
 fn	_AwtoDbgIsrCmd_EXINT1	C	0x1ae6	489
 fn	_AwtoDbgLinkPoll	3	0x8b96	112
@@ -3658,6 +3659,7 @@ stub	6__osd_tc_win_draw	6	0x9eac	8
 stub	7__AwtoCardOpen	7	0xa7c8	8
 stub	7__AwtoCardShow	7	0xa7d0	8
 stub	7__AwtoConStepRun	7	0xa7d8	8
+stub	7__AwtoConWrapBreak	7	0xa888	8
 stub	7__AwtoDdrNoteRead	7	0xa810	8
 stub	7__AwtoDiagConsole	7	0xa7e0	8
 stub	7__AwtoInText	7	0xa7e8	8
