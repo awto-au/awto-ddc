@@ -390,6 +390,8 @@ def main() -> int:
     if st.is_file():
         os.environ["AWTO_SETTINGS_TABLE"] = str(st.resolve())
         log(f"settings table {st.name}")
+    else:
+        log("settings table: none beside the image, scripts/settings_table.py (main's registry) is used")
     if a.build_inputs and a.tier == "extensive":
         build_inputs(b, log)
     g = gates(b, m, a.against, a.tree)

@@ -48,3 +48,13 @@ def test_fw_tag_hex_halves():
     import msg_tokenise as M
     assert M.tag_hex12("63263505") == (0x632, 0x635) and M.tag_hex12("63263505+-freeze") == (0x632, 0x635)
     assert M.tag_hex12("v1-3-g63263505") == (0x632, 0x635) and M.tag_hex12("var-3") == (0, 0) and M.tag_hex12("base") == (0, 0)
+
+
+def test_image_table_overrides_main_table(tmp_path):
+    # #154: fw_gates sets AWTO_SETTINGS_TABLE to tmp/fw/<stem>.settings_table.py; the menu / ddc / keys sims then read the image's registry
+    t = tmp_path / "img.settings_table.py"
+    t.write_text("SCHEMA = 0x1234\n")
+    env = {**os.environ, "AWTO_SETTINGS_TABLE": str(t)}
+    out = subprocess.run([sys.executable, "-c", "import settings_table as T; print(hex(T.SCHEMA))"], cwd=ROOT / "scripts",
+                         env=env, capture_output=True, text=True, check=True).stdout.strip()
+    assert out == "0x1234"
