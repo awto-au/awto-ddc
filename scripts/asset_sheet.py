@@ -187,8 +187,8 @@ def main():
         if n == 0:
             failed.append(name)
     names = pack(panels, "sdk_blobs", out, f"SDK VLC blobs: {len(blobs)} arrays, {tiles} tiles")
-    sections.append((f"SDK icons, logos and global fonts: {len(blobs)} arrays, {tiles} tiles decoded, {len(failed)} not decodable "
-                     f"({', '.join(failed[:12])}{'...' if len(failed) > 12 else ''})", names, "RTD2014OsdFont*.c"))
+    sections.append(((f"SDK icons, logos and global fonts: {len(blobs)} arrays, {tiles} tiles decoded, {len(failed)} not decodable "
+                     f"({', '.join(failed[:12])}{'...' if len(failed) > 12 else ''})"), names, "RTD2014OsdFont*.c"))
 
     names, n = text_font_sheet(out)
     sections.append((f"SDK proportional text font: {n} glyphs", names, "Rtd2014OsdTextTableBody_0.h"))

@@ -107,12 +107,12 @@ CASES = [
      "fire time (sim only)"),
     ("t0_multi", 0x5C, "0x2D two pending; 0x5C RR D3 10 / rebuild 30 / RR D2 5 armed out of order, RR D3 cancelled at 2 ms",
      lambda: 30 * 1.1 + CMD_MS, "fire order by deadline, cancelled one never fires (sim only)"),
-    ("t0_arm_from_isr", 0x5D, "EXINT0 hook arms RR D2: alone, during a Timer0 ISR (same level), with TF0 + IE0 together, "
-     "and with IP = 0x81 (EXINT0 high, preempts Timer0)", lambda: 10 * 1.1 + 5, "fires == arms, each at 10 ms +-10 % (sim only)"),
+    ("t0_arm_from_isr", 0x5D, ("EXINT0 hook arms RR D2: alone, during a Timer0 ISR (same level), with TF0 + IE0 together, "
+     "and with IP = 0x81 (EXINT0 high, preempts Timer0)"), lambda: 10 * 1.1 + 5, "fires == arms, each at 10 ms +-10 % (sim only)"),
     ("prio_t0_vs_exint", 0x5E, "a 2-3 ms low-priority EXINT0 spin delays a pending Timer0 event by at most its length; Timer2 not delayed",
      lambda: 10 + 3, "RR fire 10..13 ms; max Timer2 interval <= 1.1 period (sim only)"),
-    ("prio_wdt_preempts", 0x5F, "stuck EXINT0 (0x5F) / stuck Timer0 handler (0x24): WDT warning (high) preempts, PC captured; "
-     "IP = 0x81 (EXINT0 high): no preemption, hardware reset", lambda: reset_ms() + CMD_MS,
+    ("prio_wdt_preempts", 0x5F, ("stuck EXINT0 (0x5F) / stuck Timer0 handler (0x24): WDT warning (high) preempts, PC captured; "
+     "IP = 0x81 (EXINT0 high): no preemption, hardware reset"), lambda: reset_ms() + CMD_MS,
      "capture PC in AwtoT0EvTestIsr / AwtoT0EvFire at the warning; no capture at the reset (0x24 also on the unit)"),
     ("prio_inversion", None, "shared data between Timer0, EXINT0 and main: guards listed", None, "inspection (docs/watchdog.md)"),
     ("tick_load", None, "Timer2 ISR cycles (now and on --before image), Timer0 ISR idle / fire tick, per-pass poke", None,

@@ -58,8 +58,8 @@ STEP_RULES = [   # (step, regex on "origin|module|symbol"), first match wins; he
     ("7 DDC/CI + debug", r"Ddcci|DDCCI|Debug|Ddc|DDC|Iic|IIC"),
     ("3 timer/delay", r"Timer|Delay"),
     ("2 helpers", r"ScalerCommonReg|DataPort|BurstWrite|ComputeDword|MultiByte|\|_?Scaler(Set|Get)(Byte|Bit|Word|DWord)"),
-    ("8 mode path", r"Measure|Vgip|VGIP|MDomain|Memory|PLL|Pll|Scaling|Color|FmtCnv|FormatConversion|IDomain|DDomain|"
-                    r"Mode|Sync|Global|Display|Interlace|Rotation|Audio"),
+    ("8 mode path", (r"Measure|Vgip|VGIP|MDomain|Memory|PLL|Pll|Scaling|Color|FmtCnv|FormatConversion|IDomain|DDomain|"
+                    r"Mode|Sync|Global|Display|Interlace|Rotation|Audio")),
     ("10 Sys flow", r"System \(Sys|\|Sys|UserCommon|User/other|Pcb|Project|Mcu|Int|Power|Source|Interface"),
 ]
 LOG = None

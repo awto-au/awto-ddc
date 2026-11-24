@@ -220,8 +220,8 @@ def human(r):
         L += [f"  manufacturer/model : {e['manufacturer']} / {e.get('model')}   product {e['product_code']}",
               f"  serial             : text={e.get('serial_text')} numeric={e['serial_numeric']}",
               f"  made               : week {e['week']} {e['year']}   EDID {e['version']}",
-              f"  preferred timing   : {t.get('preferred')} @ {t.get('refresh_hz')} Hz  clk {t.get('pixel_clock_mhz')} MHz  "
-              f"total {t.get('h_total')}x{t.get('v_total')}",
+              (f"  preferred timing   : {t.get('preferred')} @ {t.get('refresh_hz')} Hz  clk {t.get('pixel_clock_mhz')} MHz  "
+              f"total {t.get('h_total')}x{t.get('v_total')}"),
               f"  physical size      : {e.get('size_mm')} mm (base block cm {e['size_cm']})",
               f"  conformity         : {e.get('conformity')}"]
         L += [f"     {x}" for x in e.get("conformity_detail", [])[:8]]

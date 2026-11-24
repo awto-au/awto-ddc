@@ -58,8 +58,8 @@ def p0_02_flags(v: int) -> str:
 
 def render(d: dict, tag: str) -> list[str]:
     h, t0 = d["hdr"], d["hdr"]["start"]
-    out = [f"meas4k {tag}: state {STATE.get(h['state'], h['state'])} arms {h['arms']} samples {h['nsamp']} events {h['nev']} "
-           f"window {h['end'] - t0 if h['state'] == 2 else '?'} ms (t0 = timer ms {t0})", ""]
+    out = [(f"meas4k {tag}: state {STATE.get(h['state'], h['state'])} arms {h['arms']} samples {h['nsamp']} events {h['nev']} "
+           f"window {h['end'] - t0 if h['state'] == 2 else '?'} ms (t0 = timer ms {t0})"), ""]
     out.append(f"{'#':>2} {'t_ms':>5} {'mode':<15} 0_02 0_0C  5_B0 45_B0 5_2B 45_2B  3D 3E 40 41 45  C4C5  0_28  flags")
     for i, s in enumerate(d["samples"]):
         mode = MODE[s["mode"]] if s["mode"] < len(MODE) else str(s["mode"])

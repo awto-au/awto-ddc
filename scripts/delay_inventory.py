@@ -870,8 +870,8 @@ def doc(rows, sim, path: Path, a):
         L += ["", "## Boot to ACTIVE budget (simulator)", "",
               f"- Image {sim['image']}, 1080p60 HDMI stub on D2, reset to mode ACTIVE: **{tot_ms} ms** firmware time (Timer2 ms), {sim['instr']} instr.",
               f"- Blocking waits measured on that path (delay_ms, poll, wait_event): **{blk_ms:.0f} ms** in {len(hits)} calls = {100 * blk_ms / tot_ms:.0f} % of the path; the rest is main-loop compute and waiting for timer events / state-machine timers.",
-              "- Sim limits: the HDMI Rx PHY, HPD and PLL lock flags are not modelled, so some polls run to their bound in the sim (expired column) and the stubbed TMDS pre-detect/scan/stable functions cost nothing; "
-              "Timer2 is dilated x3 to keep fw time = instr / 12.6 k per ms.", "",
+              ("- Sim limits: the HDMI Rx PHY, HPD and PLL lock flags are not modelled, so some polls run to their bound in the sim (expired column) and the stubbed TMDS pre-detect/scan/stable functions cost nothing; "
+              "Timer2 is dilated x3 to keep fw time = instr / 12.6 k per ms."), "",
               "### Time per mode state (fw ms) and blocking ms inside it", "", "| state | from ms | to ms | length ms | blocking ms | blocking calls |", "|---|---|---|---|---|---|"]
         for nm, t0, t1 in wins:
             hh = [h for h in hits if t0 <= h[0] < t1]
@@ -880,8 +880,8 @@ def doc(rows, sim, path: Path, a):
         if ts:
             L += ["", "Boot stage timestamps from the firmware's own diag block (fw ms; docs/diag-block.md): " +
                   ", ".join(f"stage {i + 1} = {v}" for i, v in enumerate(ts)) + ".",
-                  "- Stage 4 to 5 (pin-share done to first main-loop pass) is compute in the sim (no blocking site fires in that window except the ones below); "
-                  "stage 6 to 7 includes the panel T1 (10 ms) and the T2 HPD poll, which runs to its 250 ms bound in the sim because HPD is not modelled."]
+                  ("- Stage 4 to 5 (pin-share done to first main-loop pass) is compute in the sim (no blocking site fires in that window except the ones below); "
+                  "stage 6 to 7 includes the panel T1 (10 ms) and the T2 HPD poll, which runs to its 250 ms bound in the sim because HPD is not modelled.")]
         L += ["", "### Top 20 blocking sites by measured ms on the boot to ACTIVE path", "",
               "| id | kind | file:line | function | calls | ms total | ms/call | expired | class | stated reason |", "|---|---|---|---|---|---|---|---|---|---|"]
         top = sorted(sim["sites"].items(), key=lambda kv: -kv[1]["ms"])[:20]

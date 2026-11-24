@@ -1526,11 +1526,11 @@ def video_check(binp: Path, mapp: Path, mode: str, max_instr: int, log, fault: s
         mt = re.search(r"Stop at 0x([0-9a-f]+)", out)
         if mt:
             hist[m.where(m.rd(0xFFFF)[0] & 15, int(mt.group(1), 16))] += 1
-    lines = [f"video-check {binp.name} mode {mode}: final mode {last} {MODE_NAMES[last] if last < len(MODE_NAMES) else '?'} "
-             f"after ~{done} instr",
+    lines = [(f"video-check {binp.name} mode {mode}: final mode {last} {MODE_NAMES[last] if last < len(MODE_NAMES) else '?'} "
+             f"after ~{done} instr"),
              "timeline: " + " -> ".join(f"{MODE_NAMES[s]}@{n // 1_000_000}M" for n, s in timeline),
-             f"g_stMDomainInputData: {t['hwidth']}x{t['vheight']}@{t['vfreq'] / 10:.1f} htotal {t['htotal']} vtotal {t['vtotal']} "
-             f"hfreq {t['hfreq'] / 10:.1f} kHz",
+             (f"g_stMDomainInputData: {t['hwidth']}x{t['vheight']}@{t['vfreq'] / 10:.1f} htotal {t['htotal']} vtotal {t['vtotal']} "
+             f"hfreq {t['hfreq'] / 10:.1f} kHz"),
              f"stub hits: {m.stub_hits}", *decision_report(m, snaps)]
     if last != H.MODE_ACTIVE:
         lines.append("blockers (AwtoMsg id x count @ source; top 8): " + "; ".join(

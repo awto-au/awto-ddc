@@ -243,11 +243,11 @@ def unsourced_md():
     fns, rows = unsourced()
     real = [r for r in rows if not r["src"]]
     out = [f"## 2. .LIB functions with no C source in {' / '.join(PRIMARY)} ({len(rows)} of {len(fns)})", "",
-           f"- {len(real)} of them have no C source anywhere in the RL6449-relevant trees ({', '.join(SRC_TREES)}); "
-           f"the other {len(rows) - len(real)} are defined under Kernel/Scaler/ScalerFunction (column src)",
+           (f"- {len(real)} of them have no C source anywhere in the RL6449-relevant trees ({', '.join(SRC_TREES)}); "
+           f"the other {len(rows) - len(real)} are defined under Kernel/Scaler/ScalerFunction (column src)"),
            "- vendor column: lib_match.tsv class and placement (EXACT = byte-identical modulo fixups)",
-           "- refs = .c/.h files in tmp/sdcc-port/src (RL6449 + common trees) naming the function; "
-           "a referencing .c with no source for the callee needs a stub, an omission or a re-implementation in our build", ""]
+           ("- refs = .c/.h files in tmp/sdcc-port/src (RL6449 + common trees) naming the function; "
+           "a referencing .c with no source for the callee needs a stub, an omission or a re-implementation in our build"), ""]
     byc = {}
     for r in rows:
         byc.setdefault(r["cat"], []).append(r)
@@ -304,9 +304,9 @@ def verdicts(path):
 def readme(head):
     ver = verdicts(REPO / "re/lib-review/verdicts.md")
     out = [Path(head).read_text().rstrip(), "", "## 1. Variants and look-alikes, line by line", "",
-           "Reading guide: `[fix X]` = link-time fixup site (masked in the signature; value is the linker's choice); "
+           ("Reading guide: `[fix X]` = link-time fixup site (masked in the signature; value is the linker's choice); "
            "`same-op, fixup` = opcode equal, operand is a fixup (address of whatever the linker placed); "
-           "`**DIFF ...**` = a real byte difference. Placement = best fuzzy placement of the .LIB bytes in the vendor banks.", ""]
+           "`**DIFF ...**` = a real byte difference. Placement = best fuzzy placement of the .LIB bytes in the vendor banks."), ""]
     for name, at in VARIANTS:
         title = name + (f" (vendor placement forced to {at})" if at else "")
         out.append(f"### 1.{VARIANTS.index((name, at)) + 1} {title}")
