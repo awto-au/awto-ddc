@@ -139,7 +139,7 @@ def main():
             continue
         freed += size
         log(f"removed {p}")
-        if br:
+        if br and br != "(detached)":
             r = git("branch", "-d", br)
             log(f"branch -d {br}: {(r.stdout + r.stderr).strip()}")
     log(f"freed ~{freed/1e6:.0f}MB")
