@@ -23,6 +23,7 @@ import sys
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))  # -I drops script dir
 import rtd_gate
 
+LOG = logging.getLogger(__name__)
 MAGIC = 0x99552277
 FIELD_LEN = 36
 TAIL_LEN = 36
@@ -71,7 +72,7 @@ class Db:
         f = t0 + TAIL_LEN
         self.tags = {"g": d[f + 10:f + 12], "o": d[f + 18:f + 20], "kt": d[f + 28:f + 32],
                          "use": d[t0 + 20:t0 + 28], "s": d[t0 + 30:t0 + 32], "z": d[t0 + 12:t0 + 16]}
-        logging.info("learned tags: %s", {k: v.hex() for k, v in self.tags.items()})
+        LOG.info("learned tags: %s", {k: v.hex() for k, v in self.tags.items()})
 
     def s(self, ptr):
         d, p = self.d, self.pool + ptr
@@ -90,7 +91,7 @@ class Db:
         # first tail sits 0x14 after hdr_size (5 dwords of preamble); else scan
         t0 = self.hdr_size + 0x14
         if d[t0 + 36:t0 + 44] != b"\xff" * 8 and d[t0 + 44:t0 + 46] != b"\xff\xff":
-            logging.warning("unexpected first field layout at 0x%x", t0 + 36)
+            LOG.warning("unexpected first field layout at 0x%x", t0 + 36)
         self.learn_tags(t0)
         self.preamble = struct.unpack_from(f"<{(t0 - self.hdr_size) // 4:d}I", d, self.hdr_size)
         regs = []
@@ -108,14 +109,14 @@ class Db:
                        "lvl": lvl, "nf": nf, "fptr": fptr, "fields": fields, "tail": tail}
             regs.append(reg)
             if not fields:
-                logging.warning("register at tail 0x%x has no fields", tail)
+                LOG.warning("register at tail 0x%x has no fields", tail)
             if self.is_tail(pos):
                 tail = pos
                 pos += TAIL_LEN
                 continue
             break
         self.pool = pos
-        logging.info("stream end / pool base = 0x%x, %d registers", pos, len(regs))
+        LOG.info("stream end / pool base = 0x%x, %d registers", pos, len(regs))
         return regs
 
     def _tail(self, t):
@@ -153,8 +154,8 @@ def main():
     ap.add_argument("--gate-warn-only", action="store_true", help="downgrade gate refusals to warnings")
     a = ap.parse_args()
     setup_log()
-    rtd_gate.gate_or_exit(a.db, "DB.bin", warn_only=a.gate_warn_only or None, log=logging.info)
-    logging.info("parse %s -> %s", a.db, a.out)
+    rtd_gate.gate_or_exit(a.db, "DB.bin", warn_only=a.gate_warn_only or None, log=LOG.info)
+    LOG.info("parse %s -> %s", a.db, a.out)
     with open(a.db, "rb") as _f:
         db = Db(_f.read())
     regs = db.parse()
@@ -163,7 +164,7 @@ def main():
     ra_path = a.readall or os.path.join(os.path.dirname(os.path.abspath(a.db)), "ReadAll.txt")
     if os.path.exists(ra_path):
         rtd_gate.gate_or_exit(ra_path, "ReadAll.txt", warn_only=a.gate_warn_only or None,
-                              log=logging.info)
+                              log=LOG.info)
     readall = read_readall(ra_path)
 
     # ---- resolve names / consistency checks --------------------------------
@@ -191,7 +192,7 @@ def main():
     # last field's kt = group id of the NEXT register; first reg: preamble[-1] [fw]
     for i, r in enumerate(regs):
         r["gid"] = (regs[i - 1]["fl"][-1]["kt"] if i else db.preamble[-1])
-    logging.info("consistency warnings: %s", warn)
+    LOG.info("consistency warnings: %s", warn)
 
     # ---- group assignment: runs of gid inside a page, in stream order ------
     # ReadAll group list = ordered runs of group ids [fw: matched on checked pages]
@@ -249,10 +250,10 @@ def main():
                 r["group"] = nm
         if names and len(names) != len(runs):
             bad_pages += 1
-            logging.info("page %02X: %d ReadAll groups vs %d gid runs; groups via gid map",
+            LOG.info("page %02X: %d ReadAll groups vs %d gid runs; groups via gid map",
                          pg, len(names), len(runs))
-    logging.info("gid->group map: %d ids, %d conflicts", len(gmap), conflicts)
-    logging.info("group mapping: %d pages matched, %d mismatched", ok_pages, bad_pages)
+    LOG.info("gid->group map: %d ids, %d conflicts", len(gmap), conflicts)
+    LOG.info("group mapping: %d pages matched, %d mismatched", ok_pages, bad_pages)
 
     # ---- write TSV ---------------------------------------------------------
     cols = ["page", "address", "port_idx", "reg_type", "kind", "register", "bit_high", "bit_low",
@@ -284,7 +285,7 @@ def main():
                     "0x{:02X}".format(f["rv"]), r["group"], r["gid"],
                     w[0] if w else "", w[1] if w else "", esc(f["rgrp"]), esc(f["desc"])]) + "\n")
                 nfld += 1
-    logging.info("wrote %d register rows, %d field rows, %d pages", nreg, nfld, len(by_page))
+    LOG.info("wrote %d register rows, %d field rows, %d pages", nreg, nfld, len(by_page))
     print(f"registers={nreg:d} fields={nfld:d} pages={len(by_page)}")
 
 

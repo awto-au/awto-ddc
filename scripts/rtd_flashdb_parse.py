@@ -26,6 +26,7 @@ import re
 import struct
 import sys
 
+LOG = logging.getLogger(__name__)
 MAGIC = 0x07020509
 REC = 72
 HDR = 10
@@ -143,7 +144,7 @@ def parse_flashset_v2(d, swren_names):
     known = {s["offset"] for s in scripts}
     for c in chips:
         if c["swren_offset"] is not None and c["swren_offset"] not in known:
-            logging.warning("chip %s: swren_offset %d matches no script", c["name"], c["swren_offset"])
+            LOG.warning("chip %s: swren_offset %d matches no script", c["name"], c["swren_offset"])
     hdr = {"magic": f"0x{magic:08x}", "format_version": ver, "chip_count": count, "swren_count": nsw,
            "format": "FlashSet.dat v2 (72 B records)"}
     return hdr, chips, scripts
@@ -214,7 +215,7 @@ def cmd_parse(src, out, swren_path, tool_version):
     try:
         hdr, chips, scripts = parse_flashset_v2(d, swren_names)
     except (ValueError, struct.error):
-        logging.info("not FlashSet v2 layout, trying Flash.dat legacy layout")
+        LOG.info("not FlashSet v2 layout, trying Flash.dat legacy layout")
         hdr, chips, scripts = parse_flash_legacy(d)
     hdr.update({"tool_version": tool_version or infer_version(src), "source_file": base,
                 "source_size": len(d), "sha256": sha, "record_count": len(chips),
@@ -225,7 +226,7 @@ def cmd_parse(src, out, swren_path, tool_version):
     with open(out, "w") as f:
         json.dump(doc, f, indent=1)
         f.write("\n")
-    logging.info("%s: %d chips, %d swren scripts, sha256 %s -> %s", base, len(chips), len(scripts), sha[:16], out)
+    LOG.info("%s: %d chips, %d swren scripts, sha256 %s -> %s", base, len(chips), len(scripts), sha[:16], out)
     return 0
 
 
@@ -274,7 +275,7 @@ def cmd_scalers(root, out, tool_version):
     with open(out, "w") as f:
         json.dump(doc, f, indent=1)
         f.write("\n")
-    logging.info("%d scalers, duplicate ids %s -> %s", len(scalers), dup, out)
+    LOG.info("%d scalers, duplicate ids %s -> %s", len(scalers), dup, out)
     return 0
 
 
@@ -323,7 +324,7 @@ def cmd_diff(a, b):
             lines.append(f"~ changed swren_scripts ({len(sa)} -> {len(sb)} scripts)")
     lines.append(f"# {len(added)} added, {len(removed)} removed, {len(changed)} changed")
     print("\n".join(lines))
-    logging.info("diff %s %s: %d added, %d removed, %d changed", a, b, len(added), len(removed), len(changed))
+    LOG.info("diff %s %s: %d added, %d removed, %d changed", a, b, len(added), len(removed), len(changed))
     return 1 if (added or removed or changed or len(lines) > len(added) + len(removed) + len(changed) + 2) else 0
 
 

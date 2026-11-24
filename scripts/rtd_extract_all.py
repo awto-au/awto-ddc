@@ -30,6 +30,7 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, HERE)  # -I drops script dir
 import rtd_gate
 
+LOG = logging.getLogger(__name__)
 WANT = {"db.bin", "gpio.bin", "dpcddb.bin", "ipdb.bin", "flashset.dat", "flash.dat",
         "swren.dat", "readall.txt", "version.txt"}
 PE_EXT = (".dll", ".exe", ".ocx")
@@ -68,10 +69,10 @@ def run(cmd, what):
     t = time.time()
     p = subprocess.run([sys.executable, "-I"] + cmd, capture_output=True, text=True, cwd=rtd_gate.repo_root(),
                        timeout=PARSER_LIMIT_S, check=False)
-    logging.info("%s: rc=%d %.1fs %s", what, p.returncode, time.time() - t,
+    LOG.info("%s: rc=%d %.1fs %s", what, p.returncode, time.time() - t,
                  (p.stdout.strip().splitlines() or [""])[-1])
     if p.returncode:
-        logging.error("%s FAILED rc=%d\n%s", what, p.returncode, (p.stdout + p.stderr)[-2000:])
+        LOG.error("%s FAILED rc=%d\n%s", what, p.returncode, (p.stdout + p.stderr)[-2000:])
     return p.returncode
 
 
@@ -88,11 +89,11 @@ def main():
     root = os.path.abspath(a.root)
     tv = a.tool_version or rtd_gate.detect_tool_version(root)
     reg = rtd_gate.load_registry()
-    logging.info("root=%s tool_version=%s registry validated=%s", root, tv, reg.get("tool_versions_seen"))
+    LOG.info("root=%s tool_version=%s registry validated=%s", root, tv, reg.get("tool_versions_seen"))
     if tv is None:
-        logging.warning("tool version not detected (dir name lacks Vx.y_YYYYMMDD); pass --tool-version")
+        LOG.warning("tool version not detected (dir name lacks Vx.y_YYYYMMDD); pass --tool-version")
     elif tv not in reg.get("tool_versions_seen", []):
-        logging.warning("NEW TOOL VERSION %s: not in registry tool_versions_seen %s - "
+        LOG.warning("NEW TOOL VERSION %s: not in registry tool_versions_seen %s - "
                         "every file is checked, expect gate output below to show what changed",
                         tv, reg.get("tool_versions_seen"))
 
@@ -107,14 +108,14 @@ def main():
         except rtd_gate.GateError as e:  # unknown kind
             rows.append({"file": rel, "kind": "?", "version": "?", "state": "fail", "msg": str(e)})
     w = max(len(r["file"]) for r in rows) if rows else 10
-    logging.info("%-*s  %-12s %-13s %s", w, "file", "kind", "version", "state")
+    LOG.info("%-*s  %-12s %-13s %s", w, "file", "kind", "version", "state")
     for r in rows:
-        logging.info("%-*s  %-12s %-13s %s", w, r["file"], r["kind"], r["version"], r["state"].upper())
+        LOG.info("%-*s  %-12s %-13s %s", w, r["file"], r["kind"], r["version"], r["state"].upper())
     for r in rows:
         if r["msg"]:
-            logging.info("  [%s] %s: %s", r["state"].upper(), r["file"], r["msg"])
+            LOG.info("  [%s] %s: %s", r["state"].upper(), r["file"], r["msg"])
     counts = {s: sum(1 for r in rows if r["state"] == s) for s in ("ok", "warn", "unsupported", "fail")}
-    logging.info("gate summary: %s", counts)
+    LOG.info("gate summary: %s", counts)
     os.makedirs(a.out, exist_ok=True)
     with open(os.path.join(a.out, "gate_report.json"), "w", encoding="utf-8") as fo:
         json.dump({"root": root, "tool_version": tv, "counts": counts, "files": rows}, fo, indent=1)
@@ -123,8 +124,8 @@ def main():
     bad = [r for r in rows if r["state"] == "fail" or (a.strict and r["state"] == "warn")]
     if bad and not a.warn_only:
         for r in bad:
-            logging.error("LAYOUT DRIFT / UNKNOWN VERSION: %s -> %s", r["file"], r["msg"])
-        logging.error("STOP: %d file(s) failed the gate. Onboard per docs/reversing/realtek-rtd/"
+            LOG.error("LAYOUT DRIFT / UNKNOWN VERSION: %s -> %s", r["file"], r["msg"])
+        LOG.error("STOP: %d file(s) failed the gate. Onboard per docs/reversing/realtek-rtd/"
                       "extraction.md (rtd_gate.py diff <file>), or rerun with --warn-only.", len(bad))
         return rtd_gate.EXIT_REFUSED
     if a.gate_only:
@@ -156,7 +157,7 @@ def main():
                 gzip_to(gtsv, os.path.join(a.out, "gpio", chip + ".gpio.tsv.gz"))
     for r in rows:
         if r["kind"] == "DB.bin" and r["state"] == "unsupported":
-            logging.info("skip %s: known variant v%s, no parser", r["file"], r["version"])
+            LOG.info("skip %s: known variant v%s, no parser", r["file"], r["version"])
 
     flashp = os.path.join(HERE, "rtd_flashdb_parse.py")
     plug = os.path.join(root, "PlugIn")
@@ -166,14 +167,14 @@ def main():
         if run([flashp, plug, fout] + gw, "flashdb"):
             fail += 1
     else:
-        logging.info("flashdb: rtd_flashdb_parse.py not present, FlashSet/Flash/SWREN gated only")
+        LOG.info("flashdb: rtd_flashdb_parse.py not present, FlashSet/Flash/SWREN gated only")
 
     ptsv = os.path.join(tmp, "pe.tsv")
     if run([os.path.join(HERE, "pe_resources.py"), root, ptsv] + gw, "pe_resources"):
         fail += 1
     else:
         gzip_to(ptsv, os.path.join(a.out, "pe", (tv or "unknown") + ".tsv.gz"))
-    logging.info("done: %d parser failure(s)", fail)
+    LOG.info("done: %d parser failure(s)", fail)
     return 5 if fail else 0
 
 

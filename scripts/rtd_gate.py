@@ -28,6 +28,7 @@ import re
 import struct
 import sys
 
+LOG = logging.getLogger(__name__)
 MAGIC = 0x99552277
 REG_NAME = os.path.join("re", "formats.json")
 EXIT_REFUSED = 3
@@ -433,7 +434,7 @@ def _cmd_register(a):
                               "size": res.signature["size"], "sha256": res.signature["sha256"],
                               "tool_version": a.tool_version}
     save_registry(reg)
-    logging.info("registered %s v%s validated against %s", kind, res.version, a.tool_version)
+    LOG.info("registered %s v%s validated against %s", kind, res.version, a.tool_version)
 
 
 def main():
@@ -455,40 +456,40 @@ def main():
             if a.cmd == "gate":
                 try:
                     r = gate(f, a.kind, warn_only=a.warn_only, tool_version=a.tool_version)
-                    logging.info("%-6s %s v%s %s", r.state.upper(), r.kind, r.version, f)
+                    LOG.info("%-6s %s v%s %s", r.state.upper(), r.kind, r.version, f)
                     for m in r.warnings + r.fatal:
-                        logging.info("    %s", m)
+                        LOG.info("    %s", m)
                     rc = rc or (EXIT_REFUSED if r.fatal else 0)
                 except GateUnsupported as e:
-                    logging.info("UNSUPPORTED %s", e)
+                    LOG.info("UNSUPPORTED %s", e)
                     rc = rc or EXIT_UNSUPPORTED
             elif a.cmd == "sig":
-                logging.info("%s\n%s", f, json.dumps(compute_signature(f, a.kind), indent=2))
+                LOG.info("%s\n%s", f, json.dumps(compute_signature(f, a.kind), indent=2))
             else:
                 reg = load_registry()
                 sig = compute_signature(f, a.kind, reg)
                 spec = reg["kinds"][sig["kind"]]
-                logging.info("%s: %s version=%s size=%d sha256=%s", f, sig["kind"],
+                LOG.info("%s: %s version=%s size=%d sha256=%s", f, sig["kind"],
                              sig["version"], sig["size"], sig["sha256"][:16])
                 v = spec["versions"].get(sig["version"])
                 if v is None:
-                    logging.info("  version %s NOT in registry (%s)", sig["version"],
+                    LOG.info("  version %s NOT in registry (%s)", sig["version"],
                                  ",".join(spec["versions"]))
-                    logging.info("  computed derived: %s", json.dumps(sig["derived"]))
+                    LOG.info("  computed derived: %s", json.dumps(sig["derived"]))
                     for k, vs in spec["versions"].items():
-                        logging.info("  closest known v%s expects: %s", k,
+                        LOG.info("  closest known v%s expects: %s", k,
                                      json.dumps(vs.get("expect", {})))
                     rc = EXIT_REFUSED
                     continue
                 for key, got, rule, ok in compare(sig, v) + compare(sig, v, "expect_warn"):
-                    logging.info("  %-4s %-22s got=%r expect=%r", "ok" if ok else "DIFF",
+                    LOG.info("  %-4s %-22s got=%r expect=%r", "ok" if ok else "DIFF",
                                  key, got, rule)
                     rc = rc or (0 if ok else EXIT_REFUSED)
                 extra = {k: x for k, x in sig["derived"].items() if k not in v.get("expect", {})
                              and k not in v.get("expect_warn", {})}
-                logging.info("  unconstrained derived: %s", json.dumps(extra))
+                LOG.info("  unconstrained derived: %s", json.dumps(extra))
         except GateError as e:
-            logging.info("REFUSED %s", e)
+            LOG.info("REFUSED %s", e)
             rc = rc or EXIT_REFUSED
     return rc
 

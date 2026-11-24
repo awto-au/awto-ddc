@@ -23,6 +23,7 @@ import sys
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))  # -I drops script dir
 import rtd_gate
 
+LOG = logging.getLogger(__name__)
 MAGIC = 0x99552277
 PIN_REC = 376
 PAD = 0xCD
@@ -104,7 +105,7 @@ class Db:
                     continue
                 self.f.setdefault(int(c[1], 16), []).append(
                     (int(c[6]), int(c[7]), c[8], c[5], c[16]))
-        logging.info("regdb %s: %d registers", path, len(self.f))
+        LOG.info("regdb %s: %d registers", path, len(self.f))
 
     def regfields(self, addr):
         return [x[2] for x in self.f.get(addr, []) if x[2] != "Reserved"]
@@ -237,7 +238,7 @@ def parse(d, db):
                 schmitt.append(r.u16())
     left = len(d) - r.p
     tail = d[r.p:].hex(' ')
-    logging.info("%s tag=%s hdr=(%d,%d) pins=%d spi=%d pairs=%d adc=%d ports=%d timers=%d pwm=%d "
+    LOG.info("%s tag=%s hdr=(%d,%d) pins=%d spi=%d pairs=%d adc=%d ports=%d timers=%d pwm=%d "
                  "schmitt=%d trailing_bytes=%d (%s) warn=%s", chip, chip, hdr_a, hdr_b, len(pins), len(spi),
                  len(pairs), len(adc), len(ports), len(timers), len(pwm), len(schmitt), left, tail, warn)
     return {"chip": chip, "pins": pins, "spi": spi, "pairs": pairs, "adc": adc, "ports": ports,
@@ -349,8 +350,8 @@ def main():
     ap.add_argument("--gate-warn-only", action="store_true", help="downgrade gate refusals to warnings")
     a = ap.parse_args()
     setup_log()
-    rtd_gate.gate_or_exit(a.gpio, "GPIO.bin", warn_only=a.gate_warn_only or None, log=logging.info)
-    logging.info("parse %s -> %s", a.gpio, a.out)
+    rtd_gate.gate_or_exit(a.gpio, "GPIO.bin", warn_only=a.gate_warn_only or None, log=LOG.info)
+    LOG.info("parse %s -> %s", a.gpio, a.out)
     chip = os.path.basename(os.path.dirname(os.path.abspath(a.gpio)))
     rdb = a.regdb or os.path.join(os.path.dirname(os.path.abspath(a.out)), chip + ".tsv")
     db = Db(rdb)
@@ -360,7 +361,7 @@ def main():
     with open(a.out, "w", encoding="utf-8", newline="") as fo:
         fo.write("\t".join(COLS) + "\n")
         fo.writelines("\t".join(str(r.get(c, "")) for c in COLS) + "\n" for r in rows)
-    logging.info("wrote %d rows (%d pins); regdb field match: %s", len(rows), len(g["pins"]), st)
+    LOG.info("wrote %d rows (%d pins); regdb field match: %s", len(rows), len(g["pins"]), st)
     print(f"{chip} pins={len(g['pins'])} rows={len(rows)} db_exact={st['exact']:d}/{st['n']:d} "
           f"db_names_pin={st['said']:d}/{st['said_n']:d}")
 

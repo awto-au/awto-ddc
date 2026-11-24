@@ -14,6 +14,7 @@ import sys
 import zipfile
 from pathlib import Path
 
+LOG = logging.getLogger(__name__)
 ROM_NAME = "035127-02.np3"
 DEFAULT_ZIP = "/vendors/atari/asteroids-mame/sources/asteroid.zip"
 ROM_BASE_WORD = 0x800  # vector ROM at 6502 0x5000 -> DVG word address 0x800
@@ -264,26 +265,26 @@ def main():
     out.mkdir(parents=True, exist_ok=True)
     words = load_rom(a.zip)
     dvg = Dvg(words)
-    logging.info("ROM %s: %d words, sha256 %s", ROM_NAME, len(words),
+    LOG.info("ROM %s: %d words, sha256 %s", ROM_NAME, len(words),
                  hashlib.sha256(b"".join(w.to_bytes(2, "little") for w in words)).hexdigest()[:16])
     n, worst = verify_ops(dvg, words)
-    logging.info("verify: %d vector deltas vs rate-multiplier model, worst error %.2f px", n, worst)
+    LOG.info("verify: %d vector deltas vs rate-multiplier model, worst error %.2f px", n, worst)
     shapes = {}
     for name, addr in catalog(dvg, words).items():
         segs, _ = dvg.decode(addr)
         shapes[name] = {"addr": addr, "nseg": len(segs), "lines": polylines(segs), "bbox": bbox(segs)}
         render(segs, out / (name.replace(" ", "sp") + ".png"))
         if name.startswith("rock"):
-            logging.info("%s closed: start %s end %s", name, segs[0][:2], segs[-1][2:4])
+            LOG.info("%s closed: start %s end %s", name, segs[0][:2], segs[-1][2:4])
     (out / "shapes.json").write_text(json.dumps(shapes))
     for grp in ("char_", "rock", "saucer", "debris", "hull", "flame"):
         sel = {k: v for k, v in shapes.items() if k.startswith(grp)}
         blob = json.dumps({k: v["lines"] for k, v in sorted(sel.items())}, sort_keys=True).encode()
-        logging.info("%-7s %2d shapes %3d segments %4d polylines sha256 %s", grp, len(sel),
+        LOG.info("%-7s %2d shapes %3d segments %4d polylines sha256 %s", grp, len(sel),
                      sum(v["nseg"] for v in sel.values()), sum(len(v["lines"]) for v in sel.values()),
                      hashlib.sha256(blob).hexdigest()[:16])
     sample_frame(shapes, out / "frame_sample.png")
-    logging.info("wrote %s", out)
+    LOG.info("wrote %s", out)
 
 
 if __name__ == "__main__":
