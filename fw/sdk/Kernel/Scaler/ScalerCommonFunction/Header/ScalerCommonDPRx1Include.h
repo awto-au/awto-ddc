@@ -204,9 +204,7 @@ extern BYTE g_ucDpRx1AuxModeBackup_EXINT;
 //****************************************************************************
 // FUNCTION EXTERN
 //****************************************************************************
-#if(_WD_TIMER_INT_SUPPORT == _ON)
-extern void ScalerDpRx1DecodeErrorCountReset_WDINT(void);
-#endif
+#define ScalerDpRx1DecodeErrorCountReset_WDINT ScalerDpRx1DecodeErrorCountReset // two RMW writes, no static storage (#337)
 
 void ScalerDpRx1DecodeErrorCountReset(void);
 extern void ScalerDpRx1ValidSignalDetection(void);

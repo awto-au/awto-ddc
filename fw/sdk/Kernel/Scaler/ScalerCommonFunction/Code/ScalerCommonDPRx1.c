@@ -90,10 +90,6 @@ BYTE g_ucDpRx1AuxModeBackup_EXINT;
 //****************************************************************************
 // FUNCTION DECLARATIONS
 //****************************************************************************
-#if(_WD_TIMER_INT_SUPPORT == _ON)
-void ScalerDpRx1DecodeErrorCountReset_WDINT(void);
-#endif
-
 void ScalerDpRx1DecodeErrorCountReset(void);
 void ScalerDpRx1ValidSignalDetection(void);
 BYTE ScalerDpRx1LinkRateDetect(void);
@@ -179,22 +175,6 @@ void ScalerDpRx1SwitchHDR10CmpAudioInfo(void);
 //****************************************************************************
 // FUNCTION DEFINITIONS
 //****************************************************************************
-#if(_WD_TIMER_INT_SUPPORT == _ON)
-//--------------------------------------------------
-// Description  : Reset 8b10b Error Count value
-// Input Value  : None
-// Output Value : None
-//--------------------------------------------------
-void ScalerDpRx1DecodeErrorCountReset_WDINT(void)
-{
-    // Reset 8b10b Error Count Value
-    ScalerSetBit_EXINT(PB0_08_BIST_PATTERN_SEL, ~(_BIT2 | _BIT1 | _BIT0), 0x00);
-
-    // Start Record 8b10b Error Count Value
-    ScalerSetBit_EXINT(PB0_08_BIST_PATTERN_SEL, ~(_BIT2 | _BIT1 | _BIT0), _BIT1);
-}
-#endif
-
 //--------------------------------------------------
 // Description  : Reset 8b10b Error Count value
 // Input Value  : None

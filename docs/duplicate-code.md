@@ -32,7 +32,7 @@ Flash = recoverable bytes (measured copies minus the largest unless `est`). Risk
 | 6 | `ScalerPowerGroupD0..D3PowerCut/Isolation` | 37 x 4 | 612 B (before table cost) | none | low | power sequencing | 9 | #297 |
 | 7 | `ScalerGDIPhyRx2/Rx3 Power/PowerProc/Z0Switch` | 337 x 2 | done: map -186 B (858 -> 672), image -139 B, XDATA +3 B | real: `ABC0` flag-clear differs Rx2 vs Rx3, kept per port (constant, as the Dahua firmware) | medium | impedance at hot plug | 9 | #298, `scripts/gdiphy_equiv.py` |
 | 8 | `ScalerDpRx1Tp1/Tp2Check_EXINT0` lane blocks (7 per function, 4 distinct) | 7 x 52 lines per function | est 3.5 KB of 10 KB | none | high | ISR, link training | 7 | #299 |
-| 9 | ISR / main twins of DpRx1 (`DFECheck`, `AdjustLaneFLDBand`, ...) | 15 pairs | 1.1 KB (up to 5.0 KB) | none | high (non-reentrant) | ISR, #281 | 2, 7 | #300 |
+| 9 | ISR / main twins of DpRx1 (`DFECheck`, `AdjustLaneFLDBand`, ...) | 15 pairs | 1.1 KB (up to 5.0 KB) | none | high (non-reentrant) | ISR, #281 | 2, 7 | #300, #337 (per-pair table below) |
 | 10 | Own fw: get-VCP reply builder x4, T2 snapshot x3, mirrored rect x2 | 4-12 lines x 2-4 | est < 200 B | none | trivial | T2 snapshot is ISR-safe by `EA` | C, 1 | #301 |
 | 11 | Script logger `say`/`log` x194 | ~1100 lines | host | 35 without `mkdir`, 24 non-ISO stamps in scripts | low | no | host | #302 |
 | 12 | `repo_root` / `ROOT` x367 | ~900 lines | host | 93 ignore `AWTO_DDC_REPO` | low | no | host | #303 |
@@ -60,6 +60,36 @@ Normalisation: digits -> `@`; hunks classed cosmetic (name / register page / mac
 - `tEDID_TABLE_D2/D3` (256 B each) differ by the port tag (`awto_edid_hdmi_d3.h`, `scripts/fw_edid_tables.py`): deliberate; a base + patch saves about 200 B, not filed.
 - Tcon0..13: 14 files x 86 lines, 0 bytes linked.
 
+## ISR twins (#337)
+Tool: `scripts/isr_twins.py` (linked listings of `tmp/sdcc-port`; per suffix function: bytes, plain twin, source diff, object diff, static storage). Base 0742049b: 62-65 suffix functions, 19 with a same-file plain twin.
+- Merge rule (all must hold): object code of the two bodies identical after suffix / label normalisation; no PARM / local / sloc storage in either (sc3 passes up to 3 byte args in registers; ISRs push R0-R7 and ACC/B/DPL/DPH/PSW); callees register-only or themselves merged; no `__critical` / tick wait / macro-family difference.
+- Not safe by construction: any body with static storage (a shared copy races with an EXINT0 landing mid-call: `sdcc_overlay.py` keeps functions reachable from two regions static).
+- Done (identical object, no storage; the ISR name is now a macro for the retained body):
+
+| pair | B each | proof |
+|---|---|---|
+| `ScalerTimerCancelTimerEvent` / `_EXINT0` | 70 | object identical, r3-r7 + DPTR only |
+| `ScalerDpRx1DecodeErrorCountReset` / `_WDINT` | 16 | object identical, two RMW stores |
+| `ScalerDpRx1GetDpcdInfo_WDINT` / `_EXINT0` (ISR / ISR) | 28 | object identical, `AwtoDelayCnt` = `djnz R6` |
+
+- Not merged (table: pair, ISR B / main B, source diff lines / object diff lines, verdict):
+
+| pair | B | diff | verdict |
+|---|---|---|---|
+| `SinkStatusSet` | 116 / 116 | 0 / 0 | no: callees differ (plain `GetDpcdInfo` does Release Aux, PBA_C0 bit 7; ISR one does not) |
+| `AudioDpAudioEnable` | 35 / 35 | 0 / 0 | needs masking: 2 PARM bytes static; main callers (4 sites) under EX0 mask; -35 B; Dan |
+| `DFECheck` | 141 / 150 | 6 / 51 | no: DPCD read vs cached rate / lanes (#300) |
+| `DFELaneCheck` | 79 / 71 | 9 / 10 | no: bit vs BYTE return, 1 B static each |
+| `GetDpcdInfo` / `GetDpcdBitInfo` / `SetDpcdValue` / `SetDpcdBitValue` | 28-47 / 34-53 | 3 / 7 | no: plain does Release Aux; PARM storage in the 4-5 arg ones |
+| `AdjustLaneFLDBand` | 482 / 501 | 13 / 99 | no: 5 / 10 B static, wait kinds differ |
+| `SetDFEInitial` | 539 / 631 | 42 / 277 | no |
+| `RebuildPhy` | 2151 / 4300 | 303 / 2095 | no: different function |
+| `TMDSRxCheckCDRStable` / `MeasureClk` | 600 / 581, 213 / 189 | 34 / 198, 20 / 147 | no: tick vs counted waits |
+| `TimerWDCancelTimerEvent` | 25 / 36 | 0 / 6 | no: main copy holds EA off (`__critical`) around the 2 B store |
+| `CecRxWriteIntoBackupFifo` / `RxInfoStruct` | 197, 93 | 7, 23 | plain copy not linked: nothing to save |
+
+- The other 46 suffix functions have no same-file plain twin (ISR-only code).
+
 ## Drift found in git history
 - TMDS Rx2/Rx3 before #292: 3 commits touched Rx2 only (`b37825f3`, `be01411d` #216 colour-depth wait; `ce27afe4` #256 2.9 ms unscrambled-source block); 20 of 23 commits touching the pair edited both files. #292 removes this class.
 - Sync / audio / DPTx lane / PowerGroup pairs: no one-sided commit since the SDK import (`db7cee7e`); edits since import hit the pair together (#281 volatile / delay-counter passes) or not at all.
@@ -71,7 +101,6 @@ Normalisation: digits -> `@`; hunks classed cosmetic (name / register page / mac
 - `RL6449_Series_McuCommonInclude.h` / `McuInterface.h` (345 identical lines), `ScalerCommonSync{Include,Interface}.h`, `ScalerCommonReg{Common,}Include.h`: SDK header twins, zero flash; Realtek's include scheme needs both.
 - `ScalerCommonNVRam.c` flash table repeats other than WREN (2.6 k dup lines are the per-chip blocks of #5), `SysSource.c` / `ScalerPLL.c` / `ScalerCommonTimerFunction.c` repeated state-machine blocks inside one function: same-function, state specific.
 - `tLUTGAMMA_18/20/22/24` (4 x 6156 B, distinct data) behind `_AWTO_GAMMA_ALL` (Dan: all kept).
-- `ScalerTimerCancelTimerEvent` vs `_EXINT0` (43 instr, intentional ISR twin, 70 B).
 - Our fw: `testcmd.c` asm shape variants (`AwtoOplWordNop*`, test only), `AwtoOsd*Lines` (prototype + body counted twice by the tool).
 
 ## Method for each merge (from #283)

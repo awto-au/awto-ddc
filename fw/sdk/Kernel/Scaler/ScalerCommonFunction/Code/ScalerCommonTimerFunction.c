@@ -344,9 +344,6 @@ void ScalerTimerReactiveTimerEvent(WORD usTime, EnumScalerTimerEventID enumEvent
 void ScalerTimerCancelTimerEvent(EnumScalerTimerEventID enumEventID);
 bit ScalerTimerSearchActiveTimerEvent(EnumScalerTimerEventID enumEventID);
 
-#if((_DP_SUPPORT == _ON) || (_TMDS_HDCP_2_2_SUPPORT == _ON) || ((_DP_TYPE_C_PORT_CTRL_SUPPORT == _ON) && (_PORT_CONTROLLER_EMBEDDED_SUPPORT == _ON)))
-void ScalerTimerCancelTimerEvent_EXINT0(EnumScalerTimerEventID enumEventID);
-#endif
 
 #if((_DDCCI_CODE_REDUCTION == _OFF) && (_DEBUG_MESSAGE_SUPPORT == _OFF) && (_DDCCI_AUTO_SWITCH_SUPPORT == _ON))
 void ScalerTimerCancelTimerEvent_EXINT1(EnumScalerTimerEventID enumEventID);
@@ -2419,30 +2416,6 @@ bit ScalerTimerSearchActiveTimerEvent(EnumScalerTimerEventID enumEventID)
     return _FALSE;
 }
 
-#if((_DP_SUPPORT == _ON) || ((_TMDS_HDCP_2_2_SUPPORT == _ON) && (_HDMI_PORT_EXIST == _ON)) || ((_DP_TYPE_C_PORT_CTRL_SUPPORT == _ON) && (_PORT_CONTROLLER_EMBEDDED_SUPPORT == _ON)))
-//--------------------------------------------------
-// Description  : Cancel an event
-// Input Value  : Event     --> Event which we want to cancel
-// Output Value : None
-//--------------------------------------------------
-void ScalerTimerCancelTimerEvent_EXINT0(EnumScalerTimerEventID enumEventID)
-{
-    BYTE ucIdx;
-
-    // Search for Existing Event with the same Event ID
-    for(ucIdx = 0; ucIdx < _TIMER_EVENT_COUNT; ucIdx++)
-    {
-        if(GET_EVENT_VALID(ucIdx) == _TRUE)
-        {
-            if(GET_EVENT_ID(ucIdx) == enumEventID)
-            {
-                CLR_EVENT_VALID(ucIdx);
-                return;
-            }
-        }
-    }
-}
-#endif
 
 #if((_DDCCI_CODE_REDUCTION == _OFF) && (_DEBUG_MESSAGE_SUPPORT == _OFF) && (_DDCCI_AUTO_SWITCH_SUPPORT == _ON))
 //--------------------------------------------------
