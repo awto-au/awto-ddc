@@ -1,6 +1,6 @@
 """Sim-only test-timing scale (scripts/sim_time_scale.py): the patched image changes the monitor period and nothing else.
 
-Offline, --slow. Image: $AWTO_TEST_IMAGE (stem) or the newest tmp/fw/*-be.bin that has the monitor.
+Offline, --slow. Image: fixture fw_image (scripts/test_image.py).
 """
 from __future__ import annotations
 
@@ -16,19 +16,16 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "scripts"))
 import sim_time_scale as TS
 
-
-def _image():
-    e = os.environ.get("AWTO_TEST_IMAGE")
-    if e:
-        return Path(e)
-    for p in sorted((ROOT / "tmp/fw").glob("*-be.bin"), key=lambda p: p.stat().st_mtime, reverse=True):
-        if "_g_stAwtoMon" in p.with_suffix(".map").read_text(errors="replace") and "-clk" not in p.name:
-            return p.with_suffix("")
-    return None
+IMG = None          # the tree's image stem, set per module from the fw_image fixture
 
 
-IMG = _image()
-pytestmark = [pytest.mark.slow, pytest.mark.skipif(IMG is None, reason="no image with the monitor in tmp/fw")]
+@pytest.fixture(autouse=True, scope="module")
+def _use_image(fw_image):
+    global IMG
+    IMG = fw_image.stem
+
+
+pytestmark = [pytest.mark.slow]
 
 
 def test_patch_changes_exactly_the_two_immediates():

@@ -1,6 +1,6 @@
 """Delay routines (fw/timer/delay.c) and their gate (scripts/delay_sim.py F probes + site replay): the clean image passes, each injected fault FAILS.
 
-Offline, --slow (each run ~10 s). Image: $AWTO_TEST_IMAGE (stem) or the newest tmp/fw/*-be.bin whose map has _AwtoDelayLoops.
+Offline, --slow (each run ~10 s). Image: fixture fw_image (scripts/test_image.py).
 """
 from __future__ import annotations
 
@@ -16,18 +16,16 @@ ROOT = Path(__file__).resolve().parents[1]
 ENV = {**os.environ, "AWTO_SIM_CORE": "fast", "PYTHONHASHSEED": "0"}
 
 
-def _image():
-    e = os.environ.get("AWTO_TEST_IMAGE")
-    if e:
-        return Path(e)
-    for p in sorted((ROOT / "tmp/fw").glob("*-be.bin"), key=lambda p: p.stat().st_mtime, reverse=True):
-        if "-clk" not in p.name and "_AwtoDelayLoops" in p.with_suffix(".map").read_text(errors="replace"):
-            return p.with_suffix("")
-    return None
+IMG = None          # the tree's image stem, set per module from the fw_image fixture
 
 
-IMG = _image()
-pytestmark = [pytest.mark.slow, pytest.mark.skipif(IMG is None, reason="no image with AwtoDelayLoops in tmp/fw")]
+@pytest.fixture(autouse=True, scope="module")
+def _use_image(fw_image):
+    global IMG
+    IMG = fw_image.stem
+
+
+pytestmark = [pytest.mark.slow]
 
 
 def sym(name):

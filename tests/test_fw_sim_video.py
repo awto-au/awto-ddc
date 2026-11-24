@@ -10,10 +10,6 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "scripts"))
 import fw_sim
 
-IMG = ROOT / "tmp/fw/AWT26110003-wb-clu3-be"
-needs_img = pytest.mark.skipif(not IMG.with_suffix(".bin").exists() or not IMG.with_suffix(".map").exists(),
-                               reason="image tmp/fw/AWT26110003-wb-clu3-be.{bin,map} absent")
-
 
 def w(c, hi, lo, mask):
     return ((c[hi] & mask) << 8 | c[lo]) + 1
@@ -40,13 +36,12 @@ def test_hdmi_input_registers_decode_like_the_sdk():
 
 
 @pytest.fixture(scope="module")
-def vbus():
-    b = fw_sim.SimBus(IMG.with_suffix(".bin"), IMG.with_suffix(".map"), video="1080p60")
+def vbus(fw_image):
+    b = fw_sim.SimBus(fw_image.bin, fw_image.map, video="1080p60")
     yield b
     b.close()
 
 
-@needs_img
 @pytest.mark.slow
 def test_video_source_found_and_mode_active(vbus):
     import unit_health as H
@@ -55,12 +50,11 @@ def test_video_source_found_and_mode_active(vbus):
     assert (t["hwidth"], t["vheight"], t["vfreq"], t["hfreq"]) == (1920, 1080, 600, 675)
 
 
-@needs_img
 @pytest.mark.slow
-def test_all_ten_health_checks_pass_in_the_sim(vbus):
+def test_all_ten_health_checks_pass_in_the_sim(vbus, fw_image):
     import unit_health as H
     vbus.run_until_mode(H.MODE_ACTIVE)
-    maps = {n: H.sym_addr(IMG.with_suffix(".map").read_text(errors="replace"), n) for n in H.MAP_SYMS}
+    maps = {n: H.sym_addr(fw_image.map.read_text(errors="replace"), n) for n in H.MAP_SYMS}
     rep = H.Report()
     rep.add("bus rate", True, "sim")
     H.run(H.Dbg(vbus, wait=vbus.wait, now=vbus.now), maps, (1920, 1080, 60.0), rep, wait=vbus.wait)
@@ -68,19 +62,10 @@ def test_all_ten_health_checks_pass_in_the_sim(vbus):
 
 
 # ---- 2160p60 (#26): data path above _DATA_PATH_SPEED_LIMIT, line-buffer 4K60 ----------------------------------
-IMG_B = ROOT / "tmp/fw/AWT26110003-wb-stepB-be"
-IMG_FRC = ROOT / "tmp/fw/AWT26110003-wb-frc-be"
-
-
-def _needs(img):
-    return pytest.mark.skipif(not img.with_suffix(".bin").exists() or not img.with_suffix(".map").exists(),
-                              reason=f"image {img.name}.{{bin,map}} absent")
-
-
-def _video(img, mode, fault=None, max_instr=200_000_000):
+def _video(img, mode, fault=None, max_instr=200_000_000):   # img: Image of test_image.py
     import io
     log = io.StringIO()
-    rc = fw_sim.video_check(img.with_suffix(".bin"), img.with_suffix(".map"), mode, max_instr, log, fault)
+    rc = fw_sim.video_check(img.bin, img.map, mode, max_instr, log, fault)
     return rc, log.getvalue()
 
 
@@ -117,31 +102,28 @@ def test_hdmi_input_60_000_vs_59_940_hs_period():
     assert a.PCLK == 5940 and b.PCLK == 5934 and abs(b.vfreq_hz - 59.94006) < 1e-4
 
 
-@_needs(IMG_B)
 @pytest.mark.slow
-def test_2160p60_decodes_and_reaches_active_with_healthy_status():
-    rc, txt = _video(IMG_B, "2160p60")
+def test_2160p60_decodes_and_reaches_active_with_healthy_status(fw_variant):
+    rc, txt = _video(fw_variant("nofrc"), "2160p60")
     assert rc == 0, txt
     assert "3840x2160@60.0 htotal 4400 vtotal 2250" in txt
     assert "P30_00 0x82 P31_05 0x88 P31_06 0x80" in txt                                   # vendor dump values
     assert "g_ulDClkFreq 539553 kHz" in txt and "in range" in txt
 
 
-@_needs(IMG_B)
 @pytest.mark.slow
-def test_2160p60_ends_in_power_saving_on_fifo_underflow():
+def test_2160p60_ends_in_power_saving_on_fifo_underflow(fw_variant):
     """Hardware dump of the unit-3 build at 4K60 has P0_02 bit0 (M-domain FIFO underflow) set, the vendor dump not: with that flag
     kept raised ScalerMDomainMemoryCheck fails, display setting is never ready, NOSUPPORT after 2 s, then POWER_SAVING."""
-    rc, txt = _video(IMG_B, "2160p60", "underflow")
+    rc, txt = _video(fw_variant("nofrc"), "2160p60", "underflow")
     assert rc == 1
     assert "final mode 6 POWER_SAVING" in txt and "DISPLAY_SETTING@" in txt and "NOSUPPORT@" in txt
     assert "decision ScalerMDomainMemoryCheck" in txt and "FAIL: P0_02.0 FIFO underflow" in txt
     assert "supported" in txt and "in range" in txt                                       # the SDK-level checks all pass
 
 
-@_needs(IMG_FRC)
 @pytest.mark.slow
-def test_frc_image_2160p60_line_buffer_reaches_active():
-    rc, txt = _video(IMG_FRC, "2160p60")
+def test_frc_image_2160p60_line_buffer_reaches_active(fw_image):
+    rc, txt = _video(fw_image, "2160p60")
     assert rc == 0, txt
     assert "ScalerMDomainMemoryCheck" in txt and "pass" in txt

@@ -1,6 +1,6 @@
 """SimBus.snapshot / restore (fastmachine core_snap): a restored machine runs exactly as the original did from that point.
 
-Image: $AWTO_TEST_IMAGE (stem, no suffix) or the newest tmp/fw/*-be.bin with the monitor; skipped when absent. Offline, fast core.
+Image: fixture fw_image (scripts/test_image.py).
 """
 from __future__ import annotations
 
@@ -16,16 +16,13 @@ sys.path.insert(0, str(ROOT / "scripts"))
 os.environ.setdefault("AWTO_SIM_CORE", "fast")
 
 
-def _image():
-    e = os.environ.get("AWTO_TEST_IMAGE")
-    if e:
-        return Path(e)
-    c = sorted((ROOT / "tmp/fw").glob("*-be.bin"), key=lambda p: p.stat().st_mtime)
-    return c[-1].with_suffix("") if c else None
+IMG = None          # the tree's image stem, set per module from the fw_image fixture
 
 
-IMG = _image()
-pytestmark = pytest.mark.skipif(IMG is None or not IMG.with_suffix(".map").exists(), reason="no image in tmp/fw")
+@pytest.fixture(autouse=True, scope="module")
+def _use_image(fw_image):
+    global IMG
+    IMG = fw_image.stem
 
 
 def digest(bus):

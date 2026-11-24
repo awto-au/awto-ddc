@@ -85,10 +85,9 @@ def test_register_tables_exclude_ports():
     assert not [a for a, _ in rd + [(w, 0) for w in wr] if L.excluded(a) or (a >> 8) > G.MAX_PAGE]
 
 
+@pytest.mark.xfail(run=False, reason="awto-ddc#340: the cpu-suite image does not build (XDATA)")
 @pytest.mark.parametrize("clock", [87, 175, 350])
-def test_sim_run(clock):
-    img = ROOT / f"tmp/fw/AWT26110003-cpusuite-{clock}-be.bin"
-    if not img.exists():
-        pytest.skip(f"{img.name} not built (./dev.py cpu-suite --sim --build)")
+def test_sim_run(clock, fw_cpu_suite):
+    img = fw_cpu_suite(clock).bin
     r = subprocess.run([sys.executable, str(ROOT / "scripts/cpu_suite.py"), "--sim", "--clocks", str(clock), "--bin", str(img)], capture_output=True, text=True, check=False)
     assert r.returncode == 0, r.stdout[-3000:]

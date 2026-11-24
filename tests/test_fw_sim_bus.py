@@ -8,15 +8,12 @@ import pytest
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "scripts"))
-IMG = ROOT / "tmp/fw/AWT26110003-wb-clu3-be"
-pytestmark = pytest.mark.skipif(not IMG.with_suffix(".bin").exists() or not IMG.with_suffix(".map").exists(),
-                                reason="image tmp/fw/AWT26110003-wb-clu3-be.{bin,map} absent")
 
 
 @pytest.fixture(scope="module")
-def bus():
+def bus(fw_image):
     import fw_sim
-    b = fw_sim.SimBus(IMG.with_suffix(".bin"), IMG.with_suffix(".map"))
+    b = fw_sim.SimBus(fw_image.bin, fw_image.map)
     yield b
     b.close()
 
@@ -28,7 +25,7 @@ def test_block_and_byte_reads_match_xdata(bus):
     assert want[:2] == b"AD" and want[3] == 8
     assert X.read_blocks(bus, base, 4) == want       # 0x3C block path, checksum verified by dbg_xdata
     assert X.read_bytes(bus, base, 4) == want        # 0x01/0x3A byte path
-    mode = bus.addr("g_stModeInfo")
+    mode = bus.addr("isr_g_stModeInfo")
     assert len(X.read_blocks(bus, mode, 30)) == 30   # 2 chunks (24 + 6)
 
 

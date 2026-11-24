@@ -7,14 +7,13 @@ import pytest
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "scripts"))
 
-IMG = ROOT / "tmp/fw/AWT26110003-cpusuite-87-be.bin"
 IDLE_S = 30.0
 T2_OFF = 0x16               # diag block: usT2Isr (Timer2 ISR count = ms), zeroed by AwtoDiagInit at every boot
 
 
-def test_idle_watchdog_reset():
-    if not IMG.exists():
-        pytest.skip(f"{IMG.name} not built (./dev.py cpu-suite --sim --build)")
+@pytest.mark.xfail(run=False, reason="awto-ddc#340: the cpu-suite image does not build (XDATA)")
+def test_idle_watchdog_reset(fw_cpu_suite):
+    IMG = fw_cpu_suite(87).bin
     import cpu_suite as C
     dev = C.Sim(IMG, IMG.with_suffix(".map"), "cpusidle", C.CLOCKS[87])
     try:

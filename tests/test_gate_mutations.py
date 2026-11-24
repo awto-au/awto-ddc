@@ -1,7 +1,7 @@
 """Mutation tests of the sped-up firmware gates (deadport, inputrate): each injected fault must make the gate FAIL, the clean run PASSES.
 
 Proves a speed-up did not weaken the check (awto-ddc gate speed task, Dan 2026-11-19). Offline; --slow (each run 10..25 s CPU).
-Image: $AWTO_TEST_IMAGE (stem, no suffix) or the newest tmp/fw/*-be.bin; skipped when absent.
+Image: fixture fw_image (scripts/test_image.py).
 Faults: sim input (a cable on D2, a window too short, a pulse shorter than the worst read gap) and firmware (the GPIO scan RET'd).
 """
 from __future__ import annotations
@@ -19,16 +19,16 @@ ENV = {**os.environ, "AWTO_SIM_CORE": "fast"}
 STALL_S = 300      # backstop only: 3x the measured cold worst case of the slowest run here
 
 
-def _image():
-    e = os.environ.get("AWTO_TEST_IMAGE")
-    if e:
-        return Path(e)
-    c = sorted((ROOT / "tmp/fw").glob("*-be.bin"), key=lambda p: p.stat().st_mtime)
-    return c[-1].with_suffix("") if c else None
+IMG = None          # the tree's image stem, set per module from the fw_image fixture
 
 
-IMG = _image()
-pytestmark = [pytest.mark.slow, pytest.mark.skipif(IMG is None or not IMG.with_suffix(".map").exists(), reason="no image in tmp/fw")]
+@pytest.fixture(autouse=True, scope="module")
+def _use_image(fw_image):
+    global IMG
+    IMG = fw_image.stem
+
+
+pytestmark = [pytest.mark.slow]
 
 
 def gate(script, binp, mapp, *args):

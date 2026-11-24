@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import ctypes
+import os
 import re
 import shutil
 import subprocess
@@ -135,13 +136,7 @@ def test_edid_physical_addresses_per_hdmi_port():
     assert b"\x03\x0c\x00" not in E.build("dp")[128:]
 
 
-def test_firmware_cec_sim_when_an_image_exists():
-    img = sorted((ROOT / "tmp/fw").glob("AWT*-be.bin"), key=lambda p: p.stat().st_mtime)
-    if not img:
-        pytest.skip("no firmware image in tmp/fw")
-    mp = img[-1].with_suffix(".map")
-    if "_SysCecHandler" not in mp.read_text(errors="replace"):
-        pytest.skip("newest image has no CEC code")
-    r = subprocess.run([sys.executable, str(ROOT / "scripts/cec_sim.py"), str(img[-1]), str(mp)], capture_output=True, text=True, timeout=240,
-                       env={**__import__("os").environ, "AWTO_SIM_CORE": "fast"}, check=False)
+def test_firmware_cec_sim(fw_image):
+    r = subprocess.run([sys.executable, str(ROOT / "scripts/cec_sim.py"), str(fw_image.bin), str(fw_image.map)], capture_output=True, text=True,
+                       timeout=240, env={**os.environ, "AWTO_SIM_CORE": "fast"}, check=False)
     assert r.returncode == 0 and "FAIL" not in r.stdout, r.stdout[-2000:]
