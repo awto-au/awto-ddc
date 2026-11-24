@@ -51,6 +51,7 @@ CALLJ = re.compile(r"^\s+(lcall|ljmp|acall)\s+(\w+)")
 SCAN_MAX = 30             # lines from an address load to its consumer; longer = give up (stays common)
 AR_EQU = re.compile(r"^\s*(ar[0-7]|rbank0)\s*=")
 BANK_SIZE = L.BANK_SIZE
+MSG_BANK = MT.MSG_BANK
 MSG_RESERVE = {MT.MSG_BANK: MT.MSG_SIZE}   # top of one bank = fixed debug-message block (#56), never code
 HOT_BANKS = 3             # helper called from at least this many other banks
 HOT_SIZE = 384            # and its banked callee closure no larger than this
@@ -464,6 +465,9 @@ def main() -> int:
                     "(one copy per fn) while users x size <= CUT bytes; 0 = off")
     ap.add_argument("--repack", action="store_true", help="keep the map's common rows, re-assign every banked fn / const by call affinity "
                     "(bank_affinity.py) into --banks banks; the new map is a one-time full relocation")
+    ap.add_argument("--mode", choices=["", "dev", "release"], default="",
+                    help="dev: all banks, per-chunk slots with slack kept from the tracked map (small edits rewrite few sectors); release: densest "
+                         "packing in the fewest banks that fit (<= --banks), fresh every build, the tracked map is not rewritten")
     ap.add_argument("--headroom", type=lambda x: int(x, 0), default=0, help="--repack: bytes kept free in every bank")
     ap.add_argument("--keep-dead", action="store_true", help="keep chunks unreachable from main/ISRs")
     ap.add_argument("--layout", default="", help="tracked bank map (fw/bank_map.tsv): region per chunk, reused "
@@ -591,6 +595,10 @@ def main() -> int:
         log(f"bank map was made with common {lay.header.get('common')} / resid_end {lay.header.get('resid_end')}: repacked for "
             f"{hex(a.common_max)} / {hex(a.resid_end)} (offsets are build output, only the bank decision is kept)")
     fill = [0] * a.banks
+    if a.mode == "release":
+        a.repack = True
+    elif a.mode == "dev" and reuse and lay.header.get("mode") != "dev":
+        a.repack = True                                      # first dev build from a map of another mode: one full relocation
     if a.repack and not reuse:
         sys.exit("--repack needs the existing bank map (it keeps the common rows)")
 
@@ -640,14 +648,20 @@ def main() -> int:
                     newc.append(c.name)
         log(f"sticky layout {a.layout}: {len(lay.rows)} rows, {len(newc)} new chunks: {', '.join(sorted(newc)[:20])}")
         if a.repack:
-            caps = [cap - a.headroom - MSG_RESERVE.get(b, 0) for b in range(a.banks)]
-            tot, _ = AF.assign(funcs, consts, place["groups"], place["pins"], lambda c: c.common, caps, const_call_pairs(funcs, consts),
-                                  load_weights(a.cluster_weights, funcs) if a.cluster_weights else None, log)
-            log(f"repack: {a.banks} banks, headroom {a.headroom}: fill (incl. local stubs) {tot}")
+            dev = a.mode == "dev"
+            pairs = const_call_pairs(funcs, consts)
+            dyn_w = load_weights(a.cluster_weights, funcs) if a.cluster_weights else None
+            nb = a.banks
+            caps = [cap - a.headroom - MSG_RESERVE.get(b, 0) for b in range(nb)]
+            tot, _ = AF.assign(funcs, consts, place["groups"], place["pins"], lambda c: c.common, caps, pairs, dyn_w, log,
+                               spread=0.05 if dev else 0.0)
+            fill = [0] * nb
+            log(f"repack {a.mode or 'plain'}: {a.banks} banks, headroom {a.headroom}: fill (incl. local stubs) {tot}")
             for c in [*funcs.values(), *consts.values()]:                     # the old banked rows are void: new region, same key
                 k = ("fn" if c.area == "CSEG" else "const", c.name)
                 if c.size and not c.common and k in lay.rows:
                     lay.rows[k] = (c.bank, 0, 0)
+            lay.rows = {k: v for k, v in lay.rows.items() if k[0] != "stub"}
     elif sticky:
         f = a.fill_target
         while True:
@@ -703,12 +717,17 @@ def main() -> int:
     if reuse:                                                # pass A: re-home fns whose bank has no room left
         its = slot_items(True)
         stale = a.local_stubs and lay.header.get("local") != "1"          # a map from before local stubs counted every stub as common
-        for i in range(0 if stale else int(lay.header.get("stubs", "0"))):                # the last build's stubs: common room kept for them
-            st = L.Item("stub", f"_reserved{i}", STUB_SIZE, "C", "", slot=STUB_SIZE)
-            st.fixed = True
-            its.append(st)
+        dev = a.mode == "dev"
+        if dev:                                              # the last build's stub rows (offsets kept) hold their room
+            its += [st for (k, n), (rg, _o, _s) in lay.rows.items() if k == "stub"
+                    for st in [L.Item("stub", n, STUB_SIZE, rg, "", slot=STUB_SIZE)] if not setattr(st, "fixed", True)]
+        else:
+            for i in range(0 if stale else int(lay.header.get("stubs", "0"))):                # the last build's stubs: common room kept for them
+                st = L.Item("stub", f"_reserved{i}", STUB_SIZE, "C", "", slot=STUB_SIZE)
+                st.fixed = True
+                its.append(st)
         placed, rehomed = L.assign(its, lay, a.resid_end, a.common_max, a.banks, cap, log, reserve=MSG_RESERVE,
-                                   labels=place["labels"])
+                                   labels=place["labels"], sticky=dev)
         for (kind, name), rid in rehomed.items():
             if kind == "fn" and rid != "C":
                 funcs[name].bank = rid
@@ -888,11 +907,11 @@ def main() -> int:
             it.fixed = True
         its += stub_items()
         placed, _ = L.assign(its, lay, a.resid_end, a.common_max, a.banks, cap, log, reserve=MSG_RESERVE,
-                             labels=place["labels"])
+                             labels=place["labels"], sticky=a.mode == "dev")
         apply_placed(placed)
         check_place(place, lambda c: placed[("fn" if c.area == "CSEG" else "const", c.name)][0])
         placed_slot = {("ST" if k[0] == "stub" else "CH") + k[1]: v[2] for k, v in placed.items()}
-        lay.header.update({"common": hex(a.common_max), "resid_end": hex(a.resid_end), "stubs": str(len(stubs) - len(local)), "local": "1" if a.local_stubs else "0"})   # common stubs: their room is reserved first next build
+        lay.header.update({"common": hex(a.common_max), "resid_end": hex(a.resid_end), "stubs": str(len(stubs) - len(local)), "local": "1" if a.local_stubs else "0", "mode": a.mode or "plain", "banks": str(a.banks)})   # common stubs: their room is reserved first next build
         lay.header.pop("slot_pad", None)
         for (kind, name), (rid, off, sl) in placed.items():
             an = ("ST" if kind == "stub" else "CH") + name
@@ -932,7 +951,7 @@ def main() -> int:
     if sticky:
         Path(a.layout_out).parent.mkdir(parents=True, exist_ok=True)
         Path(a.layout_out).write_text(lay.text())
-        Path(a.layout_out).with_name("bank_map.new.tsv").write_text(lay.map_text())
+        Path(a.layout_out).with_name("bank_map.new.tsv").write_text(lay.map_text(sticky=a.mode == "dev"))
         log(f"layout written: {a.layout_out} ({len(lay.rows)} rows); bank map {a.layout} promoted by fw_build after the link")
     bank_of = {m.name: sorted({c.bank for c in m.chunks if c.bank is not None}) for m in mods}
     rep = {"banks": {i: f for i, f in enumerate(fill) if f}, "bank_of": bank_of, "stubs": len(stubs),

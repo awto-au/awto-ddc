@@ -672,7 +672,7 @@ def _flashed(u: dict) -> dict:
 
 
 @command("build firmware (the only build entry; engine scripts/fwimage.py): FRC + rotation by default; frozen to tmp/fw/<serial>-<tag>-be.{bin,map,sync.tsv,settings_table.py}; tag = <commit>[+][-freeze|-nofrc][-audio-test] unless --tag",
-         args="[--unit N | --serial S] [--tree DIR] [--freeze | --no-frc] [--audio-test] [--savers pacman,scope2,asteroids] [-D NAME[=VAL] ...] [--tag T] [--force] [--bin DIR --src DIR --level N --expect STAMP --flags F --fw-args A]",
+         args="[--unit N | --serial S] [--tree DIR] [--layout dev|release] [--freeze | --no-frc] [--audio-test] [--savers pacman,scope2,asteroids] [-D NAME[=VAL] ...] [--tag T] [--force] [--bin DIR --src DIR --level N --expect STAMP --flags F --fw-args A]",
          kind="action")
 def cmd_build(extra: list[str]) -> int:
     serial = _opt(extra, "--serial")
@@ -702,12 +702,20 @@ def cmd_build(extra: list[str]) -> int:
     tree = Path(_opt(extra, "--tree") or REPO)
     commit = subprocess.run(["git", "rev-parse", "--short", "HEAD"], cwd=tree, capture_output=True, text=True, check=False).stdout.strip()
     dirty = "+" if subprocess.run(["git", "diff", "--quiet"], cwd=tree, check=False).returncode else ""
+    layout = _opt(extra, "--layout") or "dev"                          # dev = spread + slots (small edits), release = fewest banks (docs/flash-layout.md)
+    if layout not in ("dev", "release"):
+        raise SystemExit(f"build: --layout takes dev or release, got {layout!r}; nothing done")
+    opt += "-rel" if layout == "release" else ""
     tag = _opt(extra, "--tag") or f"{commit}{dirty}{opt}{'-audio-test' if audio_test else ''}"
     args = ["--tree", str(tree), "--serial", u["serial"], "--tag", tag, *[x for d in defs for x in ("-D", d)]]
+    fwa = [f"--layout-mode {layout}"]
     for x in [x for x in extra if x.startswith("--fw-args=")]:      # a value that starts with -- (extra fw_build args)
         extra.remove(x)
-        args += ["--fw-args", x.split("=", 1)[1]]
-    for o in ("--bin", "--src", "--level", "--expect", "--flags", "--fw-args"):     # compiler A/B and layout experiments (fwimage.py options)
+        fwa.append(x.split("=", 1)[1])
+    if isinstance(_opt(extra, "--fw-args"), str):
+        fwa.append(_opt(extra, "--fw-args"))
+    args += ["--fw-args", " ".join(fwa)]
+    for o in ("--bin", "--src", "--level", "--expect", "--flags"):     # compiler A/B and layout experiments (fwimage.py options)
         v = _opt(extra, o)
         if isinstance(v, str):
             args += [o, v]

@@ -77,13 +77,22 @@ def record(serial: str, image: Path, **extra) -> dict:
     root = unit_lock.repo_root()
     here = _git(root, "rev-parse", "--short", "HEAD")
     built = build_commit(image)                     # #285: the image's own commit, not the flashing checkout's
-    rec = {"tag": image.name.removesuffix(".bin"), "sha256": sha, "images_dir": dname,
+    rec = {"tag": image.name.removesuffix(".bin"), "sha256": sha, "images_dir": dname, "layout": build_field(image, "layout_mode"),
            "built": _iso(image.stat().st_mtime), "commit": built or "unknown", "flasher_commit": here,
            "worktree": str(root), "flashed": isostamp.now(), **extra}
     if built and here and not here.startswith(built[:7]) and not built.startswith(here[:7]):
         print(f"warning: image {rec['tag']} was built from {built}, flashed from a checkout at {here} ({root})")
     _write(_file(serial), rec)
     return rec
+
+
+def build_field(image: Path, key: str) -> str:
+    """One field of the image's <stem>.build.json ('' for an older image)."""
+    try:
+        d = json.loads(image.with_name(image.name.removesuffix(".bin") + ".build.json").read_text())
+    except (OSError, ValueError):
+        return ""
+    return str(d.get(key) or "") if isinstance(d, dict) else ""
 
 
 def build_commit(image: Path) -> str:

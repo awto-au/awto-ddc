@@ -90,6 +90,7 @@ def main(argv: list[str] | None = None) -> int:
         json.dumps({k: bj.get(k) for k in ("xdata_free", "xdata_pool")}) + "\n")     # shown in the gates record; no build fails on it
     (root / "tmp/fw" / f"{a.serial}-{a.tag}-be.build.json").write_text(            # variant + clock of this image (scripts/image_variant.py)
         json.dumps({"defines": [*a.defs, *(f for f in a.flags.split() if f.startswith("-D"))], "xdata_free": bj.get("xdata_free"),
+                    "layout_mode": bj.get("layout_mode"), "image_bytes": bj.get("bin_bytes"),      # dev | release (docs/flash-layout.md)
                     "commit": _tree_git(a.tree, "rev-parse", "--short", "HEAD"),        # #285: provenance of this image
                     "dirty": bool(_tree_git(a.tree, "status", "--porcelain", "--untracked-files=no"))}) + "\n")
     shutil.copy2(a.tree / "tmp/sdcc-port/bank_layout.new.tsv", root / "tmp/fw" / f"{a.serial}-{a.tag}-be.bank_layout.tsv")

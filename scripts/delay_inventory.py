@@ -89,7 +89,7 @@ def parse_rst(build: Path, syms) -> dict[str, Fn]:
                 m = LAB.match(l)
                 if m:
                     if m.group(2).startswith("__bs_"):
-                        parse_rst.stubs[int(m.group(1), 16)] = "_" + m.group(2)[5:]
+                        parse_rst.stubs[int(m.group(1), 16)] = "_" + LOCAL_STUB.sub("", m.group(2)[5:])
                         cur, st = None, None
                     elif m.group(2)[:32] in syms and not m.group(2)[0].isdigit():     # the map cuts names at 32 characters
                         cur = fns.setdefault(m.group(2), Fn(m.group(2), int(m.group(1), 16), syms[m.group(2)[:32]][1]))
@@ -120,9 +120,12 @@ def parse_rst(build: Path, syms) -> dict[str, Fn]:
     return {k: v for k, v in fns.items() if not k.startswith("__bs_")}
 
 
+LOCAL_STUB = re.compile(r"_b\d+$")                       # bank-local stub __bs<fn>_b<bank> (sdcc_bank --local-stubs)
+
+
 def resolve_callee(raw: str, names: set[str], stub_idx: dict[str, list[str]]) -> list[str]:
     if raw.startswith("__bs_"):
-        return stub_idx.get(raw, [])
+        return stub_idx.get(raw) or stub_idx.get(LOCAL_STUB.sub("", raw), [])
     return [raw] if raw in names else []
 
 

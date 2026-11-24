@@ -68,15 +68,18 @@ Image sectors (4 KiB, of 224) changed by one small edit vs the unedited build of
 - `--inline-consts CUT` (off): emits a CONST after each user fn; fw_link_check reports false findings (227 at cut 64) until it knows each chunk's code size.
 - Audit: `scripts/common_audit.py` (common chunk classes, stub callers by bank, const classes, helper duplication).
 
-## Bank repack by call affinity (#333 follow-up, `scripts/bank_affinity.py`, `scripts/bank_pack.py`)
-- `fw/bank_map.tsv` is the output of `python scripts/bank_pack.py --banks N --headroom BYTES --msg-size BYTES --keep` (also sets `code_banks` and the `msg` address in the toml). Deterministic: same inputs, same map. Never hand-merge a conflict: run it again on the merged tree.
+## Two layouts, one switch (#333): `./dev.py build --layout dev|release`
+- `fw_build.py --layout-mode dev|release`, default dev; `dev.py build --layout release` tags the image `-rel`. Mode is in `<stem>.build.json` (`layout_mode`, `image_bytes`), in the flash record (`layout`) and in the bank layout header (`#mode`).
+- **dev**: code spread over all 15 banks (affinity assignment, 5 % over an equal share per bank), every chunk in a slot with slack (banks: size + 8 + size/8, common: size + 4 + size/32; stubs 8 B). `fw/bank_map.tsv` is tracked WITH offset + slot of every row incl. stubs; an edit keeps every chunk that still fits its slot where it was, a grown chunk moves alone into a hole. Image = 15 banks = 240 sectors.
+- **release**: densest packing, fresh every build, `fw/bank_map.tsv` is not read for banks and not rewritten (only its common rows are inputs). `fw_build.release_bank_step`: fewest banks, then least headroom per bank (0, 128, 256, 512, 1024, 2048 B) that the whole bank step accepts; the image ends with the last used bank. Same inputs give a byte-identical image.
+- Switching: the first dev build from a map of another mode regenerates `fw/bank_map.tsv` (one full relocation; commit it). Release never touches the map, so there is no switching cost on the tracked side; flashing dev <-> release rewrites most sectors (numbers in awto-ddc#333).
+- Debug-message block: fixed `0x9E000` + 8 KiB (top of bank 9, `fw/rl6449_memory.toml`), shared by both layouts (release needs >= 10 banks). Table size today 6,821 B for 177 enabled ids, ~35 B per further id; all 535 ids need 19,419 B. `fw_build` fails with the table size and id count if the table outgrows the block.
+- The flasher takes the image length as it is: banks above are not written (old content stays), a device-manifest count mismatch makes the flasher CRC-diff every image sector instead of trusting the manifest.
+
+## Bank assignment by call affinity (`scripts/bank_affinity.py`, `sdcc_bank.py --repack`, planner `scripts/bank_pack.py --mode dev|release`)
 - Inputs: the map's common rows (ISR-reachable, SP-reading, pinned: unchanged), `#pragma place group / bank`, call sites (8^loop depth), measured calls per pass (`fw/cluster_weights.json`, from `scripts/fw_profile.py --json`), CONST users.
 - Units that share a bank: place-group members, a CONST with every fn that names it (else it would go to common), a CONST pointer and the fn it is passed to (link gate gptr_const_xbank).
-- Method: heavy-edge agglomeration + first-fit-decreasing, then move / swap refinement on (cut weight + 6 x stub copies); every bank stays within `64 KiB - common - headroom` counting its local stub copies (8 B each, exact); the message block is reserved in the last bank.
+- Method: heavy-edge agglomeration + first-fit-decreasing, then move / swap refinement on (cut weight + 6 x stub copies); every bank stays within `64 KiB - common - headroom` counting its local stub copies (8 B each, exact).
 - Address-taken fns (pointer tables) always get a stub in the table's bank, even when the fn lives there (364 stubs for `_OperationFactoryTable`, fixed).
 - `#pragma place bank(n)` with n above the last code bank does not exist: those became `group(<file>_<n>)` (generators emit the same); pins on banks 5, 6, 8 stay.
-- A new map is a one-time full relocation: the first flash after it rewrites most banks.
-- Planner: `bank_pack.py` runs `sdcc_bank.py --repack` alone on `tmp/sdcc-port/asm_ovl` (needs a finished build), prints per-bank fn / const / stub bytes and free.
-
-Measured 2026-11-24, unit-3 image, main 5a092af4 + repack, sim (`fw_profile`, 12 passes), `flash_layout_measure.py` (4 edits, same tree before / after):
-see awto-ddc#333 comment for the table (banks vs headroom, stubs, sectors, speed).
+- `bank_pack.py` runs the bank step alone on `tmp/sdcc-port/asm_ovl` (needs a finished build), prints per-bank fn / const / stub bytes and free. Numbers: awto-ddc#333.

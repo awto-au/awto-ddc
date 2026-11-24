@@ -4,16 +4,16 @@
 [code]
 bank_size   = 0x10000      # DW8051 64 KB window, whole window banked
 banks       = 16           # 1 MB flash
-code_banks  = 13           # banks 0..code_banks-1 hold code (the image ends with the last one, scripts/bank_pack.py); above it: not flashed; 15 = NVRAM / manifest / spare (#44)
+code_banks  = 15           # banks 0-14 may hold code: dev layout spreads over all, release uses the fewest that fit (image ends with the last used bank; above: not flashed); 15 = NVRAM / manifest / spare (#44)
 common_end  = 0x2800       # [0, common_end) copied into every bank image
 vectors_end = 0x53         # vectors 0..9 (0x03 + 8n, 3 B each)
 resid_end   = 0x890        # common bytes kept for vectors / HOME / GSINIT / library / XINIT before pinned areas (#209)
 bank_reg    = 0xFFFF       # XDATA bank-select register
 
-[[code.reserved]]          # fixed debug-message block, never code (#56); top of the last code bank (bank_pack.py --keep sets addr)
+[[code.reserved]]          # fixed debug-message block, never code (#56); fixed at the top of bank 9 so both layouts (release >= 10 banks) share it; fw_build fails if the table outgrows it
 name = "msg"
-addr = 0xCA000
-size = 0x6000
+addr = 0x9E000
+size = 0x2000
 
 [xdata]
 pool = [0xD700, 0xF3C9]    # SDK XDATA end 0xF700 less the 48 B diag block, 32 B watchdog record, 20 B reset snapshot, 5 B backlight test knob, 718 B sync ring (RL6449_Project.h AWTO_SYNC_ADDR: no-init, kept over a warm reset)

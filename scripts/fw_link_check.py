@@ -80,7 +80,7 @@ def parse_map(path):
 RST_LINE = re.compile(r"^ {6}([0-9A-F]{6})?(?: [0-9A-F]{2})*\s*(?:\[\s*\d+\])?\s*\d+ (.*)$")
 RST_CONT = re.compile(r"^\s+(?:[0-9A-F]{2} ?)+$")   # continuation of a long .db/.ascii: bytes only (RST_LINE read "63 33" as line 63)
 DATA_DIR = re.compile(r"^\.(db|byte|dw|word|ascii|asciz|ascis|ds|blkb|blkw|str|strz|strs)\b", re.IGNORECASE)
-LIT_IMM = re.compile(r"#\s*\(?\s*(?:0x[0-9a-fA-F]+|\d+)\s*\)?\s*$")
+LIT_IMM = re.compile(r"#\s*(?:\s|[()+\-*/|&<>~^]|0[xX][0-9a-fA-F]+|\d+)+$")      # a number or an expression of numbers only (`#0xff - 0x08`)
 SIG = re.compile(r"^;\s+\S.*\.c:\d+: [\w\s\*]*?\b(\w+)\s*\((.*)\)\s*$")
 
 

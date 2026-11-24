@@ -321,6 +321,9 @@ def parse_ihx(p: Path) -> dict:
     return mem
 
 
+RELEASE_HEADROOM = (0, 128, 256, 512, 1024, 2048)    # bytes free per bank tried in this order at each bank count (constants moved after the plan need a little room)
+
+
 def bank_args(a, new_layout):
     """sdcc_bank.py command line of this build (scripts/bank_pack.py runs the same step alone)."""
     pin = ",".join(x for x in (a.pin_common, (ROOT / "tmp/sdcc-port/pin_common.txt").read_text().strip()
@@ -333,9 +336,26 @@ def bank_args(a, new_layout):
             *(["--ptr-safe", a.ptr_safe] if a.ptr_safe else []),
             *(["--cluster", a.cluster] if a.cluster else []),
             *(["--cluster-weights", a.cluster_weights] if a.cluster_weights else []),
-            *(["--repack", "--headroom", str(a.headroom)] if a.repack else []),
+            "--mode", a.layout_mode, *(["--headroom", str(a.headroom)] if a.layout_mode == "release" else []),
+            *(["--repack", "--headroom", str(a.headroom)] if a.repack and a.layout_mode == "dev" else []),
+            *(["--cluster-weights", "fw/cluster_weights.json"] if a.layout_mode and not a.cluster_weights else []),
             *(["--pin-common", pin] if pin else []),
             *(["--resid-end", a.resid_end] if a.resid_end else [])]
+
+
+def release_bank_step(a, py, new_layout, out=None):
+    """Fewest banks, then least headroom, that the whole bank step accepts (deterministic order); returns (banks, headroom)."""
+    tried = []
+    for nb in range(max(MT.MSG_BANK + 1, a.release_min_banks), CM.CODE_BANKS + 1):
+        for hr in ((a.release_headroom,) if a.release_headroom else RELEASE_HEADROOM):
+            a.headroom = hr
+            cmd = [py, *bank_args(a, new_layout), "--banks", str(nb), *(["--out", str(out)] if out else [])]
+            r = subprocess.run([str(x) for x in cmd], cwd=ROOT, capture_output=True, text=True, check=False)
+            tried.append((nb, hr, r.returncode))
+            if r.returncode == 0:
+                log(f"release layout: {nb} banks, headroom {hr} B per bank (tried {tried})")
+                return nb, hr
+    sys.exit(f"release layout: no fit in {CM.CODE_BANKS} banks (tried {tried})")
 
 
 def parse_args(argv=None):
@@ -354,6 +374,11 @@ def parse_args(argv=None):
     ap.add_argument("--cluster-weights", default="", help="passed to sdcc_bank (measured call counts, fw/cluster_weights.json)")
     ap.add_argument("--pin-common", default="_ScalerTimerDelayXms,_ScalerTimerPollingFlagProc,_AwtoPutStr,_AwtoStackPaint,_AwtoStackCheck,_AwtoStackDeepTest,_AwtoDbgIsrCmd_EXINT1,_ScalerTimerWaitForEvent,_AwtoWaitLog,_AwtoWaitPump,_AwtoPsPollSite,_AwtoDelayLoops,_AwtoDelayXus,_AwtoDelayCnt,_AwtoDelayEnd,_AwtoDelayLong,_AwtoWdtPoke,_AwtoPassStamp,_ScalerSyncDpHpdIrqAssertTimer2EventProc_EXINT,_RxRegGetBit,_RxRegGetByte,_RxRegSetBit,_RxRegSetByte",
                     help="passed to sdcc_bank (comma list of fns forced into common; OSD string helper: callers pass bank-local literals; stack canary fns read SP: no trampoline bytes in between; the EXINT1 debug reply: no banked call in the ISR; ScalerTimerWaitForEvent reads its caller's return address (#216): no stub; AwtoWaitLog / AwtoWaitPump / ScalerTimerDelayXms / PollingFlagProc read SP)")
+    ap.add_argument("--layout-mode", choices=["dev", "release"], default="dev",
+                    help="dev (default): code spread over all banks, per-chunk slots kept from fw/bank_map.tsv (a small edit rewrites few sectors); "
+                         "release: densest packing in the fewest banks, regenerated every build, fw/bank_map.tsv untouched (docs/flash-layout.md)")
+    ap.add_argument("--release-headroom", type=lambda x: int(x, 0), default=0, help="release layout: this headroom per bank only (a variant with more free tail)")
+    ap.add_argument("--release-min-banks", type=int, default=0, help="release layout: start the search at this bank count (a variant with more banks)")
     ap.add_argument("--repack", action="store_true", help="one-time: re-assign every banked fn / const by call affinity into code_banks banks "
                     "(sdcc_bank --repack; the new fw/bank_map.tsv is a full relocation)")
     ap.add_argument("--headroom", type=lambda x: int(x, 0), default=0, help="--repack: bytes kept free in every bank")
@@ -403,7 +428,10 @@ def main() -> int:
     run("isr", [py, "scripts/sdcc_isr_libs.py"])              # ISR-private non-reentrant lib helpers (#19)
     new_layout = ROOT / "tmp/sdcc-port/bank_layout.new.tsv"
     new_layout.unlink(missing_ok=True)                        # only this run's output may be promoted
-    run("bank", [py, *bank_args(a, new_layout)])
+    if a.layout_mode == "release":
+        release_bank_step(a, py, new_layout)
+    else:
+        run("bank", [py, *bank_args(a, new_layout)])
     bank_dir = ROOT / "tmp/sdcc-port/asm_bank"
     # / % * memcpy: library only (#204); % by 0 = Keil's result via the _keil entries (--keil-div)
     for extra in (ROOT / "fw/sdcc/bank.asm", ROOT / "fw/sdcc/crt_xinit.asm", ROOT / "fw/sdcc/crt_rtd_startup.asm",
@@ -453,7 +481,7 @@ def main() -> int:
         log(f"xdata layout promoted: {XLAYOUT}")
     if pins:
         check_layout((out / "fw.map").read_text(errors="replace"), pins, new_layout)
-        if not variant and not re.search(r"-D_AWTO_SAVER_\w+=_OFF", os.environ.get("K2S_SDCC_EXTRA", "")):   # a build without a saver must not rewrite the tracked layout
+        if a.layout_mode == "dev" and not variant and not re.search(r"-D_AWTO_SAVER_\w+=_OFF", os.environ.get("K2S_SDCC_EXTRA", "")):   # release / a build without a saver must not rewrite the tracked layout
             promote_layout(new_layout, ROOT / a.layout)   # absolute a.layout wins in the join
     mem = parse_ihx(out / "fw.ihx")
     common_end = max((x for x in mem if x < a.common), default=0) + 1
@@ -470,12 +498,15 @@ def main() -> int:
         if x >= a.common:
             img[x] = v
     blk = MT.build(MT.rows_from_tsv((ROOT / "fw/msgids.tsv").read_text()))   # enabled ids of this build's port step
+    if len(blk) > MT.MSG_SIZE:
+        sys.exit(f"message table is {len(blk)} B for {MT.parse(blk)['count']} enabled ids, the reserved block is {MT.MSG_SIZE} B "
+                 f"(fw/rl6449_memory.toml msg size; every id enabled would need about 19.5 KB): enable fewer ids or raise the block")
     img[MT.MSG_ADDR:MT.MSG_ADDR + len(blk)] = blk
     minfo = MT.parse(blk)
     (out / "msgtable.bin").write_bytes(blk)
     log(f"msgtable: {minfo['count']} ids, {len(blk)} B of {MT.MSG_SIZE} at 0x{MT.MSG_ADDR:x}, hash {minfo['hash']}")
     (out / "fw.bin").write_bytes(img)
-    rep = {"serial": a.serial, "common_end": common_end, "common_max": a.common, "banks": used,
+    rep = {"serial": a.serial, "layout_mode": a.layout_mode, "common_end": common_end, "common_max": a.common, "banks": used,
            "bin_bytes": len(img),
            "msgtable": {"addr": MT.MSG_ADDR, "bytes": len(blk), "ids": minfo["count"], "hash": minfo["hash"]}, "xdata_free": XDATA_STAT.get("free"), "xdata_pool": XDATA_STAT.get("pool"), "xdata_holes": [(hex(x), hex(y)) for x, y in hs], "iram": iram,
            "sdcccall": int(T.SDCCCALL), "compiler": T.stamp()}

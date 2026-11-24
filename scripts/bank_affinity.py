@@ -280,12 +280,15 @@ def refine(st, e, passes=12, stub_w=STUB_W):
     return st
 
 
-def assign(funcs, consts, place_groups, place_pins, is_common, caps, pairs=(), dyn=None, log=print):
+def assign(funcs, consts, place_groups, place_pins, is_common, caps, pairs=(), dyn=None, log=print, spread=0.0):
     """caps: per-bank usable bytes (bank size - common - msg block - headroom). Sets c.bank on every non-common chunk;
     returns (per-bank totals incl. local stubs, cut weight before / after refinement)."""
     units, owner, users = build_units(funcs, consts, place_groups, place_pins, is_common, pairs)
     e = edges(units, owner, funcs, consts, users, dyn)
     sizes = [u.size for u in units]
+    if spread:                                                # dev layout: every bank gets about its share, the rest is free tail
+        share = int(sum(sizes) / len(caps) * (1 + spread))
+        caps = [min(c, share) for c in caps]
     for slack in (0.06, 0.04, 0.03, 0.02, 0.01, 0.0):          # room for the stub copies the sizes do not include
         out, fr = initial(units, e, [int(c * (1 - slack)) for c in caps], sizes)
         if out is None:

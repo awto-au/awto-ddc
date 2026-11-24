@@ -66,11 +66,17 @@ class Layout:
             out.append(f"{kind}\t{name}\t{reg}\t0x{off:04x}\t{slot}")
         return "\n".join(out) + "\n"
 
-    def map_text(self):
-        """The tracked part: which region each fn / const lives in (offsets are recomputed every build)."""
+    def map_text(self, sticky=False):
+        """The tracked part. Release / compact: region per fn / const only (offsets are build output). Dev (sticky): also
+        offset + slot of every row incl. stubs, so an edit keeps the unchanged chunks where they were."""
         out = [f"#{k} {v}" for k, v in sorted(self.header.items())]
-        out.append("# kind\tname\tregion    (bank map: scripts/sdcc_layout.py; region C = common, n = bank n)")
-        out += [f"{k}\t{n}\t{r[0]}" for (k, n), r in sorted(self.rows.items(), key=lambda kv: (kv[0][0], kv[0][1])) if k != "stub"]
+        rows = sorted(self.rows.items(), key=lambda kv: (kv[0][0], kv[0][1]))
+        if sticky:
+            out.append("# kind\tname\tregion\toffset\tslot    (dev layout: scripts/sdcc_layout.py; region C = common, n = bank n)")
+            out += [f"{k}\t{n}\t{r[0]}\t0x{r[1]:04x}\t{r[2]}" for (k, n), r in rows]
+        else:
+            out.append("# kind\tname\tregion    (bank map: scripts/sdcc_layout.py; region C = common, n = bank n)")
+            out += [f"{k}\t{n}\t{r[0]}" for (k, n), r in rows if k != "stub"]
         return "\n".join(out) + "\n"
 
     def save(self, path):
@@ -109,6 +115,13 @@ class Region:
     def free(self):
         return sum(n for _, n in self.holes())
 
+    def place_at(self, key, off, slot):
+        """Keep a previous offset: only when [off, off + slot) lies inside one free hole."""
+        if any(o <= off and off + slot <= o + n for o, n in self.holes()):
+            self.placed[key] = (off, slot)
+            return True
+        return False
+
     def place(self, key, slot):
         """Best-fit hole (smallest that fits, lowest offset on ties); returns offset or None."""
         best = None
@@ -121,7 +134,19 @@ class Region:
         return best[0]
 
 
-def assign(items, layout, common_lo, common_hi, nbanks, bank_cap, log=print, reserve=None, labels=None):
+def slack_slot(rid, size):
+    """Dev layout slot: room to grow in place. Common is tight (it is copied into every bank); banks have a free tail."""
+    return size + 4 + size // 32 if rid == "C" else size + 8 + size // 8
+
+
+def _put(reg, rid, it, sticky):
+    """Dev layout: a slot with slack, else the exact size; compact: the exact size."""
+    if sticky and it.key[0] != "stub" and reg.place(it.key, slack_slot(rid, it.slot)) is not None:
+        return True
+    return reg.place(it.key, it.slot) is not None
+
+
+def assign(items, layout, common_lo, common_hi, nbanks, bank_cap, log=print, reserve=None, labels=None, sticky=False):
     """Pack every item back to back; returns (placed: key -> (region, offset, size), moved: key -> new region).
     items: list[Item] with .region = wanted region (C or bank); `layout` (the tracked bank map) tells which chunks are known.
     Order: fixed items first (consts, residual-bound), then consts, module, name. No padding, no holes.
@@ -134,6 +159,11 @@ def assign(items, layout, common_lo, common_hi, nbanks, bank_cap, log=print, res
         regs[b] = Region(b, 0, bank_cap - (reserve or {}).get(b, 0))
     by_key = {it.key: it for it in items}
     moved = {}
+    if sticky:                                              # dev layout: a chunk keeps (region, offset, slot) while it still fits its slot
+        for it in items:
+            row = layout.rows.get(it.key)
+            if row and row[0] == it.region and row[2] >= it.slot and row[2] > 0 and regs[it.region].place_at(it.key, row[1], row[2]):
+                continue
     for it in sorted(items, key=lambda it: (not it.fixed, it.is_const is False, it.module, it.key[1])):
         if it.region == "C" or it.fixed:
             cands = [it.region] + (["C"] if it.is_const and it.region != "C" else [])
@@ -144,7 +174,9 @@ def assign(items, layout, common_lo, common_hi, nbanks, bank_cap, log=print, res
             cands = home + sorted((b for b in regs if b != "C" and b not in home), key=lambda b: -regs[b].free())
         else:
             cands = [it.region] + sorted((b for b in regs if b not in ("C", it.region)), key=lambda b: -regs[b].free())
-        done = next((rid for rid in cands if regs[rid].place(it.key, it.slot) is not None), None)
+        if any(it.key in r.placed for r in regs.values()):
+            continue                                        # kept at its previous offset
+        done = next((rid for rid in cands if _put(regs[rid], rid, it, sticky)), None)
         if done is None:
             why = (labels or {}).get(it.key)
             raise SystemExit(f"{why + ': ' if why else 'layout: '}no room for {it.key[1]} ({it.slot} B) in "
