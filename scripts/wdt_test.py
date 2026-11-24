@@ -173,6 +173,10 @@ class SimTarget:
     def io(self):
         return self.bus
 
+    def wdt_params(self) -> tuple[int, int]:
+        """(N, THR) the image programmed into the chip: FFEA[2:0] + 1, FFB0[7:4]:FFAE (#178: not the header's)"""
+        return (self.m.rd(0xFFEA)[0] & 7) + 1, (self.m.rd(0xFFB0)[0] >> 4) << 8 | self.m.rd(0xFFAE)[0]
+
     def now_ms(self) -> float:
         return self.cr.advance(self.m)
 
@@ -1262,6 +1266,10 @@ def main() -> int:
     say = Log()
     if a.sim:
         t = SimTarget(a.sim[0], a.sim[1], say)
+        n_img, thr_img = t.wdt_params()           # the image's own values win: a header of another tree gave false FAILs (#178)
+        if (n_img, thr_img) != (N, THR):
+            say(f"  image programs N {n_img}, THR 0x{thr_img:03X} (header/default N {N}, THR 0x{THR:03X}): image values used")
+            N, THR = n_img, thr_img
         say(f"wdt_test --sim {a.sim[0].name}: N {N}, THR 0x{THR:03X}: warning {warn_ms():.1f} ms, reset {reset_ms():.1f} ms")
     elif a.unit and a.map:
         t = UnitTarget(a.unit, a.map, say)
