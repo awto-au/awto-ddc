@@ -10,6 +10,9 @@ import sys
 import time
 from pathlib import Path
 
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from _log import Logger
+
 MAIN = Path("/mnt/2tb/git/awto-ddc")
 BASE = "origin/main"
 KEEP_NAMES = {"awto-ddc-ports2", "awto-ddc-ports2-main", "awto-ddc-tmdsphy", "awto-ddc-s2b14"}
@@ -32,11 +35,7 @@ ROOT = repo_root()
 LOG = ROOT / "tmp/logs/worktree_sweep.log"
 
 
-def log(msg: str) -> None:
-    print(msg)
-    LOG.parent.mkdir(parents=True, exist_ok=True)
-    with LOG.open("a") as f:
-        f.write(f"{time.strftime('%Y-%m-%dT%H:%M:%S%z')} {msg}\n")
+log = Logger(LOG).say
 
 
 def git(*args, cwd=MAIN):
@@ -58,7 +57,7 @@ def parse():
 
 def du(path: str) -> int:
     r = subprocess.run(["du", "-sk", path], check=False, capture_output=True, text=True)
-    return int(r.stdout.split()[0]) * 1024 if r.stdout else 0
+    return int(r.stdout.split()[0]) * 1024 if r.returncode == 0 and r.stdout else 0
 
 
 def dirty(path: str):
