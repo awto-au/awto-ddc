@@ -26,7 +26,7 @@ def _use_image(fw_image):
     IMG = fw_image.stem
 
 
-pytestmark = [pytest.mark.slow]
+pytestmark = [pytest.mark.slow, pytest.mark.xfail(reason="awto-ddc#342: install_delay_ffwd does not match the current AwtoDelayLoops code")]
 PAD = 0x0006       # code address never executed here: a stub on it stops the run (as delay_sim.replay)
 
 

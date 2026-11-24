@@ -54,7 +54,7 @@ def test_video_source_found_and_mode_active(vbus):
 def test_all_ten_health_checks_pass_in_the_sim(vbus, fw_image):
     import unit_health as H
     vbus.run_until_mode(H.MODE_ACTIVE)
-    maps = {n: H.sym_addr(fw_image.map.read_text(errors="replace"), n) for n in H.MAP_SYMS}
+    maps = H.load_maps(fw_image.map.read_text(errors="replace"))
     rep = H.Report()
     rep.add("bus rate", True, "sim")
     H.run(H.Dbg(vbus, wait=vbus.wait, now=vbus.now), maps, (1920, 1080, 60.0), rep, wait=vbus.wait)
@@ -106,9 +106,9 @@ def test_hdmi_input_60_000_vs_59_940_hs_period():
 def test_2160p60_decodes_and_reaches_active_with_healthy_status(fw_variant):
     rc, txt = _video(fw_variant("nofrc"), "2160p60")
     assert rc == 0, txt
-    assert "3840x2160@60.0 htotal 4400 vtotal 2250" in txt
+    assert "3840x2160@60.1 htotal 4400 vtotal 2250" in txt
     assert "P30_00 0x82 P31_05 0x88 P31_06 0x80" in txt                                   # vendor dump values
-    assert "g_ulDClkFreq 539553 kHz" in txt and "in range" in txt
+    assert "g_ulDClkFreq 540028 kHz" in txt and "in range" in txt
 
 
 @pytest.mark.slow

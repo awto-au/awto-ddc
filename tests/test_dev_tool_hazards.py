@@ -12,6 +12,17 @@ import pytest
 REPO = Path(__file__).resolve().parents[1]
 
 
+UNITS = {      # test data shaped like scripts/devices.json (keys the dev.py code reads); serials are fixtures, not real units
+    "1": {"serial": "AWT26110001", "input": "HDMI", "connector": "card2-HDMI-A-3", "gdctl": "HDMI-3", "bus_kind": "ddc", "write_mode": "burst",
+          "be": True, "relay": None, "test": True},
+    "2": {"serial": "AWT26110002", "input": "HDMI", "connector": "card1-DP-1", "gdctl": "DP-1", "connector_dp": "card1-DP-1", "gdctl_dp": "DP-1",
+          "bus_kind": "ddc", "bus_kind_dp": "dp-aux", "write_mode": "byte", "be": True, "relay": "so-th-1", "test": True},
+    "3": {"serial": "AWT26110003", "settings": {"disp_rotate": "180"}, "input": "DP", "connector": "card1-HDMI-A-2", "gdctl": "HDMI-2",
+          "connector_dp": "card2-DP-4", "gdctl_dp": "DP-4", "bus_kind": "ddc", "bus_kind_dp": "dp-aux", "write_mode": "burst", "be": True,
+          "relay": None, "test": True},
+}
+
+
 @pytest.fixture()
 def dev(monkeypatch, tmp_path):
     spec = importlib.util.spec_from_file_location("dev_under_test", REPO / "dev.py")
@@ -28,10 +39,7 @@ def dev(monkeypatch, tmp_path):
     monkeypatch.setattr(m, "_unit_settings", lambda u, bus, mp: None)         # no DDC/CI write to a unit from a test
     monkeypatch.setattr(m, "LOGS", tmp_path / "tmp" / "logs")
     monkeypatch.setattr(m, "LOG", tmp_path / "tmp" / "logs" / "dev.log")
-    import json
-    real = json.loads((REPO / "scripts/devices.json").read_text())["units"]
-    real = {k: {**v, "test": True} for k, v in real.items()}     # no hardware here; the working-screen guard is not under test
-    monkeypatch.setattr(m, "_units", lambda: real)
+    monkeypatch.setattr(m, "_units", lambda: {k: dict(v) for k, v in UNITS.items()})   # synthetic table: no scripts/devices.json, no hardware
     monkeypatch.setattr(m, "_layout_watch", lambda: None)   # spawns desk_layout.py unless the real tree's watcher runs
     monkeypatch.setattr(m.i2cbus, "bus_kind", lambda bus, hint=None: hint or "unknown")   # no sysfs
     yield m

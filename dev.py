@@ -99,7 +99,7 @@ STEPS: dict[str, tuple[str, list[str], bool]] = {
 }
 
 # gate = fail-fast, blocks a commit. First failure wins; fix that.
-GATE = ["test", "build"]
+GATE = ["build", "test"]            # build first: the tests run on the gate's own image (AWTO_TEST_IMAGE, awto-ddc#339)
 # ci = run-all-collect-all. Every leg runs even after a failure, then ONE
 # GO/NO-GO. On hardware a re-run costs minutes and may not reproduce.
 CI = ["lint", "test", "build"]
@@ -151,6 +151,24 @@ _UNIT_LOG: Path | None = None               # tmp/logs/unit-<serial>.log once a 
 SKIPPED = 125   # distinct from any real tool's exit code
 
 
+LAST_BUILD: Path | None = None      # stem of the newest image cmd_build made in this process
+
+
+def _export_test_image() -> None:
+    """tests run on one image of this tree: $AWTO_TEST_IMAGE, else the newest build at HEAD, else one build (scripts/test_image.py)."""
+    import test_image
+    if os.environ.get("AWTO_TEST_IMAGE"):
+        log(f"test image: $AWTO_TEST_IMAGE={os.environ['AWTO_TEST_IMAGE']}")
+        return
+    try:
+        img = test_image.base()
+    except test_image.ImageUnavailable as e:
+        log(f"test image: none ({e}); image tests skip, naming the fw_image fixture", "WARN")
+        return
+    os.environ["AWTO_TEST_IMAGE"] = str(img.stem)
+    log(f"test image: {img.name} (AWTO_TEST_IMAGE)")
+
+
 def run_step(name: str, extra: list[str] | None = None) -> int:
     """Run one STEPS entry (or a project command by name). Returns its exit code, or SKIPPED."""
     if name not in STEPS:
@@ -163,6 +181,8 @@ def run_step(name: str, extra: list[str] | None = None) -> int:
         log(f"{name}: {argv[0]} not on PATH - skipped", "WARN")
         return SKIPPED
     cmd = argv + (list(extra) if (extra and takes_extra) else [])
+    if name == "test":
+        _export_test_image()
     log("run: " + " ".join(cmd))
     rc = subprocess.call(cmd, cwd=REPO)
     log(f"rc={rc}: " + " ".join(cmd), "INFO" if rc == 0 else "ERROR")
@@ -239,13 +259,20 @@ def cmd_clean(_extra: list[str]) -> int:
 @command("fail-fast pre-commit gate: " + " + ".join(GATE) + "; --extensive also runs the EXTENSIVE firmware gate tier on the newest image (fw_gates --tier extensive)",
          args="[--extensive]", kind="aggregate")
 def cmd_gate(extra: list[str]) -> int:
+    os.environ["AWTO_TEST_STRICT"] = "1"        # an image test that cannot find its image FAILS here (fixture fw_image)
     for name in GATE:
-        rc = run_step(name)
+        if name == "test" and LAST_BUILD is not None:
+            os.environ["AWTO_TEST_IMAGE"] = str(LAST_BUILD)       # the gate's own build
+        rc = run_step(name, ["--slow"] if name == "test" else None)
         if rc not in (0, SKIPPED):
             log(f"GATE FAILED at {name} (rc={rc})", "FATAL")
             return rc
     if _flag(extra, "--extensive"):
         imgs = sorted((p for p in FW.glob("*-be.bin") if not re.search(r"-(t0ev|clk\d+)-be\.bin$", p.name)), key=lambda p: p.stat().st_mtime)   # base images, not siblings
+        if LAST_BUILD is not None:
+            imgs = [LAST_BUILD.with_suffix(".bin")]       # the gate's own build, not a variant the tests built after it
+            import test_image
+            test_image.restore_port()                     # the link / iram gates read the asm of the last build: rebuild the base after a test variant
         if not imgs:
             log("GATE: --extensive needs a built image in tmp/fw", "FATAL")
             return 1
@@ -726,6 +753,8 @@ def cmd_build(extra: list[str]) -> int:
         return rc
     name = f"{u['serial']}-{tag}-be"
     (FW / f"{u['serial']}-last.txt").write_text(name)
+    global LAST_BUILD
+    LAST_BUILD = FW / name
     log(f"image tmp/fw/{name}.bin (unit {n}{', freeze' if freeze else ', no FRC' if nofrc else ''}"
         f"{', internal audio test' if audio_test else ''})", "ALERT")
     return 0

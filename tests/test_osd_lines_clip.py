@@ -10,7 +10,15 @@ import pytest
 ROOT = Path(__file__).resolve().parent.parent
 ZIP = ROOT / "docs/osd-prototypes/osd-lines-12x18.zip"
 NEW = ROOT / "tools/osd_lines"
-WORK = ROOT / "tmp/scratch/osd_lines_clip"
+WORK = None          # per-run scratch dir, set by the fixture below
+
+
+@pytest.fixture(autouse=True, scope="module")
+def _work(tmp_path_factory):
+    global WORK
+    WORK = tmp_path_factory.mktemp("osd_lines_clip")
+
+
 TILES = [(12, 18), (8, 8), (5, 7), (16, 16), (32, 32), (1, 1), (32, 3)]
 RUN_LIMIT_S = 60                 # one harness run: ~1 s measured; expiry = hung harness
 
