@@ -39,14 +39,14 @@ def call(run, bank, pc, arg, times=3):
     m, c, p = run.m, run.m.core, run.m.p
     ie = c.sfr[0x28]
     c.sfr[0x28] = 0
-    sp = 0x70
+    sp = 0x80                    # stack area (indirect RAM): 0x70.. is overlay frames of the direct area
     m.stubs.setdefault(RET_PAD, []).append((None, "replay", lambda m_, r: m_.request_stop()))
     c.pch[RET_PAD] |= 0xFFFF
     out = []
     for _ in range(times):
         c.xram[0xFFFF] = (bank or 0) & 15
         c.set_bank((bank or 0) & 15)
-        c.iram[0x0F] = (bank or 0) & 15      # _d_isr_bs_cur: the bank stub restores it on return
+        c.iram[run.m.addr("d_isr_bs_cur") & 0xFF] = (bank or 0) & 15      # the bank stub restores it on return; address from the map
         c.iram[sp + 1], c.iram[sp + 2] = RET_PAD & 0xFF, RET_PAD >> 8
         c.sfr[0x01] = sp + 2
         c.iram[0x07] = arg          # R7 = port 0 (#326) or the LT type of the older images; R5 = LT type 0 (normal), sdcccall 3 bank 0
