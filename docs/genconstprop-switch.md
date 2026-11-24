@@ -8,13 +8,13 @@
 - Same tree (bedee736), compiler 161, flag on vs off: code bytes (non-0xFF in .bin) 749292 -> 736072 (-13220, includes layout shifts); DDOVLS 0x6d -> 0x69 (-4 B IRAM after overlay); free XDATA 183 -> 181 B; sim cycles/pass 163231 -> 163232, work 76844 -> 76776.
 - `on` needs 46 new warn_policy rows first: "conditional flow changed by optimizer" in ScalerCommonNVRam (16), RTD2014NVRamOsd (6), ScalerPLL (4), DPRx1 (3), ScalerIDomain (3), UserCommonInterface (3), our testcmd (3 + 1 unreachable), ddcci (2), console (2), cec_msg, Osd, ScalerColor, DP_SeptPhy (1 each). Each is a folded condition: review for ISR-polled flags (the #23 class) before adding rows. Measurement builds used a wildcard row, not committed.
 - Sim gates on the `on` image: boot_sim FAIL ("bite: line times never step back": console times 113 then 111 ms after the watchdog bite); the same compiler with the flag passes boot_sim. Not root-caused. The other gates were not meaningful (layout files restored after the A/B); rerun on a clean `on` build.
-- Not run: `cpu-suite --sim` D_XMS, delay_cal_check, unit boot test.
+- Not run: delay_cal_check, unit boot test.
 
 ## After the compiler refresh (/usr/local)
 1. Re-pin `SDCC_COMMIT` in scripts/fwimage.py (and the docstring line 4) to the new install stamp.
 2. Build default image and an `on` image with the same compiler; compare code bytes, IRAM after overlay, free XDATA (build log), `scripts/speed_bench.py IMAGE --no-record`.
-3. Sim: `scripts/fw_gates.py IMAGE_STEM` ALL PASS on the `on` image; `./dev.py cpu-suite --sim --build --cases D_XMS` (ScalerTimerDelayXms elapsed ticks in [n, n+2]); `python scripts/delay_cal_check.py BIN MAP`; `python scripts/delay_audit.py --write` then `--check`.
-4. Unit boot test (test unit only, units in `scripts/devices.json`): flash the `on` image, `./dev.py health` (delay-cal row, 4 ms paced loop rate), `./dev.py cpu-suite --unit N` case D_XMS. Rest the unit per its rest-mode rule afterwards.
+3. Sim: `scripts/fw_gates.py IMAGE_STEM` ALL PASS on the `on` image; `python scripts/delay_cal_check.py BIN MAP`; `python scripts/delay_audit.py --write` then `--check`.
+4. Unit boot test (test unit only, units in `scripts/devices.json`): flash the `on` image, `./dev.py health` (delay-cal row, 4 ms paced loop rate). Rest the unit per its rest-mode rule afterwards.
 5. All pass: delete `GENCONSTPROP` and the flag line in fw_compile.py in one commit; the default build then runs without `--nogenconstprop`.
 6. Any failure: leave the default; file the failing site in awto-ddc#23.
 

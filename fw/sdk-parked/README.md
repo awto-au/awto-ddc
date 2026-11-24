@@ -30,3 +30,7 @@
 - `ScalerDPRx1_SeptPhy.c`, `ScalerCommonDPRx1.c`, `ScalerCommonSync.c`: DpRx1 MST (+ HDCP repeater, MST-to-SST), DP HDCP 2.2 and FreeSync `#if(<FEATURE> == _ON)` blocks cut out of the live file; those options are `_OFF`, so 0 B in the image (#44, #21). Headers and prototypes stay in `fw/sdk`.
 - HDCP removed (Dan 2026-11-23): restore = revert d14689a6 and set `_AWTO_HDCP` `_ON`, see #44. The DP Rx1 HDCP 1.4 checks (`ScalerDpRx1HdcpCheckValid` / `CheckEnabled` / `ReAuthStatusCheck` / `MeasureCheck` / `CheckHdcpCpirqStatus`, `ScalerSyncHdcpCheckEnabled`) stay in the live files under `#if(_AWTO_HDCP == _ON)`, OFF = macros returning not-enabled (`ScalerDPRx1_SeptPhyInclude.h`).
 - Restore: set the option `_ON`, `python3 scripts/sdk_park_funcs.py restore` (appends the parked units to the live file, deletes the parked file), build, gates. Re-park: `sdk_park_funcs.py move`.
+
+## Parked CPU suite (`cpu-suite/`, #340, Dan 2026-11-24)
+- Whole `-D _AWTO_CPU_SUITE` image: `fw-test/cpu_suite.*` (was `fw/test/`), `scripts/`, `tests/`, `docs/cpu-suite.md`; not built, collected or linted. Hooks removed from SysMain / SysTimer / SysInt / `RL6449_Project.h` / `fw_build.py` VEC_PROBE / `test_image.py` / `conftest.py` / `dev.py cpu-suite`.
+- Restore: `git revert` the parking commit (moves files back and re-adds the hooks).

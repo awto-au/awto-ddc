@@ -5,7 +5,7 @@
 - Verdicts: OK = correct at every clock, wrong = defect, wasted = correct but slower / looser than needed, unknown = no measurement. Priority P1 (blocks a known failure) .. P4.
 - Premise corrections (checked in code):
   - The production watchdog is NOT fed by the Timer2 ISR. `SysTimerIntProc2` clears it only under `_WD_TIMER_INT_SUPPORT == _OFF` (`fw/sdk/Kernel/System/Code/SysTimer.c:437`); `Scaler_Option.h:453-457` forces it `_ON` (DP / HDMI 2.0 on). Feeds are main-loop passes and bounded loops only (`docs/watchdog.md`). A main-loop-fed WDT is already the design.
-  - `docs/cpu-suite.md` (branch a0ae6fa) lines 20 / 27 / 134 ("Timer2 keeps clearing the hardware watchdog") are wrong for the same reason: the suite loop's `AWTO_WDT_PASS` is the only feed. `docs/saver-mode.md:112` "820 ms budget" is the superseded N = 2 design (warning 1025 ms); current warning 200.1 ms, reset 585.9 ms.
+  - `fw/sdk-parked/cpu-suite/docs/cpu-suite.md` (branch a0ae6fa) lines 20 / 27 / 134 ("Timer2 keeps clearing the hardware watchdog") are wrong for the same reason: the suite loop's `AWTO_WDT_PASS` is the only feed. `docs/saver-mode.md:112` "820 ms budget" is the superseded N = 2 design (warning 1025 ms); current warning 200.1 ms, reset 585.9 ms.
 
 ## 1. Watchdog
 - Time base: CNT2 counts 2048 crystal clocks, CNT3 12 bit (143.0 us per count, wraps 585.9 ms), CNT1 counts wraps (`docs/watchdog.md`, `RL6449_Project.h:327-332`). Not the MCU clock, not M2PLL: the timeout in wall time is identical at 87 / 175 / 350.
@@ -22,7 +22,7 @@
 | direct pokes bypass site accounting | none | wrong (minor) | `fw/test/scope_saver.c:280`, `fw/test/asteroids.c:1429` write FFEA[6] directly: `ucMaxPoke` / `g_ucAwtoPokeSite` never see those gaps, so W1 under-reports during savers | use `AWTO_WDT_FEED(site)` with new site ids | P3 |
 | `wdt_test.py` default N / THR | none | wrong default, OK in gate | `wdt_test.py:35` `N, THR = 2, 0xC00` vs header 1 / 0x577; gate passes `--header` (`fw_gates.py:120`) | read the header by default or fail without `--header` | P4 |
 | PS: WDT IRQ vs EXINT0 priority | IOSC unchanged | OK | `watchdog.md` interrupt model: IP 0x81 PS, stuck EXINT0 not preempted, hardware reset 585.9 ms | none | - |
-| cpu-suite idle self-reset 30 s | none | OK (suite only) | branch a0ae6fa `AwtoWdtHang` after `AWTO_CPU_IDLE_MS`; not for the production image | wrong sentence in `cpu-suite.md` fixed in the next edit of that file | P4 |
+| cpu-suite idle self-reset 30 s | none | OK (suite only) | branch a0ae6fa `AwtoWdtHang` after `AWTO_CPU_IDLE_MS`; not for the production image | wrong sentence in `fw/sdk-parked/cpu-suite/docs/cpu-suite.md` fixed in the next edit of that file | P4 |
 
 ## 2. Timers, serial, I2C, keys, CEC, PWM, audio, power-saving clocks
 
@@ -59,7 +59,7 @@
 | Unsupported `AWTO_CLOCK_MHZ` / `AWTO_FLASH_MHZ` values | n/a | wrong (silent) | `Project_Option.h:352-365`, `Scaler_Option.h:643-660`: any value > 87 other than 350 compiles as 175; any `AWTO_FLASH_MHZ` other than 117 / 87 as 70; `Project_Config_Check.h` has no check | `#error` for values outside {87, 175, 350} / {70, 87, 117} | P4 |
 
 ## 4. Interrupt latency and ISR time vs deadlines
-- Sim (dw8051, `cpu-suite.md`): EXINT0 / Timer0 entry mean latency 78 / 138 / 162 counts = 10.7 / 9.4 / 5.5 us at 87 / 175 / 350: cache-cold entry, falls only 2x for a 4x clock. Timer1 (cache hit) 23 counts = 0.8 us at 350. Not measured on the unit (Phase B of the suite).
+- Sim (dw8051, `fw/sdk-parked/cpu-suite/docs/cpu-suite.md`): EXINT0 / Timer0 entry mean latency 78 / 138 / 162 counts = 10.7 / 9.4 / 5.5 us at 87 / 175 / 350: cache-cold entry, falls only 2x for a 4x clock. Timer1 (cache hit) 23 counts = 0.8 us at 350. Not measured on the unit (Phase B of the suite).
 - Cache fill on the unit: 1099 ns per 16 B line at 116.9 MHz flash, 3601 ns at stock (`clock-sweep.md` cache meter).
 
 | item | clock dependency | verdict | evidence | fix / test | prio |

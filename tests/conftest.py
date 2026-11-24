@@ -1,7 +1,7 @@
 """Shared test setup.
 - `slow`: full simulator runs (> ~10 s), skipped unless `pytest --slow` (`./dev.py gate` passes it).
 - `hw`: real hardware, skipped unless `pytest --hw` / AWTO_TEST_HW=1; the unit comes from AWTO_TEST_UNIT (docs/gates.md).
-- `fw_image` / `fw_variant` / `fw_cpu_suite`: firmware image, resolution in scripts/test_image.py. Image absent = skip naming the
+- `fw_image` / `fw_variant`: firmware image, resolution in scripts/test_image.py. Image absent = skip naming the
   fixture; with AWTO_TEST_STRICT=1 (`./dev.py gate`) it is a failure.
 """
 import os
@@ -59,17 +59,6 @@ def fw_variant(fw_image):
     def get(kind, *defs):
         try:
             return TI.variant(kind, *defs)
-        except TI.ImageUnavailable as e:
-            _unavailable(e)
-    return get
-
-
-@pytest.fixture(scope="session")
-def fw_cpu_suite(fw_image):
-    """fw_cpu_suite(87): the CPU-suite image at that clock (MHz)."""
-    def get(clock):
-        try:
-            return TI.cpu_suite(clock)
         except TI.ImageUnavailable as e:
             _unavailable(e)
     return get

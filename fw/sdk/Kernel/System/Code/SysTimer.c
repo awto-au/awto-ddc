@@ -46,9 +46,6 @@
 void SysTimerHandler(void);
 void SysTimerEventProc(EnumScalerTimerEventID enumEventID);
 void SysTimerIntProc0(void) __interrupt(1);
-#ifdef _AWTO_CPU_SUITE
-void SysTimerIntProc1(void) __interrupt(3);
-#endif
 void SysTimerIntProc2(void) __interrupt(5);
 void SysTimerWDIntProc(void) __interrupt(8);
 
@@ -385,21 +382,12 @@ void SysTimerIntProc0(void) __interrupt(1)
 {
     static BYTE ucFff4 [[awto::isr_shared("private to this ISR: burst-write backup, own storage (an overlaid local broke the stall test)")]];
 
-    AWTO_CPUS_ISR(1);
     // Backup for Burst Write Bug
     ucFff4 = MCU_FFF4_SCA_INF_ADDR; AwtoT0EvIsr(); AWTO_ISR_WAKE(T0);
 
     // Reload Backup for Burst Write Bug
     MCU_FFF4_SCA_INF_ADDR = ucFff4;
 }
-
-#ifdef _AWTO_CPU_SUITE
-// Timer1 vector: only the CPU suite image enables it; every other image gets a bare reti (fw_build write_vectors)
-void SysTimerIntProc1(void) __interrupt(3)
-{
-    AWTO_CPUS_ISR(3);
-}
-#endif
 
 //--------------------------------------------------
 // Description  : Timer2 Int Function

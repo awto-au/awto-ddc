@@ -235,9 +235,6 @@ static void SysMainPass(void)
 //--------------------------------------------------
 void main(void)
 {
-#ifdef _AWTO_CPU_SUITE
-    AwtoCpuSuiteMain();                     // special image (docs/cpu-suite.md): the suite runner replaces the whole main loop
-#endif
     AwtoStackPaint();
     AwtoWdtInit();
     AwtoFlashWindowCheck();

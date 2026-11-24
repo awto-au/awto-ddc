@@ -479,17 +479,6 @@ extern void AwtoWdtShow(void);
 #define AWTO_WDT_SHOW()
 #define AwtoOsdWdtLines()
 #endif
-// CPU suite image (-D _AWTO_CPU_SUITE, fw/test/cpu_suite.c, docs/cpu-suite.md): ISR hook at the top of EXINT0 / Timer0 / Timer1.
-#ifdef _AWTO_CPU_SUITE
-extern volatile __xdata unsigned char isr_g_ucCpuIsr;
-extern volatile __xdata unsigned char isr_g_aucCpuSnap[4];
-extern void AwtoCpuIsr(unsigned char ucVec);
-extern void AwtoCpuSuiteMain(void);
-#define AWTO_CPUS_ISR(ucVec)                                    do { if(isr_g_ucCpuIsr != 0) { isr_g_aucCpuSnap[0] = TL0; isr_g_aucCpuSnap[1] = TH0; \
-                                                                     isr_g_aucCpuSnap[2] = TL1; isr_g_aucCpuSnap[3] = TH1; AwtoCpuIsr(ucVec); return; } } while(0)
-#else
-#define AWTO_CPUS_ISR(ucVec)
-#endif
 // Interrupt priority (IP), named policy values, docs/watchdog.md "IP in the power-saving window": bit 7 = WD warning (high), bit 5 = Timer2, bit 0 = EXINT0.
 #define AWTO_IP_NORMAL                                          0xA0    // WD warning + Timer2 high, EXINT0 low
 #define AWTO_IP_PS_WINDOW                                       0x81    // WD warning + EXINT0 high, Timer2 low (DP AUX handling in power saving)

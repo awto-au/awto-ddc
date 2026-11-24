@@ -3,7 +3,7 @@
 Resolution (`base()`): 1. $AWTO_TEST_IMAGE (stem, .bin or .map accepted)  2. newest build of THIS tree at HEAD
   (`commit` / `dirty` in tmp/fw/<stem>.build.json, no defines, dev layout; gated records first)
   3. one `./dev.py build --tag testimg` into this tree's tmp (serialised by build_guard; cached by commit).
-Variants by capability: `variant("clk87")`, `variant("t0ev")`, `variant("nofrc")`, `cpu_suite(87)` or any `-D` list;
+Variants by capability: `variant("clk87")`, `variant("t0ev")`, `variant("nofrc")`, or any `-D` list;
   found by (commit, defines set), else built beside the base as `<base tag>-<slug>` (same names as fw_gates --build-inputs).
 Opt out of builds: AWTO_TEST_NO_BUILD=1 (the fixture then skips, naming itself).
 """
@@ -144,15 +144,6 @@ def variant(kind, *defs: str) -> Image:
         return img
     slug = "-".join(names) if names else "-".join(sorted(x.lower().replace("=", "") for x in _norm(d)))
     return _build(f"{b.tag}-{slug}", [*b.meta().get("defines", []), *d], b.serial)
-
-
-def cpu_suite(clock: int) -> Image:
-    """CPU-suite image at `clock` MHz (fw/test/cpu_suite.c, no monitor); same names as `dev.py cpu-suite --sim --build`."""
-    b = base()
-    defs = ["_AWTO_CPU_SUITE", f"AWTO_CLOCK_MHZ={clock}"]
-    if (img := _find(_norm(defs))) and img.serial == b.serial:
-        return img
-    return _build(f"cpusuite-{clock}", defs, b.serial)
 
 
 def restore_port() -> None:

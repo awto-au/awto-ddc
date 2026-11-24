@@ -490,15 +490,6 @@ fw/test/asteroids.c|-|const|AWTO_AST_TICK_MS|1	W0546	E	fw/test/asteroids.c	67	-	
 fw/test/asteroids.c|-|const|AWTO_AST_INFO_PERIOD_MS|1	W0547	E	fw/test/asteroids.c	176	-	const	1000	ms	AwtoMs() deadline / pass budget in Timer2 ms	no	1000	1000	ours	[emu]	OK		AWTO_AST_INFO_PERIOD_MS
 fw/test/asteroids.c|-|const|AWTO_AST_PASS_MS|1	W0548	E	fw/test/asteroids.c	187	-	const	8	ms	AwtoMs() deadline / pass budget in Timer2 ms	no	8	8	ours	[emu]	OK		AWTO_AST_PASS_MS
 fw/test/asteroids.c|-|const|AWTO_AST_FRAME_MS|1	W0549	E	fw/test/asteroids.c	188	-	const	40	ms	AwtoMs() deadline / pass budget in Timer2 ms	no	40	40	ours	[emu]	OK		AWTO_AST_FRAME_MS
-fw/test/cpu_suite.c|-|const|AWTO_CPU_IDLE_MS|1	W0550	E	fw/test/cpu_suite.c	17	-	const	30000	ms	AwtoMs() deadline / pass budget in Timer2 ms	no	30000	30000	ours	[emu]	OK		AWTO_CPU_IDLE_MS
-fw/test/cpu_suite.c|-|const|AWTO_CPU_C_T_MS16|1	W0551	E	fw/test/cpu_suite.c	32	-	const	7	ms	AwtoMs() deadline / pass budget in Timer2 ms	no	7	7	ours	[emu]	OK		AWTO_CPU_C_T_MS16
-fw/test/cpu_suite.c|-|const|AWTO_CPU_C_T_MS32|1	W0552	E	fw/test/cpu_suite.c	33	-	const	8	ms	AwtoMs() deadline / pass budget in Timer2 ms	no	8	8	ours	[emu]	OK		AWTO_CPU_C_T_MS32
-fw/test/cpu_suite.c|-|const|AWTO_CPU_AR_PERIODS|1	W0553	E	fw/test/cpu_suite.c	62	-	const	20	ms	AwtoMs() deadline / pass budget in Timer2 ms	no	20	20	ours	[emu]	OK		AWTO_CPU_AR_PERIODS
-fw/test/cpu_suite.c|-|const|AWTO_CPU_MS_TICKS|1	W0554	E	fw/test/cpu_suite.c	68	-	const	12	ms	AwtoMs() deadline / pass budget in Timer2 ms	no	12	12	ours	[emu]	OK		AWTO_CPU_MS_TICKS
-fw/test/cpu_suite.c|-|const|AWTO_CPU_MS_STEP_MAX|1	W0555	E	fw/test/cpu_suite.c	69	-	const	3	ms	AwtoMs() deadline / pass budget in Timer2 ms	no	3	3	ours	[emu]	OK		AWTO_CPU_MS_STEP_MAX
-fw/test/cpu_suite.c|-|const|AWTO_CPU_MS_LEAD|1	W0556	E	fw/test/cpu_suite.c	70	-	const	5	ms	AwtoMs() deadline / pass budget in Timer2 ms	no	5	5	ours	[emu]	OK		AWTO_CPU_MS_LEAD
-fw/test/cpu_suite.c|-|const|AWTO_CPU_STORM_MS_DEF|1	W0557	E	fw/test/cpu_suite.c	94	-	const	10	ms	AwtoMs() deadline / pass budget in Timer2 ms	no	10	10	ours	[emu]	OK		AWTO_CPU_STORM_MS_DEF
-fw/test/cpu_suite.c|-|const|AWTO_CPU_STORM_GRACE_MS|1	W0558	E	fw/test/cpu_suite.c	95	-	const	4	ms	AwtoMs() deadline / pass budget in Timer2 ms	no	4	4	ours	[emu]	OK		AWTO_CPU_STORM_GRACE_MS
 fw/test/ddr_draw.c|-|const|AWTO_DRW_STALL_MS|1	W0582	E	fw/test/ddr_draw.c	32	-	const	50	ms	AwtoMs() deadline / pass budget in Timer2 ms	no	50	50	ours	[emu]	OK	MCU_DC CMD busy stall limit = 3 frames of DDR arbitration (scripts/ddr_frame_test.py); op aborted, test-only (freeze builds)	AWTO_DRW_STALL_MS
 fw/test/saver.c|-|const|AWTO_SPLASH_MAX_MS|1	W0559	E	fw/test/saver.c	39	-	const	3000	ms	AwtoMs() deadline / pass budget in Timer2 ms	no	3000	3000	ours	[emu]	OK		AWTO_SPLASH_MAX_MS
 fw/test/saver.c|-|const|AWTO_SAVER_NOSIG_MS|1	W0560	E	fw/test/saver.c	40	-	const	1800	ms	AwtoMs() deadline / pass budget in Timer2 ms	no	1800	1800	ours	[emu]	OK		AWTO_SAVER_NOSIG_MS

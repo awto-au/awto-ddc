@@ -61,7 +61,6 @@ void SysEXINT0(void) __interrupt(0)
     BYTE ucPowerStatus;
 #endif
 
-    AWTO_CPUS_ISR(0);
     AWTO_ISR_WAKE(Ex0);
     // Backup for Burst Write Bug
     ucFff4 = MCU_FFF4_SCA_INF_ADDR; AWTO_T0EV_EXINT0();

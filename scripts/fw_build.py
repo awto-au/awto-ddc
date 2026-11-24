@@ -244,9 +244,6 @@ AWTO_VEC 3 Timer1
 #if(_USB3_RETIMER_SUPPORT == _ON)
 AWTO_VEC 9 EXINT3
 #endif
-#ifdef _AWTO_CPU_SUITE
-AWTO_VEC 3 Timer1
-#endif
 """
 
 
