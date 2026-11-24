@@ -620,7 +620,7 @@ def main() -> int:
                     sim = Sim(a.bin, a.map, not a.no_rotate)
                     try:
                         op(sim, OP_BIG, 60.0, n=int(on), label="sim ot8")
-                        sbad = big_compare(lambda s_, n_: sim_image(sim.font(), s_, n_), "sim SRAM")
+                        sbad = big_compare(lambda s_, n_, sim=sim: sim_image(sim.font(), s_, n_), "sim SRAM")
                         fails += bool(sbad)
                         import osd_render as R
                         OUT.mkdir(parents=True, exist_ok=True)

@@ -129,6 +129,5 @@ Commands: `./dev.py osd-hw-test --unit 3 [--cal] t1 t2 t4 t7 t8 rd freeze`; logs
 - PASS 2 (mode works, other layout): cells are 24 x 36 px (3x the area of `ot8off`'s 12 x 18 cells) and the same pattern ids can be told apart but their pixels sit elsewhere: the layout is read off P0 / P1 / P7 in the photo (file as the OT-8 result, fix `osd_model.glyph_bits`).
 - FAIL: SRAM compare differs; cells stay 12 x 18 (picture = `ot8off`); blank / garbled screen; row 2 high ids differ from the low ids (fetch past 8192 or at the top); screen shifted so the region clips (position units, T9 note) is not a FAIL, re-place.
 - Sim cannot check: the true pixel layout (guess only), the narrow-char slice rule in this mode, whether the scale-up region and fetch timing hold at 24 x 36, fetch past word 8192 for 36-word glyphs, the 12222-word budget on the real SRAM. Only the stored words, the map and the op logic are compared.
-- Image (tag `ot8`): `./dev.py build --unit 3 --tag ot8 -D _AWTO_OSD_HWTEST -D AWTO_OHW_NO_CLK "--fw-args=--xdata-floor 0"`.
-  - `AWTO_OHW_NO_CLK` compiles the clock sweep out of the HWTEST image: HWTEST on main fe592b7 no longer fits XDATA (over by 28 B even with the floor off); without the sweep 417 B are free, below the 700 B floor (hence `--xdata-floor 0`, local hack, never a production image).
+- Image (tag `ot8`): `./dev.py build --unit 3 --tag ot8 -D _AWTO_OSD_HWTEST`.
   - The OT-8 op keeps its scratch in `g_stAwtoOsdHw` (no new XDATA).

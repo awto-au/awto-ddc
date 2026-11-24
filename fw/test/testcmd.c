@@ -796,7 +796,6 @@ static void AwtoOhwBig(void)                            // OT-8: 4 x 8 cells of 
 }
 
 #include "ScalerCommonFunctionInclude.h"                       // DELAY_5US / DELAY_XUS
-#ifndef AWTO_OHW_NO_CLK                                 // -D AWTO_OHW_NO_CLK: image without the clock sweep (frees ~450 B XDATA: HWTEST no longer fits otherwise)
 // ---- MCU / flash clock sweep (docs/clock-sweep.md; host scripts/clk_sweep.py). MCU = M2PLL / F / M, SPI = M2PLL / F / F2 (FFED, FFEE, FFE9).
 // Apply = dividers + everything derived from them as the SDK speed-up mode does, then the checks; held until revert / hold limit.
 // Fallbacks: revert from the main loop at the hold limit; a stalled main loop = WDT reset (586 ms) = stock clock again.
@@ -2091,7 +2090,6 @@ static void AwtoClkPoll(void)
     }
 }
 
-#endif
 
 // ---- OSD write-rate sweep (docs/osd-write-sweep.md): the registers that may limit the OSD port write rate, set one op at a time ----
 // Envelope: FFF1 (bit 7, 3:0), FFFB, FFBC[4:0] only; every op restores the three registers before it returns; a stalled main loop = WDT reset.
@@ -3065,9 +3063,7 @@ static void AwtoOsdHwPoll(void)
     WORD usCalls;
     unsigned long ulT0;
 
-#ifndef AWTO_OHW_NO_CLK
     AwtoClkPoll();
-#endif
     AwtoOswPoll();
     AwtoDdrPoll();
     g_stAwtoOsdHw.ucSaverRun = g_ucAwtoSaverRun;
