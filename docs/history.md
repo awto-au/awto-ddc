@@ -140,7 +140,7 @@ Terms (no bare "vendor"): **Dahua firmware** = the monitor's original firmware (
 
 ### 4.3 Power, wake, KVM, IP over DDC (#78, #79, #60, #83, #80)
 - L1/L2/L3 levels (wake HDMI: 269-304 / 302-372 / ~1.4 s; DP: 509-543 / 614-635 / 1.64-1.67 s). Runtime DDC swap (#79, VCP 0xE3). KVM switch 80-96 ms monitor side; `scripts/kvm.py` 72-91 ms host side (bus cache fix, 2026-11-08); `kvm_demo.py`.
-- #83 pre-fill of the idle DP port works in the sim, **not on hardware** (scan fails, link drops); needs firmware instrumentation (branch `wb-p14pf`, image wb-p14pf1). Idle HDMI ports not covered.
+- #83 pre-fill of the idle DP port works in the sim, **not on hardware** (scan fails, link drops); needs firmware instrumentation (branch `wb-p14pf` deleted 2026-11-24; the feature is on main as kvm_prefill). Idle HDMI ports not covered.
 - After deep sleep the first switch back to HDMI takes the full path (idle receiver powered down; not investigated).
 - IP over DDC = "Busorra" (`scripts/ddcnet.py`, `docs/ip-over-ddc.md`): stack test 13/13 and a real `ping` on unit 2 over DDC/CI (rtt ~140 ms), TAP via `ddcnet.py daemon --units 2 --route`.
 
@@ -178,7 +178,7 @@ Terms (no bare "vendor"): **Dahua firmware** = the monitor's original firmware (
 | `awto-ddc-swap` | wb-p14swap | the image line on units 1/3 (wake, KVM, menu, IP-over-DDC, dead-port guard) |
 | `awto-ddc-keys` | wb-p14keys | #85/#39 keys (keys5 on unit 2; keys6 uncommitted) |
 | `awto-ddc-audio` | wb-p14audio | #94 audio, unmerged |
-| (no worktree) | wb-p14pf | #83 pre-fill |
+| (deleted 2026-11-24) | wb-p14pf | #83 pre-fill (on main as kvm_prefill) |
 | older lines | wb-p14kvm, wb-p14net, wb-osd67(+net), wb-p14sw, wb-sc3, wb-keilcompat, wb-mixed*, wb-port*, wb-ddrinit, wb-msgtable, wb-p14new, wb-vfreq | merged or superseded; prune with `scripts/worktree_prune.py` / `branch_prune.py` after review (they archive images first) |
 
 ## 6. Runbook
