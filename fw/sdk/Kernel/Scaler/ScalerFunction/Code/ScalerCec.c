@@ -276,7 +276,7 @@ void ScalerCecRxReadOutFromBackupFifo(void)
 
         DebugMessageCEC("<= Cec0 Rx Backup Fifo: HB ", isr_g_stCecRxReceivedInfo.ucReceivedHb);
 
-        memset(isr_g_stCecRxReceivedInfo.pucReceivedDb, 0, 16);
+        memset((BYTE *)isr_g_stCecRxReceivedInfo.pucReceivedDb, 0, 16);   // awto: explicit non-volatile cast, W196 (#66)
         for(pData[0] = 0; pData[0] < isr_g_stCecRxReceivedInfo.ucDbLength; pData[0]++)
         {
             isr_g_stCecRxReceivedInfo.pucReceivedDb[pData[0]] = isr_g_pucCecRxBackupFifo[2 + pData[0]];
@@ -782,7 +782,7 @@ void ScalerCecRxWriteIntoRxInfoStruct(void)
 
     DebugMessageCEC("<= Cec Rx Read: HB", isr_g_stCecRxReceivedInfo.ucReceivedHb);
 
-    memset(isr_g_stCecRxReceivedInfo.pucReceivedDb, 0, 16);
+    memset((BYTE *)isr_g_stCecRxReceivedInfo.pucReceivedDb, 0, 16);   // awto: explicit non-volatile cast, W196 (#66)
     for(pData[0] = 0; pData[0] < isr_g_stCecRxReceivedInfo.ucDbLength; pData[0]++)
     {
         isr_g_stCecRxReceivedInfo.pucReceivedDb[pData[0]] = ScalerGetByteVar(P18_D3_CEC1_RXDR1_1 + pData[0]);
@@ -849,7 +849,7 @@ void ScalerCecSendNewFx(void)
     DebugMessageCEC("=> Cec Tx send: HB", g_stCecTxTransmitInfo.ucTransmitHb);
 
     // Clear & Set message into CEC Tx Fifo
-    memset((volatile BYTE xdata *)P18_C0_CEC1_TXDR1_1, 0x00, 16);
+    memset((BYTE xdata *)P18_C0_CEC1_TXDR1_1, 0x00, 16);   // awto: explicit non-volatile cast, W196 (#66)
     for(ucParam = 0; ucParam < g_stCecTxTransmitInfo.ucDbLength; ucParam += 1)
     {
         ScalerSetByte((P18_C0_CEC1_TXDR1_1 + ucParam), g_stCecTxTransmitInfo.pucTransmitDb[ucParam]);

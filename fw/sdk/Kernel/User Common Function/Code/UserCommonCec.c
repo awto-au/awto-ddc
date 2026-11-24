@@ -70,7 +70,7 @@ void UserCommonCecReceiveNotify(void)
         UserInterfaceCecReceivedNotify((StructCecRxReceivedInfo *)&isr_g_stCecRxReceivedInfo);
 
         // reset Cec rx struct
-        memset(&isr_g_stCecRxReceivedInfo, 0, sizeof(isr_g_stCecRxReceivedInfo));
+        memset((StructCecRxReceivedInfo *)&isr_g_stCecRxReceivedInfo, 0, sizeof(isr_g_stCecRxReceivedInfo));   // awto: explicit non-volatile cast, W196 (#66)
     }
 }
 

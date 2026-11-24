@@ -33,6 +33,8 @@
 | `Kernel/Scaler/RL6449_Series_Scaler/Code/RL6449_Series_Power.c` | behaviour | fast boot: no waits for rails this board never switches | #63 | 3 |
 | `Kernel/Scaler/RL6449_Series_Scaler/Code/RL6449_Series_TMDSRx2.c` | behaviour | keep SCDC 0x20 across a TMDS initial (host 1/40 ratio) | #78 | 1 |
 | `Kernel/Scaler/RL6449_Series_Scaler/Code/RL6449_Series_TMDSRx3.c` | behaviour | keep SCDC 0x20 across a TMDS initial (host 1/40 ratio) | #78 | 1 |
+| `Kernel/Scaler/ScalerFunction/Code/ScalerCec.c` | mechanical | explicit non-volatile cast on memset of CEC state, warning 196 gone; object code identical | #66 | 3 |
+| `Kernel/User Common Function/Code/UserCommonCec.c` | mechanical | same cast on the RX struct clear | #66 | 1 |
 | `Kernel/Scaler/ScalerCommonFunction/Code/ScalerCommonDebug.c` | behaviour | debug IIC engine follows the active port | #28 | 4 |
 | `Kernel/Scaler/ScalerCommonFunction/Code/ScalerCommonDebug.c` | behaviour | debug slave answers in the EXINT1 ISR | #38 | 1 |
 | `Kernel/Scaler/ScalerCommonFunction/Code/ScalerCommonDebug.c` | behaviour | host-silence timeout of the debug wait | #56 | 1 |
