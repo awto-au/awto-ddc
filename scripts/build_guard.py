@@ -62,3 +62,11 @@ def acquire(tree: Path, lock: Path = LOCK, wait_s: int = WAIT_S, min_mb: int = M
     fh.flush()
     _held = fh                                                  # released at process exit
     _say(f"build: lock taken, {free} MB available")
+
+
+def release() -> None:
+    """Drop the lock before the process exits (dev.py gate: the tests start their own variant builds, #339)."""
+    global _held
+    if _held is not None:
+        _held.close()               # closing the descriptor releases the flock
+        _held = None

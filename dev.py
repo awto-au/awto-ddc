@@ -749,6 +749,7 @@ def cmd_build(extra: list[str]) -> int:
             args += [o, v]
     import fwimage
     rc = fwimage.main(args)
+    build_guard.release()                                            # the lock covers the build only; a gate's tests build variants next
     if rc:
         return rc
     name = f"{u['serial']}-{tag}-be"

@@ -28,3 +28,13 @@ def test_lock_taken_and_second_waiter_times_out(tmp_path):
     with pytest.raises(BlockingIOError):
         fcntl.flock(other, fcntl.LOCK_EX | fcntl.LOCK_NB)   # held by this process's descriptor
     G._held.close()
+
+
+def test_release_lets_a_second_builder_in(tmp_path):
+    lock = tmp_path / "locks" / "build.lock"
+    G.acquire(tmp_path, lock=lock, wait_s=1, min_mb=1)
+    G.release()
+    other = lock.open("a+")
+    fcntl.flock(other, fcntl.LOCK_EX | fcntl.LOCK_NB)         # free again, no BlockingIOError
+    other.close()
+    assert G._held is None
