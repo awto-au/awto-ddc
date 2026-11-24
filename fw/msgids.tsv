@@ -6,7 +6,7 @@
 01ce	CheckMDomain	Kernel/Scaler/ScalerFunction/Code/ScalerMDomain.c:1842	_LAST_LINE_TARGET too close to DHtotal boundary !!! Double check _LAST_LINE_TARGET.	1
 01d3	FRC	Kernel/Scaler/RL6449_Series_Scaler/Code/RL6449_Series_Scaling.c:612	DDEN Period	1
 01db	Rx2	Kernel/Scaler/ScalerCommonFunction/Code/ScalerCommonSync.c:5736	Get Color Space YUV444	0
-01fa	Rx0	Kernel/Scaler/ScalerFunction/Code/ScalerDP_SeptPhy.c:959	7. DP Long HPD	0
+01fa	Rx0	Kernel/Scaler/ScalerFunction/Code/ScalerDP_SeptPhy.c:961	7. DP Long HPD	0
 021f	System	Kernel/Scaler/ScalerFunction/Code/ScalerMDomain.c:608	_DHTotal_over_panel	1
 021f	System	Kernel/Scaler/ScalerFunction/Code/ScalerMDomain.c:624	_DHTotal_over_panel	1
 024a	FRC	Kernel/Scaler/RL6449_Series_Scaler/Code/RL6449_Series_Rotation.c:67	R_IV	1
@@ -41,8 +41,8 @@
 1446	Analog	Kernel/User Common Function/Code/UserCommonNVRamSystem.c:1482	4. Match presetmode	0
 1446	Analog	Kernel/User Common Function/Code/UserCommonNVRamSystem.c:943	4. Match presetmode	0
 14da	Audio	Kernel/System/Code/SysAudio.c:388	Audio Dac Depop	0
-1502	Rx1	Kernel/Scaler/ScalerFunction/Code/ScalerDP_SeptPhy.c:479	_D1_HOT_PLUG_HIGH after Xms	0
-1502	Rx1	Kernel/Scaler/ScalerFunction/Code/ScalerDP_SeptPhy.c:487	_D1_HOT_PLUG_HIGH after Xms	0
+1502	Rx1	Kernel/Scaler/ScalerFunction/Code/ScalerDP_SeptPhy.c:480	_D1_HOT_PLUG_HIGH after Xms	0
+1502	Rx1	Kernel/Scaler/ScalerFunction/Code/ScalerDP_SeptPhy.c:488	_D1_HOT_PLUG_HIGH after Xms	0
 1584	Rx1	Kernel/Scaler/ScalerCommonFunction/Code/ScalerCommonDPRx1.c:1507	_COLORIMETRY_RAW	0
 1589	Rx2	Kernel/Scaler/RL6449_Series_Scaler/Code/RL6449_Series_TMDSRx2.c:3948	7. TMDS Lane2 LE Max	0
 15a0	Scaler	Kernel/User Common Function/Code/UserCommonInterface.c:4401	MBR: Kernel Adjusted Backlight Mode	0
@@ -61,9 +61,9 @@
 1b73	Rx2	Kernel/Scaler/ScalerCommonFunction/Code/ScalerCommonSync.c:5950	Get Colorimetry INTO_DEFAULT	0
 1b73	Rx2	Kernel/Scaler/ScalerCommonFunction/Code/ScalerCommonSync.c:6024	Get Colorimetry INTO_DEFAULT	0
 1b73	Rx2	Kernel/Scaler/ScalerCommonFunction/Code/ScalerCommonSync.c:6055	Get Colorimetry INTO_DEFAULT	0
-1e70	Digital	Kernel/Scaler/ScalerFunction/Code/ScalerDP_SeptPhy.c:792	7. Low Power Event	1
-1e70	Digital	Kernel/Scaler/ScalerFunction/Code/ScalerDP_SeptPhy.c:837	7. Low Power Event	1
-1e70	Digital	Kernel/Scaler/ScalerFunction/Code/ScalerDP_SeptPhy.c:880	7. Low Power Event	1
+1e70	Digital	Kernel/Scaler/ScalerFunction/Code/ScalerDP_SeptPhy.c:794	7. Low Power Event	1
+1e70	Digital	Kernel/Scaler/ScalerFunction/Code/ScalerDP_SeptPhy.c:839	7. Low Power Event	1
+1e70	Digital	Kernel/Scaler/ScalerFunction/Code/ScalerDP_SeptPhy.c:882	7. Low Power Event	1
 1e7e	Rx2	Kernel/Scaler/ScalerCommonFunction/Code/ScalerCommonSync.c:6256	YCC Quantization Range Changed	0
 1ee3	CEC	Kernel/Scaler/ScalerFunction/Code/ScalerCec.c:450	CEC: Unexpected RX condition.....	0
 1fcf	Rx0	Kernel/Scaler/ScalerFunction/Code/ScalerDP_SeptPhy.c:439	_D0_HOT_PLUG_HIGH after Xms	0
@@ -92,7 +92,7 @@
 2b0b	Rx1	Kernel/Scaler/RL6449_Series_Scaler/Code/RL6449_Series_DPRx1.c:2187	modified M code	0
 2b7e	Rx2	Kernel/Scaler/ScalerFunction/Code/ScalerTMDSRx2_SeptPhy.c:856	7. PowerSaving D2 DDC	0
 2bc8	Audio	Kernel/Scaler/ScalerFunction/Code/ScalerAudio_SeptPhy.c:539	False : D3 Audio Packet	0
-2d7e	Rx0	Kernel/Scaler/ScalerFunction/Code/ScalerDP_SeptPhy.c:950	7. DP HDCP Long HPD	0
+2d7e	Rx0	Kernel/Scaler/ScalerFunction/Code/ScalerDP_SeptPhy.c:952	7. DP HDCP Long HPD	0
 2dc9	Rx1	Kernel/Scaler/ScalerCommonFunction/Code/ScalerCommonDPRx1.c:1915	VSC change: Color Space, _COLOR_SPACE_YCBCR422	0
 2de2	FRC	Kernel/Scaler/RL6449_Series_Scaler/Code/RL6449_Series_Rotation.c:68	R-OH	1
 2df4	FRC	Kernel/Scaler/ScalerFunction/Code/ScalerMemory.c:742	FrameTrack-DVT-Error	1
@@ -310,7 +310,7 @@
 8adb	Scaler	Kernel/System/Code/SysMode.c:714	DRR Get IVF from user define	0
 8b05	Rx2	Kernel/Scaler/RL6449_Series_Scaler/Code/RL6449_Series_TMDSRx2.c:3395	4. VCO is not band10, reset Icp	0
 8b29	Rx1	Kernel/Scaler/ScalerCommonFunction/Code/ScalerCommonDPRx1.c:1587	_COLORIMETRY_EXT_RGB_SCRGB	0
-8b60	Rx1	Kernel/Scaler/ScalerFunction/Code/ScalerDP_SeptPhy.c:1020	7. DP Long HPD	0
+8b60	Rx1	Kernel/Scaler/ScalerFunction/Code/ScalerDP_SeptPhy.c:1022	7. DP Long HPD	0
 8b92	Rx1	Kernel/Scaler/ScalerCommonFunction/Code/ScalerCommonDPRx1.c:1537	_COLORIMETRY_EXT_YCC_XVYCC601	0
 8d5e	Rx1	Kernel/Scaler/RL6449_Series_Scaler/Code/RL6449_Series_DPRx1.c:2487	2nd PE Max Record	0
 8db7	Rx2	Kernel/Scaler/ScalerCommonFunction/Code/ScalerCommonSync.c:5759	Get Pixel Repetition 2	0
@@ -341,7 +341,7 @@
 9a80	Scaler	Kernel/User Common Function/Code/UserCommonInterface.c:4463	MBR: Step Change Count	0
 9a8d	Rx1	Kernel/Scaler/ScalerCommonFunction/Code/ScalerCommonDPRx1.c:916	Current Link Clk	0
 9a8d	Rx1	Kernel/Scaler/ScalerFunction/Code/ScalerDPRx1_SeptPhy.c:3102	Current Link Clk	0
-9b2d	Rx1	Kernel/Scaler/ScalerFunction/Code/ScalerDP_SeptPhy.c:1033	7. DP Margin Link Long HPD	0
+9b2d	Rx1	Kernel/Scaler/ScalerFunction/Code/ScalerDP_SeptPhy.c:1035	7. DP Margin Link Long HPD	0
 9bce	System	Kernel/User Common Function/Code/UserCommonInterface.c:3889	OSD -- Pin Assignment E Support On/Off Switch	1
 9c3c	Rx1	Kernel/Scaler/ScalerCommonFunction/Code/ScalerCommonDPRx1.c:1182	VSC DB17	0
 9cfb	Rx1	Kernel/Scaler/RL6449_Series_Scaler/Code/RL6449_Series_DPRx1.c:2486	2nd PE Loop	0
@@ -385,7 +385,7 @@ ad5e	FS	Kernel/Scaler/ScalerFunction/Code/ScalerPLL.c:2179	New offset	1
 ad5e	FS	Kernel/Scaler/ScalerFunction/Code/ScalerPLL.c:2188	New offset	1
 ad5e	FS	Kernel/Scaler/ScalerFunction/Code/ScalerPLL.c:2195	New offset	1
 ad9b	CheckMDomain	Kernel/Scaler/ScalerFunction/Code/ScalerMDomain.c:1879	OD Efficiency(%)	1
-ae31	Rx1	Kernel/Scaler/ScalerFunction/Code/ScalerDP_SeptPhy.c:1011	7. DP HDCP Long HPD	0
+ae31	Rx1	Kernel/Scaler/ScalerFunction/Code/ScalerDP_SeptPhy.c:1013	7. DP HDCP Long HPD	0
 ae56	System	Kernel/User Common Function/Code/UserCommonInterface.c:3621	DP Clone Mode Switch	1
 ae5c	Rx2	Kernel/Scaler/RL6449_Series_Scaler/Code/RL6449_Series_TMDSRx2.c:2728	R Channel CDR Unstable	0
 ae5c	Rx2	Kernel/Scaler/RL6449_Series_Scaler/Code/RL6449_Series_TMDSRx2.c:2744	R Channel CDR Unstable	0
@@ -422,7 +422,7 @@ b7e4	FRC	Kernel/Scaler/RL6449_Series_Scaler/Code/RL6449_Series_Rotation.c:64	R_T
 b852	Audio	Kernel/Scaler/ScalerFunction/Code/ScalerDPRx1_SeptPhy.c:1743	00. DP Power Saving Audio : Idle Pattern Case	0
 b8be	Rx2	Kernel/Scaler/ScalerCommonFunction/Code/ScalerCommonSync.c:6139	Get RGB RESERVED RANGE	0
 b959	Rx1	Kernel/Scaler/ScalerFunction/Code/ScalerDPRx1_SeptPhy.c:2772	###Origin usVTotal###	0
-b98f	Rx0	Kernel/Scaler/ScalerFunction/Code/ScalerDP_SeptPhy.c:1266	DP Rx0 MST reset	0
+b98f	Rx0	Kernel/Scaler/ScalerFunction/Code/ScalerDP_SeptPhy.c:1268	DP Rx0 MST reset	0
 b9a4	CEC	Kernel/Scaler/ScalerFunction/Code/ScalerCec.c:713	CEC TX FAKE Line Error Happened Orz.........	0
 ba10	Rx1	Kernel/Scaler/ScalerCommonFunction/Code/ScalerCommonDPRx1.c:1413	_COLOR_DEPTH	0
 ba6b	Measure	Kernel/Scaler/ScalerFunction/Code/ScalerMeasure.c:208	VGA active count difference fail	1
@@ -503,11 +503,11 @@ d8a7	Rx1	Kernel/Scaler/ScalerCommonFunction/Code/ScalerCommonDPRx1.c:999	7. Fram
 d9b0	FS	Kernel/Scaler/ScalerFunction/Code/ScalerMDomain.c:1425	DVS	1
 daab	System	Kernel/System/Code/SysJudge.c:789	Input Timing HFreq	1
 dae5	Scaler	Kernel/Scaler/ScalerFunction/Code/ScalerIDomain.c:179	9. Set Capture usHWidth	0
-db47	Rx1	Kernel/Scaler/ScalerFunction/Code/ScalerDP_SeptPhy.c:1276	DP Rx1 MST reset	0
+db47	Rx1	Kernel/Scaler/ScalerFunction/Code/ScalerDP_SeptPhy.c:1278	DP Rx1 MST reset	0
 db5c	CheckMDomain	Kernel/Scaler/ScalerFunction/Code/ScalerMDomain.c:1893	FRC Efficiency(%)	1
 db62	System	Kernel/System/Code/SysJudge.c:795	Input Timing VTotal	1
 dc32	System	Kernel/System/Code/SysSource.c:3849	0. Cable Status Chanaged A1	1
-dce6	Rx0	Kernel/Scaler/ScalerFunction/Code/ScalerDP_SeptPhy.c:977	7. DP Margin Link Long HPD	0
+dce6	Rx0	Kernel/Scaler/ScalerFunction/Code/ScalerDP_SeptPhy.c:979	7. DP Margin Link Long HPD	0
 dd13	Rx2	Kernel/Scaler/RL6449_Series_Scaler/Code/RL6449_Series_TMDSRx2.c:3947	7. TMDS Lane1 LE Max	0
 de0b	Rx1	Kernel/Scaler/ScalerFunction/Code/ScalerDPRx1_SeptPhy.c:3532	7. DP Rebuild PHY	0
 de27	Audio	Kernel/System/Code/SysAudio.c:408	Audio Dac Ready	0

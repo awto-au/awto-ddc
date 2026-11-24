@@ -1591,6 +1591,7 @@ extern void AwtoSyncFreq(void);
 #define AWTO_SYNC_EV_INITX                                      0x93    // INITIAL exit: arg 0 = first check, 5 = longest gap between checks, 1..4 = SDK change flag (source, mode, OSD, others) that held it; value = ms since INITIAL began
 #define AWTO_SYNC_EV_ATAIL                                      0x94    // display setting done -> ACTIVE: value = panel video ready ms << 16 | ACTIVE timer ms, both since the display setting ended
 #define AWTO_SYNC_EV_DWELL                                      0x95    // arg = port: predetect re-armed the search dwell (SDK reactive time); value = ms since the search reached the port
+#define AWTO_SYNC_EV_HPDLONG                                    0x9A    // arg = port: HPD held low, raised again after value ms (SDK long-HPD event; #193)
 #define AWTO_SYNC_EV_PASSSLOW                                   0x96    // arg = stage AWTO_PS_*; value = state << 24 | per-boot count << 16 | ms: one main-loop segment >= AWTO_PS_SLOW_MS (#311)
 #define AWTO_SYNC_EV_PASSBOOT                                   0x97    // arg = stage that owned the longest pass of a state; value = state << 24 | ms (count byte 0), once per boot after ACTIVE (#311)
 #define AWTO_SYNC_EV_FASTWAKE                                   0x99    // #313 fast wake: arg 4 = judge memory check failed (value = AwtoFastScalerStatus << 8 | memory check failed), arg 1 = try failed (value = status << 16 | reason << 8 | try; reason bits as AWTO_SW_EV_FAST_WHY, 6 = FIFO), 2 = hold started (value = try counter found)

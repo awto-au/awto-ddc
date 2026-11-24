@@ -189,9 +189,13 @@
 //****************************************************************************
 // STRUCT / TYPE / ENUM DEFINITTIONS
 //****************************************************************************
+// Power-on long HPD pulse (was 700): the SDK's own source floor ("~250ms", ScalerDP_SeptPhy.c); spec min 2 ms.
+// Source and decision: awto-ddc#193, docs/delays.md.
+#define AWTO_DP_LONG_HPD_MS                                     250
+
 typedef enum
 {
-    _DP_LONG_HPD_TIME = 700,
+    _DP_LONG_HPD_TIME = AWTO_DP_LONG_HPD_MS,
     _DP_HDCP_LONG_HPD_TIME = 800,
     _DP_MST_LONG_HPD_TIME = 800,
     _DP_HBR2_MARGIN_LINK_HPD_TIME = 800,

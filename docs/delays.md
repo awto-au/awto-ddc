@@ -145,6 +145,7 @@ Abbreviations in the table:
 | SysSource.c:698 | double-check search | 0.5 s | `_SOURCE_DOUBLE_CHECK_SEARCH_TIME_NVRAM_PORT` | SDK | no spec | no spec | search ends |
 | SysDP.c:257,304 and ScalerDPRx1_SeptPhy.c:4925 | DP hotplug / link-status IRQ | 100 ms | SDK | SDK | no spec | no spec | event fires |
 | ScalerDP_SeptPhy.c:594 | DP HPD sequence | table | SDK | SDK | no spec | no spec | event fires |
+| `ScalerCommonSyncCommonInclude.h` `AWTO_DP_LONG_HPD_MS` (`_DP_LONG_HPD_TIME`), timer event in `ScalerDpHotPlugHandler` | DP HPD low time of the power-on long pulse (soft off -> on; the source re-reads the EDID and re-trains). Non-blocking; sync line `D1 HPD pulse ... high again in N` (id 9A) | 250 ms (SDK 700) | project header | The SDK comment at `ScalerDP_SeptPhy.c` (`_DP_LONG_HPD_EVENT` at OFF_TO_NORMAL): a long HPD under ~250 ms made one laptop fail; the 250 ms is that floor, not a margin. #193 | DP spec: HPD low > 2 ms = unplug / replug (VESA text not in `/vendors`; secondary source salivity.github.io/dp "why-long-display-port-hpd-drops-cause-disconnections", 2026-11-24) | 125 | HPD high |
 | ScalerDPRx1_SeptPhy.c:5391 | HDCP long hotplug | 1 s | SDK | SDK | no spec | no spec | event fires |
 | RL6449_Series_DP_INT.c:822 | DP rebuild PHY on Timer0 | 30 ms | SDK; `fw/timer/t0ev.c:219` | SDK | no spec | no spec | event fires |
 | SysAudio.c:358,377,394 | DAC VCM initial 0.1 s; charge 0.5 s; depop 0.1 s | | SysAudio.c:30-31; `RL6449_Project_Default.h:1880` | SDK | no spec | no spec | state step |

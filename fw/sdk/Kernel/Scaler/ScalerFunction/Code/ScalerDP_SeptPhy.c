@@ -452,6 +452,7 @@ void ScalerDpHotPlugHandler(void)
 #if(_DP_LONG_HPD_MODE == _DP_LONG_HPD_TIMEREVENT_MODE)
                     if(pstHpdSeq[ucI].enumHpdTime > 0)
                     {
+                        AwtoSyncPush(AWTO_SYNC_EV_HPDLONG, _D0_INPUT_PORT, pstHpdSeq[ucI].enumHpdTime);
                         ScalerTimerReactiveTimerEvent(pstHpdSeq[ucI].enumHpdTime, _SCALER_TIMER_EVENT_DP_RX0_HOTPLUG_ASSERTED);
                     }
                     else
@@ -492,6 +493,7 @@ void ScalerDpHotPlugHandler(void)
 #if(_DP_LONG_HPD_MODE == _DP_LONG_HPD_TIMEREVENT_MODE)
                     if(pstHpdSeq[ucI].enumHpdTime > 0)
                     {
+                        AwtoSyncPush(AWTO_SYNC_EV_HPDLONG, _D1_INPUT_PORT, pstHpdSeq[ucI].enumHpdTime);
                         ScalerTimerReactiveTimerEvent(pstHpdSeq[ucI].enumHpdTime, _SCALER_TIMER_EVENT_DP_RX1_HOTPLUG_ASSERTED);
                     }
                     else
