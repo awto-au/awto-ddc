@@ -49,6 +49,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import chip_mem as CM
 import d8051
+from _log import Logger
 from _repo import ROOT as REPO
 
 BANK = CM.BANK_SIZE
@@ -932,11 +933,7 @@ def main():
                     help="post-bank asm dir of THIS image's build (const_ptr_gptr_xbank; skipped when absent)")
     ap.add_argument("--save", default="", help="write finding keys here")
     a = ap.parse_args()
-    (REPO / "tmp/logs").mkdir(parents=True, exist_ok=True)
-    lf = (REPO / "tmp/logs/fw_link_check.log").open("a")
-
-    def log(s):
-        print(s); lf.write(s + "\n"); lf.flush()
+    log = Logger(REPO / "tmp/logs/fw_link_check.log", stamp_file=False, stamp_echo=False).say
     im, F = run(a.bin, a.map, a.layout, a.common, log, a.asm)
     if a.equiv_bin:
         gim = Image(a.equiv_bin, a.equiv_map, a.equiv_layout, a.common)

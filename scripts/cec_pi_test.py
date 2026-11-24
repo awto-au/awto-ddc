@@ -19,6 +19,7 @@ import sys
 import time
 
 import isostamp
+from _log import Logger
 from _repo import ROOT
 
 LOGDIR = ROOT / "tmp/logs"
@@ -47,12 +48,6 @@ ROWS = [
 BAD = re.compile(r"Not Acknowledged|Timed out|Max Retries|Arbitration Lost|Low Drive|TIMEOUT|not found", re.IGNORECASE)
 
 
-def say(s, f=None):
-    print(s, flush=True)
-    if f:
-        f.write(s + "\n")
-
-
 def run(cmd, timeout, raw):
     raw.write(f"$ {' '.join(cmd)}\n")
     t = time.time()
@@ -76,21 +71,21 @@ def main():
     ap.add_argument("--no-setup", action="store_true", help="the adapter is already configured as a playback device")
     a = ap.parse_args()
     LOGDIR.mkdir(parents=True, exist_ok=True)
-    log, raw = (LOGDIR / "cec_pi_test.log").open("a"), (LOGDIR / "cec_pi_test.raw.log").open("a")
-    say(f"{isostamp.now()} cec_pi_test {a.dev}", log)
+    log, raw = Logger(LOGDIR / "cec_pi_test.log", stamp_file=False, stamp_echo=False), (LOGDIR / "cec_pi_test.raw.log").open("a")
+    log.say(f"{isostamp.now()} cec_pi_test {a.dev}")
     if shutil.which("cec-ctl") is None:
-        say("FAIL cec-ctl not installed (apt install v4l-utils)", log)
+        log.say("FAIL cec-ctl not installed (apt install v4l-utils)")
         return 2
     base = ["cec-ctl", "-d", a.dev]
     if not a.no_setup:
         run(base + ["--playback", "--osd-name", "pi5-test"], CALL_TIMEOUT_S, raw)
     topo = run(base + ["-S"], CALL_TIMEOUT_S, raw)
-    say("topology:\n" + "\n".join("  " + x for x in topo.splitlines()[:30]), log)
+    log.say("topology:\n" + "\n".join("  " + x for x in topo.splitlines()[:30]))
     if not re.search(r"Playback", topo):
-        say("FAIL the adapter is not a playback device (physical address 0xf.f.f.f = no HDMI link / EDID read failed?)", log)
+        log.say("FAIL the adapter is not a playback device (physical address 0xf.f.f.f = no HDMI link / EDID read failed?)")
     fails = 0
     only = set(a.only.split(",")) if a.only else None
-    say(f"{'row':44} {'result':6} detail", log)
+    log.say(f"{'row':44} {'result':6} detail")
     for name, args, want in ROWS:
         if only and name not in only:
             continue
@@ -99,21 +94,21 @@ def main():
         bad = BAD.search(out)
         ok = not miss and not bad
         fails += not ok
-        say(f"{name:44} {'PASS' if ok else 'FAIL':6} " + ("" if ok else (f"missing {miss}" if miss else f"saw '{bad.group(0)}'")), log)
+        log.say(f"{name:44} {'PASS' if ok else 'FAIL':6} " + ("" if ok else (f"missing {miss}" if miss else f"saw '{bad.group(0)}'")))
     if a.compliance:
         if shutil.which("cec-compliance") is None:
-            say("compliance: cec-compliance not installed (apt install v4l-utils)", log)
+            log.say("compliance: cec-compliance not installed (apt install v4l-utils)")
         else:
             hlp = run(["cec-compliance", "--help"], CALL_TIMEOUT_S, raw)
             m = re.search(r"(--test-remote|--remote-test|-r)\b", hlp)
             if m is None:
-                say("compliance: no remote-test option in cec-compliance --help; run it by hand (docs/cec.md)", log)
+                log.say("compliance: no remote-test option in cec-compliance --help; run it by hand (docs/cec.md)")
             else:
                 out = run(["cec-compliance", "-d", a.dev, m.group(1), "0"], COMPLIANCE_TIMEOUT_S, raw)
                 tot = re.findall(r"Total.*", out)
-                say("compliance: " + (tot[-1] if tot else "no Total line, see the raw log"), log)
+                log.say("compliance: " + (tot[-1] if tot else "no Total line, see the raw log"))
                 fails += bool(re.search(r"Failures?: *[1-9]|fail: *[1-9]", out, re.IGNORECASE))
-    say(f"{'PASS' if fails == 0 else 'FAIL'} cec_pi_test: {fails} failed", log)
+    log.say(f"{'PASS' if fails == 0 else 'FAIL'} cec_pi_test: {fails} failed")
     return 1 if fails else 0
 
 

@@ -21,6 +21,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 import clk_sweep as C
 import isostamp
 import osd_hw_test as H
+from _log import shared
 from _repo import ROOT
 
 LOG = ROOT / "tmp/logs/clk_soak.log"
@@ -34,10 +35,7 @@ MAX_RESETS = 3                             # stop after this many resets: the st
 
 
 def say(s: str) -> None:
-    LOG.parent.mkdir(parents=True, exist_ok=True)
-    line = f"{isostamp.now()} {s}"
-    with LOG.open("a") as f:
-        f.write(line + "\n")
+    shared(LOG, echo=None).say(s)
     C.say(s)
 
 

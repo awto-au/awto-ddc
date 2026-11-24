@@ -25,6 +25,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 import dbg_xdata as X
 import isostamp
 import reg_live_scan as S
+from _log import Logger
 from _repo import ROOT
 
 LOG = ROOT / "tmp/logs/reg_behind_probe.log"
@@ -398,11 +399,8 @@ def main_isp(a) -> int:
     i2cbus.require_unit(bus, u["serial"])
     out = Path(a.out) if a.out else ROOT / f"tmp/regs/live/{u['serial']}-behind-isp-{time.strftime('%Y%m%d-%H%M%S')}.json"
     out.parent.mkdir(parents=True, exist_ok=True)
-    LOG.parent.mkdir(parents=True, exist_ok=True)
-    lf = LOG.open("a")
-
-    def log(s: str) -> None:
-        lf.write(f"{isostamp.now()} u{a.unit}/behind-isp {s}\n")
+    lf = Logger(LOG, echo=None, prefix=f"u{a.unit}/behind-isp ")
+    log = lf.say
 
     meta = {"serial": u["serial"], "unit": a.unit, "bus": bus, "start": isostamp.now(), "fw_note": "isp"}
     import rtd_isp_probe
@@ -445,11 +443,8 @@ def main() -> int:
     bus = a.bus if a.bus is not None else S.resolve_bus(u)
     out = Path(a.out) if a.out else ROOT / f"tmp/regs/live/{u['serial']}-behind-{time.strftime('%Y%m%d-%H%M%S')}.json"
     out.parent.mkdir(parents=True, exist_ok=True)
-    LOG.parent.mkdir(parents=True, exist_ok=True)
-    lf = LOG.open("a")
-
-    def log(s: str) -> None:
-        lf.write(f"{isostamp.now()} u{a.unit}/behind {s}\n")
+    lf = Logger(LOG, echo=None, prefix=f"u{a.unit}/behind ")
+    log = lf.say
 
     meta = {"serial": u["serial"], "unit": a.unit, "bus": bus, "start": isostamp.now()}
     try:

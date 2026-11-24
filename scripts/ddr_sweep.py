@@ -16,10 +16,9 @@ import sys
 import time
 from pathlib import Path
 
-import isostamp
-
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import i2cbus
+from _log import Logger
 from _repo import ROOT
 from p037_test import rd, wr
 from rtd_i2c_bridge import Real
@@ -38,10 +37,7 @@ class Phy:
         self.d, self.lf = d, lf
 
     def log(self, s):
-        line = f"{isostamp.now()} {s}"
-        print(line, flush=True)
-        self.lf.write(line + "\n")
-        self.lf.flush()
+        self.lf.say(s)
 
     def r(self, ch, page_sel, reg):  # page_sel 0 = 8E-type, 1 = 8F-type
         return rd(self.d, PG[ch][page_sel] << 8 | reg)
@@ -197,7 +193,7 @@ def main() -> int:
     ap.add_argument("--n", type=int, default=5)
     a = ap.parse_args()
     (ROOT / "tmp/logs").mkdir(parents=True, exist_ok=True)
-    lf = (ROOT / "tmp/logs/ddr_sweep.log").open("a")
+    lf = Logger(ROOT / "tmp/logs/ddr_sweep.log")
     i2cbus.require_unit(a.bus, a.serial)
     p = Phy(Real(a.bus, allow_write=True), lf)
     if a.cmd == "state":

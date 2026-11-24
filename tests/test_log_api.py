@@ -33,6 +33,20 @@ def test_logger_modes(tmp_path, capsys):
     assert re.fullmatch(r"\d{4}-\d\d-\d\dT\d\d:\d\d:\d\d\.\d{3}[+-]\d\d:\d\d two", line)
 
 
+def test_logger_unstamped_file_prefix_shown(tmp_path, capsys):
+    with Logger(tmp_path / "u.log", stamp_file=False, stamp_echo=False, prefix="u3/") as lg:
+        lg.say("a")
+    assert (tmp_path / "u.log").read_text() == "u3/a\n" and capsys.readouterr().out == "a\n"
+    n = iter(range(3))
+    with Logger(tmp_path / "p.log", prefix=lambda: f"+{next(n)}ms ") as lg:
+        lg.say("b", shown="B")
+        lg.say("c", echo=False)
+    out = capsys.readouterr().out.splitlines()
+    lines = (tmp_path / "p.log").read_text().splitlines()
+    assert re.fullmatch(ISO + r" \+0ms b", lines[0]) and re.fullmatch(ISO + r" \+1ms c", lines[1])
+    assert len(out) == 1 and re.fullmatch(ISO + r" \+0ms B", out[0])
+
+
 def test_logger_file_only(tmp_path, capsys):
     with Logger(tmp_path / "f.log", echo=None) as lg:
         lg.say("x")

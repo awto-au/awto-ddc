@@ -12,6 +12,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))  # -I drops script dir
 import rtd_gate
+from _log import Logger
 
 TYPES = {1: "CURSOR", 2: "BITMAP", 3: "ICON", 4: "MENU", 5: "DIALOG", 6: "STRING", 9: "ACCEL",
          14: "GROUP_ICON", 16: "VERSION", 240: "DLGINIT"}
@@ -274,13 +275,7 @@ def main():
     args = [x for x in sys.argv[1:] if x != "--gate-warn-only"]
     root = Path(args[0])
     outp = Path(args[1])
-    logf = Path("tmp/logs/pe_resources.log")
-    logf.parent.mkdir(parents=True, exist_ok=True)
-    lf = logf.open("w")
-
-    def log(m):
-        print(m)
-        lf.write(m + "\n")
+    log = Logger(Path("tmp/logs/pe_resources.log"), mode="w", stamp_file=False, stamp_echo=False).say
     files = [p for p in sorted(root.rglob("*")) if p.suffix.lower() in (".dll", ".exe", ".ocx")]
     out = []
     for p in files:

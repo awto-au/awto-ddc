@@ -31,24 +31,19 @@ import time
 from pathlib import Path
 
 import chip_mem as CM
-import isostamp
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 
+from _log import shared
 from _repo import repo_root
 
 ROOT = repo_root()
-LOGF = None
 ACTIVE_MS = 1000       # steady-state window after ACTIVE: ~300 main-loop passes at the measured 300+/s (#11), enough to rank per-pass waits
 
 
 def log(s: str):
-    line = f"{isostamp.now()} {s}"
-    print(line)
-    if LOGF:
-        LOGF.write(line + "\n")
-        LOGF.flush()
+    shared(ROOT / "tmp/logs/delay_inventory.log").say(s)
 
 
 # ---------------------------------------------------------------- map + listing
@@ -966,7 +961,6 @@ def doc(rows, sim, path: Path, a):
 
 
 def main():
-    global LOGF
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--build", default=os.environ.get("AWTO_DDC_BUILD", str(ROOT.parent / "awto-ddc-stepB")))
     ap.add_argument("--map", default=str(ROOT / "tmp/fw/AWT26110003-wb-stepB-be.map"))
@@ -976,8 +970,6 @@ def main():
     ap.add_argument("--doc", default=str(ROOT / "docs/delays.md"))
     ap.add_argument("--sim-json", default=str(ROOT / "re/delays_sim.json"))
     a = ap.parse_args()
-    (ROOT / "tmp/logs").mkdir(parents=True, exist_ok=True)
-    LOGF = (ROOT / "tmp/logs/delay_inventory.log").open("a")
     rows, fns, _g = build_rows(a)
     sim = None
     sj = Path(a.sim_json)

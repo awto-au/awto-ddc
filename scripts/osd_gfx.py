@@ -5,7 +5,7 @@ Fonts stay in their generators (the 5 x 7 glyph shapes differ per screen: '5', '
 """
 from pathlib import Path
 
-import isostamp
+from _log import shared
 
 ROWS_PER_WORD = 2
 WORD_BYTES = 3
@@ -15,13 +15,7 @@ WORD_BYTES = 3
 
 def logger(path: Path):
     """say(text): print + append to path with an ISO timestamp."""
-    def say(s: str) -> None:
-        path.parent.mkdir(parents=True, exist_ok=True)
-        line = f"{isostamp.now()} {s}"
-        with path.open("a") as f:
-            f.write(line + "\n")
-        print(line, flush=True)
-    return say
+    return shared(path).say
 
 
 def pack_rows(rows, sel=lambda v: v & 1) -> bytes:

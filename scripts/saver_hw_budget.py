@@ -13,7 +13,7 @@ import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-import isostamp
+from _log import Logger
 from _repo import repo_root
 
 ROOT = repo_root()
@@ -32,12 +32,6 @@ ROW_CHARS_MAX = 255             # row command char count: 8 bit (docs/osd/limits
 GLYPH_H = 18                    # rows of a glyph cell
 WORDS_1BIT = 9
 IDS_1BIT = 512
-
-
-def say(lf, s):
-    line = f"{isostamp.now()} {s}"
-    print(line, flush=True)
-    lf.write(line + "\n")
 
 
 def burst_us_per_byte(dclk_khz: int, hdouble: bool) -> float:
@@ -78,18 +72,17 @@ def main() -> int:
     ap.add_argument("--shift", type=int, default=8, help="pulse move per frame, raster px")
     ap.add_argument("--frames", type=int, default=16)
     a = ap.parse_args()
-    LOG.parent.mkdir(parents=True, exist_ok=True)
-    with LOG.open("a", buffering=1) as lf:
-        say(lf, "== 1. burst byte time (SDK gap formula, SYS = MCU clock 87.75 MHz [guess])")
+    with Logger(LOG) as lf:
+        lf.say("== 1. burst byte time (SDK gap formula, SYS = MCU clock 87.75 MHz [guess])")
         for d in a.dclk_khz:
-            say(lf, f"dclk {d / 1000:.0f} MHz: {burst_us_per_byte(d, False):.3f} us/B (db_width off), {burst_us_per_byte(d, True):.3f} us/B (on)")
+            lf.say(f"dclk {d / 1000:.0f} MHz: {burst_us_per_byte(d, False):.3f} us/B (db_width off), {burst_us_per_byte(d, True):.3f} us/B (on)")
         bb = burst_us_per_byte(a.dclk_khz[0], False)
-        say(lf, "== 2. glyph upload per tile, us")
+        lf.say("== 2. glyph upload per tile, us")
         for name, n in (("1-bit", 27), ("2-bit", 54)):
             burst = BURST_SETUP_XFR * US_PER_XFR + n * bb
-            say(lf, f"{name} {n} B: ScalerOsdDataPort {n * US_PORT_SDK:.0f}, direct {n * US_PORT_DIRECT:.0f}, "
+            lf.say(f"{name} {n} B: ScalerOsdDataPort {n * US_PORT_SDK:.0f}, direct {n * US_PORT_DIRECT:.0f}, "
                     f"triples {n * US_PORT_TRIPLE:.0f}, burst {burst:.0f} (setup {BURST_SETUP_XFR} x {US_PER_XFR} us + {bb:.2f} us/B)")
-        say(lf, f"== 3. run-glyph trace, pulse moving {a.shift} px / frame, {a.frames} frames")
+        lf.say(f"== 3. run-glyph trace, pulse moving {a.shift} px / frame, {a.frames} frames")
         runs = GLYPH_H * (GLYPH_H + 1) // 2
         for ras in a.raster:
             w, h = (int(v) for v in ras.split("x"))
@@ -110,7 +103,7 @@ def main() -> int:
                         xfr += 1 if last is not None and k == (last[0], last[1] + 1) else 3
                         last = k
                     prev = cur
-                say(lf, f"{ras} cw {cw}: {cols} chars x {rows} rows, map {map_words} + glyphs {glyph_words} words "
+                lf.say(f"{ras} cw {cw}: {cols} chars x {rows} rows, map {map_words} + glyphs {glyph_words} words "
                         f"({'fits' if ok else 'DOES NOT FIT'}: row <= {ROW_CHARS_MAX}, map < {MAP_FETCH_LIMIT}, SRAM <= {SRAM_WORDS}); "
                         f"{writes / a.frames:.0f} cells / frame, {xfr / a.frames:.0f} XFR writes = "
                         f"{xfr / a.frames * US_PER_XFR / 1000:.2f} ms / frame at {US_PER_XFR} us")

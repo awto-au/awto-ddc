@@ -14,10 +14,9 @@ import sys
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
-import isostamp
-
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import fw_compile as K
+from _log import Logger
 
 UV2, TARGET = "STD_FW_1P.Uv2", "RL6449_Project"
 # one large module compiles in ~60 s cold under 16 jobs; 3x backstop per global host-process rule
@@ -36,12 +35,7 @@ def main() -> int:
     ap.add_argument("--jobs", type=int, default=16)
     ap.add_argument("--sdcc", default=K.SDCC)
     a = ap.parse_args()
-    (K.ROOT / "tmp/logs").mkdir(parents=True, exist_ok=True)
-    logf = (K.ROOT / "tmp/logs/sdcc_size_probe.log").open("a")
-
-    def log(s):
-        line = f"{isostamp.now()} {s}"
-        print(line); logf.write(line + "\n"); logf.flush()
+    log = Logger(K.ROOT / "tmp/logs/sdcc_size_probe.log").say
     uv2 = K.SRC / UV2
     files, defines, incs, model = K.parse_uv2(uv2, TARGET)
     cs = sorted(((uv2.parent / f).resolve() for f in files), key=lambda p: p.stat().st_size if p.exists() else 0,

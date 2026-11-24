@@ -16,6 +16,8 @@ import os
 import sys
 from pathlib import Path
 
+from _log import shared
+
 CODES = ["0", "100", "1010", "1011", "1100", "11010", "11011", "11100", "111010", "111011",
          "111100", "111101", "1111100", "1111101", "1111110", "11111110"]
 END_CODE = "11111111"
@@ -134,10 +136,7 @@ def unpack_unit(data, w, h, bpp):
 def log(s):
     root = Path(os.environ.get("AWTO_DDC_REPO") or Path(__file__).resolve().parent.parent)
     p = root / "tmp/logs/osd_vlc.log"
-    p.parent.mkdir(parents=True, exist_ok=True)
-    with p.open("a") as f:
-        f.write(s + "\n")
-    print(s)
+    shared(p, stamp_file=False, stamp_echo=False).say(s)
 
 
 def selftest(sdk=False):

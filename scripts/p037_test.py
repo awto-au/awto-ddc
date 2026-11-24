@@ -12,14 +12,13 @@ import sys
 import time
 from pathlib import Path
 
-import isostamp
-
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import i2cbus
 from dbg_xdata import BEHIND_PAGES
 from rtd_i2c_bridge import Real
 
 DBG = 0x35 << 1
+from _log import Logger
 from _repo import ROOT
 
 LOGF = ROOT / "tmp/logs/p037_test.log"
@@ -47,13 +46,8 @@ def main() -> int:
     ap.add_argument("--secs", type=float, default=3.0)       # covers ~14 retry passes of 217 ms
     ap.add_argument("--period-ms", type=float, default=10.0)  # ~ one 4K60 frame is 16.7 ms
     a = ap.parse_args()
-    LOGF.parent.mkdir(parents=True, exist_ok=True)
-    lf = LOGF.open("a")
     t0 = time.monotonic()
-
-    def log(s):
-        line = f"{isostamp.now()} +{(time.monotonic() - t0) * 1000:7.1f}ms {s}"
-        print(line); lf.write(line + "\n"); lf.flush()
+    log = Logger(LOGF, prefix=lambda: f"+{(time.monotonic() - t0) * 1000:7.1f}ms ").say
 
     i2cbus.require_unit(a.bus, a.serial)
     d = Real(a.bus, allow_write=True)

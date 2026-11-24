@@ -23,8 +23,8 @@ import re
 import sys
 from pathlib import Path
 
-import isostamp
 import sync_classes
+from _log import shared
 from _repo import ROOT
 
 LOG = ROOT / "tmp/logs/sync_log.log"
@@ -47,11 +47,7 @@ def set_map(map_path: Path) -> None:
 
 def log(s: str, shown: str | None = None):
     """s -> console + log file; shown = the console copy (class colour on a TTY), the file always gets the plain s"""
-    LOG.parent.mkdir(parents=True, exist_ok=True)
-    line = f"{isostamp.now()} {s}"
-    print(line if shown is None else f"{isostamp.now()} {shown}", flush=True)
-    with LOG.open("a") as f:
-        f.write(line + "\n")
+    shared(LOG).say(s, shown=shown)
 
 
 def load_rows(tsv: Path) -> list[dict]:

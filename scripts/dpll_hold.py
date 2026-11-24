@@ -13,10 +13,9 @@ import sys
 import time
 from pathlib import Path
 
-import isostamp
-
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import i2cbus
+from _log import Logger
 from _repo import ROOT
 from p037_test import DBG, rd, wr
 from rtd_i2c_bridge import Real
@@ -34,13 +33,8 @@ def main() -> int:
     ap.add_argument("--fupdn", type=int, default=0)             # live 1080p60 reads C4=08 (FreqUp)
     ap.add_argument("--n", type=int, default=25)
     a = ap.parse_args()
-    LOGF.parent.mkdir(parents=True, exist_ok=True)
-    lf = LOGF.open("a")
     t0 = time.monotonic()
-
-    def log(s):
-        line = f"{isostamp.now()} +{(time.monotonic() - t0) * 1000:7.1f}ms {s}"
-        print(line); lf.write(line + "\n"); lf.flush()
+    log = Logger(LOGF, prefix=lambda: f"+{(time.monotonic() - t0) * 1000:7.1f}ms ").say
 
     i2cbus.require_unit(a.bus, a.serial)
     d = Real(a.bus, allow_write=True)

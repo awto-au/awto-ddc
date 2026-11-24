@@ -21,11 +21,10 @@ import sys
 import time
 from pathlib import Path
 
-import isostamp
-
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import sdcc_link
 import sdcc_tools as T
+from _log import Logger
 from _repo import repo_root
 
 ROOT = repo_root()
@@ -40,9 +39,7 @@ LOG = None
 
 
 def log(s, echo=False):
-    LOG.write(f"{isostamp.now()} {s}\n"); LOG.flush()
-    if echo:
-        print(s)
+    LOG.say(s, echo=echo)
 
 
 def run(cmd, **kw):
@@ -138,8 +135,7 @@ def one(name, srcs):
 
 def main():
     global LOG
-    (ROOT / "tmp/logs").mkdir(parents=True, exist_ok=True)
-    LOG = (ROOT / "tmp/logs/sim_test.log").open("a")
+    LOG = Logger(ROOT / "tmp/logs/sim_test.log", stamp_echo=False)
     tests = discover()
     want = [a for a in sys.argv[1:] if not a.startswith("-")]
     names = want or list(tests)

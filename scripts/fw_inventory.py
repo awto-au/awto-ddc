@@ -19,7 +19,7 @@ import sys
 from collections import Counter, defaultdict
 from pathlib import Path
 
-import isostamp
+from _log import shared
 from _repo import repo_root
 
 ROOT = repo_root()
@@ -62,14 +62,10 @@ STEP_RULES = [   # (step, regex on "origin|module|symbol"), first match wins; he
                     r"Mode|Sync|Global|Display|Interlace|Rotation|Audio")),
     ("10 Sys flow", r"System \(Sys|\|Sys|UserCommon|User/other|Pcb|Project|Mcu|Int|Power|Source|Interface"),
 ]
-LOG = None
 
 
 def log(s: str) -> None:
-    line = f"{isostamp.now()} {s}"
-    print(line, file=sys.stderr)
-    if LOG:
-        LOG.write(line + "\n"); LOG.flush()
+    shared(ROOT / "tmp/logs/fw_inventory.log", echo="stderr").say(s)
 
 
 def source_index(sdk: Path) -> dict:
@@ -168,14 +164,11 @@ def table(rows, col: int, title: str) -> list[str]:
 
 
 def main() -> int:
-    global LOG
     ap = argparse.ArgumentParser()
     ap.add_argument("map", type=Path)
     ap.add_argument("--tsv", type=Path)
     ap.add_argument("--sdk", type=Path, default=SDK)
     a = ap.parse_args()
-    (ROOT / "tmp/logs").mkdir(parents=True, exist_ok=True)
-    LOG = (ROOT / "tmp/logs/fw_inventory.log").open("a")
     rows, mods = inventory(a.map, a.sdk)
     tag = a.map.stem if a.map.stem != "fw" else a.map.parent.name
     out = a.tsv or ROOT / f"tmp/logs/fw_inventory_{tag}.tsv"

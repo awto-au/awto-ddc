@@ -4,6 +4,7 @@
 - Echo to stdout, flushed; `stamp_stdout=False` keeps the plain message on the terminal.
 """
 import sys
+from collections.abc import Callable
 from datetime import datetime
 from pathlib import Path
 from typing import Self
@@ -37,26 +38,34 @@ class Logger:
 
     - `Logger(path)` appends (`mode="w"` truncates); `./tmp/logs` etc. created on demand.
     - `echo`: "stdout" (default), "stderr" or None (file only); `stamp_echo=False` echoes the plain message.
+    - `stamp_file=False`: file lines carry no stamp. `prefix` (str or callable) goes between stamp and
+      message in the file line and the stamped echo, e.g. `u3/behind ` or `+12.3ms `.
+    - `say(msg, shown=..., echo=False)`: console copy differs from the file text / is skipped for one line.
     - File-like `write`/`flush`/`close` for callers that also write raw text; context manager closes.
     """
 
     def __init__(self, path: Path, *, mode: str = "a", echo: str | None = "stdout", stamp_echo: bool = True,
-                 ms: bool = False):
+                 ms: bool = False, stamp_file: bool = True, prefix: str | Callable[[], str] = ""):
         self.path = Path(path)
         self.path.parent.mkdir(parents=True, exist_ok=True)
         self._f = self.path.open(mode, encoding="utf-8", buffering=1)
         self.echo = echo
         self.stamp_echo = stamp_echo
         self.ms = ms
+        self.stamp_file = stamp_file
+        self.prefix = prefix
 
     def stamp(self) -> str:
         return datetime.now().astimezone().isoformat(timespec="milliseconds" if self.ms else "seconds")
 
-    def say(self, msg: str = "") -> None:
-        line = f"{self.stamp()} {msg}"
-        self._f.write(line + "\n")
-        if self.echo:
-            print(line if self.stamp_echo else msg, file=sys.stderr if self.echo == "stderr" else sys.stdout, flush=True)
+    def say(self, msg: str = "", *, shown: str | None = None, echo: bool = True) -> None:
+        pre = self.prefix() if callable(self.prefix) else self.prefix
+        stamp = self.stamp()
+        self._f.write((f"{stamp} " if self.stamp_file else "") + pre + msg + "\n")
+        if self.echo and echo:
+            text = msg if shown is None else shown
+            line = f"{stamp} {pre}{text}" if self.stamp_echo else text
+            print(line, file=sys.stderr if self.echo == "stderr" else sys.stdout, flush=True)
 
     def write(self, text: str) -> int:
         return self._f.write(text)

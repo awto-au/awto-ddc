@@ -26,8 +26,8 @@ import time
 from concurrent.futures import ProcessPoolExecutor
 from pathlib import Path
 
-import isostamp
 import numpy as np
+from _log import shared
 from _repo import repo_root
 
 ROOT = repo_root()
@@ -46,7 +46,6 @@ N_CODE, MIN_CONTENT = 6, 2
 N_PROSE, MIN_WORDS = 8, 5
 N_STRUCT = 20
 MUL = np.uint64(0x9E3779B97F4A7C15)
-LOG = None
 
 KEYWORDS = {"auto", "break", "case", "char", "const", "continue", "default", "do", "double", "else", "enum", "extern", "float", "for", "goto", "if", "inline", "int", "long", "register", "restrict", "return", "short", "signed", "sizeof", "static", "struct", "switch", "typedef", "union", "unsigned", "void", "volatile", "while", "_Bool", "_Static_assert", "define", "include", "ifdef", "ifndef", "endif", "elif", "undef", "pragma", "defined", "line", "error", "__xdata", "__code", "__data", "__idata", "__pdata", "__near", "__far", "__bit", "__sbit", "__sfr", "__sfr16", "__at", "__interrupt", "__using", "__reentrant", "__critical", "__naked", "__banked", "__nonbanked", "__asm", "__endasm", "__sdcc_external_startup", "uint8_t", "uint16_t", "uint32_t", "uint64_t", "int8_t", "int16_t", "int32_t", "int64_t", "size_t", "NULL", "true", "false", "bool", "stdint", "stdbool", "string", "memcpy", "memset", "memcmp", "strlen"}
 TOKEN = re.compile(r"""
@@ -65,10 +64,7 @@ _H = {}
 
 
 def log(s: str) -> None:
-    line = f"{isostamp.now()} {s}"
-    print(line, file=sys.stderr)
-    if LOG:
-        LOG.write(line + "\n"); LOG.flush()
+    shared(ROOT / "tmp/logs/cleanroom_lint.log", echo="stderr").say(s)
 
 
 def th(tok: str) -> int:
@@ -287,15 +283,12 @@ def lint(tree: Path, idx: dict, show_where: bool, structural: bool) -> list[str]
 
 
 def main() -> int:
-    global LOG
     ap = argparse.ArgumentParser()
     ap.add_argument("--tree", type=Path, default=CLEAN)
     ap.add_argument("--rebuild", action="store_true")
     ap.add_argument("--where", action="store_true")
     ap.add_argument("--structural", action="store_true")
     a = ap.parse_args()
-    (ROOT / "tmp/logs").mkdir(parents=True, exist_ok=True)
-    LOG = (ROOT / "tmp/logs/cleanroom_lint.log").open("a")
     idx = build_index(a.rebuild)
     out = lint(a.tree, idx, a.where, a.structural)
     hits = [o for o in out if "structural" not in o]

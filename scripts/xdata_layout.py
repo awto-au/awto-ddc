@@ -134,13 +134,8 @@ def check(layout: Path, mp: str) -> list:
 
 
 def log(s):
-    import isostamp
-    line = f"{isostamp.now()} {s}"
-    print(line)
-    p = Path(__file__).resolve().parents[1] / "tmp/logs/xdata_layout.log"
-    p.parent.mkdir(parents=True, exist_ok=True)
-    with p.open("a") as f:
-        f.write(line + "\n")
+    from _log import shared
+    shared(Path(__file__).resolve().parents[1] / "tmp/logs/xdata_layout.log").say(s)
 
 
 def main() -> int:

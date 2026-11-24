@@ -26,6 +26,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import dbg_xdata as X
 import isostamp
+from _log import Logger
 from _repo import ROOT
 
 LOG = ROOT / "tmp/logs/reg_live_scan.log"
@@ -327,11 +328,8 @@ def main() -> int:
     stamp = time.strftime("%Y%m%d-%H%M%S")
     out = Path(a.out) if a.out else ROOT / f"tmp/regs/live/{u['serial']}-{a.pass_label}-{stamp}.json"
     out.parent.mkdir(parents=True, exist_ok=True)
-    LOG.parent.mkdir(parents=True, exist_ok=True)
-    lf = LOG.open("a")
-
-    def log(s: str) -> None:
-        lf.write(f"{isostamp.now()} u{a.unit}/{a.pass_label} {s}\n")
+    lf = Logger(LOG, echo=None, prefix=f"u{a.unit}/{a.pass_label} ")
+    log = lf.say
 
     def note(s: str) -> None:
         print(s, flush=True)

@@ -19,10 +19,9 @@ import sys
 import time
 from pathlib import Path
 
-import isostamp
-
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import rtd_isp_probe as P
+from _log import Logger
 from _repo import ROOT
 
 ADC_REG = {"key0": 0xFF09, "key1": 0xFF0A}           # ladder A0 / A1 result cells (regdb ADC_A0 / ADC_A1)
@@ -89,12 +88,7 @@ def log_mode(a, root, io=None):
     wr = "--open" in a or "--close" in a
     own = io is None
     io = io or B.Real(bus, allow_write=wr, regread=True)
-    lf = (root / "tmp" / "logs" / "rtd_keywatch.log").open("a", buffering=1)
-
-    def say(s):
-        line = isostamp.now() + " " + s
-        print(line, flush=True)
-        lf.write(line + "\n")
+    say = Logger(root / "tmp" / "logs" / "rtd_keywatch.log").say
 
     if wr:
         v = 0x41 if "--open" in a else 0x42

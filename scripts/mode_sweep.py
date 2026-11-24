@@ -17,8 +17,6 @@ import sys
 import time
 from pathlib import Path
 
-import isostamp
-
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 import dbg_xdata as X
@@ -39,17 +37,11 @@ GDCTL_SHOW_V_S = 5             # one D-Bus call ~0.1 s, verbose 49 modes; 50x; e
 # FRC (DDR frame buffer) = P5_27 bit 5: A2/P5_AC 41 in FRC modes, 82/05 in line-buffer modes (dp sweep 2026-11-07, #26).
 FRC_BIT = 0x20
 DDR_FLAGS = [0x04 + i for i in range(8)] + [0xF1 + i for i in range(7)]      # VALID_WIN_DET SLIC0/1, INT_STATUS1
+from _log import Logger
 from _repo import ROOT
 
 LOG = ROOT / "tmp/logs/mode_sweep.log"
 RES_NAMES = {3: "ACTIVE", 4: "NOSUPPORT", 5: "NOSIGNAL", 6: "POWERSAVE"}
-
-
-def say(lf, s: str) -> None:
-    line = f"{isostamp.now()} {s}"
-    print(line, flush=True)
-    lf.write(line + "\n")
-    lf.flush()
 
 
 def host_modes(connector: str) -> list[str]:
@@ -217,7 +209,7 @@ def measure(u, maps, mode, lf) -> dict:
             return r
         except (H.DbgError, SystemExit, OSError) as e:
             err = str(e)
-            say(lf, f"  probe failed ({err}); attempt {attempt + 1}/2")
+            lf.say(f"  probe failed ({err}); attempt {attempt + 1}/2")
             time.sleep(0.5)
     return {"verdict": "HANG", "err": err}
 
@@ -239,8 +231,7 @@ def main() -> int:
     hdmi_g = u["gdctl"]
     if a.dp:
         u = {**u, "_conn": u["connector_dp"], "gdctl": u["gdctl_dp"], "input": "DP"}
-    LOG.parent.mkdir(parents=True, exist_ok=True)
-    lf = LOG.open("a")
+    lf = Logger(LOG)
     modes = a.modes.split(",") if a.modes else host_modes(u["gdctl"])
     # the rest mode first (cheap), then the rest of the list in the host's order
     modes = [m for m in modes if m != REST]
@@ -248,13 +239,13 @@ def main() -> int:
     if a.resume:
         done = {ln.split("\t")[0] for ln in a.resume.read_text().splitlines()[1:] if ln.split("\t")[1] != "SETFAIL"}
         modes = [m for m in modes if m not in done]
-    say(lf, f"sweep unit {a.unit} {u['serial']} connector {u['gdctl']}: {len(modes)} modes + rest {REST}")
+    lf.say(f"sweep unit {a.unit} {u['serial']} connector {u['gdctl']}: {len(modes)} modes + rest {REST}")
     if a.dry_run:
         show = gdctl_show()
         for m in modes:
             args = dev.gdctl_set_args(show, u["gdctl"], m)
-            say(lf, f"plan {m:<18} gdctl set {' '.join(args)}")
-        say(lf, f"plan per mode: set -> settle {SETTLE_S:g} s (no 0x35 traffic) -> probe -> set {REST} -> settle {SETTLE_S:g} s; "
+            lf.say(f"plan {m:<18} gdctl set {' '.join(args)}")
+        lf.say(f"plan per mode: set -> settle {SETTLE_S:g} s (no 0x35 traffic) -> probe -> set {REST} -> settle {SETTLE_S:g} s; "
                 f"~{len(modes) * (2 * SETTLE_S + 4) / 60:.0f} min total")
         return 0
     if i2cbus.rate_khz() != 100:
@@ -268,13 +259,13 @@ def main() -> int:
         r = subprocess.run(["gdctl", "set", *swap], capture_output=True, text=True, timeout=dev.GDCTL_SET_S, check=False)
         if r.returncode:
             raise SystemExit(f"sweep --dp: swapping DP-1 into {hdmi_g}'s slot failed: {r.stderr.strip()}; nothing changed")
-        say(lf, f"DP-1 in {hdmi_g}'s slot at {REST}; settle {SETTLE_S:g} s")
+        lf.say(f"DP-1 in {hdmi_g}'s slot at {REST}; settle {SETTLE_S:g} s")
         time.sleep(SETTLE_S)
         try:
             return sweep(a, u, lf, modes, swap, home)
         finally:
             r = subprocess.run(["gdctl", "set", *home], capture_output=True, text=True, timeout=dev.GDCTL_SET_S, check=False)
-            say(lf, f"layout restored ({hdmi_g} back, DP-1 off): rc={r.returncode} {r.stderr.strip()}")
+            lf.say(f"layout restored ({hdmi_g} back, DP-1 off): rc={r.returncode} {r.stderr.strip()}")
     return sweep(a, u, lf, modes, dev.gdctl_set_args(gdctl_show(), u["gdctl"], REST), None)
 
 
@@ -290,37 +281,37 @@ def sweep(a, u, lf, modes, orig_args, home) -> int:
     tf = tsv.open("a" if a.resume else "w")
     if not a.resume:
         tf.write("\t".join(cols) + "\n")
-    say(lf, f"image {label} (map {mapname}); TSV {tsv.relative_to(ROOT)}")
+    lf.say(f"image {label} (map {mapname}); TSV {tsv.relative_to(ROOT)}")
     rc = 0
     for m in ([] if a.resume else [REST]) + modes:
         ok, why = set_mode(u, m)
         if not ok:
             r, note = {"verdict": "SETFAIL", "err": why}, why
-            say(lf, f"{m:<18} SETFAIL {why}")
+            lf.say(f"{m:<18} SETFAIL {why}")
         else:
             time.sleep(SETTLE_S)                     # waits for: modeset + link retrain + fw mode state machine; no bus use
             r = measure(u, maps, m, lf)
             note = r.get("err", "")
             if r["verdict"] == "HANG":
-                say(lf, f"{m:<18} HANG ({note}); dev.py recover {image}")
+                lf.say(f"{m:<18} HANG ({note}); dev.py recover {image}")
                 rc_r = dev.cmd_reset(["--unit", a.unit])          # fast ISP reboot first; recover (relay cycle + reflash) if still silent
                 if rc_r == 0:
                     time.sleep(SETTLE_S)                          # waits for: firmware boot + mode detect (same settle as a modeset)
                     r2 = measure(u, maps, m, lf)
                     if r2["verdict"] != "HANG":
-                        say(lf, f"{m:<18} after reset: {r2['verdict']}")
+                        lf.say(f"{m:<18} after reset: {r2['verdict']}")
                         r, note = {"verdict": "HANG"}, f"bus silent; dev.py reset recovered (then {r2['verdict']})"
                 if note.startswith("bus silent"):
                     pass
                 elif dev.cmd_recover(["--unit", a.unit, image]) != 0:
-                    say(lf, "recover FAILED; stopping with the unit as is")
+                    lf.say("recover FAILED; stopping with the unit as is")
                     tf.write(f"{m}\tHANG\t\t\t\t\t\t\t\trecover failed\n")
                     return 1
                 else:
                     note = "bus silent; recovered by relay cycle + reflash"
             else:
                 s = r["ms"]
-                say(lf, f"{m:<18} {r['verdict']:<10} state={H.MODE_NAMES[s] if s < len(H.MODE_NAMES) else s} "
+                lf.say(f"{m:<18} {r['verdict']:<10} state={H.MODE_NAMES[s] if s < len(H.MODE_NAMES) else s} "
                         f"measured={r['timing_detail']} P0_02={r['p0_02']:02X} P5_27={r['p5_27']:02X} P5_AC={r['p5_ac']:02X} "
                         f"frc={'on' if r['frc'] else 'off'} ddr_flag_bytes={r['ddr'] if r['ddr'] is not None else '-'}")
         row = [m, r["verdict"]]
@@ -335,10 +326,10 @@ def sweep(a, u, lf, modes, orig_args, home) -> int:
         if m != REST:                                # rest state after EACH mode (Dan's rule)
             ok, why = set_mode(u, REST)
             if not ok:
-                say(lf, f"  return to {REST} FAILED: {why}; stopping")
+                lf.say(f"  return to {REST} FAILED: {why}; stopping")
                 return 1
             time.sleep(SETTLE_S)
-    say(lf, "sweep done; host back at " + REST)
+    lf.say("sweep done; host back at " + REST)
     return rc
 
 

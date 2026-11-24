@@ -15,8 +15,8 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import i2cbus
-import isostamp
 import rtd_flash_sector as F
+from _log import Logger
 from rtd_flash_sector import ENGINE_OPS, PAGE, SECTOR, Rtd
 
 ISP = 0x4A
@@ -24,9 +24,7 @@ LOG = None
 
 
 def log(s: str) -> None:
-    line = f"{isostamp.now()} {s}"
-    print(line, flush=True)
-    LOG.write(line + "\n"); LOG.flush()
+    LOG.say(s)
 
 
 def timeit(fn, n: int) -> float:
@@ -43,8 +41,7 @@ def main() -> int:
     ap.add_argument("--serial", required=True)
     a = ap.parse_args()
     root = F.repo_root()
-    (root / "tmp/logs").mkdir(parents=True, exist_ok=True)
-    LOG = (root / "tmp/logs/dp_isp_bench.log").open("a")
+    LOG = Logger(root / "tmp/logs/dp_isp_bench.log")
     F.LOG = LOG
     log(f"bench bus {a.bus} {i2cbus.adapter_name(a.bus)} kind {i2cbus.bus_kind(a.bus)}")
     i2cbus.require_unit(a.bus, a.serial, None)

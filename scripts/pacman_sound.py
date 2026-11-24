@@ -16,7 +16,6 @@ import wave
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-import isostamp
 
 PS_K_DEFAULT_HZ = 48000.0       # sc 32 = 48 kHz sample rate (SDK S code 0xA0), 32 samples per sine period: derived, not measured
 PS_SC_MIN = 24                  # sample rate <= 64 kHz: the DAC clock divider (06D4 bits 7:6) stays at its 48 kHz setting
@@ -212,6 +211,7 @@ def inc_text(k_hz: float) -> str:
     return "\n".join(lines) + "\n"
 
 
+from _log import Logger
 from _repo import repo_root
 
 
@@ -226,11 +226,8 @@ def main():
     ap.add_argument("--no-wav", action="store_true")
     a = ap.parse_args()
     log = root / "tmp/logs/pacman_sound.log"
-    log.parent.mkdir(parents=True, exist_ok=True)
-    with log.open("a") as lf:
-        def say(s):
-            print(s)
-            lf.write(f"{isostamp.now()} {s}\n")
+    with Logger(log, stamp_echo=False) as lf:
+        say = lf.say
         for name, loop in TRACKS:
             data, plan = encode(name, a.k_hz)
             worst = max((abs(1200 * math.log2(c / w)) for w, c, _ in plan if w > 0), default=0.0)

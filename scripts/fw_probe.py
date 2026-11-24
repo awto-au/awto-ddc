@@ -18,8 +18,8 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import dbg_xdata as X
 import flash_registry as R
-import isostamp
 import unit_lock
+from _log import Logger
 
 DIAG_SYM, BOX_SYM = "isr_g_stAwtoDiag", "vcp_box"
 DIAG_MAGIC, BOX_MAGIC = b"AD", b"V"
@@ -63,12 +63,7 @@ def main() -> int:
     ap.add_argument("--scan", action="store_true")
     ap.add_argument("--max", type=int, default=R.SCAN_MAX)
     a = ap.parse_args()
-    (unit_lock.repo_root() / "tmp/logs/fw_probe.log").parent.mkdir(parents=True, exist_ok=True)
-    log = (unit_lock.repo_root() / "tmp/logs/fw_probe.log").open("a", buffering=1)
-
-    def say(s: str) -> None:
-        print(s, flush=True)
-        log.write(f"{isostamp.now()} {s}\n")
+    say = Logger(unit_lock.repo_root() / "tmp/logs/fw_probe.log", stamp_echo=False).say
 
     import i2cbus
     import rtd_i2c_bridge as B
