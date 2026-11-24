@@ -123,6 +123,11 @@ def main() -> int:
         if {5, 6, 7} <= rec['ec'].keys():
             st = [rec['ec'][5][2] >> 16, rec['ec'][5][2] & 0xFFFF, rec['ec'][6][2] >> 16, rec['ec'][6][2] & 0xFFFF, rec['ec'][7][2] >> 16]
             fld += ' ' + '/'.join(map(str, st))
+        if 8 in rec['ec']:
+            v8 = rec['ec'][8][2]
+            fld += f' ex0/aux/pend {v8 >> 24}/{(v8 >> 16) & 0xFF}/{(v8 >> 8) & 0xFF}'
+        if 9 in rec['ec']:
+            fld += f" hit {rec['ec'][9][2] >> 24} auxpend/auxseen {(rec['ec'][9][2] >> 16) & 0xFF}/{rec['ec'][9][2] & 0xFFFF}"
         row = [a.label, k, f"D{e0[3]}", clk, tot, adp, ck, ck2, (low >> 8) & 3, f"{(low >> 4) & 7:x}", f"cdr{low & 1}/ckend{(low >> 2) & 1}/skip{(low >> 1) & 1}/retry{(low >> 3) & 1}", mask, win, fld]
         rows.append(row)
         say(f"lock {k}: " + " ".join(map(str, row[2:])) + f" active@{rec['t_active']}ms")

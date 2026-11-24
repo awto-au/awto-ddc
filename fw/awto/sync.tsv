@@ -175,6 +175,8 @@ EA	*	mon	monitor: %
 EC	02	x	TMDS PHY probe D2:set-up us << 16 | pixel clock 0.1 MHz = %
 EC	12	x	TMDS PHY probe D2:adp_en x3 us << 16 | ckrdy us (FLD wait, FFFF = never) = %
 EC	22	x	TMDS PHY probe D2:CMU-wait ckrdy us << 16 | path << 8 | adp end << 4 | ckrdy end << 2 | skip << 1 | CDR ok = %
+EC	82	x	TMDS PHY probe D2:EXINT0 served << 24 | AUX served << 16 | requests pending at window open << 8 | knob = %
+EC	92	x	TMDS PHY probe D2:unstable hit << 24 | AUX IRQ pending at window open << 16 | AUX IRQ seen at EXINT0 entry = %
 EC	42	x	TMDS PHY probe D2:band fine-tune poll iterations per loop (61 = timed out) = %
 EC	52	x	TMDS PHY probe D2:checkpoints us = %
 EC	62	x	TMDS PHY probe D2:checkpoints us = %
@@ -182,6 +184,8 @@ EC	72	x	TMDS PHY probe D2:checkpoints us = %
 EC	03	x	TMDS PHY probe D3:set-up us << 16 | pixel clock 0.1 MHz = %
 EC	13	x	TMDS PHY probe D3:adp_en x3 us << 16 | ckrdy us (FLD wait, FFFF = never) = %
 EC	23	x	TMDS PHY probe D3:CMU-wait ckrdy us << 16 | path << 8 | adp end << 4 | ckrdy end << 2 | skip << 1 | CDR ok = %
+EC	83	x	TMDS PHY probe D3:EXINT0 served << 24 | AUX served << 16 | requests pending at window open << 8 | knob = %
+EC	93	x	TMDS PHY probe D3:unstable hit << 24 | AUX IRQ pending at window open << 16 | AUX IRQ seen at EXINT0 entry = %
 EC	43	x	TMDS PHY probe D3:band fine-tune poll iterations per loop (61 = timed out) = %
 EC	53	x	TMDS PHY probe D3:checkpoints us = %
 EC	63	x	TMDS PHY probe D3:checkpoints us = %
