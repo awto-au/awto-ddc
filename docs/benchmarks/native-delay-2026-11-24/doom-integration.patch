@@ -1,0 +1,168 @@
+--- a/scripts/mcs51_core.c
++++ b/scripts/mcs51_core.c
+@@ -70,0 +71 @@
++    int counted_ffwd;           /* exact native DJNZ self-loop batching */
+@@ -1068,0 +1070,63 @@
++uint64_t core_ffwd_room(core_t *c);
++void core_ffwd(core_t *c, uint64_t clk, uint64_t cycles, uint64_t instr, int op);
++void core_set_counted_ffwd(core_t *c, int on) { c->counted_ffwd = on != 0; }
++
++/* Called AFTER an ordinary instruction and its IRQ poll. Only side-effect-free
++ * DJNZ self loops qualify: register-bank counters or direct lower IRAM, never
++ * SFRs. Keep the terminating iteration interpreted. No new host stops, so the
++ * caller's instruction budget and Python model deadlines remain unchanged.
++ *
++ * All instruction bytes must be hot when fetch modelling is on. Repeating
++ * this same byte sequence leaves LRU tags unchanged after the ordinary step;
++ * account for every byte hit, including line/bank/common-area boundaries.
++ * Cold, uncached, counter/edge-timer and sanitizer cases fall back.
++ * Stop strictly BEFORE a timer deadline; the ordinary step services that IRQ.
++ */
++static void counted_ffwd(core_t *c, uint32_t pc, uint64_t end)
++{
++    uint8_t op = c->last_op, addr;
++    uint32_t len;
++    uint64_t n, cyc, clk, room;
++    if (!c->counted_ffwd || c->was_reti || !c->dw)
++        return;
++    if (op >= 0xD8 && op <= 0xDF && c->cur[(pc + 1) & 0xFFFF] == 0xFE) {
++        addr = (PSW & 0x18) + (op & 7);
++        len = 2;
++    } else if (op == 0xD5 && c->cur[(pc + 2) & 0xFFFF] == 0xFD &&
++               c->cur[(pc + 1) & 0xFFFF] < 0x80) {
++        addr = c->cur[(pc + 1) & 0xFFFF];
++        len = 3;
++    } else
++        return;
++    n = (c->iram[addr] ? c->iram[addr] : 256u) - 1u;
++    if (n > end - c->p.instr) n = end - c->p.instr;
++    if (n < 2) return;
++    cyc = c->dwcyc[op];
++    clk = cyc * c->clk_per_cycle;
++    if (!clk) return;
++    room = core_ffwd_room(c) / clk;
++    if (n > room) n = room;
++    if (n < 2) return;
++    if (c->fm) {
++        uint32_t lines[3], i;
++        if (c->oplen[op] != len) return;
++        for (i = 0; i < len; i++) {
++            uint32_t a = (pc + i) & 0xFFFF;
++            uint32_t ph = a < (uint32_t)c->fm_common ? a : (c->p.bank << 16) | a;
++            uint32_t line = lines[i] = ph / c->fm_line;
++            uint32_t *tags = c->fm_tag + (size_t)(line % c->fm_sets) * c->fm_ways;
++            int w;
++            for (w = 0; w < c->fm_ways && tags[w] != line; w++) ;
++            if (w == c->fm_ways) return;
++        }
++        /* The previous ordinary fetch already established the repeated LRU
++         * order. No misses/evictions occur while all these lines are resident. */
++        if (c->fm_lacc)
++            for (i = 0; i < len; i++)
++                if (lines[i] < FM_NLINES) c->fm_lacc[lines[i]] += n;
++    }
++    c->iram[addr] -= n;
++    core_ffwd(c, n * clk, n * cyc, n, op);
++    c->p.irq_tail = 0;
++}
++
+@@ -1245,0 +1310,3 @@
++        if (c->p.pc == pc && c->p.nirq == n0 &&
++            !(c->pch[pc] >> (c->p.bank & 15) & 1))
++            counted_ffwd(c, pc, end);
+@@ -1267,0 +1335 @@
++    int counted = c->counted_ffwd;
+@@ -1275,0 +1344 @@
++    c->counted_ffwd = counted;
+@@ -1291 +1360 @@
+-    if (!c->dw || c->tslow || !(c->xram[0xFDA0] & 1) || c->tnext <= c->tnow)
++    if (!c->dw || c->tslow || (c->fm && !(c->xram[0xFDA0] & 1)) || c->tnext <= c->tnow)
+--- a/scripts/fastmachine.py
++++ b/scripts/fastmachine.py
+@@ -113,0 +114 @@
++    L.core_set_counted_ffwd.argtypes = [vp, ctypes.c_int]
+@@ -150,0 +152 @@
++        self.set_counted_ffwd(os.environ.get("AWTO_SIM_COUNTED_FFWD", "1") != "0")
+@@ -232,0 +235,3 @@
++
++    def set_counted_ffwd(self, on: bool):
++        self.L.core_set_counted_ffwd(self.h, on)
+@@ -628,76 +633,2 @@
+-        """Exact fast-forward of the two delay routines (fw/timer/delay.c, scripts/delay_sim.py): at the loop of AwtoDelayLoops (one djnz per
+-        count) and at the pass start of AwtoDelayXus (mov base, djnz, djnz outer) all but the last iterations are added in one step:
+-        clk / cycles / instructions as the dw8051 model counts them, wall_ms, ticks, the loop counter. Skips only inside the window the
+-        core says is free of timer deadlines (an IRQ then comes at the same iteration as interpreted) and the model tickers' deadlines;
+-        needs the flash code cache on (a loop already fetched once costs no stall). tests/test_delay_ffwd.py proves state equality.
+-        The routine's code is read from the image: anything but the expected shape refuses (SimError)."""
+-        S = self._S()
+-        import json
+-        j = json.loads(MODEL_JSON.read_text())
+-        cpc, cyc = j["clk_per_cycle"], j["cycles"]
+-        c = self.core
+-        for name, shape in (("AwtoDelayLoops", "loops"), ("AwtoDelayXus", "xus")):
+-            v = self.sym.get("_" + name)
+-            if v is None:
+-                continue
+-            a = v & 0xFFFF
+-            b = bytes(c.code[a:a + 10])
+-            if shape == "loops":
+-                if not (b[0] == 0x85 and b[3] == 0xD5 and b[4] == b[2] and b[5] == 0xFD and b[6] == 0x22):
+-                    raise S.SimError(f"{name}: unexpected code {b.hex()}")
+-                ctr, djnz_pc = b[2], a + 3
+-                self._ff_hook(djnz_pc, "djnz", ctr, None, cpc, cyc)
+-            else:
+-                if not (b[0] == 0x85 and b[3] == 0xD5 and b[4] == b[2] and b[5] == 0xFD and b[6] == 0xD5 and b[8] == 0xF7 and b[9] == 0x22):
+-                    raise S.SimError(f"{name}: unexpected code {b.hex()}")
+-                self._ff_hook(a + 3, "xus", b[2], (b[1], b[7], b[2]), cpc, cyc)     # first djnz of a pass (I = Base): mov I,Base ; djnz I ; djnz Counter
+-
+-    def _ff_hook(self, pc, kind, ctr, extra, cpc, cyc):
+-        c, p = self.core, self.p
+-        state = {"clk": -1}
+-        d, mv = cyc[0xD5], cyc[0x85]
+-
+-        def room_ok(s_clk):
+-            room = c.ffwd_room()
+-            for t in self._tickers:
+-                if self.dw:
+-                    left = (getattr(t, "deadline", 0) - self.wall_ms) * self.clock.f_cpu / 1000.0
+-                    if getattr(t, "deadline", 0) > 0:
+-                        room = min(room, int(left) - 1) if left > 0 else 0
+-            return room
+-
+-        def hook(m, r):
+-            if not m.dw or m.clock is None or not getattr(m, "_ff_on", True):
+-                return
+-            if kind == "djnz":
+-                v = c.iram[ctr]
+-                per_clk, per_cyc, per_ins = d * cpc, d, 1
+-                n_left = v if v else 256
+-            else:
+-                base_var, cnt_var, ivar = extra
+-                if c.iram[ivar] != c.iram[base_var]:             # not the first iteration of a pass
+-                    return
+-                b = c.iram[base_var]
+-                v = c.iram[cnt_var]
+-                n_left = v if v else 256
+-                per_cyc = mv + (b if b else 256) * d + d
+-                per_clk, per_ins = per_cyc * cpc, 2 + (b if b else 256)
+-            prev_ok = (p.clk - state["clk"]) == per_clk
+-            state["clk"] = p.clk
+-            if not prev_ok or n_left < 4:                       # the first iteration of a call runs interpreted (it fills the code cache line)
+-                return
+-            n = min(n_left - 2, room_ok(0) // per_clk)
+-            if n < 2:
+-                return
+-            c.ffwd(n * per_clk, n * per_cyc, n * per_ins, 0xD5)
+-            if kind == "djnz":
+-                c.iram[ctr] = (v - n) & 0xFF
+-            else:
+-                c.iram[cnt_var] = (v - n) & 0xFF
+-            m.wall_ms += n * per_clk * 1000.0 / m.clock.f_cpu
+-            m.ticks += n * per_cyc * 12
+-            m.instr += n * per_ins
+-            state["clk"] = p.clk
+-            return
+-        self.stubs.setdefault(pc, []).append((None, f"ffwd_{kind}", hook))
+-        self.core.pch[pc] |= 0xFFFF
++        """Enable native DJNZ batching without adding Python PC hooks."""
++        self.core.set_counted_ffwd(True)

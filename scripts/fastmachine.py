@@ -108,6 +108,7 @@ def lib():
     L.core_level.restype, L.core_level.argtypes = ctypes.c_int, [vp, ctypes.c_int]
     L.core_run.restype, L.core_run.argtypes = ctypes.c_int, [vp, ctypes.c_uint64]
     L.core_ffwd_room.restype, L.core_ffwd_room.argtypes = ctypes.c_uint64, [vp]
+    L.core_set_counted_ffwd.argtypes = [vp, ctypes.c_int]
     L.core_ffwd.argtypes = [vp, ctypes.c_uint64, ctypes.c_uint64, ctypes.c_uint64, ctypes.c_int]
     L.core_san_enable.restype, L.core_san_enable.argtypes = ctypes.c_int, [vp]
     L.core_san_ptr.restype, L.core_san_ptr.argtypes = vp, [vp, ctypes.c_int]
@@ -148,6 +149,7 @@ class Core:
         self.L = L = lib()
         self.h = L.core_new(img, len(img))
         self.p = L.core_pub(self.h).contents
+        self.set_counted_ffwd(os.environ.get("AWTO_SIM_COUNTED_FFWD", "1") != "0")
         mv = lambda sp, n, t=ctypes.c_uint8: memoryview((t * n).from_address(L.core_mem(self.h, sp))).cast("B")
         self.iram, self.sfr, self.xram = mv(0, 256), mv(1, 128), mv(2, 65536)
         self.code = mv(3, self.p.nbanks * BANK)
@@ -206,6 +208,10 @@ class Core:
     def san_enable(self):
         """Turn the race sanitizer on (needs the AWTO_SIM_SAN build); False when this is the normal build."""
         return self.L.core_san_enable(self.h) == 0
+
+    def set_counted_ffwd(self, on: bool):
+        """Batch exact DJNZ self loops in C; False provides the interpreted reference."""
+        self.L.core_set_counted_ffwd(self.h, on)
 
     def ffwd_room(self) -> int:
         return self.L.core_ffwd_room(self.h)
@@ -596,82 +602,13 @@ class FastMachine:
             return out
 
     def install_delay_ffwd(self):
-        """Exact fast-forward of the two delay routines (fw/timer/delay.c, scripts/delay_sim.py): at the loop of AwtoDelayLoops (one djnz per
-        count) and at the pass start of AwtoDelayXus (mov base, djnz, djnz outer) all but the last iterations are added in one step:
-        clk / cycles / instructions as the dw8051 model counts them, wall_ms, ticks, the loop counter. Skips only inside the window the
-        core says is free of timer deadlines (an IRQ then comes at the same iteration as interpreted) and the model tickers' deadlines;
-        needs the flash code cache on (a loop already fetched once costs no stall). tests/test_delay_ffwd.py proves state equality.
-        The routine's code is read from the image: anything but the expected shape refuses (SimError)."""
-        S = self._S()
-        import json
-        j = json.loads(MODEL_JSON.read_text())
-        cpc, cyc = j["clk_per_cycle"], j["cycles"]
-        c = self.core
-        for name, shape in (("AwtoDelayLoops", "loops"), ("AwtoDelayXus", "xus")):
-            v = self.sym.get("_" + name)
-            if v is None:
-                continue
-            a = v & 0xFFFF
-            b = bytes(c.code[a:a + 10])
-            if shape == "loops":
-                if not (b[0] == 0x85 and b[3] == 0xD5 and b[4] == b[2] and b[5] == 0xFD and b[6] == 0x22):
-                    raise S.SimError(f"{name}: unexpected code {b.hex()}")
-                ctr, djnz_pc = b[2], a + 3
-                self._ff_hook(djnz_pc, "djnz", ctr, None, cpc, cyc)
-            else:
-                if not (b[0] == 0x85 and b[3] == 0xD5 and b[4] == b[2] and b[5] == 0xFD and b[6] == 0xD5 and b[8] == 0xF7 and b[9] == 0x22):
-                    raise S.SimError(f"{name}: unexpected code {b.hex()}")
-                self._ff_hook(a + 3, "xus", b[2], (b[1], b[7], b[2]), cpc, cyc)     # first djnz of a pass (I = Base): mov I,Base ; djnz I ; djnz Counter
+        """Compatibility entry point: enable native counted-loop acceleration.
 
-    def _ff_hook(self, pc, kind, ctr, extra, cpc, cyc):
-        c, p = self.core, self.p
-        state = {"clk": -1}
-        d, mv = cyc[0xD5], cyc[0x85]
-
-        def room_ok(s_clk):
-            room = c.ffwd_room()
-            for t in self._tickers:
-                if self.dw:
-                    left = (getattr(t, "deadline", 0) - self.wall_ms) * self.clock.f_cpu / 1000.0
-                    if getattr(t, "deadline", 0) > 0:
-                        room = min(room, int(left) - 1) if left > 0 else 0
-            return room
-
-        def hook(m, r):
-            if not m.dw or m.clock is None or not getattr(m, "_ff_on", True):
-                return
-            if kind == "djnz":
-                v = c.iram[ctr]
-                per_clk, per_cyc, per_ins = d * cpc, d, 1
-                n_left = v if v else 256
-            else:
-                base_var, cnt_var, ivar = extra
-                if c.iram[ivar] != c.iram[base_var]:             # not the first iteration of a pass
-                    return
-                b = c.iram[base_var]
-                v = c.iram[cnt_var]
-                n_left = v if v else 256
-                per_cyc = mv + (b if b else 256) * d + d
-                per_clk, per_ins = per_cyc * cpc, 2 + (b if b else 256)
-            prev_ok = (p.clk - state["clk"]) == per_clk
-            state["clk"] = p.clk
-            if not prev_ok or n_left < 4:                       # the first iteration of a call runs interpreted (it fills the code cache line)
-                return
-            n = min(n_left - 2, room_ok(0) // per_clk)
-            if n < 2:
-                return
-            c.ffwd(n * per_clk, n * per_cyc, n * per_ins, 0xD5)
-            if kind == "djnz":
-                c.iram[ctr] = (v - n) & 0xFF
-            else:
-                c.iram[cnt_var] = (v - n) & 0xFF
-            m.wall_ms += n * per_clk * 1000.0 / m.clock.f_cpu
-            m.ticks += n * per_cyc * 12
-            m.instr += n * per_ins
-            state["clk"] = p.clk
-            return
-        self.stubs.setdefault(pc, []).append((None, f"ffwd_{kind}", hook))
-        self.core.pch[pc] |= 0xFFFF
+        No Python PC hooks or symbol/opcode-shape assumptions. The C core
+        recognises DJNZ self loops, including the current R7 delay routines.
+        Enabled by default; AWTO_SIM_COUNTED_FFWD=0 selects the reference path.
+        """
+        self.core.set_counted_ffwd(True)
 
     _SCALARS = ("ticks", "instr", "_stop", "last_out", "_avg_clk", "wall_ms", "_t2_set", "_t2_at")
 
