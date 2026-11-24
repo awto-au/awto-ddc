@@ -6,7 +6,7 @@
 #stubs 37
 # kind	name	region	offset	slot    (dev layout: scripts/sdcc_layout.py; region C = common, n = bank n)
 const	_OperationFactoryTable	13	0x0000	827
-const	_UserInterfaceGetOverScanStatus_tusOverscanEnTable_10000_1380	2	0x0000	102
+const	_UserInterfaceGetOverScanStatus_tusOverscanEnTable_10000_1381	C	0x23a5	90
 const	___str_0	7	0x0072	27
 const	___str_1	9	0x007c	38
 const	___str_10	7	0x008d	11
@@ -291,7 +291,7 @@ const	_s_tS2Base	9	0x1f79	2620
 const	_s_tS2Cell	9	0x29b5	683
 const	_s_tS2Font	9	0x2c60	95
 const	_s_tS2Pulse	9	0x2cbf	80
-const	_set_ap_rotate_tFlipToSdk_10000_1404	5	0x02b0	12
+const	_set_ap_rotate_tFlipToSdk_10000_1405	5	0x02b0	12
 const	_tAwtoAudioTestAmp	13	0x0522	14
 const	_tAwtoAudioTestGain	13	0x0530	21
 const	_tAwtoAudioTestMute	13	0x0545	14
@@ -935,6 +935,7 @@ fn	_AwtoSyncPushQuiet	5	0x94ba	309
 fn	_AwtoSyncRow	7	0x2487	135
 fn	_AwtoSyncScan	0	0x9bba	557
 fn	_AwtoSyncSelect	0	0x57ef	172
+fn	_AwtoSyncSettle	5	0xa3b1	15
 fn	_AwtoSyncStage	13	0x6e20	207
 fn	_AwtoSyncSw	5	0x95ef	153
 fn	_AwtoSyncT2Start	2	0x9e8b	374
@@ -2735,6 +2736,7 @@ stub	0__AwtoSyncBegin	0	0xa2ba	8
 stub	0__AwtoSyncDetect	0	0xa2c2	8
 stub	0__AwtoSyncPush	0	0xa2ca	8
 stub	0__AwtoSyncRow	0	0xa2d2	8
+stub	0__AwtoSyncSettle	0	0xa2f2	8
 stub	0__AwtoSyncTail	0	0xa2da	8
 stub	0__AwtoTmdsMemNote	0	0xa02a	8
 stub	0__AwtoWdtShow	0	0xa2ea	8
