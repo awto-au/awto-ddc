@@ -39,10 +39,10 @@
 // FUNCTION DECLARATIONS
 //****************************************************************************
 #if(_D1_DP_EXIST == _ON)
-BYTE ScalerDpRx1GetDpcdBitInfo_EXINT0(BYTE ucDpcdAccessPortH, BYTE ucDpcdAccessPortM, BYTE ucDpcdAccessPortL, BYTE ucDpcdBit);
+BYTE ScalerDpRx1GetDpcdBitInfoHM_EXINT0(WORD usDpcdAccessPortHM, BYTE ucDpcdAccessPortL, BYTE ucDpcdBit);  // awto: DPCD address H:M in one WORD, 3 register arguments (#336)
 BYTE ScalerDpRx1GetDpcdInfo_EXINT0(BYTE ucDpcdAccessPortH, BYTE ucDpcdAccessPortM, BYTE ucDpcdAccessPortL);
-void ScalerDpRx1SetDpcdBitValue_EXINT0(BYTE ucDpcdAccessPortH, BYTE ucDpcdAccessPortM, BYTE ucDpcdAccessPortL, BYTE ucNotDpcdBit, BYTE ucDpcdBit);
-void ScalerDpRx1SetDpcdValue_EXINT0(BYTE ucDpcdAccessPortH, BYTE ucDpcdAccessPortM, BYTE ucDpcdAccessPortL, BYTE ucDpcdValue);
+void ScalerDpRx1SetDpcdBitValueHM_EXINT0(WORD usDpcdAccessPortHM, BYTE ucDpcdAccessPortL, WORD usDpcdNotBitBit);  // awto: DPCD address H:M in one WORD, 3 register arguments (#336)
+void ScalerDpRx1SetDpcdValueHM_EXINT0(WORD usDpcdAccessPortHM, BYTE ucDpcdAccessPortL, BYTE ucDpcdValue);  // awto: DPCD address H:M in one WORD, 3 register arguments (#336)
 void ScalerDpRx1SinkStatusSet_EXINT0(EnumDpSinkReceivePort enumReceiverPort, EnumDpSinkStatus enumInSync);
 BYTE ScalerDpRx1TrainingPattern1_EXINT0(DPRX_PD EnumDpLinkTrainingType enumDpLtType);
 BYTE ScalerDpRx1TrainingPattern2_EXINT0(DPRX_PD EnumDpLinkTrainingType enumDpLtType);
@@ -89,8 +89,10 @@ void ScalerDpRx1SetHotPlugEvent_EXINT0(EnumDpHotPlugAssertType enumHpdType);
 //                ucDpcdAccessPortL --> Low Bye of DPCD Adress
 // Output Value : DPCD Information
 //--------------------------------------------------
-BYTE ScalerDpRx1GetDpcdBitInfo_EXINT0(BYTE ucDpcdAccessPortH, BYTE ucDpcdAccessPortM, BYTE ucDpcdAccessPortL, BYTE ucDpcdBit)
+BYTE ScalerDpRx1GetDpcdBitInfoHM_EXINT0(WORD usDpcdAccessPortHM, BYTE ucDpcdAccessPortL, BYTE ucDpcdBit)
 {
+    BYTE ucDpcdAccessPortH = (BYTE)(usDpcdAccessPortHM >> 8);
+    BYTE ucDpcdAccessPortM = (BYTE)usDpcdAccessPortHM;
     ScalerSetByte_EXINT(PBA_C1_DPCD_ADDR_PORT_H, ucDpcdAccessPortH);
     ScalerSetByte_EXINT(PBA_C2_DPCD_ADDR_PORT_M, ucDpcdAccessPortM);
     ScalerSetByte_EXINT(PBA_C3_DPCD_ADDR_PORT_L, ucDpcdAccessPortL);
@@ -120,8 +122,12 @@ BYTE ScalerDpRx1GetDpcdInfo_EXINT0(BYTE ucDpcdAccessPortH, BYTE ucDpcdAccessPort
 //                ucDpcdValue --> DPCD Value
 // Output Value : None
 //--------------------------------------------------
-void ScalerDpRx1SetDpcdBitValue_EXINT0(BYTE ucDpcdAccessPortH, BYTE ucDpcdAccessPortM, BYTE ucDpcdAccessPortL, BYTE ucNotDpcdBit, BYTE ucDpcdBit)
+void ScalerDpRx1SetDpcdBitValueHM_EXINT0(WORD usDpcdAccessPortHM, BYTE ucDpcdAccessPortL, WORD usDpcdNotBitBit)
 {
+    BYTE ucDpcdAccessPortH = (BYTE)(usDpcdAccessPortHM >> 8);
+    BYTE ucDpcdAccessPortM = (BYTE)usDpcdAccessPortHM;
+    BYTE ucNotDpcdBit = (BYTE)(usDpcdNotBitBit >> 8);
+    BYTE ucDpcdBit = (BYTE)usDpcdNotBitBit;
     ScalerSetByte_EXINT(PBA_C1_DPCD_ADDR_PORT_H, ucDpcdAccessPortH);
     ScalerSetByte_EXINT(PBA_C2_DPCD_ADDR_PORT_M, ucDpcdAccessPortM);
     ScalerSetByte_EXINT(PBA_C3_DPCD_ADDR_PORT_L, ucDpcdAccessPortL);
@@ -135,8 +141,10 @@ void ScalerDpRx1SetDpcdBitValue_EXINT0(BYTE ucDpcdAccessPortH, BYTE ucDpcdAccess
 //                ucDpcdValue --> DPCD Value
 // Output Value : None
 //--------------------------------------------------
-void ScalerDpRx1SetDpcdValue_EXINT0(BYTE ucDpcdAccessPortH, BYTE ucDpcdAccessPortM, BYTE ucDpcdAccessPortL, BYTE ucDpcdValue)
+void ScalerDpRx1SetDpcdValueHM_EXINT0(WORD usDpcdAccessPortHM, BYTE ucDpcdAccessPortL, BYTE ucDpcdValue)
 {
+    BYTE ucDpcdAccessPortH = (BYTE)(usDpcdAccessPortHM >> 8);
+    BYTE ucDpcdAccessPortM = (BYTE)usDpcdAccessPortHM;
     ScalerSetByte_EXINT(PBA_C1_DPCD_ADDR_PORT_H, ucDpcdAccessPortH);
     ScalerSetByte_EXINT(PBA_C2_DPCD_ADDR_PORT_M, ucDpcdAccessPortM);
     ScalerSetByte_EXINT(PBA_C3_DPCD_ADDR_PORT_L, ucDpcdAccessPortL);

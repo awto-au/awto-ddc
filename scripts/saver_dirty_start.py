@@ -50,7 +50,7 @@ def frames(a, prior, target, n, rotate):
         if live[0] and (r["a1"] & 0xFF) == SYNC_EV_ODEMO and (r["a2"] & 0xFF) in args and len(rows) < n:
             rows.append(hashlib.md5(R.render_snap(sess.snap(), "black", 4).tobytes()).hexdigest())
 
-    sess.bus.m.stub("AwtoSyncPush", hook)
+    sess.bus.m.stub("AwtoSyncPushL", hook)
     live[0] = True
     ddc.set(0xEB, vcp)
     t0 = sess.bus.now()

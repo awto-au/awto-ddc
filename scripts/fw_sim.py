@@ -1507,7 +1507,7 @@ def video_check(binp: Path, mapp: Path, mode: str, max_instr: int, log, fault: s
 
     def am(m_, r):
         msgs[r["a1"]] += 1                                   # watch only: AwtoMsg0/AwtoMsgV(id, value)
-    for fn in ("AwtoMsg0", "AwtoMsgV"):
+    for fn in ("AwtoMsg0", "AwtoMsgVL"):
         m.stub(fn, am)
     ma = m.addr("isr_g_stModeInfo")
     timeline, done, last = [], 0, None

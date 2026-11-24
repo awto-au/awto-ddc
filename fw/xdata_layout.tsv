@@ -2,7 +2,7 @@
 fastsw	0xd700	0	170
 keytest	0xd700	170	154
 awto_settings_menu	0xd700	324	135
-ScalerMDomain	0xd700	459	132
+ScalerMemory	0xd700	459	27
 awto_osd_ui	0xd700	591	125
 ScalerCommonDPRx1	0xd700	716	24
 RL6449_Series_DPRx1_INT	0xd700	740	6
@@ -38,7 +38,6 @@ UserCommonInterface	0xd700	2384	27
 delaycal	0xd700	2411	27
 flash_io	0xd700	2438	25
 saver	0xd700	2463	25
-ScalerMemory	0xd700	2488	24
 loopsplit	0xd700	2512	22
 wdt	0xd700	2534	22
 OsdDrawWindow	0xd700	2556	21
@@ -129,6 +128,7 @@ __ovl	0xe380	184	1
 flash_screen	0xe380	185	1
 RL6449_Series_GDIPhy	0xe380	252	3
 RL6449_Series_DPRx1	0xe580	0	99
+ScalerMDomain	0xe580	99	134
 sync	0xe780	37	733
 asteroids	0xe780	770	515
 ScalerCommonDebug	0xe780	1285	363

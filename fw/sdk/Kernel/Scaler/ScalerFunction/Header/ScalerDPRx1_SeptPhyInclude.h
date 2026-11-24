@@ -181,7 +181,7 @@ extern void ScalerDpRx1HSActiveTrackingMode(EnumDpHSTrackingType enumHSTrackingT
 extern void ScalerDpRx1SetNoVideoStreamIRQ(bit bEn);
 extern void ScalerDpRx1DpcdLinkStatusReset(EnumDpResetStatus enumDpResetStatus);
 extern DWORD ScalerDpRx1GetBStoVSDelay(void);
-extern BYTE ScalerDpRx1GetDpcdBitInfo(BYTE ucDpcdAccessPortH, BYTE ucDpcdAccessPortM, BYTE ucDpcdAccessPortL, BYTE ucDpcdBit);
+extern BYTE ScalerDpRx1GetDpcdBitInfoHM(WORD usDpcdAccessPortHM, BYTE ucDpcdAccessPortL, BYTE ucDpcdBit);  // awto: DPCD address H:M in one WORD, 3 register arguments (#336)
 extern BYTE ScalerDpRx1GetDpcdInfo(BYTE ucDpcdAccessPortH, BYTE ucDpcdAccessPortM, BYTE ucDpcdAccessPortL);
 extern bit ScalerDpRx1GetVideoStream(void);
 extern EnumDpHotPlugTime ScalerDpRx1BeforeHpdToggleProc(EnumDpHotPlugAssertType enumHpdType);
@@ -196,8 +196,11 @@ extern void ScalerDpRx1ErrorCounterEnable_EXINT0(DPRX_PD EnumDpLinkTrainingType 
 extern bit ScalerDpRx1MSAActiveChange(void);
 extern bit ScalerDpRx1PSPreDetect(void);
 extern void ScalerDpRx1SecDataBlockReset(void);
-extern void ScalerDpRx1SetDpcdBitValue(BYTE ucDpcdAccessPortH, BYTE ucDpcdAccessPortM, BYTE ucDpcdAccessPortL, BYTE ucNotDpcdBit, BYTE ucDpcdBit);
-extern void ScalerDpRx1SetDpcdValue(BYTE ucDpcdAccessPortH, BYTE ucDpcdAccessPortM, BYTE ucDpcdAccessPortL, BYTE ucDpcdValue);
+extern void ScalerDpRx1SetDpcdBitValueHM(WORD usDpcdAccessPortHM, BYTE ucDpcdAccessPortL, WORD usDpcdNotBitBit);  // awto: DPCD address H:M in one WORD, 3 register arguments (#336)
+extern void ScalerDpRx1SetDpcdValueHM(WORD usDpcdAccessPortHM, BYTE ucDpcdAccessPortL, BYTE ucDpcdValue);  // awto: DPCD address H:M in one WORD, 3 register arguments (#336)
+#define ScalerDpRx1SetDpcdValue(h, m, l, v)  ScalerDpRx1SetDpcdValueHM((((WORD)(BYTE)(h) << 8) | (BYTE)(m)), (BYTE)(l), (BYTE)(v))  // awto: call sites keep the old 4/5 argument form; H:M (and not-bit:bit) share one WORD (#336)
+#define ScalerDpRx1SetDpcdBitValue(h, m, l, nb, b)  ScalerDpRx1SetDpcdBitValueHM((((WORD)(BYTE)(h) << 8) | (BYTE)(m)), (BYTE)(l), (((WORD)(BYTE)(nb) << 8) | (BYTE)(b)))  // awto: call sites keep the old 4/5 argument form; H:M (and not-bit:bit) share one WORD (#336)
+#define ScalerDpRx1GetDpcdBitInfo(h, m, l, b)  ScalerDpRx1GetDpcdBitInfoHM((((WORD)(BYTE)(h) << 8) | (BYTE)(m)), (BYTE)(l), (BYTE)(b))  // awto: call sites keep the old 4/5 argument form; H:M (and not-bit:bit) share one WORD (#336)
 extern void ScalerDpRx1SinkStatusSet(EnumDpSinkReceivePort enumReceiverPort, EnumDpSinkStatus enumInSync);
 extern void ScalerDpRx1ChangeHdcpDpcdCapability(bit bEn);
 

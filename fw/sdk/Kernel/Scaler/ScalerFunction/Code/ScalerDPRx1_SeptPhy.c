@@ -86,7 +86,7 @@ void ScalerDpRx1HSActiveTrackingMode(EnumDpHSTrackingType enumHSTrackingType);
 void ScalerDpRx1SetNoVideoStreamIRQ(bit bEn);
 void ScalerDpRx1DpcdLinkStatusReset(EnumDpResetStatus enumDpResetStatus);
 DWORD ScalerDpRx1GetBStoVSDelay(void);
-BYTE ScalerDpRx1GetDpcdBitInfo(BYTE ucDpcdAccessPortH, BYTE ucDpcdAccessPortM, BYTE ucDpcdAccessPortL, BYTE ucDpcdBit);
+BYTE ScalerDpRx1GetDpcdBitInfoHM(WORD usDpcdAccessPortHM, BYTE ucDpcdAccessPortL, BYTE ucDpcdBit);  // awto: DPCD address H:M in one WORD, 3 register arguments (#336)
 BYTE ScalerDpRx1GetDpcdInfo(BYTE ucDpcdAccessPortH, BYTE ucDpcdAccessPortM, BYTE ucDpcdAccessPortL);
 bit ScalerDpRx1GetVideoStream(void);
 EnumDpHotPlugTime ScalerDpRx1BeforeHpdToggleProc(EnumDpHotPlugAssertType enumHpdType);
@@ -109,8 +109,8 @@ bit ScalerDpRx1MSAActiveChange(void);
 bit ScalerDpRx1PSPreDetect(void);
 void ScalerDpRx1SetDpLaneMapping(EnumTypeCPinCfgType enumPinAssignment, EnumTypeCOrientation enumOrientation);
 void ScalerDpRx1SecDataBlockReset(void);
-void ScalerDpRx1SetDpcdBitValue(BYTE ucDpcdAccessPortH, BYTE ucDpcdAccessPortM, BYTE ucDpcdAccessPortL, BYTE ucNotDpcdBit, BYTE ucDpcdBit);
-void ScalerDpRx1SetDpcdValue(BYTE ucDpcdAccessPortH, BYTE ucDpcdAccessPortM, BYTE ucDpcdAccessPortL, BYTE ucDpcdValue);
+void ScalerDpRx1SetDpcdBitValueHM(WORD usDpcdAccessPortHM, BYTE ucDpcdAccessPortL, WORD usDpcdNotBitBit);  // awto: DPCD address H:M in one WORD, 3 register arguments (#336)
+void ScalerDpRx1SetDpcdValueHM(WORD usDpcdAccessPortHM, BYTE ucDpcdAccessPortL, BYTE ucDpcdValue);  // awto: DPCD address H:M in one WORD, 3 register arguments (#336)
 void ScalerDpRx1SinkStatusSet(EnumDpSinkReceivePort enumReceiverPort, EnumDpSinkStatus enumInSync);
 void ScalerDpRx1ChangeHdcpDpcdCapability(bit bEn);
 
@@ -922,8 +922,10 @@ DWORD ScalerDpRx1GetBStoVSDelay(void)
 //                ucDpcdAccessPortL --> Low Bye of DPCD Adress
 // Output Value : DPCD Information
 //--------------------------------------------------
-BYTE ScalerDpRx1GetDpcdBitInfo(BYTE ucDpcdAccessPortH, BYTE ucDpcdAccessPortM, BYTE ucDpcdAccessPortL, BYTE ucDpcdBit)
+BYTE ScalerDpRx1GetDpcdBitInfoHM(WORD usDpcdAccessPortHM, BYTE ucDpcdAccessPortL, BYTE ucDpcdBit)
 {
+    BYTE ucDpcdAccessPortH = (BYTE)(usDpcdAccessPortHM >> 8);
+    BYTE ucDpcdAccessPortM = (BYTE)usDpcdAccessPortHM;
     // Release Aux
     ScalerSetBit(PBA_C0_DPCD_CTRL, ~_BIT7, 0x00);
 
@@ -1872,8 +1874,12 @@ void ScalerDpRx1SecDataBlockReset(void)
 //                ucDpcdValue --> DPCD Value
 // Output Value : None
 //--------------------------------------------------
-void ScalerDpRx1SetDpcdBitValue(BYTE ucDpcdAccessPortH, BYTE ucDpcdAccessPortM, BYTE ucDpcdAccessPortL, BYTE ucNotDpcdBit, BYTE ucDpcdBit)
+void ScalerDpRx1SetDpcdBitValueHM(WORD usDpcdAccessPortHM, BYTE ucDpcdAccessPortL, WORD usDpcdNotBitBit)
 {
+    BYTE ucDpcdAccessPortH = (BYTE)(usDpcdAccessPortHM >> 8);
+    BYTE ucDpcdAccessPortM = (BYTE)usDpcdAccessPortHM;
+    BYTE ucNotDpcdBit = (BYTE)(usDpcdNotBitBit >> 8);
+    BYTE ucDpcdBit = (BYTE)usDpcdNotBitBit;
     // Release Aux
     ScalerSetBit(PBA_C0_DPCD_CTRL, ~_BIT7, 0x00);
 
@@ -1890,8 +1896,10 @@ void ScalerDpRx1SetDpcdBitValue(BYTE ucDpcdAccessPortH, BYTE ucDpcdAccessPortM, 
 //                ucDpcdValue --> DPCD Value
 // Output Value : None
 //--------------------------------------------------
-void ScalerDpRx1SetDpcdValue(BYTE ucDpcdAccessPortH, BYTE ucDpcdAccessPortM, BYTE ucDpcdAccessPortL, BYTE ucDpcdValue)
+void ScalerDpRx1SetDpcdValueHM(WORD usDpcdAccessPortHM, BYTE ucDpcdAccessPortL, BYTE ucDpcdValue)
 {
+    BYTE ucDpcdAccessPortH = (BYTE)(usDpcdAccessPortHM >> 8);
+    BYTE ucDpcdAccessPortM = (BYTE)usDpcdAccessPortHM;
     // Release Aux
     ScalerSetBit(PBA_C0_DPCD_CTRL, ~_BIT7, 0x00);
 

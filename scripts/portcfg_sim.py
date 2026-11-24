@@ -90,7 +90,7 @@ def main() -> int:
         scans.append(pri[(r["a1"] & 0xFF) % 10])
 
     m.stub("set_get", set_get)
-    m.stub("AwtoSyncPush", push)
+    m.stub("AwtoSyncPushL", push)
     m.stub("SysSourceScanPortInitial", scan)
 
     def tap(key, ms=150, gap=0.4):

@@ -308,7 +308,10 @@
 // awto #26: keil2sdcc rewrites enabled DebugMessage<Cat>("text", v) to these (id from fw/msgids.tsv); disabled sites vanish
 #if(_DEBUG_MESSAGE_SUPPORT == _ON)
 extern void AwtoMsg0(unsigned int usId);
-extern void AwtoMsgV(unsigned int usId, unsigned long ulValue);
+extern void AwtoMsgVL(unsigned int usId, unsigned long ulValue);
+extern void AwtoMsgVW(unsigned int usId, unsigned int usValue);
+// awto: a value of 16 bit or less goes in registers (R6:R7, R4:R5); the long form passes it in XRAM (#336)
+#define AwtoMsgV(id, val)  ((sizeof((val) + 0) <= 2) ? AwtoMsgVW((id), (val)) : AwtoMsgVL((id), (val)))
 #endif
 
 //--------------------------------------------------

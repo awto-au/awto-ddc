@@ -105,7 +105,7 @@ def frame_hook(sess):
                 h["snap"] = sess.snap()
             h["count"] += 1
 
-    sess.bus.m.stub("AwtoSyncPush", hook)
+    sess.bus.m.stub("AwtoSyncPushL", hook)
     sess.frame = h
 
 

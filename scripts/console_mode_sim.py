@@ -68,7 +68,7 @@ def main() -> int:
                 evs.append(((r["a2"] & 0xFF), round(bus.now(), 3)))
 
         m.stub("set_get", set_get)
-        m.stub("AwtoSyncPush", push)
+        m.stub("AwtoSyncPushL", push)
         bus.boot()
         gpio = bus.addr("g_stAwtoGpio") + 3
 

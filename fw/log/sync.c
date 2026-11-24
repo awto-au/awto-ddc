@@ -308,7 +308,12 @@ void AwtoMstep(BYTE ucId, BYTE ucArg, WORD usVal)
     }
 }
 
-void AwtoSyncPush(BYTE ucId, BYTE ucArg, DWORD ulVal)
+void AwtoSyncPushW(BYTE ucId, BYTE ucArg, WORD usVal)
+{
+    AwtoSyncPushL(ucId, ucArg, usVal);
+}
+
+void AwtoSyncPushL(BYTE ucId, BYTE ucArg, DWORD ulVal)
 {
     BYTE ucK = AWTO_SYNC_BACK(g_stAwtoSync.ucSeq, g_stAwtoSync.ucEpSeq);      // lines in this episode
     BYTE ucR;

@@ -70,7 +70,7 @@ def run(a) -> int:
             img = R.render_snap(st, "black", RENDER_SHRINK)
             rows.append((len(rows), state_md5(st), hashlib.md5(img.tobytes()).hexdigest(), round(sess.ms())))
 
-    sess.bus.m.stub("AwtoSyncPush", hook)
+    sess.bus.m.stub("AwtoSyncPushL", hook)
     t0 = sess.bus.now()
     ddc.set(VCP_SAVER, vcp)
     limit = LIMIT_S_PER_FRAME * (a.frames + 1)

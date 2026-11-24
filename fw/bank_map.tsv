@@ -6,7 +6,7 @@
 #stubs 37
 # kind	name	region	offset	slot    (dev layout: scripts/sdcc_layout.py; region C = common, n = bank n)
 const	_OperationFactoryTable	13	0x0000	827
-const	_UserInterfaceGetOverScanStatus_tusOverscanEnTable_10000_1381	C	0x23a5	90
+const	_UserInterfaceGetOverScanStatus_tusOverscanEnTable_10000_1383	C	0x23a5	90
 const	___str_0	7	0x0072	27
 const	___str_1	9	0x007c	38
 const	___str_10	7	0x008d	11
@@ -291,7 +291,7 @@ const	_s_tS2Base	9	0x1f79	2620
 const	_s_tS2Cell	9	0x29b5	683
 const	_s_tS2Font	9	0x2c60	95
 const	_s_tS2Pulse	9	0x2cbf	80
-const	_set_ap_rotate_tFlipToSdk_10000_1405	5	0x02b0	12
+const	_set_ap_rotate_tFlipToSdk_10000_1407	5	0x02b0	12
 const	_tAwtoAudioTestAmp	13	0x0522	14
 const	_tAwtoAudioTestGain	13	0x0530	21
 const	_tAwtoAudioTestMute	13	0x0545	14
@@ -529,7 +529,7 @@ fn	_AstTick	10	0x8967	59
 fn	_AstWorld	10	0x89a2	431
 fn	_AudioHdmiGetDpBit	2	0x44c2	36
 fn	_AudioHdmiGetSr	2	0x44e6	105
-fn	_AudioHdmiSetDpBit	2	0x454f	45
+fn	_AudioHdmiSetDpBitAO	2	0x6402	46
 fn	_AudioHdmiSetDpByte	14	0x6574	36
 fn	_AudioHdmiSetSr	2	0x457c	45
 fn	_AwtoAsteroids	8	0x96f9	797
@@ -717,7 +717,8 @@ fn	_AwtoMonSample	9	0x6946	1691
 fn	_AwtoMs	C	0x1e54	127
 fn	_AwtoMsg0	9	0x4235	23
 fn	_AwtoMsgLoad	14	0xac54	20
-fn	_AwtoMsgV	1	0x335a	266
+fn	_AwtoMsgVL	2	0xa3a7	266
+fn	_AwtoMsgVW	2	0x454f	26
 fn	_AwtoMsgWait	13	0x372b	62
 fn	_AwtoMstep	1	0x9db3	161
 fn	_AwtoNoCableHold	3	0x8e2b	59
@@ -823,7 +824,8 @@ fn	_AwtoPutMhz	7	0x716b	168
 fn	_AwtoPutMilli	7	0x7213	94
 fn	_AwtoPutMon	7	0x7271	559
 fn	_AwtoPutNote	7	0x74a0	546
-fn	_AwtoPutNum	7	0x76c2	206
+fn	_AwtoPutNumL	7	0x76c2	200
+fn	_AwtoPutNumW	7	0xa870	24
 fn	_AwtoPutNvF	7	0x7790	63
 fn	_AwtoPutNvFlush	7	0x77cf	506
 fn	_AwtoPutNvG	7	0x79c9	100
@@ -930,8 +932,9 @@ fn	_AwtoSyncLine	7	0x8b69	3330
 fn	_AwtoSyncMark	2	0x9e56	53
 fn	_AwtoSyncName	7	0x986b	157
 fn	_AwtoSyncPoll	0	0x9aca	240
-fn	_AwtoSyncPush	5	0x8f2b	1423
+fn	_AwtoSyncPushL	5	0xa3c0	1445
 fn	_AwtoSyncPushQuiet	5	0x94ba	309
+fn	_AwtoSyncPushW	5	0x8f2b	35
 fn	_AwtoSyncRow	7	0x2487	135
 fn	_AwtoSyncScan	0	0x9bba	557
 fn	_AwtoSyncSelect	0	0x57ef	172
@@ -1710,8 +1713,8 @@ fn	_ScalerDpRx1ErrorCounterUpdate_EXINT0	11	0x6d9b	919
 fn	_ScalerDpRx1FakeLTProtect	0	0x2d4e	73
 fn	_ScalerDpRx1FifoCheck	4	0x761b	154
 fn	_ScalerDpRx1GetBStoVSDelay	13	0x3f08	1165
-fn	_ScalerDpRx1GetDpcdBitInfo	2	0x6402	56
-fn	_ScalerDpRx1GetDpcdBitInfo_EXINT0	11	0x439c	49
+fn	_ScalerDpRx1GetDpcdBitInfoHM	4	0x9ec4	53
+fn	_ScalerDpRx1GetDpcdBitInfoHM_EXINT0	11	0x439c	46
 fn	_ScalerDpRx1GetDpcdInfo	C	0x0dc2	42
 fn	_ScalerDpRx1GetDpcdInfo_EXINT0	11	0x43cd	42
 fn	_ScalerDpRx1GetVideoInfo	4	0x4e5e	121
@@ -1752,10 +1755,10 @@ fn	_ScalerDpRx1SetColorInfo	4	0x6096	580
 fn	_ScalerDpRx1SetDFEInitial	2	0x6cbf	717
 fn	_ScalerDpRx1SetDFEInitial_EXINT0	11	0x475c	614
 fn	_ScalerDpRx1SetDpLaneMapping	2	0x6f8c	216
-fn	_ScalerDpRx1SetDpcdBitValue	2	0x7064	71
-fn	_ScalerDpRx1SetDpcdBitValue_EXINT0	11	0x49c2	64
-fn	_ScalerDpRx1SetDpcdValue	2	0x70ab	53
-fn	_ScalerDpRx1SetDpcdValue_EXINT0	11	0x4a02	46
+fn	_ScalerDpRx1SetDpcdBitValueHM	4	0x9ef9	67
+fn	_ScalerDpRx1SetDpcdBitValueHM_EXINT0	11	0x400f	60
+fn	_ScalerDpRx1SetDpcdValueHM	4	0x9f3c	49
+fn	_ScalerDpRx1SetDpcdValueHM_EXINT0	11	0x49c2	42
 fn	_ScalerDpRx1SetFifoIRQ	14	0x7555	37
 fn	_ScalerDpRx1SetFifoWD	14	0x757a	37
 fn	_ScalerDpRx1SetHotPlugEvent	0	0x2dbe	53
@@ -2734,7 +2737,8 @@ stub	0__AwtoSetLoop	0	0xa26a	8
 stub	0__AwtoSwEvent	0	0xa272	8
 stub	0__AwtoSyncBegin	0	0xa2ba	8
 stub	0__AwtoSyncDetect	0	0xa2c2	8
-stub	0__AwtoSyncPush	0	0xa2ca	8
+stub	0__AwtoSyncPushL	0	0xa112	8
+stub	0__AwtoSyncPushW	0	0xa2fa	8
 stub	0__AwtoSyncRow	0	0xa2d2	8
 stub	0__AwtoSyncSettle	0	0xa2f2	8
 stub	0__AwtoSyncTail	0	0xa2da	8
@@ -2749,13 +2753,13 @@ stub	0__ScalerDpResetProc	0	0xa122	8
 stub	0__ScalerDpRx1ChangeDpcdVersion	0	0xa002	8
 stub	0__ScalerDpRx1ChangeHdcpDpcdCapability	0	0xa0d2	8
 stub	0__ScalerDpRx1DpcdLinkStatusReset	0	0xa0da	8
-stub	0__ScalerDpRx1GetDpcdBitInfo	0	0xa0e2	8
+stub	0__ScalerDpRx1GetDpcdBitInfoHM	0	0xa0e2	8
 stub	0__ScalerDpRx1LinkStatusIRQ	0	0xa0ea	8
 stub	0__ScalerDpRx1NormalPreDetect	0	0xa0f2	8
 stub	0__ScalerDpRx1PSPreDetect	0	0xa0fa	8
 stub	0__ScalerDpRx1ScanInputPort	0	0xa102	8
-stub	0__ScalerDpRx1SetDpcdBitValue	0	0xa10a	8
-stub	0__ScalerDpRx1SetDpcdValue	0	0xa112	8
+stub	0__ScalerDpRx1SetDpcdBitValueHM	0	0xa2ca	8
+stub	0__ScalerDpRx1SetDpcdValueHM	0	0xa10a	8
 stub	0__ScalerDpRx1StableDetect	0	0xa11a	8
 stub	0__ScalerGlobalDoubleBufferConfigReset	0	0xa00a	8
 stub	0__ScalerGlobalDoubleBufferEnable	0	0xa012	8
@@ -2827,7 +2831,7 @@ stub	12__AwtoNvEv	12	0x9e5d	8
 stub	12__ScalerDpRx1DecodeErrorCountReset	12	0x6bfe	8
 stub	12__ScalerDpRx1GetDpcdInfo_EXINT0	12	0x6c06	8
 stub	13__AwtoSwEvent	13	0x7b6f	8
-stub	13__AwtoSyncPush	13	0x7b77	8
+stub	13__AwtoSyncPushW	13	0x7b77	8
 stub	13__RTDFactoryAdcGainBAdjustEnter	13	0x6f1f	8
 stub	13__RTDFactoryAdcGainBAdjustExit	13	0x6f27	8
 stub	13__RTDFactoryAdcGainBAdjustLeft	13	0x6f2f	8
@@ -3229,7 +3233,7 @@ stub	13__set_ap_user_rgb	13	0x7b5f	8
 stub	13__set_ap_volume	13	0x7b67	8
 stub	13__set_row	13	0x7aa7	8
 stub	14__AmpSet	14	0xb027	8
-stub	14__AudioHdmiSetDpBit	14	0xaed7	8
+stub	14__AudioHdmiSetDpBitAO	14	0xaed7	8
 stub	14__AwtoAudioAmp	14	0xb02f	8
 stub	14__AwtoDbgSelectChannel	14	0xb05f	8
 stub	14__AwtoDiagStage	14	0xb067	8
@@ -3244,7 +3248,7 @@ stub	14__AwtoSyncBegin	14	0xb0b7	8
 stub	14__AwtoSyncDisplay	14	0xaf47	8
 stub	14__AwtoSyncFreq	14	0xb0bf	8
 stub	14__AwtoSyncPoll	14	0xb0c7	8
-stub	14__AwtoSyncPush	14	0xb0cf	8
+stub	14__AwtoSyncPushW	14	0xb0cf	8
 stub	14__AwtoSyncTiming	14	0xb0d7	8
 stub	14__AwtoTmdsHpd	14	0xb0a7	8
 stub	14__AwtoUserRgb	14	0xb08f	8
@@ -3343,8 +3347,9 @@ stub	14__set_apply_call	14	0xb057	8
 stub	14__set_sdk_get	14	0xb07f	8
 stub	1__AwtoFreqUpdate	1	0x9f54	8
 stub	1__AwtoMsg0	1	0x9e9c	8
-stub	1__AwtoSyncPush	1	0x9f5c	8
-stub	1__ScalerDebugMessage	1	0x9ea4	8
+stub	1__AwtoMsgVL	1	0x9ea4	8
+stub	1__AwtoSyncPushL	1	0x335a	8
+stub	1__AwtoSyncPushW	1	0x3362	8
 stub	1__ScalerDpScanInitial	1	0x9e54	8
 stub	1__ScalerFRCDisplayCtrl	1	0x9e5c	8
 stub	1__ScalerFRCInitial	1	0x9e64	8
@@ -3384,7 +3389,8 @@ stub	2__AwtoDpOneFrameMs	2	0xa34f	8
 stub	2__AwtoFastScalerStatus	2	0xa35f	8
 stub	2__AwtoSyncBegin	2	0xa377	8
 stub	2__AwtoSyncInitial	2	0xa37f	8
-stub	2__AwtoSyncPush	2	0xa387	8
+stub	2__AwtoSyncPushL	2	0x0000	8
+stub	2__AwtoSyncPushW	2	0x0008	8
 stub	2__AwtoSyncSw	2	0xa38f	8
 stub	2__AwtoTmdsStuck	2	0xa36f	8
 stub	2__AwtoWakeHold	2	0xa357	8
@@ -3393,6 +3399,7 @@ stub	2__ScalerAudioDPDigitalOutputProc	2	0xa167	8
 stub	2__ScalerAudioWatchDogProc	2	0xa16f	8
 stub	2__ScalerDDR2PowerControl	2	0xa177	8
 stub	2__ScalerDDomainBackgroundEnable	2	0xa17f	8
+stub	2__ScalerDebugMessage	2	0xa387	8
 stub	2__ScalerDebugSelectDDCCIDebugMode	2	0xa22f	8
 stub	2__ScalerDisplayDPTx1VideoStreamOutput	2	0xa267	8
 stub	2__ScalerDisplayDPTxAnalogPhyConrol	2	0xa26f	8
@@ -3401,8 +3408,11 @@ stub	2__ScalerDisplayDPTxSetZ0	2	0xa197	8
 stub	2__ScalerDpRx1CDRCheck	2	0xa24f	8
 stub	2__ScalerDpRx1DFECheck	2	0xa257	8
 stub	2__ScalerDpRx1FakeLTProtect	2	0xa217	8
+stub	2__ScalerDpRx1GetDpcdBitInfoHM	2	0x6430	8
 stub	2__ScalerDpRx1HDCPBlockReset	2	0xa25f	8
 stub	2__ScalerDpRx1RebuildPhy	2	0xa187	8
+stub	2__ScalerDpRx1SetDpcdBitValueHM	2	0x4569	8
+stub	2__ScalerDpRx1SetDpcdValueHM	2	0x4571	8
 stub	2__ScalerDpRx1SignalDetectMeasureCount	2	0xa21f	8
 stub	2__ScalerDpRx1ValidSignalDetection	2	0xa227	8
 stub	2__ScalerFRCEn	2	0xa19f	8
@@ -3455,7 +3465,8 @@ stub	3__AwtoSrcRing	3	0xa3f6	8
 stub	3__AwtoSwEvent	3	0xa416	8
 stub	3__AwtoSwFast	3	0xa3fe	8
 stub	3__AwtoSyncBegin	3	0xa41e	8
-stub	3__AwtoSyncPush	3	0xa426	8
+stub	3__AwtoSyncPushL	3	0xa426	8
+stub	3__AwtoSyncPushW	3	0xa42e	8
 stub	3__RTDFactoryOsdFuncDisableOsd	3	0xa346	8
 stub	3__RTDFactoryOsdFuncDrawWindow	3	0xa34e	8
 stub	3__RTDFactoryOsdFuncEnableOsd	3	0xa356	8
@@ -3496,11 +3507,9 @@ stub	4__ScalerDpRx1AlignCheck	4	0x9e4c	8
 stub	4__ScalerDpRx1CpIRQ	4	0x9e54	8
 stub	4__ScalerDpRx1DecodeCheck	4	0x9e5c	8
 stub	4__ScalerDpRx1GetBStoVSDelay	4	0x9e64	8
-stub	4__ScalerDpRx1GetDpcdBitInfo	4	0x9e6c	8
 stub	4__ScalerDpRx1LinkRateDetect	4	0x9e24	8
 stub	4__ScalerDpRx1ScrambleSetting	4	0x9e74	8
 stub	4__ScalerDpRx1SetDFEInitial	4	0x9e7c	8
-stub	4__ScalerDpRx1SetDpcdValue	4	0x9e84	8
 stub	4__ScalerDpRx1SetNoVideoStreamIRQ	4	0x9e8c	8
 stub	4__ScalerDpRx1SignalCheck	4	0x9e2c	8
 stub	4__ScalerDpRx1SignalDetectMeasureCount	4	0x9e34	8
@@ -3541,7 +3550,7 @@ stub	5__AwtoPmSoundPoll	5	0xa149	8
 stub	5__AwtoPortName	5	0xa259	8
 stub	5__AwtoPortSet	5	0xa319	8
 stub	5__AwtoPutClock	5	0xa261	8
-stub	5__AwtoPutNum	5	0xa269	8
+stub	5__AwtoPutNumW	5	0xa269	8
 stub	5__AwtoQcOsd	5	0xa321	8
 stub	5__AwtoRbPrime	5	0xa329	8
 stub	5__AwtoSaverTaken	5	0xa331	8
@@ -3629,7 +3638,7 @@ stub	6__AwtoOsdRowCmds	6	0x9e7c	8
 stub	6__AwtoOsdScreenBegin	6	0x9e84	8
 stub	6__AwtoPmSound	6	0x9e64	8
 stub	6__AwtoPmSoundBg	6	0x9e6c	8
-stub	6__AwtoSyncPush	6	0x9e94	8
+stub	6__AwtoSyncPushW	6	0x9e94	8
 stub	6__PcDeltaB	6	0x9e8c	8
 stub	6__ScalerOsd2BitFontOffset	6	0x9e04	8
 stub	6__ScalerOsd2FontFunction	6	0x9e0c	8
@@ -3659,10 +3668,10 @@ stub	7__AwtoPutWall	7	0xa7f8	8
 stub	7__AwtoRbPrime	7	0xa828	8
 stub	7__AwtoSyncAt	7	0xa818	8
 stub	7__AwtoSyncConPoll	7	0xa800	8
-stub	7__AwtoSyncPush	7	0xa838	8
+stub	7__AwtoSyncPushW	7	0xa838	8
 stub	7__AwtoSyncStage	7	0xa840	8
 stub	7__AwtoSyncTxt	7	0xa808	8
-stub	7__ScalerDpRx1GetDpcdBitInfo	7	0xa7a0	8
+stub	7__ScalerDpRx1GetDpcdBitInfoHM	7	0xa7a0	8
 stub	7__ScalerDpRx1MacInitial	7	0xa7a8	8
 stub	7__ScalerFmtCnvGetSourceType	7	0xa798	8
 stub	7__SysSourceGetCableDetect	7	0xa7b0	8
@@ -3687,7 +3696,8 @@ stub	8__AwtoOsdScreenOff	8	0x9f70	8
 stub	8__AwtoPmSound	8	0x9f28	8
 stub	8__AwtoPmSoundPoll	8	0x9f30	8
 stub	8__AwtoScTile	8	0x9f78	8
-stub	8__AwtoSyncPush	8	0x9f88	8
+stub	8__AwtoSyncPushL	8	0x9f88	8
+stub	8__AwtoSyncPushW	8	0x9f98	8
 stub	8__OsdPaletteSelectPalette	8	0x9ee8	8
 stub	8__ScalerCecPollingMsgReceiving	8	0x9ef8	8
 stub	8__ScalerColorOutputGammaEnable	8	0x9f40	8
@@ -3714,7 +3724,8 @@ stub	9__AwtoOsdTurn	9	0x93e7	8
 stub	9__AwtoOsdWdtLines	9	0x93af	8
 stub	9__AwtoPutHex2	9	0x93b7	8
 stub	9__AwtoSwEvent	9	0x93f7	8
-stub	9__AwtoSyncPush	9	0x93ff	8
+stub	9__AwtoSyncPushL	9	0x93ff	8
+stub	9__AwtoSyncPushW	9	0x943f	8
 stub	9__AwtoTextLine	9	0x93bf	8
 stub	9__AwtoTextShow	9	0x93c7	8
 stub	9__OsdDispDisableOsd	9	0x932f	8
@@ -3744,7 +3755,7 @@ stub	_AwtoDdcRxDone	C	0x2345	8
 stub	_AwtoDdcRxFrame	C	0x234d	8
 stub	_AwtoDiagInit	C	0x2355	8
 stub	_AwtoFlashWindowCheck	C	0x235d	8
-stub	_AwtoMsgV	C	0x22cd	8
+stub	_AwtoMsgVW	C	0x22cd	8
 stub	_AwtoPassSlow	C	0x236d	8
 stub	_AwtoPsWakePoll	C	0x2375	8
 stub	_AwtoPutChar	C	0x232d	8

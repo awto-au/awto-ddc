@@ -238,7 +238,7 @@ static void AwtoPutStr(const char *s)
 }
 
 // Digits low first into the row, then reversed in place: no digit buffer (10 B XDATA), no extra local (deep DATA path).
-static void AwtoPutNum(unsigned long ulV, BYTE ucMin)
+static void AwtoPutNumL(unsigned long ulV, BYTE ucMin)
 {
     BYTE ucN = d_s_ucAwtoLen;
 
@@ -264,6 +264,12 @@ static void AwtoPutNum(unsigned long ulV, BYTE ucMin)
         s_pcAwtoRow[ucN] ^= s_pcAwtoRow[ucMin];
     }
 }
+
+static void AwtoPutNumW(WORD usV, BYTE ucMin)         // value <= 16 bit: both arguments in registers
+{
+    AwtoPutNumL(usV, ucMin);
+}
+#define AwtoPutNum(v, min)  ((sizeof((v) + 0) <= 2) ? AwtoPutNumW((v), (min)) : AwtoPutNumL((v), (min)))
 
 static void AwtoPutHex2(BYTE ucV)
 {

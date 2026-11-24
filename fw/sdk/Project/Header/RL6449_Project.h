@@ -1567,7 +1567,10 @@ extern void AwtoSyncT2Start(void);
 #define AWTO_SYNC_MARK()                                        AwtoSyncMark()
 extern void AwtoSyncBegin(unsigned char ucKind, unsigned char ucPort);
 extern void AwtoSyncSettle(void);
-extern void AwtoSyncPush(unsigned char ucId, unsigned char ucArg, unsigned long ulVal);
+extern void AwtoSyncPushL(unsigned char ucId, unsigned char ucArg, unsigned long ulVal);
+extern void AwtoSyncPushW(unsigned char ucId, unsigned char ucArg, unsigned int usVal);
+// awto: a value of 16 bit or less goes in registers (R7, R5, R2:R3); the long form passes it in XRAM (#336)
+#define AwtoSyncPush(id, arg, val)  ((sizeof((val) + 0) <= 2) ? AwtoSyncPushW((id), (arg), (val)) : AwtoSyncPushL((id), (arg), (val)))
 extern void AwtoSyncSw(unsigned char ucId, unsigned char ucArg);
 extern void AwtoSyncDetect(unsigned char ucPort, unsigned char ucKind, unsigned char ucPre, unsigned char ucType);
 extern void AwtoSyncTiming(void);

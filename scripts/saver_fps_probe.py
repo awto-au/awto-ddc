@@ -64,7 +64,7 @@ def main() -> int:
         if on[0] and (r["a1"] & 0xFF) == F.SYNC_EV_ODEMO and (r["a2"] & 0xFF) in args:
             frames.append(mm.wall_ms * 1000.0)
 
-    m.stub("AwtoSyncPush", sync)
+    m.stub("AwtoSyncPushL", sync)
     for n in a.fn:
         if "_" + n in m.sym:
             m.stub(n, lambda mm, r, n=n: on[0] and calls[n].append(mm.wall_ms * 1000.0) and None)

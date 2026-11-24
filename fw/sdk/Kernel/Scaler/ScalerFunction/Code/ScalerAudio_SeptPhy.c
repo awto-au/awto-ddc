@@ -432,10 +432,11 @@ void ScalerAudioD1DPSetDVCVolumeAdjustType(bit bAdjustType)
 //--------------------------------------------------
 // Description  : HDMI audio register access of port ucPort (0 = D2, 1 = D3): data port and status register of page 0x71 + port
 //--------------------------------------------------
-static void AudioHdmiSetDpBit(BYTE ucPort, BYTE ucIndex, BYTE ucAnd, BYTE ucOr)
+static void AudioHdmiSetDpBitAO(BYTE ucPort, BYTE ucIndex, WORD usAndOr)  // awto: And:Or in one WORD, 3 register arguments (#336)
 {
-    ScalerSetDataPortBit(AUDIO_HDMI_REG(ucPort, P71_C9_HDMI_AP), ucIndex, ucAnd, ucOr);
+    ScalerSetDataPortBit(AUDIO_HDMI_REG(ucPort, P71_C9_HDMI_AP), ucIndex, (BYTE)(usAndOr >> 8), (BYTE)usAndOr);
 }
+#define AudioHdmiSetDpBit(p, i, a, o)  AudioHdmiSetDpBitAO((p), (i), (((WORD)(BYTE)(a) << 8) | (BYTE)(o)))  // awto: call sites keep the 4 argument form (#336)
 
 static void AudioHdmiSetDpByte(BYTE ucPort, BYTE ucIndex, BYTE ucValue)
 {

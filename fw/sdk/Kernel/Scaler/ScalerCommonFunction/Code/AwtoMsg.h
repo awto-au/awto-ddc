@@ -26,7 +26,12 @@ unsigned char AwtoMsgWait(void)
     return 1;
 }
 
-void AwtoMsgV(unsigned int usId, unsigned long ulValue)
+void AwtoMsgVW(unsigned int usId, unsigned int usValue)  // awto: register-argument form of AwtoMsgVL (#336)
+{
+    AwtoMsgVL(usId, usValue);
+}
+
+void AwtoMsgVL(unsigned int usId, unsigned long ulValue)
 {
     if(g_ucAwtoMsgOn == 0)
     {
@@ -50,6 +55,6 @@ void AwtoMsgV(unsigned int usId, unsigned long ulValue)
 
 void AwtoMsg0(unsigned int usId)
 {
-    AwtoMsgV(usId, 0);
+    AwtoMsgVW(usId, 0);
 }
 #endif

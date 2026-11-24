@@ -36,10 +36,13 @@
 // FUNCTION EXTERN
 //****************************************************************************
 #if(_D1_DP_EXIST == _ON)
-extern BYTE ScalerDpRx1GetDpcdBitInfo_EXINT0(BYTE ucDpcdAccessPortH, BYTE ucDpcdAccessPortM, BYTE ucDpcdAccessPortL, BYTE ucDpcdBit);
+extern BYTE ScalerDpRx1GetDpcdBitInfoHM_EXINT0(WORD usDpcdAccessPortHM, BYTE ucDpcdAccessPortL, BYTE ucDpcdBit);  // awto: DPCD address H:M in one WORD, 3 register arguments (#336)
 extern BYTE ScalerDpRx1GetDpcdInfo_EXINT0(BYTE ucDpcdAccessPortH, BYTE ucDpcdAccessPortM, BYTE ucDpcdAccessPortL);
-extern void ScalerDpRx1SetDpcdBitValue_EXINT0(BYTE ucDpcdAccessPortH, BYTE ucDpcdAccessPortM, BYTE ucDpcdAccessPortL, BYTE ucNotDpcdBit, BYTE ucDpcdBit);
-extern void ScalerDpRx1SetDpcdValue_EXINT0(BYTE ucDpcdAccessPortH, BYTE ucDpcdAccessPortM, BYTE ucDpcdAccessPortL, BYTE ucDpcdValue);
+extern void ScalerDpRx1SetDpcdBitValueHM_EXINT0(WORD usDpcdAccessPortHM, BYTE ucDpcdAccessPortL, WORD usDpcdNotBitBit);  // awto: DPCD address H:M in one WORD, 3 register arguments (#336)
+extern void ScalerDpRx1SetDpcdValueHM_EXINT0(WORD usDpcdAccessPortHM, BYTE ucDpcdAccessPortL, BYTE ucDpcdValue);  // awto: DPCD address H:M in one WORD, 3 register arguments (#336)
+#define ScalerDpRx1SetDpcdValue_EXINT0(h, m, l, v)  ScalerDpRx1SetDpcdValueHM_EXINT0((((WORD)(BYTE)(h) << 8) | (BYTE)(m)), (BYTE)(l), (BYTE)(v))  // awto: call sites keep the old 4/5 argument form; H:M (and not-bit:bit) share one WORD (#336)
+#define ScalerDpRx1SetDpcdBitValue_EXINT0(h, m, l, nb, b)  ScalerDpRx1SetDpcdBitValueHM_EXINT0((((WORD)(BYTE)(h) << 8) | (BYTE)(m)), (BYTE)(l), (((WORD)(BYTE)(nb) << 8) | (BYTE)(b)))  // awto: call sites keep the old 4/5 argument form; H:M (and not-bit:bit) share one WORD (#336)
+#define ScalerDpRx1GetDpcdBitInfo_EXINT0(h, m, l, b)  ScalerDpRx1GetDpcdBitInfoHM_EXINT0((((WORD)(BYTE)(h) << 8) | (BYTE)(m)), (BYTE)(l), (BYTE)(b))  // awto: call sites keep the old 4/5 argument form; H:M (and not-bit:bit) share one WORD (#336)
 extern void ScalerDpRx1SinkStatusSet_EXINT0(EnumDpSinkReceivePort enumReceiverPort, EnumDpSinkStatus enumInSync);
 extern BYTE ScalerDpRx1TrainingPattern1_EXINT0(DPRX_PD EnumDpLinkTrainingType enumDpLtType);
 extern BYTE ScalerDpRx1TrainingPattern2_EXINT0(DPRX_PD EnumDpLinkTrainingType enumDpLtType);
