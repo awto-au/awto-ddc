@@ -7,6 +7,7 @@ Per suffix function: linked bytes (CH_ area in the .rst), plain twin + bytes, di
 suffix normalisation, own static storage (PARM / locals / sloc), callees, whether the plain twin has any.
 Log: tmp/logs/isr_twins.log
 """
+
 import argparse
 import difflib
 import re
@@ -91,7 +92,10 @@ out_names = set()
 
 
 def c_body(src_root: Path, name: str) -> str:
-    pat = re.compile(r"^[A-Za-z_][\w \*]*\b" + re.escape(name) + r"\s*\([^;{]*\)\s*\n?\{", re.MULTILINE)
+    pat = re.compile(
+        r"^[A-Za-z_][\w \*]*\b" + re.escape(name) + r"\s*\([^;{]*\)\s*\n?\{",
+        re.MULTILINE,
+    )
     for f in src_root.rglob("*.c"):
         t = f.read_text(errors="replace")
         m = pat.search(t)
@@ -100,13 +104,13 @@ def c_body(src_root: Path, name: str) -> str:
             for j in range(i, len(t)):
                 depth += (t[j] == "{") - (t[j] == "}")
                 if depth == 0:
-                    return t[m.start():j + 1]
+                    return t[m.start() : j + 1]
     return ""
 
 
 def norm(body: str) -> list:
     body = re.sub(r"_(EXINT0|EXINT1|EXINT|WDINT)\b", "", body)
-    body = re.sub(r"/\*.*?\*/|//[^\n]*", "", body, flags=re.S)
+    body = re.sub(r"/\*.*?\*/|//[^\n]*", "", body, flags=re.DOTALL)
     return [re.sub(r"\s+", " ", ln).strip() for ln in body.split("\n") if ln.strip()]
 
 
@@ -118,7 +122,7 @@ def main():
     log = Logger(ROOT / "tmp/logs/isr_twins.log")
     tree = Path(a.sdcc)
     sz = sizes(tree)
-    stor, calls, where = storage_and_calls(tree)
+    stor, calls, _where = storage_and_calls(tree)
     names = sorted(n for n in calls if SUFFIX.search(n))
     out_names.update(names, (SUFFIX.sub("", n) for n in names))
     af = asm_funcs(tree)
@@ -131,16 +135,33 @@ def main():
             x, y = norm(c_body(tree / "src", n)), norm(c_body(tree / "src", plain))
             d = sum(1 for t in difflib.ndiff(x, y) if t[0] in "+-")
         own = sum(s for k, v in stor.items() if k.startswith(n + "_") for _, s in v)
-        twst = sum(s for k, v in stor.items() if tw and k.startswith(tw + "_") for _, s in v)
+        twst = sum(
+            s for k, v in stor.items() if tw and k.startswith(tw + "_") for _, s in v
+        )
         ad = ""
         if tw and n in af and tw in af:
             ad = sum(1 for t in difflib.ndiff(af[n], af[tw]) if t[0] in "+-")
-        rows.append((n, sz.get(n, 0), tw, sz.get(tw, 0) if tw else "", d, ad, own, twst, ",".join(sorted(calls[n]))))
+        rows.append(
+            (
+                n,
+                sz.get(n, 0),
+                tw,
+                sz.get(tw, 0) if tw else "",
+                d,
+                ad,
+                own,
+                twst,
+                ",".join(sorted(calls[n])),
+            )
+        )
     with open(a.tsv, "w") as f:
-        f.write("isr_fn\tbytes\tplain_twin\ttwin_bytes\tdiff_lines\tasm_diff\tisr_static_B\ttwin_static_B\tcalls\n")
-        for r in rows:
-            f.write("\t".join(str(c) for c in r) + "\n")
-    log.say(f"{len(rows)} suffix functions, {sum(r[1] for r in rows)} B, {sum(1 for r in rows if r[2])} with a plain twin -> {a.tsv}")
+        f.write(
+            "isr_fn\tbytes\tplain_twin\ttwin_bytes\tdiff_lines\tasm_diff\tisr_static_B\ttwin_static_B\tcalls\n"
+        )
+        f.writelines("\t".join(str(c) for c in r) + "\n" for r in rows)
+    log.say(
+        f"{len(rows)} suffix functions, {sum(r[1] for r in rows)} B, {sum(1 for r in rows if r[2])} with a plain twin -> {a.tsv}"
+    )
 
 
 if __name__ == "__main__":
