@@ -2,6 +2,7 @@
 """Does a video frame land byte-exact in DDR? (awto-ddc DDR-capture question for awto-games-dw8051#1, option A)
 
 usage: ./dev.py ddr-capture [--unit N] run [--seed S] [--cap-s S]   one session on the unit (debug link, frame mode, freeze, sampled read-back)
+       ./dev.py ddr-capture [--unit N] run-rows [--seed S]              #348 test 1: independent rows, port A vs row 2L, port B vs row 2L+1
        ./dev.py ddr-capture analyse [READS.json]                    offline: compare a saved read set again (no hardware)
        scripts/ddr_capture_check.py gen [--seed S]                   write the frame file only
 - Test frame 3840x2160 RGB888, left half x < 1920 = PRNG fill (numpy default_rng(seed)), right half = per channel a seeded
@@ -215,11 +216,16 @@ def sample_addresses(seed: int) -> list[int]:
 class Reader:
     """MCU_DC port A read, LEN 2 (16 B). The stale-flag clear costs one block read but a stale buffer would fake a mismatch."""
 
-    def __init__(self, d):
+    def __init__(self, d, port: str = "a"):
         import ddr_frame_test as T
         self.d, self.T, self.cur = d, T, [None] * 4
-        self.r = T.MCU_DC["a"]
-        d.wr(self.r["len"], 2)
+        self.r = T.MCU_DC[port]
+        ln = d.rd(self.r["len"])
+        log(f"MCU_DC port {port} LEN read {ln:#04x} (regdb reset 0x02; A: other values kill the port, #255; B: kept at 2, never written)")
+        if port == "a":
+            d.wr(self.r["len"], 2)
+        elif ln != 2:
+            raise SystemExit(f"port B LEN {ln:#04x} != 2: refused (no write to MCU_DC_LEN_B)")
 
     def read(self, a: int, limit_s: float = 0.05) -> bytes | None:       # 50 ms = 3 frames of DDR arbitration (ddr_frame_test.dc_burst_read)
         d, r = self.d, self.r
@@ -509,6 +515,129 @@ def analyse_levels(reads: list[dict], payload: bytes, seed: int, data_bursts: in
     return ok
 
 
+def rows_levels(seed: int) -> np.ndarray:
+    """(H, W, 3) levels, every frame row independent (seeded PRNG): odd rows differ from the even rows."""
+    import ddr_levels as LV
+    return LV.filler(H * W * 3, len(LV.load_table()[0]), seed).reshape(H, W, 3)
+
+
+_STORED: list = []
+
+
+def rows_line(lv: np.ndarray, row: int, mirror: bool) -> np.ndarray:
+    """Stored bytes of frame row `row` as one memory line (pixel p = frame x 3839 - p when mirrored), B G R."""
+    import ddr_levels as LV
+    if not _STORED:
+        _STORED.append(LV.load_table()[1])
+    r = lv[row, ::-1, :] if mirror else lv[row]
+    return _STORED[0][r].reshape(-1)
+
+
+ROW_HYPS = [(nm, dr, mir) for nm, dr in (("row 2L", 0), ("row 2L+1", 1)) for mir in (True, False)]
+
+
+def lane_perm(pairs: list[tuple[bytes, bytes]]) -> list[set]:
+    """For each read byte i: the expected byte positions j that agree on every pair (got, expected natural)."""
+    cand = [set(range(16)) for _ in range(16)]
+    for got, exp in pairs:
+        for i in range(16):
+            cand[i] = {j for j in cand[i] if exp[j] == got[i]}
+    return cand
+
+
+def analyse_rows(reads: list[dict], seed: int) -> bool:
+    """Exact equality per read against frame rows 2L / 2L+1 (mirror on / off), lane order swap 1 / 0; then the lane permutation that fits."""
+    lv = rows_levels(seed)
+    verdict = {}
+    for port in ("a", "b"):
+        rs = [r for r in reads if r["port"] == port]
+        got = [(r, bytes.fromhex(r["hex"])) for r in rs if r["hex"]]
+        tmo = len(rs) - len(got)
+        log(f"port {port.upper()}: {len(rs)} line-start reads, {len(got)} with data, {tmo} read-flag timeouts (not compared)")
+        tab = {}
+        for nm, dr, mir in ROW_HYPS:
+            for sw in (1, 0):
+                n = 0
+                for r, g in got:
+                    e = rows_line(lv, 2 * (r["addr"] // PITCH_U) + dr, mir)[:16].tobytes()
+                    n += g == (e[8:] + e[:8] if sw else e)
+                tab[(nm, mir, sw)] = n
+                log(f"  {nm:9s} mirror {int(mir)} halves-swap {sw}: exact {n} / {len(got)}")
+        best = max(tab, key=tab.get)
+        nm, mir, sw = best
+        dr = 1 if nm == "row 2L+1" else 0
+        pairs = [(g, rows_line(lv, 2 * (r["addr"] // PITCH_U) + dr, mir)[:16].tobytes()) for r, g in got]
+        multiset = sum(sorted(g) == sorted(e) for g, e in pairs)
+        perm = lane_perm(pairs)
+        log(f"  best: {nm} mirror {int(mir)} swap {sw} = {tab[best]}/{len(got)}; same bytes in any order {multiset}/{len(got)}; "
+            f"lane map read byte i <- memory byte j: " + " ".join(f"{i}<-{sorted(p)}" for i, p in enumerate(perm)))
+        bad = [(r, g) for (r, g), (_, e) in zip(got, pairs, strict=True) if g != (e[8:] + e[:8] if sw else e)]
+        for r, g in bad[:6]:
+            log(f"  mismatch @unit {r['addr']} (line {r['addr'] // PITCH_U}): got {g.hex()}")
+        verdict[port] = (nm, mir, sw, tab[best], len(got), tmo)
+    a, b = verdict["a"], verdict["b"]
+    ok = a[0] == "row 2L" and b[0] == "row 2L+1" and a[3] == a[4] > 0 and b[3] == b[4] > 0
+    log(f"VERDICT chip A (port A) = frame row 2L: {a[3]}/{a[4]} exact (mirror {int(a[1])}, swap {a[2]}); "
+        f"chip B (port B) = {b[0]}: {b[3]}/{b[4]} exact (mirror {int(b[1])}, swap {b[2]}) -> "
+        f"{'chip B holds the odd rows' if ok else 'NOT confirmed'}")
+    return ok
+
+
+def run_rows(a) -> int:
+    """Test 1 of #348: frame with independent odd rows (levels table), freeze, port A and port B read at the same line starts."""
+    import ddr_frame_test as T
+    import ddr_freeze_test as F
+    import ddr_levels as LV
+    T.LOG = LOG
+    lv = rows_levels(a.seed)
+    sent, _ = LV.load_table()
+    write_frame_file(sent[lv])
+    log(f"rows run: seed {a.seed:#x}, {W}x{H} frame, every row PRNG levels ({len(sent)} levels, table ddr_levels.json); "
+        f"expected chip A line L = row 2L, chip B line L = row 2L+1 (mirrored, stored bytes)")
+    lines = list(range(H // 2))
+    random.Random(a.seed).shuffle(lines)
+    d = T.Dbg(a.unit, a.bus)
+    reads, marks, proc, t_on, snap = [], {}, None, None, {}
+    try:
+        F.frame_mode(d.io)
+        snap = snapshot(d)
+        rda, rdb = Reader(d, "a"), Reader(d, "b")
+        e0a = rows_line(lv, 0, True)[:16].tobytes()
+        e0b = rows_line(lv, 1, True)[:16].tobytes()
+        t_on = time.monotonic()
+        proc = pattern_start(F, a.connector)
+        while time.monotonic() - t_on < MARK_WAIT_S and len(marks) < 2:     # lane-order agnostic: same 16 bytes in any order
+            for nm, rd, e in (("a", rda, e0a), ("b", rdb, e0b)):
+                if nm not in marks:
+                    g = rd.read(0)
+                    if g is not None and sorted(g) == sorted(e):
+                        marks[nm] = round(time.monotonic() - t_on, 2)
+        log(f"markers (unit 0, same bytes as row 0 / row 1, s after window start): {marks}")
+        t = time.monotonic()
+        while time.monotonic() - t < SETTLE_FRAMES * FRAME_S:
+            F.prd(d.io, F.P5_AC)
+        F.freeze(d.io, True)
+        t_frz = time.monotonic() - t_on
+        log(f"freeze on at {t_frz:.2f} s after window start")
+        for ln in lines:
+            if time.monotonic() - t_on > a.cap_s - 0.3:
+                break
+            for port, rd in (("a", rda), ("b", rdb)):
+                g = rd.read(ln * PITCH_U)
+                reads.append({"port": port, "addr": ln * PITCH_U, "hex": g.hex() if g else None, "t": round(time.monotonic() - t_on, 3)})
+        log(f"reads: {len(reads)} bursts ({len(reads) // 2} lines x 2 ports) in {time.monotonic() - t_on - t_frz:.2f} s after the freeze")
+    finally:
+        if proc is not None:
+            F.finish(d, proc, t_on)
+        else:
+            F.freeze(d.io, False)
+            F.cmd(d.io, F.TC_SDK)
+        d.io.close()
+        READS.write_text(json.dumps({"mode": "rows", "seed": a.seed, "unit": a.unit, "markers": marks, "regs": snap, "reads": reads}))
+        log(f"reads saved: {READS}")
+    return 0 if analyse_rows(reads, a.seed) else 1
+
+
 def offline(a) -> int:
     if a.recover:
         reads = recover(ROOT / "tmp/logs/ddr_frame_test.raw.log", a.recover)
@@ -521,6 +650,8 @@ def offline(a) -> int:
         log(f"recovered {len(reads)} reads from the raw log since {a.recover}; saved {READS}")
     else:
         j = json.loads(Path(a.reads or READS).read_text())
+        if j.get("mode") == "rows":
+            return 0 if analyse_rows(j["reads"], j["seed"]) else 1
         if j.get("mode") == "levels":
             import ddr_levels as LV
             pl = np.random.default_rng(j["seed"] ^ 0x5A5A).integers(0, 256, j["payload_kb"] * 1000, dtype=np.uint8).tobytes()
@@ -538,7 +669,7 @@ def offline(a) -> int:
 
 def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    ap.add_argument("what", choices=("run", "run-levels", "analyse", "gen"))
+    ap.add_argument("what", choices=("run", "run-levels", "run-rows", "analyse", "gen"))
     ap.add_argument("reads", nargs="?")
     ap.add_argument("--unit", type=int, default=3)
     ap.add_argument("--bus", type=int)
@@ -555,6 +686,8 @@ def main() -> int:
         return 0
     if a.what == "run-levels":
         return run_levels(a)
+    if a.what == "run-rows":
+        return run_rows(a)
     return run(a) if a.what == "run" else offline(a)
 
 

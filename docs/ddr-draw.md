@@ -51,6 +51,7 @@ States: 2 ok, 3 refused (unknown op, empty / off-screen rectangle, bad grid), 4 
 - Fill touches only the index bytes that change (2 buffer bytes per burst, mid / high bytes every 128 bursts); read-back is in the firmware (CMD read 101, poll `MCU_DC_READ_FLAG`, 16 `DATABUF_R` bytes, compare). Single reads by default; `--double` = extra reads of a bad burst, reported as a separate result.
 - Read lane order: `DATABUF_R` is in memory order with the two 8 B halves swapped (`swap=1`); found by the script on 8 blocks (swap 0: 1022 bad of 1024, swap 1: 0).
 - A burst whose read flag never sets within 50 ms is counted as a timeout, not compared; the retry pass recovers it.
+- `ucPort` (0 = port A / chip A, 1 = port B / chip B, #348): the addr ops address the selected port's registers (port B = port A + 0x40); `LEN` written 2 on either port (regdb reset 0x02, port B read 0x02 on unit 3). Port B lane order on unit 3 = port A's (halves swapped, read and write; #348 test 1). Host: `./dev.py ddr-keep --port a|b|ab`.
 - `--extend`: fill + sampled read-back (256 blocks over the filled region) in doubling steps past block 1; capacity = first aliasing. `--watch`: live (not frozen) marker block read back repeatedly. `--regs`: buffer-mode registers.
 
 ## Measured (unit 2, freeze image 333c92f + this change, MCU 350 MHz default, frozen 4K60, 2026-11-20, #267)

@@ -1482,8 +1482,8 @@ def cmd_ddr_addr(extra: list[str]) -> int:
     return _py("ddr_addr_test.py", "--unit", n, "--bus", _live_bus(u), "--map", m, *extra)
 
 
-@command("DDR marker at the top of the 32 MiB: fill | verify (freeze image; survival over an event, scripts/ddr_keep_probe.py)",
-         args="[--unit N] [--map F] fill|verify|cmd 0xNN", kind="action")
+@command("DDR address-in-data marker on chip A / B (port a|b|ab, default units 0x200000.., 2.5 MB): fill | verify (freeze image; survival over an event, scripts/ddr_keep_probe.py)",
+         args="[--unit N] [--map F] [--port a|b|ab] [--blk0 B] [--blocks N] [--no-prep] [--label TEXT] fill|verify|cmd 0xNN", kind="action")
 def cmd_ddr_keep(extra: list[str]) -> int:
     n, u = _unit(extra)
     given = _opt(extra, "--map")
@@ -1492,7 +1492,7 @@ def cmd_ddr_keep(extra: list[str]) -> int:
 
 
 @command("does a video frame land byte-exact in DDR? test frame on the unit, freeze, sampled DDR read-back, exact compare (scripts/ddr_capture_check.py; a few seconds on screen)",
-         args="[--unit N] run [--seed S] [--cap-s S] | analyse [READS.json]", kind="action")
+         args="[--unit N] run | run-levels | run-rows [--seed S] [--cap-s S] | analyse [READS.json]", kind="action")
 def cmd_ddr_capture(extra: list[str]) -> int:
     n, u = _unit(extra)
     if extra[:1] == ["analyse"]:
