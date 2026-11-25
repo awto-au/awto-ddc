@@ -2899,7 +2899,7 @@ key	page	addr	regdb_name	regdb_status	regdb_reset	regdb_fields	access	sdk_name	s
 3730	37	30	MCU_DC_WMASK_H_A	documented	0x00	ddr_a_wmask[7:0]RW	RW	P37_30_MCU_DC_WMASK_H_A	defined	0	AWTO_R_MCU_DC_WMASK_H_A	2776B=MCU_DC_WMASK_A_H 2797UPM=MCU_DC_WMASK_A_H	27	1	00	00	00	0	0	2026-11-05	2026-11-19	3	i:00x13 l:00x13 r:00x1									
 3731	37	31	MCU_DC_WMASK_L_A	documented	0x00	ddr_a_wmask[7:0]RW	RW	P37_31_MCU_DC_WMASK_L_A	defined	0	AWTO_R_MCU_DC_WMASK_L_A	2776B=MCU_DC_WMASK_A_L 2797UPM=MCU_DC_WMASK_A_L	27	1	00	00	00	0	0	2026-11-05	2026-11-19	3	i:00x13 l:00x13 r:00x1									
 3734	37	34	MCU_DC_READ_FLAG_A	documented	0x00	ddr_a_read_ready_flag[0]R	R	P37_34_MCU_DC_READ_FLAG_A	defined	0	AWTO_R_MCU_DC_READ_FLAG_A	2776B 2797UPM	27	1	00	00	00	0	0	2026-11-05	2026-11-19	3	i:00x13 l:00x13 r:00x1									
-3740	37	40	MCU_DC_CMD_B	documented	0x00	ddr_b_cmd[7:5]RW	RW	P37_40_MCU_DC_CMD_B	defined	0			27	1	00	00	00	0	0	2026-11-05	2026-11-19	3	i:00x13 l:00x13 r:00x1									
+3740	37	40	MCU_DC_CMD_B	documented	0x00	ddr_b_cmd[7:5]RW	RW	P37_40_MCU_DC_CMD_B	defined	0	AWTO_R_MCU_DC_CMD_B		27	1	00	00	00	0	0	2026-11-05	2026-11-19	3	i:00x13 l:00x13 r:00x1									
 3741	37	41	MCU_DC_LEN_B	documented	0x02	ddr_b_burst_len[3:0]RW	RW	P37_41_MCU_DC_LEN_B	defined	0			27	2	00	02		1	0	2026-11-05	2026-11-19	3	i:02x13 l:02x11,00x2 r:02x1									
 3744	37	44	MCU_DC_ADDR_H_B	documented	0x00	ddr_b_addr[3:0]RW	RW	P37_44_MCU_DC_ADDR_H_B	defined	0			27	1	00	00	00	0	0	2026-11-05	2026-11-19	3	i:00x13 l:00x13 r:00x1									
 3745	37	45	MCU_DC_ADDR_M_B	documented	0x00	ddr_b_addr[7:0]RW	RW	P37_45_MCU_DC_ADDR_M_B	defined	0			27	1	00	00	00	0	0	2026-11-05	2026-11-19	3	i:00x13 l:00x13 r:00x1									

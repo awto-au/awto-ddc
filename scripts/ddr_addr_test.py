@@ -35,7 +35,7 @@ OP_FILL, OP_VERIFY, OP_WATCH = "addrfill", "addrverify", "addrwatch"
 SEED_MASK = 0xFFFFFFFF
 
 # StAwtoAddr (fw/test/ddr_draw.c), big endian: (name, size) in C order
-FIELDS = (("blk0", 4), ("blocks", 4), ("seed", 4), ("stride", 2), ("step_ms", 2), ("inv", 1), ("swap", 1), ("retry", 1), ("samples", 1),
+FIELDS = (("blk0", 4), ("blocks", 4), ("seed", 4), ("stride", 2), ("step_ms", 2), ("inv", 1), ("swap", 1), ("retry", 1), ("samples", 1), ("port", 1),
           ("checked", 4), ("bad", 4), ("stale", 4), ("shift", 4), ("data", 4), ("tmo", 4), ("spin", 4), ("slow", 4), ("bits", 4 * IDX_BITS), ("watch", 2 * WATCH_N),
           ("rec_n", 1), ("rec_idx", 4 * REC_N), ("rec", BURST_BYTES * REC_N))
 OFF: dict[str, int] = {}
@@ -185,7 +185,7 @@ def main() -> int:
     base = SW.sym(a.map, "g_stAwtoAddr")
 
     def params(**kw) -> None:
-        v = {"blk0": 0, "blocks": 0, "seed": seed, "stride": 0, "step_ms": 0, "inv": 0, "swap": 0, "retry": 0, "samples": 0}
+        v = {"blk0": 0, "blocks": 0, "seed": seed, "stride": 0, "step_ms": 0, "inv": 0, "swap": 0, "retry": 0, "samples": 0, "port": 0}
         v.update(kw)
         raw = b"".join(v[n].to_bytes(s, "big") for n, s in FIELDS[:RESULT_FROM_IDX])
         for i, byte in enumerate(raw):

@@ -105,7 +105,7 @@ __xdata StAwtoDraw g_stAwtoDraw;
 #else
 extern StAwtoDraw g_stAwtoDraw;                 // host build (tests/ddr_draw_host.c): the harness supplies DRW_*, AwtoMs, GET_OSD_FREEZE_STATUS
 #endif
-#define DRW_IDLE()                              do { if((DRW_RD(AWTO_R_MCU_DC_CMD_A) & AWTO_F_MCU_DC_CMD_A_DDR_A_CMD) != 0) { DrwIdleSlow(); } } while(0)
+#define DRW_IDLE()                              do { if((DRW_RD(AWTO_R_MCU_DC_CMD_A) & AWTO_F_MCU_DC_CMD_A_DDR_A_CMD) != 0) { DrwIdleSlow(0); } } while(0)
 
 static const __code BYTE tcDrwPal[AWTO_DRW_PAL_N][AWTO_DRW_BPP] =       // R, G, B (scripts/ddr_grid100.py PAL)
 {
@@ -125,7 +125,7 @@ static BYTE s_ucDrwErr;                         // AWTO_DRW_ST_* of the first fa
 static BYTE s_ucDrwSlow;
 static unsigned long s_ulDrwBursts;
 
-static void DrwIdleSlow(void)                   // CMD busy after the first read: spin, then the ms limit
+static void DrwIdleSlow(BYTE ucPort)           // CMD busy after the first read: spin, then the ms limit; ucPort = register offset of the port
 {
     BYTE ucN;
     unsigned long ulT;
@@ -136,14 +136,14 @@ static void DrwIdleSlow(void)                   // CMD busy after the first read
     }
     for(ucN = AWTO_DRW_SPIN_FAST; ucN != 0; ucN--)
     {
-        if((DRW_RD(AWTO_R_MCU_DC_CMD_A) & AWTO_F_MCU_DC_CMD_A_DDR_A_CMD) == 0)
+        if((DRW_RD(AWTO_R_MCU_DC_CMD_A + ucPort) & AWTO_F_MCU_DC_CMD_A_DDR_A_CMD) == 0)
         {
             return;
         }
     }
     s_ucDrwSlow++;
     ulT = AwtoMs();
-    while((DRW_RD(AWTO_R_MCU_DC_CMD_A) & AWTO_F_MCU_DC_CMD_A_DDR_A_CMD) != 0)
+    while((DRW_RD(AWTO_R_MCU_DC_CMD_A + ucPort) & AWTO_F_MCU_DC_CMD_A_DDR_A_CMD) != 0)
     {
         if((AwtoMs() - ulT) >= AWTO_DRW_STALL_MS)
         {
@@ -524,6 +524,7 @@ typedef struct
     BYTE ucSwap;                                // verify: read lane swap (0 / 1)
     BYTE ucRetry;                               // verify: extra reads of a bad burst, 0 = single read
     BYTE ucSamples;                             // watch: samples
+    BYTE ucPort;                                // 0 = MCU_DC port A (chip A), 1 = port B (chip B, #348)
     unsigned long ulChecked;                    // results: bursts read back
     unsigned long ulBad;                        // still wrong after the extra reads
     unsigned long ulStale;                      // first read wrong, a retry right (only with ucRetry)
@@ -551,6 +552,12 @@ static BYTE s_aucAdGot[AWTO_DRW_BURST_BYTES];
 static BYTE s_aucAdSeed[AWTO_DRW_IDX_BYTES];    // seed bytes, low first
 static BYTE s_ucAdInv;
 static BYTE s_ucAdSwap;
+static BYTE s_ucAdPort;                         // register offset of the selected MCU_DC port (0 = A)
+
+#define AWTO_DRW_PORT_B_OFF                     (AWTO_R_MCU_DC_CMD_B - AWTO_R_MCU_DC_CMD_A)    // port B registers = port A + this
+#define AD_RD(reg)                              DRW_RD((reg) + s_ucAdPort)
+#define AD_WR(reg, val)                         DRW_WR((reg) + s_ucAdPort, (val))
+#define AD_IDLE()                               do { if((AD_RD(AWTO_R_MCU_DC_CMD_A) & AWTO_F_MCU_DC_CMD_A_DDR_A_CMD) != 0) { DrwIdleSlow(s_ucAdPort); } } while(0)
 
 static void AdSet(BYTE ucPos, BYTE ucVal)       // one expected byte in both units
 {
@@ -567,10 +574,10 @@ static void AdBlockSet(unsigned long ulBlk)     // address upper bytes of the bl
     {
         AdSet(ucK, (BYTE)(ulU >> (8 * ucK)) ^ s_aucAdSeed[ucK] ^ s_ucAdInv);
     }
-    DRW_IDLE();
-    DRW_WR(AWTO_R_MCU_DC_ADDR_H_A, (BYTE)(ulU >> 24));
-    DRW_WR(AWTO_R_MCU_DC_ADDR_M_A, (BYTE)(ulU >> 16));
-    DRW_WR(AWTO_R_MCU_DC_ADDR_L_A, (BYTE)(ulU >> 8));
+    AD_IDLE();
+    AD_WR(AWTO_R_MCU_DC_ADDR_H_A, (BYTE)(ulU >> 24));
+    AD_WR(AWTO_R_MCU_DC_ADDR_M_A, (BYTE)(ulU >> 16));
+    AD_WR(AWTO_R_MCU_DC_ADDR_L_A, (BYTE)(ulU >> 8));
 }
 
 static unsigned long AdParams(void)             // returns the block count
@@ -582,6 +589,11 @@ static unsigned long AdParams(void)             // returns the block count
         s_aucAdSeed[ucK] = (BYTE)(g_stAwtoAddr.ulSeed >> (8 * ucK));
     }
     s_ucAdInv = (g_stAwtoAddr.ucInv != 0) ? AWTO_DRW_INV : 0;
+    s_ucAdPort = (g_stAwtoAddr.ucPort != 0) ? AWTO_DRW_PORT_B_OFF : 0;
+    AD_IDLE();
+    AD_WR(AWTO_R_MCU_DC_LEN_A, AWTO_DRW_LEN_UNITS);             // port B: regdb reset 0x02, read 0x02 on unit 3 (#348); only 2 is ever written
+    AD_WR(AWTO_R_MCU_DC_WMASK_H_A, 0);                          // every byte written
+    AD_WR(AWTO_R_MCU_DC_WMASK_L_A, 0);
     for(ucK = 0; ucK < AWTO_DRW_LANE_BYTES; ucK++)
     {
         AdSet(AWTO_DRW_IDX_BYTES + ucK, tcDrwLane[ucK] ^ s_ucAdInv);
@@ -599,9 +611,9 @@ static BYTE DrwAddrFill(void)
 
     for(ucK = AWTO_DRW_IDX_BYTES; ucK < AWTO_DRW_UNIT_BYTES; ucK++)     // the lane bytes never change: loaded once
     {
-        DRW_IDLE();
-        DRW_WR(AWTO_R_MCU_DC_DATABUF_W_00_A + AWTO_DRW_EVEN_BUF + ucK, s_aucAdExp[ucK]);
-        DRW_WR(AWTO_R_MCU_DC_DATABUF_W_00_A + AWTO_DRW_ODD_BUF + ucK, s_aucAdExp[ucK]);
+        AD_IDLE();
+        AD_WR(AWTO_R_MCU_DC_DATABUF_W_00_A + AWTO_DRW_EVEN_BUF + ucK, s_aucAdExp[ucK]);
+        AD_WR(AWTO_R_MCU_DC_DATABUF_W_00_A + AWTO_DRW_ODD_BUF + ucK, s_aucAdExp[ucK]);
     }
     for(ulBlk = g_stAwtoAddr.ulBlk0; (ulBlk < (g_stAwtoAddr.ulBlk0 + ulN)) && (s_ucDrwErr == 0); ulBlk++)
     {
@@ -609,18 +621,18 @@ static BYTE DrwAddrFill(void)
         AdBlockSet(ulBlk);
         for(ucK = 1; ucK < AWTO_DRW_IDX_BYTES; ucK++)
         {
-            DRW_WR(AWTO_R_MCU_DC_DATABUF_W_00_A + AWTO_DRW_EVEN_BUF + ucK, s_aucAdExp[ucK]);
-            DRW_WR(AWTO_R_MCU_DC_DATABUF_W_00_A + AWTO_DRW_ODD_BUF + ucK, s_aucAdExp[ucK]);
+            AD_WR(AWTO_R_MCU_DC_DATABUF_W_00_A + AWTO_DRW_EVEN_BUF + ucK, s_aucAdExp[ucK]);
+            AD_WR(AWTO_R_MCU_DC_DATABUF_W_00_A + AWTO_DRW_ODD_BUF + ucK, s_aucAdExp[ucK]);
         }
         for(ucJ = 0; ucJ < AWTO_DRW_ADDR_BLOCK_BURSTS; ucJ++)
         {
             ucLo = (BYTE)(ucJ * AWTO_DRW_BURST_UNITS);
-            DRW_IDLE();
-            DRW_WR(AWTO_R_MCU_DC_ADDR_A, ucLo);
+            AD_IDLE();
+            AD_WR(AWTO_R_MCU_DC_ADDR_A, ucLo);
             ucLo ^= s_aucAdSeed[0] ^ s_ucAdInv;
-            DRW_WR(AWTO_R_MCU_DC_DATABUF_W_00_A + AWTO_DRW_EVEN_BUF, ucLo);
-            DRW_WR(AWTO_R_MCU_DC_DATABUF_W_00_A + AWTO_DRW_ODD_BUF, ucLo ^ 1);
-            DRW_WR(AWTO_R_MCU_DC_CMD_A, AWTO_DRW_CMD_WRITE);
+            AD_WR(AWTO_R_MCU_DC_DATABUF_W_00_A + AWTO_DRW_EVEN_BUF, ucLo);
+            AD_WR(AWTO_R_MCU_DC_DATABUF_W_00_A + AWTO_DRW_ODD_BUF, ucLo ^ 1);
+            AD_WR(AWTO_R_MCU_DC_CMD_A, AWTO_DRW_CMD_WRITE);
         }
         s_ulDrwBursts += AWTO_DRW_ADDR_BLOCK_BURSTS;
     }
@@ -633,10 +645,10 @@ static BYTE AdRead(BYTE ucLo)                   // 0 = flag timeout
     BYTE ucJ;
     unsigned long ulT;
 
-    DRW_IDLE();
-    DRW_WR(AWTO_R_MCU_DC_ADDR_A, ucLo);
-    DRW_WR(AWTO_R_MCU_DC_CMD_A, AWTO_DRW_CMD_READ);
-    for(ucN = AWTO_DRW_SPIN_FAST; (ucN != 0) && ((DRW_RD(AWTO_R_MCU_DC_READ_FLAG_A) & AWTO_DRW_READ_FLAG_BIT) == 0); ucN--)
+    AD_IDLE();
+    AD_WR(AWTO_R_MCU_DC_ADDR_A, ucLo);
+    AD_WR(AWTO_R_MCU_DC_CMD_A, AWTO_DRW_CMD_READ);
+    for(ucN = AWTO_DRW_SPIN_FAST; (ucN != 0) && ((AD_RD(AWTO_R_MCU_DC_READ_FLAG_A) & AWTO_DRW_READ_FLAG_BIT) == 0); ucN--)
     {
     }
     g_stAwtoAddr.ulSpin += (BYTE)(AWTO_DRW_SPIN_FAST - ucN);
@@ -644,7 +656,7 @@ static BYTE AdRead(BYTE ucLo)                   // 0 = flag timeout
     {
         g_stAwtoAddr.ulSlow++;
         ulT = AwtoMs();
-        while((DRW_RD(AWTO_R_MCU_DC_READ_FLAG_A) & AWTO_DRW_READ_FLAG_BIT) == 0)
+        while((AD_RD(AWTO_R_MCU_DC_READ_FLAG_A) & AWTO_DRW_READ_FLAG_BIT) == 0)
         {
             if((AwtoMs() - ulT) >= AWTO_DRW_STALL_MS)
             {
@@ -654,7 +666,7 @@ static BYTE AdRead(BYTE ucLo)                   // 0 = flag timeout
     }
     for(ucJ = 0; ucJ < AWTO_DRW_BURST_BYTES; ucJ++)
     {
-        s_aucAdGot[ucJ] = DRW_RD(AWTO_R_MCU_DC_DATABUF_R_00_A + ((ucJ + s_ucAdSwap * AWTO_DRW_HALF) % AWTO_DRW_BURST_BYTES));
+        s_aucAdGot[ucJ] = AD_RD(AWTO_R_MCU_DC_DATABUF_R_00_A + ((ucJ + s_ucAdSwap * AWTO_DRW_HALF) % AWTO_DRW_BURST_BYTES));
     }
     return 1;
 }
@@ -888,8 +900,10 @@ void AwtoDrwPoll(void)                          // main pass: one op at a time, 
     DRW_WR(AWTO_R_MCU_DC_LEN_A, AWTO_DRW_LEN_UNITS);
     DRW_IDLE();
     DrwMaskSet(0);
+    s_ucAdPort = 0;
     ucOk = DrwRun(ucOp);
     DRW_IDLE();
+    AD_IDLE();                                                  // addr ops on port B: its last write done too
     g_stAwtoDraw.usMs = (WORD)(AwtoMs() - ulT0);
     g_stAwtoDraw.ulBursts = s_ulDrwBursts;
     g_stAwtoDraw.ucSlow = s_ucDrwSlow;
