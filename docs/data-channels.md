@@ -63,7 +63,7 @@ DP carries rows 3-5, 18, 19, 22, 25 and 26 as well (same scaler path after the r
 ## Frame capture check (video frame -> DDR, unit 3, Intel HDMI-A-2, 4K59.991, frame mode 0x0C, frozen by P5_27 / P45_27 bit2)
 - Tool: `./dev.py ddr-capture run` (`scripts/ddr_capture_check.py`); log `tmp/logs/ddr_capture_check.log`; issue: awto-ddc ddr-capture thread (see `docs/history.md` entry).
 - Memory (chip A, port A) = block 1 only: 1080 lines x 3840 px x B,G,R, pitch 1440 units, base 0; memory line L = frame row 2L, pixel p = frame x 3839 - p (rotate-180 capture, `CAP_M1_ROTATION` 3).
-- Odd rows go to chip B via M2 (E/O mode, SDK + regdb, `ddr-map.md`); pending a port B read (#348 test 1).
+- Odd rows go to chip B via M2 (E/O mode, `ddr-map.md`): [HW] port B line L = frame row 2L+1, 92/92 exact (#348 test 1).
 - Memory lines >= 1080 are not written (stale); usable 12 441 600 B per frame (3840 x 1080 x 3).
 - Stored byte = per-channel monotonic LUT of the sent byte (16 + floor(e x 219 / 255) +-1): the host sent limited range (`Broadcast RGB` = Automatic on i915).
 - Level encoding (`scripts/ddr_levels.py`, `ddr_levels.json`, 217 levels, 31 B per 32 levels, 12 052 792 B per frame = 96.9 % of 12 441 600): 291 of 291 sampled bursts exact (2026-11-25, `./dev.py ddr-capture run-levels`).

@@ -14,7 +14,8 @@
 - 4K path: M1 captures even rows into chip A, M2 odd rows into chip B, each V/2 = 1080 lines at base 0.
   - `RL6449_Series_FRC.c:468-469` (VHeight / 2 for E/O), `:653-663` (2-chip build: M2 base 0, not BLOCK_STEP as in the 1-chip branch `:639-651`).
   - [HW] 2026-11-25 `CAP_M2_DDR_CTRL1` 0x82, `LINE_NUM` 0x438, `MEM_ADDR` 0.
-  - Pending a port B read on unit 3 (#348 test 1).
+  - [HW] unit 3: port A line L = row 2L, port B line L = row 2L+1, 92/92 exact each; both ports halves-swapped (#348 test 1).
+  - [HW] `CAP_M1/M2_LINE_STEP` reads back 0 live although the data follows a 0x5A0 pitch (open, #348).
 - LINE_STEP = ceil(W x bpp / 64), rounded up to a multiple of 4; BLOCK_STEP = (V / 2) x LINE_STEP.
   - 3840 px, 24 bpp: LINE_STEP 0x5A0, BLOCK_STEP 0x17BB00 units = 12,441,600 B per chip.
   - 30 bpp: LINE_STEP 0x708.
@@ -55,9 +56,10 @@
   - Triggers: timing change, source switch, test cmd 0x0C / 0x0D, rotate / mirror change, wake.
 - Buffering change: blocks 2 and 3 go live, up to 0x2F75FF (24 bpp) or 0x3B537F (30 bpp).
 - DPMS / power-key off: DDR PLL stops, no explicit self-refresh in the SDK; wake re-inits the PHY.
-  - [HW] top 128 KiB of chip A survived ~8 s power saving, ISP reset, watchdog reset, input switch (`note-store.md`). Longer power saving, power-key off, AC cycle: not measured.
+  - [HW] content is lost: POWER key off 12 s flips single bits (450 / 475 bad bursts of 156,288 on A / B); power saving 524 s loses 99.7 % (#348 test 2). Data kept in DDR must be reloaded after either.
+  - [HW] intact on both chips: test cmd 0x0C / 0x0D, input switch, source switch, rotate off / on, ISP reset, watchdog reset (#348 test 2). AC cycle: not measured.
 - No clear / fill path in our build. Cold power-up: content undefined. Writes before the first main-loop pass are lost [HW].
 - Hazard: `MCU_DC_LEN` != 2 on port A kills port A [HW #255].
 
 ## Open (#348, one run each on unit 3)
-- Chip B holds the odd rows; free ranges untouched by every event; line-buffer mode capture writes; buffering at 24 / 30 / 50 Hz; 10 bpc LINE_STEP; freeze cleared by mode set; retention without DDR clock; picture impact of MCU traffic.
+- Line-buffer mode capture writes; buffering at 24 / 30 / 50 Hz; 10 bpc LINE_STEP; freeze cleared by mode set; retention without DDR clock; picture impact of MCU traffic.

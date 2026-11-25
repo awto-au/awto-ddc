@@ -26,12 +26,13 @@
 | immediately after fill | 0 |
 | console close / reopen (test cmd 0x27 / 0x26) | 0 |
 | input switch episode (test cmd 0x32, settled) | 0 |
-| power saving by VCP D6 = 4 for ~8 s, wake by D6 = 1 | 0 |
+| VCP D6 = 4, wake by D6 = 1 (power saving likely not reached, #348) | 0 |
 | ISP reset (`./dev.py reset`, 0xEE <- 0x02) | 0 |
 | watchdog reset (test cmd 0x4C) | 0 |
 | fill + verify with the live picture (no freeze, `--no-prep`), 8 cycles | 0, no sync-log anomaly, health 13/13 |
 
 - Firmware store, unit 3: notes 1..5 written, read back from the DDR by the host (`ddr-notes`) intact, still intact after an ISP reset; note 6 after the reset continued the numbering; `./dev.py synclog` prints the old texts from the DDR.
+- DDR content is lost over POWER key off and long power saving (#348 test 2); notes in DDR do not survive them.
 - Not measured: a cold power-up (the DDR content is then undefined by design: the ring restarts too), picture glitches by eye (no camera login on this box).
 - OSD SRAM (option E): no working read-back found (reads returned option-register values with the console shown, over ISP and from the MCU); not used.
 

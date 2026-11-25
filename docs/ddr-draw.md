@@ -8,7 +8,7 @@
 ## Layout (one place: the `AWTO_DRW_*` constants in `ddr_draw.c`; measured 2026-11-19, #255, `docs/data-channels.md`)
 - 8 B per address unit, 3 B per pixel in memory order B, G, R, burst = 16 B at an even unit = 5.33 px; line pitch exactly 1440 units = 720 bursts; frame base 0.
 - The two 8 B halves of the write buffer are swapped: the driver stages `mem[8..15] + mem[0..7]`.
-- Block 1 (A < 1 555 200 units = 1080 lines) is shown at screen row = 2 x memory line; the odd row below comes from chip B (E/O mode [SDK], #348 test 1). Ops take SCREEN x, y, w, h; an odd start / height rounds outward to whole memory lines (2 screen rows). Only block 1 is drawn (screen y < 2160).
+- Block 1 (A < 1 555 200 units = 1080 lines) is shown at screen row = 2 x memory line; the odd row below comes from chip B (E/O mode, [HW] #348 test 1). Ops take SCREEN x, y, w, h; an odd start / height rounds outward to whole memory lines (2 screen rows). Only block 1 is drawn (screen y < 2160).
 - `WMASK` bit = 1: byte NOT written. Bit order vs the swapped halves is ASSUMED (`AWTO_DRW_MASK_LANE_BUFFER`: bit n = buffer byte n); op `masktest` checks it on hardware.
 - Read-back by address: ops 12-14 below (`ddr_addr_test.py`); a plain `ddr-draw` drawing is still checked with the DCR count (`--count`, lit pixels) or a photo.
 
