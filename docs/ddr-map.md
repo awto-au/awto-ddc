@@ -58,8 +58,9 @@
 - DPMS / power-key off: DDR PLL stops, no explicit self-refresh in the SDK; wake re-inits the PHY.
   - [HW] content is lost: POWER key off 12 s flips single bits (450 / 475 bad bursts of 156,288 on A / B); power saving 524 s loses 99.7 % (#348 test 2). Data kept in DDR must be reloaded after either.
   - [HW] intact on both chips: test cmd 0x0C / 0x0D, input switch, source switch, rotate off / on, ISP reset, watchdog reset (#348 test 2). AC cycle: not measured.
+- [HW] 4K60 rotate off = line-buffer mode: `cap_cap_en` stays 1 and blocks stay programmed, but neither chip is written (marker unchanged 2 s; rotate 180 control overwritten within 23 ms; #348). DDR is then free except the log; any switch to rotate 180 rewrites block 1.
 - No clear / fill path in our build. Cold power-up: content undefined. Writes before the first main-loop pass are lost [HW].
 - Hazard: `MCU_DC_LEN` != 2 on port A kills port A [HW #255].
 
 ## Open (#348, one run each on unit 3)
-- Line-buffer mode capture writes; buffering at 24 / 30 / 50 Hz; 10 bpc LINE_STEP; freeze cleared by mode set; retention without DDR clock; picture impact of MCU traffic.
+- E/O mapping at 1080p60 (blocked: no picture, #350); buffering at 24 / 30 / 50 Hz; 10 bpc LINE_STEP; freeze cleared by mode set; retention without DDR clock; picture impact of MCU traffic.
