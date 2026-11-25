@@ -65,7 +65,8 @@ DP carries rows 3-5, 18, 19, 22, 25 and 26 as well (same scaler path after the r
 - Memory = block 1 only: 1080 lines x 3840 px x B,G,R, pitch 1440 units, base 0; memory line L = frame row 2L (odd rows dropped), pixel p = frame x 3839 - p (rotate-180 capture, `CAP_M1_ROTATION` 3).
 - Memory lines >= 1080 are not written (stale); usable 12 441 600 B per frame (3840 x 1080 x 3).
 - Stored byte = per-channel monotonic LUT of the sent byte (16 + floor(e x 219 / 255) +-1): the host sent limited range (`Broadcast RGB` = Automatic on i915).
-- 0 of 92 block-1 bursts equal the sent bytes; 0 of 1472 bytes ambiguous under the LUT; read-back = host debug link, 16 B per ~12 ms.
+- Level encoding (`scripts/ddr_levels.py`, `ddr_levels.json`, 217 levels, 31 B per 32 levels, 12 052 792 B per frame = 96.9 % of 12 441 600): 291 of 291 sampled bursts exact (2026-11-25, `./dev.py ddr-capture run-levels`).
+- Raw (unencoded) frame: 0 of 92 block-1 bursts equal the sent bytes; 0 of 1472 bytes ambiguous under the LUT; read-back = host debug link, 16 B per ~12 ms.
 
 ## Not examined
 - Board UART / ISP pins (physical access), any monitor USB port, I2S / S/PDIF output pins on the board, DDR clock frequency.

@@ -368,6 +368,147 @@ def recover(raw: Path, since: str) -> list[dict]:
     return out
 
 
+REGDB = ROOT / "re/regdb/RTD2795T-CG.tsv.gz"
+
+
+def decode_regs(snap: dict) -> None:
+    """One log line per field of the snapshot registers (regdb names, first line of the description)."""
+    import gzip
+    by_addr: dict[int, list] = {}
+    with gzip.open(REGDB, "rt") as fh:
+        for ln in fh:
+            c = ln.rstrip("\n").split("\t")
+            if len(c) > 16 and c[4] == "FIELD" and c[1].startswith("0x"):
+                by_addr.setdefault(int(c[1], 16), []).append(c)
+    for nm, a in CAP_REGS:
+        v = snap.get(nm)
+        if v is None:
+            continue
+        for c in by_addr.get(a, []):
+            hi, lo = int(c[6]), int(c[7])
+            fv = (v >> lo) & ((1 << (hi - lo + 1)) - 1)
+            log(f"  {nm} 0x{a:04X} [{hi}:{lo}] {c[8]} = {fv:#x}  ({c[16].replace(chr(92) + 'n', ' | ')[:110]})")
+
+
+def run_levels(a) -> int:
+    """Encoded payload (scripts/ddr_levels.py) as the frame; compare sampled bursts of block 1 by exact equality of the stored bytes,
+    and decode the contiguous reads back to payload bytes."""
+    import ddr_frame_test as T
+    import ddr_freeze_test as F
+    import ddr_levels as LV
+    T.LOG = LOG
+    payload = np.random.default_rng(a.seed ^ 0x5A5A).integers(0, 256, a.payload_kb * 1000, dtype=np.uint8).tobytes()
+    n = len(LV.load_table()[0])
+    lv = LV.memory_levels(payload, a.seed)
+    stored = LV.stored_memory(lv)                       # expected bytes of block 1, memory order
+    data_levels = len(LV.to_levels(payload, n))
+    data_bursts = data_levels // 16                     # 16 levels = 16 B = one burst
+    write_frame_file(LV.frame_from_levels(lv))
+    stream = len(payload).to_bytes(LV.HDR_B, "big") + payload
+    log(f"levels run: {len(payload)} B payload, {n} levels, {data_levels} levels = {data_bursts} bursts "
+        f"({data_levels / LV.LINE_B:.1f} memory lines) of {LV.CAP_LEVELS // 16} bursts in block 1; capacity {LV.capacity_bytes(n)} B of "
+        f"{LV.CAP_LEVELS} raw ({100 * LV.capacity_bytes(n) / LV.CAP_LEVELS:.1f} %); filler = seeded PRNG levels")
+
+    def exp(ad: int) -> bytes:
+        return stored[UNIT_B * ad + 8:UNIT_B * ad + 16].tobytes() + stored[UNIT_B * ad:UNIT_B * ad + 8].tobytes()   # swapped halves
+    d = T.Dbg(a.unit, a.bus)
+    reads, marks, proc, t_on, snap = [], {}, None, None, {}
+    try:
+        F.frame_mode(d.io)
+        snap = snapshot(d)
+        decode_regs(snap)
+        rd = Reader(d)
+        t_on = time.monotonic()
+        proc = pattern_start(F, a.connector)
+        last = LV.LINES * PITCH_U - 2
+        want = {"unit0": 0, "last_burst": last}
+        while time.monotonic() - t_on < MARK_WAIT_S and len(marks) < len(want):
+            for nm, ad in want.items():
+                if nm not in marks:
+                    g = rd.read(ad)
+                    if g is not None and g == exp(ad):
+                        marks[nm] = round(time.monotonic() - t_on, 2)
+        log(f"markers (exact, s after window start): {marks} of {list(want)}")
+        t = time.monotonic()
+        while time.monotonic() - t < SETTLE_FRAMES * FRAME_S:
+            F.prd(d.io, F.P5_AC)
+        F.freeze(d.io, True)
+        t_frz = time.monotonic() - t_on
+        log(f"freeze on at {t_frz:.2f} s after window start")
+        rnd = random.Random(a.seed)
+        plan = list(range(0, 120, 2))                      # 60 contiguous bursts = 30 chunks
+        for _ in range(4000):
+            plan.append(2 * rnd.randrange(data_bursts))                           # payload area (unit address = 2 x burst index)
+            plan.append(2 * rnd.randrange(data_bursts, LV.CAP_LEVELS // 16))      # filler area of block 1
+        for ad in plan:
+            if time.monotonic() - t_on > a.cap_s - 0.3:
+                break
+            g = rd.read(ad)
+            reads.append({"addr": ad, "hex": g.hex() if g else None, "t": round(time.monotonic() - t_on, 3)})
+        log(f"reads: {len(reads)} bursts in {time.monotonic() - t_on - t_frz:.2f} s after the freeze")
+    finally:
+        if proc is not None:
+            F.finish(d, proc, t_on)
+        else:
+            F.freeze(d.io, False)
+            F.cmd(d.io, F.TC_SDK)
+        d.io.close()
+        READS.write_text(json.dumps({"mode": "levels", "seed": a.seed, "payload_kb": a.payload_kb, "unit": a.unit, "markers": marks, "regs": snap, "reads": reads}))
+        log(f"reads saved: {READS}")
+    return 0 if analyse_levels(reads, payload, a.seed, data_bursts, stream) else 1
+
+
+def analyse_levels(reads: list[dict], payload: bytes, seed: int, data_bursts: int, stream: bytes) -> bool:
+    import ddr_levels as LV
+    n = len(LV.load_table()[0])
+    stored = LV.stored_memory(LV.memory_levels(payload, seed))
+    tot = {"payload": [0, 0], "filler": [0, 0]}
+    timeouts = 0
+    bad_bytes = [0, 0, 0]
+    first = []
+    contig = {}
+    for r in reads:
+        if not r["hex"]:
+            timeouts += 1
+            continue
+        ad = r["addr"]
+        got = bytes.fromhex(r["hex"])
+        e = stored[UNIT_B * ad + 8:UNIT_B * ad + 16].tobytes() + stored[UNIT_B * ad:UNIT_B * ad + 8].tobytes()
+        k = "payload" if ad // 2 < data_bursts else "filler"
+        tot[k][0] += 1
+        if got == e:
+            tot[k][1] += 1
+        else:
+            for i in range(16):
+                if got[i] != e[i]:
+                    bad_bytes[(UNIT_B * ad + i) % 3] += 1
+            if len(first) < 8:
+                first.append(f"@unit {ad} (line {ad // PITCH_U}) got {got.hex()} expected {e.hex()}")
+        if ad < 120:
+            contig[ad] = got[8:] + got[:8]
+    cmp_n = tot["payload"][0] + tot["filler"][0]
+    exact = tot["payload"][1] + tot["filler"][1]
+    log(f"RESULT sampled {len(reads)} bursts of 777600 in block 1 (payload area = {data_bursts} bursts): compared {cmp_n}, "
+        f"exact {exact}, mismatching {cmp_n - exact}, read-flag timeouts (not compared) {timeouts}")
+    log(f"  payload area: {tot['payload'][1]}/{tot['payload'][0]} exact; filler area: {tot['filler'][1]}/{tot['filler'][0]} exact; "
+        f"mismatching bytes B/G/R = {bad_bytes}")
+    for ln in first:
+        log("  first mismatch " + ln)
+    dec_ok = None
+    if len(contig) == 60 and sorted(contig) == list(range(0, 120, 2)):
+        lv = LV.levels_from_stored(np.frombuffer(b"".join(contig[x] for x in range(0, 120, 2)), np.uint8))
+        if (lv == 255).any():
+            log(f"  contiguous 960 B: {int((lv == 255).sum())} stored bytes are not table values")
+            dec_ok = False
+        else:
+            out = LV.from_levels(lv, n, whole=False)
+            dec_ok = out == stream[:len(out)]
+            log(f"  contiguous 960 B decoded to {len(out)} B (length header + payload): {'EQUAL to the payload' if dec_ok else 'DIFFERENT'}")
+    ok = cmp_n > 0 and exact == cmp_n and dec_ok is not False
+    log(f"VERDICT {'BYTE-EXACT on every compared burst' if ok else 'NOT byte-exact (or nothing compared)'}")
+    return ok
+
+
 def offline(a) -> int:
     if a.recover:
         reads = recover(ROOT / "tmp/logs/ddr_frame_test.raw.log", a.recover)
@@ -380,6 +521,11 @@ def offline(a) -> int:
         log(f"recovered {len(reads)} reads from the raw log since {a.recover}; saved {READS}")
     else:
         j = json.loads(Path(a.reads or READS).read_text())
+        if j.get("mode") == "levels":
+            import ddr_levels as LV
+            pl = np.random.default_rng(j["seed"] ^ 0x5A5A).integers(0, 256, j["payload_kb"] * 1000, dtype=np.uint8).tobytes()
+            nb = len(LV.to_levels(pl, len(LV.load_table()[0]))) // 16
+            return 0 if analyse_levels(j["reads"], pl, j["seed"], nb, len(pl).to_bytes(8, "big") + pl) else 1
     f = build_frame(j["seed"])
     res = analyse(j["reads"], f, j.get("swap", 1))
     ok = report(res, f, j.get("swap", 1))
@@ -392,7 +538,7 @@ def offline(a) -> int:
 
 def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    ap.add_argument("what", choices=("run", "analyse", "gen"))
+    ap.add_argument("what", choices=("run", "run-levels", "analyse", "gen"))
     ap.add_argument("reads", nargs="?")
     ap.add_argument("--unit", type=int, default=3)
     ap.add_argument("--bus", type=int)
@@ -400,12 +546,15 @@ def main() -> int:
     ap.add_argument("--seed", type=lambda v: int(v, 0), default=SEED_DEFAULT)
     ap.add_argument("--recover", help="analyse: rebuild the reads from the raw I2C log lines at/after this ISO stamp, or freeze@STAMP = after the first freeze write at/after STAMP")
     ap.add_argument("--locate", action="store_true", help="analyse: also look each mismatching 8 B half up in the frame (aligned, 3 transforms)")
+    ap.add_argument("--payload-kb", type=int, default=300, help="run-levels: payload size in KB (1000 B)")
     ap.add_argument("--cap-s", type=float, default=SCREEN_CAP_S)
     a = ap.parse_args()
     if a.what == "gen":
         write_frame_file(build_frame(a.seed))
         log(f"frame file written: {FRAME_FILE}")
         return 0
+    if a.what == "run-levels":
+        return run_levels(a)
     return run(a) if a.what == "run" else offline(a)
 
 
