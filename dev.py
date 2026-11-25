@@ -1492,7 +1492,7 @@ def cmd_ddr_keep(extra: list[str]) -> int:
 
 
 @command("does a video frame land byte-exact in DDR? test frame on the unit, freeze, sampled DDR read-back, exact compare (scripts/ddr_capture_check.py; a few seconds on screen)",
-         args="[--unit N] run | run-levels | run-rows [--seed S] [--cap-s S] | analyse [READS.json]", kind="action")
+         args="[--unit N] run | run-levels | run-rows [--size WxH] [--seed S] [--cap-s S] | probe [--size WxH] | analyse [READS.json]", kind="action")
 def cmd_ddr_capture(extra: list[str]) -> int:
     n, u = _unit(extra)
     if extra[:1] == ["analyse"]:
