@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Read-only: DRM connector properties (Broadcast RGB, max bpc, ...) of one connector, through libdrm (no master needed).
 
-usage: drm_conn_prop.py CARD CONNECTOR     e.g. drm_conn_prop.py /dev/dri/card1 HDMI-A-2
+usage: drm_conn_prop.py CARD CONNECTOR [set "NAME" VALUE]  (set needs DRM master or the call fails: logged)     e.g. drm_conn_prop.py /dev/dri/card1 HDMI-A-2
 Log: ./tmp/logs/drm_conn_prop.log
 """
 import ctypes as C
@@ -55,6 +55,9 @@ def main() -> int:
             p = d.drmModeGetProperty(fd, c.props[k]).contents
             val = c.prop_values[k]
             nm = p.name.decode()
+            if len(sys.argv) == 6 and sys.argv[3] == "set" and nm == sys.argv[4]:
+                rc = d.drmModeObjectSetProperty(fd, c.connector_id, 0xC0C0C0C0, p.prop_id, C.c_uint64(int(sys.argv[5])))
+                _log_line(f"{sys.argv[2]} set {nm} {val} -> {sys.argv[5]}: rc {rc}", LOG)
             if nm in ("Broadcast RGB", "max bpc", "Colorspace", "output format", "Output format", "content type", "audio", "force audio", "dithering", "Broadcast RGB range"):
                 en = ""
                 if p.count_enums:
