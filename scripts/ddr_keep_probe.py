@@ -29,7 +29,7 @@ BLK0 = 0x200000 // BLOCK_UNITS                        # default region: unit 0x2
 AWTO_BLOCKS = 1221                                    # 1221 x 128 bursts x 16 B = 2 500 608 B (#348 test 2)
 AWTO_SWAP = 1                                         # read lane order, port A (ddr_addr_test.py) and port B (#348 test 1): halves swapped
 HOLD_S = 0.3                                          # the frozen frame stays up this long after the op (ddr_draw session)
-EST_VERIFY_BURST_S = 64e-6                            # measured firmware single read (docs/ddr-draw.md, unit 2): op limit = 1.25 x this + flag timeouts
+EST_VERIFY_BURST_S = 207e-6                           # worst measured per burst: every burst bad (bookkeeping), unit 3 #348 E10: 32.4 s / 156 288; limit = 1.25 x + 2 s
 LOG_A_FIRST = 0x3EBFFE                                # DRAM log + note store on chip A (fw/log/hostnote.c): never inside a region
 
 
