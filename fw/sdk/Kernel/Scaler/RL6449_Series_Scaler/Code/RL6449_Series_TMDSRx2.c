@@ -3417,6 +3417,8 @@ bit ScalerTMDSRx2HdmiSetDeepColorPll(WORD usTMDSClkCount, BYTE ucColorDepth)
 //--------------------------------------------------
 void ScalerTMDSRxHdmiPacketDetect(bit bWait)
 {
+    BYTE ucFrame = 0;
+
     if(bWait == _WAIT)
     {
         // Polling 3 frame for detect Packet signals
@@ -3497,7 +3499,13 @@ void ScalerTMDSRxHdmiPacketDetect(bit bWait)
         }
 #endif
 
-        // No extra frame wait (was 130 ms): the GCP poll above has seen the packet, the depth is read once and re-checked in TMDSStableDetect; #216
+        // HW colour depth (GCP CD) lands frames after the GCP flag: 3 Vsyncs (W1C bit 3), 45 ms cap each (1/24 Hz frame + margin).
+        // Without it a 10 bpc source measures 1.25x wide and the judge loops on "source unstable" (#350, was removed by #216)
+        for(ucFrame = 0; ucFrame < 3; ucFrame++)
+        {
+            RxSetBit(P71_A4_TMDS_CTRL, ~(_BIT7 | _BIT6 | _BIT5 | _BIT4 | _BIT3), _BIT3);
+            ScalerTimerPollingFlagProc(45, RXA(P71_A4_TMDS_CTRL), _BIT3, _TRUE);
+        }
 
         RXSEL((CLR_HDMI_RX2_PACKET_DETECTING()), (CLR_HDMI_RX3_PACKET_DETECTING()));
     }
