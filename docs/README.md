@@ -4,6 +4,7 @@
 - Hardware investigations: `monitoring.md` (health monitor, ADC), `temperature.md`, `register-audit.md`, `monitors/README.md` (I2C roles), `reversing/dahua-fw/register-audit.md`.
 - Extra apps (`--extra-fw`, app hooks): `extra-apps.md`.
 - OSD: `osd/` (manual), `osd-write-sweep.md`, `saver-fps-hw.md` (OSD hardware levers; its saver numbers are of the removed games, `games.md`).
+- DDR: `ddr-map.md` (2 chips, clients, free ranges, events; #348), `ddr-draw.md`, `note-store.md`, `dram-log-design.md`, `data-channels.md` (frame capture).
 - Interfaces: `cec.md` (HDMI CEC sink, RPi5 test plan).
 - Registers: `../re/regmap/README.md` (one row per register; docs link by key `PPAA`).
 - Reports (research, no hardware):

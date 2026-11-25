@@ -6,11 +6,11 @@ Host: `scripts/dram_log.py`, `sync_log.py` (`read_ring` version 4, `--dram`), `u
 
 ## Why
 - XDATA free was 56 B; the ring cost 718 B (88 x 8 B + 14 B) and every new line needs ring room; a boot episode is ~87 lines.
-- DDR = 32 MiB, the note store already proved the MCU_DC port A path (docs/note-store.md).
+- DDR = 2 x 32 MiB chips; the log is on chip A (MCU_DC port A, path proved by the note store, docs/note-store.md). Map: docs/ddr-map.md.
 
-## Region (DDR, 8 B units, 2^22 units)
+## Region (chip A, 8 B units, 2^22 units)
 - Header burst: units 0x3EBFFE. Ring: units 0x3EC000.. = 32768 slots x 16 B = 512 KiB (31.375 MB .. 31.875 MB), ends at the note store (0x3FC000, 31.98 MB).
-- Clear of everything: 4K frame buffer ends at 24.9 MB, capture writes below 12.4 MB (docs/note-store.md, docs/ddr-draw.md); panel is 3840 x 2160 only.
+- Clear of everything: 4K capture writes one 12,441,600 B block per chip (E/O mode); 1- and 2-buffer modes stay below unit 0x3B5380 (docs/ddr-map.md, #348); panel is 3840 x 2160 only.
 - 32768 entries = ~375 boots at 87 lines.
 
 ## Entry (16 B = one burst)
@@ -33,7 +33,7 @@ Host: `scripts/dram_log.py`, `sync_log.py` (`read_ring` version 4, `--dram`), `u
 
 ## Write path
 - Callers of `AwtoSyncPush` / `AwtoSyncPushQuiet`: main loop only. ISRs count (`isr_*` bytes) and the main loop writes the line (`AwtoDelayLongPoll` fw/timer/delay.c:131, DP training counter, HPD counters). The sanitizer run (below) shows no ISR access to the tail.
-- The MCU_DC port is shared and a 16 B burst load costs ~68 us (16 register writes, docs/ddr-draw.md): the main loop drains <= 4 lines per pass (`AWTO_DLOG_DRAIN`, SysMainPass after `AwtoSwPoll`, counted in stage "sw poll").
+- MCU_DC port A is shared by the log, the note store and ddr_draw, and a 16 B burst load costs ~68 us (16 register writes, docs/ddr-draw.md): the main loop drains <= 4 lines per pass (`AWTO_DLOG_DRAIN`, SysMainPass after `AwtoSwPoll`, counted in stage "sw poll").
 - Tail nearly full (>= 28 pending) in a shallow caller: that caller writes the oldest 4 lines at once. 4 entries stay free for `AwtoWaitLog`, which runs on the deepest DATA overlay path and cannot call the DDR code.
 - Tail full in such a path: the line is dropped and counted (`ucLost`); the next shallow push writes `log overflow: N lines lost (DDR busy)` (sync.tsv 0x98, error class). Never silent.
 - Before Timer2 runs, lines carry WDT time and are re-based at the Timer2 start (`AwtoSyncT2Start`, now 32 bit): no flush until then (forced only when the tail is full).

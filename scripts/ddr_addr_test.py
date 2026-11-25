@@ -2,7 +2,7 @@
 """DDR address-in-data fill + read-back (freeze image, fw/test/ddr_draw.c ops 12-14; docs/ddr-draw.md).
 
 usage: ./dev.py ddr-addr [--unit N] [--map F] [--seed S] [--double] [--extend] [--watch] [--no-prep] [--hold S]
-  default  UHD block 1 (1 555 200 units = 777 600 bursts of 16 B = 3840 x 1080 x 3 B, line-doubled on screen):
+  default  UHD block 1 (1 555 200 units = 777 600 bursts of 16 B = 3840 x 1080 x 3 B, chip A = even screen rows, docs/ddr-map.md):
            fill with the unit index (seed XOR), read back with SINGLE reads in the firmware, then the same with every byte inverted.
            Result per pass: bursts, bad, by address bit, first mismatches, fw ms. Lane swap of the read buffer: found on 8 blocks first.
   --double a separate second result: the same read-back with 2 extra reads of a bad burst (stale count).

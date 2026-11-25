@@ -1,6 +1,6 @@
 # DDR draw ops in the monitor (#267)
 
-- Test-only commands that draw into the frame buffer through `MCU_DC` port A from the firmware. Source `fw/test/ddr_draw.c`; compiled to nothing unless `-D _AWTO_FREEZE=_ON` (`./dev.py build --freeze`).
+- Test-only commands that draw into the frame buffer on chip A (even screen rows) through `MCU_DC` port A from the firmware; chip B / odd rows are not drawn (`ddr-map.md`). Source `fw/test/ddr_draw.c`; compiled to nothing unless `-D _AWTO_FREEZE=_ON` (`./dev.py build --freeze`).
 - Host: `./dev.py ddr-draw [--unit N] OP:key=val,...` (`scripts/ddr_draw.py`); one command from the host, the monitor draws; each op is timed by the firmware (`AwtoMs`, 1 ms tick) and by the host.
 - Interface: params into `g_stAwtoDraw` (map symbol; big-endian), `ucGo = op` last; the main pass runs the op to the end (WDT fed per line) and clears `ucGo`. No test cmd number.
 - Frame prep (host side): host window, `0x0C` frame mode (after the window: a mode change resets it), freeze with `0xFE` (`--sdk-freeze`; the P5_27 / P45_27 poke did NOT hold the frame on the freeze image, unit 1 2026-11-19), ops, `0xFF`, `0x0D`. The host screen must be awake (a locked / power-saved host shows no picture and the unit goes to power saving). Ops do not freeze by themselves; `ucFrozen` records the state at op start.
@@ -8,7 +8,7 @@
 ## Layout (one place: the `AWTO_DRW_*` constants in `ddr_draw.c`; measured 2026-11-19, #255, `docs/data-channels.md`)
 - 8 B per address unit, 3 B per pixel in memory order B, G, R, burst = 16 B at an even unit = 5.33 px; line pitch exactly 1440 units = 720 bursts; frame base 0.
 - The two 8 B halves of the write buffer are swapped: the driver stages `mem[8..15] + mem[0..7]`.
-- Block 1 (A < 1 555 200 units = 1080 lines) is shown line-doubled: screen row = 2 x memory line. Ops take SCREEN x, y, w, h; an odd start / height rounds outward to whole memory lines (2 screen rows). Only block 1 is drawn (screen y < 2160).
+- Block 1 (A < 1 555 200 units = 1080 lines) is shown at screen row = 2 x memory line; the odd row below comes from chip B (E/O mode [SDK], #348 test 1). Ops take SCREEN x, y, w, h; an odd start / height rounds outward to whole memory lines (2 screen rows). Only block 1 is drawn (screen y < 2160).
 - `WMASK` bit = 1: byte NOT written. Bit order vs the swapped halves is ASSUMED (`AWTO_DRW_MASK_LANE_BUFFER`: bit n = buffer byte n); op `masktest` checks it on hardware.
 - Read-back by address: ops 12-14 below (`ddr_addr_test.py`); a plain `ddr-draw` drawing is still checked with the DCR count (`--count`, lit pixels) or a photo.
 
@@ -38,14 +38,14 @@ States: 2 ok, 3 refused (unknown op, empty / off-screen rectangle, bad grid), 4 
 
 ## Measured (unit 1, freeze image 9578a24, 4K60, MCU 87.7 MHz, 2026-11-19, #267)
 - Mask lane order: `masktest` counts R/G/B = 5/5/6 (DCR sel 1..3 = R, G, B, checked with a red fill); model for the assumed order (bit n = buffer byte n) is B6 G5 R5, the shifted order would give R6: the assumption holds.
-- DCR counts memory-line pixels (before the vertical doubling): fill 2000 x 1000 screen px = 1 000 000, `frame` = 4 147 200 (3840 x 1080), both exact.
+- DCR counts memory-line pixels (even rows only, chip A): fill 2000 x 1000 screen px = 1 000 000, `frame` = 4 147 200 (3840 x 1080), both exact.
 - `fill` 2000 x 1000 white: 188 000 bursts, 279 / 285 / 288 ms = 1.5 us per burst = 10.4-10.8 MB/s (estimate 95 ms, 0.50 us); green: 353 ms (3 buffer loads per line instead of 1). `CMD` slow polls 0: the write completes within the fast spin.
 - `frame` white: 777 600 bursts, 926 ms = 13.4 MB/s; `gradv`: 983 ms = 12.7 MB/s.
 - `figure`: 1068 bursts, 71 ms (every edge burst reloads the 16 B buffer); `gradh`: 21.3 s (259 200 spans, 82 us each).
 - A `DATABUF_W` load of 16 B costs about 68 us (green vs white fill, `figure`, `gradh` all agree): ~4 us per register write, vs ~0.3 us per register access in the burst loop. Data that changes every burst runs at ~0.25 MB/s; solid colours at 10-13 MB/s.
 
 ## Address-in-data fill + read-back (ops 12-14, `./dev.py ddr-addr`, `scripts/ddr_addr_test.py`, `tests/test_ddr_addr.py`)
-- Region = block 1: 1 555 200 units = 777 600 bursts = 12 441 600 B (3840 x 1080 x 3 B, pitch 1440 units; shown line-doubled as 3840 x 2160). Linear burst index, pitch ignored.
+- Region = block 1: 1 555 200 units = 777 600 bursts = 12 441 600 B (3840 x 1080 x 3 B, pitch 1440 units; chip A = even rows of 3840 x 2160). Linear burst index, pitch ignored.
 - Pattern per 8 B unit u (memory order): bytes 0..3 = (u ^ seed) little endian, bytes 4..7 = lane constants 5A A5 3C C3; second pass every byte inverted. Seed = per-run constant (stale frame cannot match).
 - Params and results live in `g_stAwtoAddr` (map symbol; field table `FIELDS` in the script, checked against the C struct by the test): blk0, blocks (0 = block 1), seed, stride, inv, swap, retry; results: checked, bad, by address bit (28), neighbour-unit / data-only counts, flag timeouts, first 4 bad bursts (index + bytes read).
 - Fill touches only the index bytes that change (2 buffer bytes per burst, mid / high bytes every 128 bursts); read-back is in the firmware (CMD read 101, poll `MCU_DC_READ_FLAG`, 16 `DATABUF_R` bytes, compare). Single reads by default; `--double` = extra reads of a bad burst, reported as a separate result.
@@ -56,5 +56,5 @@ States: 2 ok, 3 refused (unknown op, empty / off-screen rectangle, bad grid), 4 
 ## Measured (unit 2, freeze image 333c92f + this change, MCU 350 MHz default, frozen 4K60, 2026-11-20, #267)
 - Fill: 777 600 bursts, 1008 ms = 12.3 MB/s (1.3 us per burst). Read-back: 50.1 / 50.5 s single-read (0.25 MB/s, 64 us per burst; includes 401 / 409 reads x 50 ms timeouts = 20 s).
 - Single-read result, both passes (normal, inverted), seed 0xF5B4A162: 777 600 bursts each, 0 mismatches (0 by every address bit); 401 / 409 reads timed out (0.05 %) and were not compared. Double-read (2 extra reads): 777 600 bursts, 0 bad, 371 recovered by retry.
-- Capacity: fill + sampled read-back past block 1: 3 110 400 units clean; 6 220 800 units: burst 0 (unit 0) reads back unit 4 194 304, burst 1 unit 4 194 306 (address bit 22 only), 10 880 of 33 024 sampled bursts bad (= the share of samples below 2 026 496 units that were overwritten): the address wraps at 2^22 units = 4 194 304 x 8 B = 32 MiB = 256 Mbit.
+- Capacity: fill + sampled read-back past block 1: 3 110 400 units clean; 6 220 800 units: burst 0 (unit 0) reads back unit 4 194 304, burst 1 unit 4 194 306 (address bit 22 only), 10 880 of 33 024 sampled bursts bad (= the share of samples below 2 026 496 units that were overwritten): the address wraps at 2^22 units = 4 194 304 x 8 B = 32 MiB = 256 Mbit = one chip (chip A; chip B is a second 32 MiB behind port B, `ddr-map.md`).
 - Live (not frozen): marker written into block 1 is overwritten within one frame (0 bad in the first back-to-back sample for some positions, all bad by the 2nd-3rd); the 3 positions after block 1 stay intact over 8 samples (about 64 ms). Registers: `CAP_M1_DDR_CTRL1` 0x82 (`cap_cap_en` 1, `cap_db_en` 0, `cap_sb_sel` 0), `CAP_M1_DDR_CTRL3` 0x00 (`cap_3buf_en` 0), `DISP_M1_DISP_CTRL1` 0x01 (`disp_db_en` 0, `disp_src_sel` 00), `DISP_M1_DISP_CTRL3` 0x00 (`disp_3buf_en` 0); M2 the same.

@@ -4,15 +4,15 @@
 - Code: `fw/log/hostnote.c` (`AwtoDdrNoteWrite` / `AwtoDdrNoteRead`), `fw/osd/console.c` (`AwtoPutNote`), constants `AWTO_DDRN_*` in `RL6449_Project.h`. Host: `scripts/ddr_note_read.py` (`./dev.py ddr-notes`), `sync_log.py` (`NOTE_DDR`).
 
 ## Layout
-- DDR = 32 MiB = 2^22 units of 8 B (address wraps there). Store = units 0x3FC000..0x3FFFFF: 1024 lines x 16 units (128 B = 8 bursts of 16 B).
+- DDR = two 32 MiB chips (`ddr-map.md`); port A reaches chip A only, 2^22 units of 8 B (address wraps there). Store = chip A units 0x3FC000..0x3FFFFF: 1024 lines x 16 units (128 B = 8 bursts of 16 B).
 - Line = tag (2 B BE, note sequence) + length + text (119 B) + zero pad. Line index = sequence & 1023; a line is valid only when its tag equals the sequence asked for.
 - Port: MCU_DC port A, burst = 16 B, write / read buffer halves swapped (memory byte j = buffer byte (j + 8) mod 16), CMD 0x80 write / 0xA0 read, READ_FLAG bit 0 (as `fw/test/ddr_draw.c`, `docs/ddr-draw.md`).
 - Note numbering continues over a warm reset: `AwtoSyncInit` seeds `g_usAwtoNoteN` from the newest NOTE entry of the kept ring (the DDR lines are keyed by it). A cold power-up clears the ring and restarts at 1.
 
 ## Why the top region is free
-- Frame buffers at 4K: one 24.9 MB buffer from address 0 (3840 x 2160 x 3 B); 3 buffers only at 1080p (18.7 MB). Highest address of any mode for inputs up to 3840 x 2160 is below 32 MB x 0.78. The store starts at 31.98 MB (units 0x3FC000).
-- Measured: the live capture does not write above block 1 (12.4 MB) (#267, `docs/ddr-draw.md`).
-- Not a guarantee for a mode that fills the whole DDR (the FRC width limit of 5053 px x 2160 lines x 3 B = 32.7 MB is the SDK's own full-memory figure): none exists for a 3840 x 2160 panel.
+- Frame buffer at 4K (E/O mode): one 12,441,600 B block per chip from address 0 (3840 x 1080 x 3 B; even rows chip A, odd rows chip B). Highest address of any 1- or 2-buffer mode is below unit 0x3B5380 (29.66 MiB); 3-buffer mode would overrun the chip [SDK] (`ddr-map.md`, #348). The store starts at 31.875 MiB (units 0x3FC000).
+- Measured: the live capture does not write above block 1 (12,441,600 B) on chip A (#267, `docs/ddr-draw.md`).
+- Not a guarantee for a mode that fills the whole chip (3-buffer at 4K = 4,199,040 units > 2^22 [SDK arithmetic, #348]; the FRC width limit of 5053 px x 2160 lines x 3 B = 32.7 MB is the SDK's own full-memory figure).
 
 ## Bus cost (off the live-picture path)
 - Write: at note time only (one test cmd per note): 8 bursts, ~14 us. Read: only when the console draws a note row whose text left the slot: 8 bursts, ~64 us each = ~0.5 ms, in the main loop, one row per pass.

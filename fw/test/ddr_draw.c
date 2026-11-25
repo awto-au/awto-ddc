@@ -5,7 +5,7 @@
 // #267 DDR draw ops (freeze build only): draw into the frame buffer through MCU_DC port A in the monitor, not burst by burst from the host.
 // Host: scripts/ddr_draw.py fills g_stAwtoDraw, then ucGo = op; AwtoDrwPoll (main pass) runs it and clears ucGo. No test cmd number.
 // ONE place owns the layout (#255 measurements, docs/data-channels.md): 8 B per address unit, 3 B per pixel (B, G, R), burst = 16 B = 2 units,
-// the two 8 B halves of the write buffer are swapped, line pitch 1440 units, block 1 is shown line-doubled (screen row = 2 x memory line).
+// the two 8 B halves of the write buffer are swapped, line pitch 1440 units, block 1 = chip A = even screen rows (screen row = 2 x memory line; odd rows chip B, docs/ddr-map.md).
 #if(_AWTO_FREEZE == _ON)
 
 #define AWTO_DRW_SCREEN_W                       3840
