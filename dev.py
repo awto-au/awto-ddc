@@ -1491,6 +1491,16 @@ def cmd_ddr_keep(extra: list[str]) -> int:
     return _dbg_py(b, "ddr_keep_probe.py", "--unit", n, "--bus", b, "--map", Path(_fwmap(u, given)), *extra)
 
 
+@command("does a video frame land byte-exact in DDR? test frame on the unit, freeze, sampled DDR read-back, exact compare (scripts/ddr_capture_check.py; a few seconds on screen)",
+         args="[--unit N] run [--seed S] [--cap-s S] | analyse [READS.json]", kind="action")
+def cmd_ddr_capture(extra: list[str]) -> int:
+    n, u = _unit(extra)
+    if extra[:1] == ["analyse"]:
+        return _py("ddr_capture_check.py", *extra)
+    b = _live_bus(u)
+    return _dbg_py(b, "ddr_capture_check.py", "--unit", n, "--bus", b, "--connector", u["gdctl"], *extra)
+
+
 @command("host-note lines from the DDR note store over the debug link (docs/note-store.md): --last K | --seq S ...",
          args="[--unit N] [--map F] [--last K | --seq S ...]", kind="action")
 def cmd_ddr_notes(extra: list[str]) -> int:

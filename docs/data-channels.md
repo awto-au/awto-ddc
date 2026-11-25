@@ -33,7 +33,7 @@ Compiled 2026-11-19. One table, sorted by Max KB/s, fastest first (ties: higher 
 | 23 | I2C/DDC | DDC/CI slave 0x37 | both | 0.05 | 0.16 | 0.1 | 0.1 | measured / calc | 16 B buffer, 0.1-0.3 s per call (`docs/ddc-control.md`); not for bulk |
 | 24 | HDMI | CEC | both | 0.035 | 0.04 | 0.0004 | 0.0004 | calc | block present (`_HW_HDMI_CEC_GEN`); host GPUs usually do not wire the pin |
 | 25 | HDMI/DP | Dimming histogram (DCC) | host -> monitor | n/a | n/a | 25 | 594 | unverified | `DCC_ADDRESS_PORT` 0x07C9 / `DCC_DATA_PORT` 0x07CA; bin count and readability not checked (#251) |
-| 26 | HDMI/DP | Screen freeze + DDR staging | host -> monitor | n/a | n/a | 25 | 594 | unverified | `LS_SCREEN_FREEZE_MODE_CTRL` 0x03EE (`sfm_cap_en`, `sfm_w_done`, `sfm_disp_en`), InfoFrame as marker, read via `MCU_DC_*`; one 4K frame ~25 MB, 896 KiB flash image fits in ~300 k pixels; flash write (3 ms / 256 B page, CPU halted) becomes the limit; marker timing, lossless capture, `_AWTO_FREEZE` build not checked |
+| 26 | HDMI/DP | Screen freeze + DDR staging | host -> monitor | n/a | n/a | 25 | 594 | unverified | `LS_SCREEN_FREEZE_MODE_CTRL` 0x03EE (`sfm_cap_en`, `sfm_w_done`, `sfm_disp_en`), InfoFrame as marker, read via `MCU_DC_*`; one 4K frame ~25 MB, 896 KiB flash image fits in ~300 k pixels; flash write (3 ms / 256 B page, CPU halted) becomes the limit; frame capture into DDR: see "Frame capture check" below |
 | 27 | HDMI | Audio channel status | host -> monitor | n/a | n/a | 0.032 | 0.192 | unverified | no named HDMI register found; only sample-rate detect |
 | 28 | DP | Audio MAUD / NAUD | host -> monitor | n/a | n/a | n/a | n/a | unverified | `MSA_MAUD/NAUD` 24-bit values, normally GPU-computed; only a modified driver can use them |
 | 29 | I2C/DDC | SCDC slave 0x54 | both | n/a | n/a | 0.1 | 0.1 | unverified | HDMI only; flags / status |
@@ -59,6 +59,13 @@ DP carries rows 3-5, 18, 19, 22, 25 and 26 as well (same scaler path after the r
 - Freeze [measured 2026-11-19, unit 1, FRC image, frame mode forced]: writing `P5_27` and `P45_27` bit2 (`CAP_Mn_DDR_CTRL1`, what `ScalerFRCDisplayFreeze` sets) stops the capture: DDR kept the red frame while the host showed black; clearing the bits resumes it. No freeze build is needed to hold a frame.
 - MCU_DC read data [measured, frozen frame]: a burst at a fixed address returns the right neighbourhood but at a varying 8 B beat offset, read to read (solid red: units (a, a+2) then (a+1, a+3); `xbits` pattern: first half unit phase 0, 1 or 2 mod 3 across three reads, second half = first - 1). Reads of one address do not repeat, so byte-exact readback by address needs self-describing data (position code in the pixels) or a consensus of several reads; port A also timed out on ~25 % of bursts, port B less. The host pattern's non-extreme colours carry +-1 temporal dither (NVIDIA): use 0 / 255 channel values for byte-exact checks.
 - `MCU_DC_LEN` != 2 on port A (1, 4): flag never set, `CMD` stays 0xA0, later reads on A time out; port B kept working; the display was disturbed (M1 overflow, wrong DCR counts) until the SDK memory choice was restored (test cmd 0x0D).
+
+## Frame capture check (video frame -> DDR, unit 3, Intel HDMI-A-2, 4K59.991, frame mode 0x0C, frozen by P5_27 / P45_27 bit2)
+- Tool: `./dev.py ddr-capture run` (`scripts/ddr_capture_check.py`); log `tmp/logs/ddr_capture_check.log`; issue: awto-ddc ddr-capture thread (see `docs/history.md` entry).
+- Memory = block 1 only: 1080 lines x 3840 px x B,G,R, pitch 1440 units, base 0; memory line L = frame row 2L (odd rows dropped), pixel p = frame x 3839 - p (rotate-180 capture, `CAP_M1_ROTATION` 3).
+- Memory lines >= 1080 are not written (stale); usable 12 441 600 B per frame (3840 x 1080 x 3).
+- Stored byte = per-channel monotonic LUT of the sent byte (16 + floor(e x 219 / 255) +-1): the host sent limited range (`Broadcast RGB` = Automatic on i915).
+- 0 of 92 block-1 bursts equal the sent bytes; 0 of 1472 bytes ambiguous under the LUT; read-back = host debug link, 16 B per ~12 ms.
 
 ## Not examined
 - Board UART / ISP pins (physical access), any monitor USB port, I2S / S/PDIF output pins on the board, DDR clock frequency.

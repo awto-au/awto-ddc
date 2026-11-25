@@ -2,7 +2,7 @@
 """Host-side known pattern: borderless fullscreen GTK4 window on ONE connector, no layout change (awto-ddc#255).
 
 usage: /usr/bin/python3 scripts/host_pattern.py --connector HDMI-3 --fifo tmp/scratch/pat.fifo [--initial "solid 255 0 0"]
-Commands (one per line, written to the FIFO): code (R=y&255 G=y>>8 B=(x//16)&255) | solid R G B | box X Y W H R G B (on black) | hgrad (R ramp left->right, G ramp top->bottom,
+Commands (one per line, written to the FIFO): code (R=y&255 G=y>>8 B=(x//16)&255) | solid R G B | box X Y W H R G B (on black) | raw PATH (w*h*4 B BGRX file, 1:1) | hgrad (R ramp left->right, G ramp top->bottom,
 B = 0x80) | quit. Coordinates are logical = physical pixels (scale 1.0 on this desk). Cairo antialiasing off.
 Needs the system python (gi); the repo venv has no gi. Log: ./tmp/logs/host_pattern.log
 """
@@ -22,6 +22,7 @@ from gi.repository import Gdk, GLib, Gtk
 
 LOG = ROOT / "tmp/logs/host_pattern.log"
 state = {"cmd": ["solid", "0", "0", "0"]}
+RAW = {}
 
 
 def log(s):
@@ -106,6 +107,15 @@ def draw(area, cr, w, h):
             buf[y * stride:(y + 1) * stride] = rows[(7 * y) % 64]
         surf.mark_dirty()
         cr.set_source_surface(surf, 0, 0)
+        cr.paint()
+    elif op == "raw":
+        # raw PATH = w*h*4 bytes B,G,R,X (cairo RGB24 little endian), painted 1:1 at 0,0: an arbitrary frame (scripts/ddr_capture_check.py)
+        surf = RAW.get(c[1])
+        if surf is None:
+            data = bytearray(Path(c[1]).read_bytes())
+            surf = RAW[c[1]] = (cairo.ImageSurface.create_for_data(data, cairo.FORMAT_RGB24, w, h, 4 * w), data)
+            log(f"raw {c[1]}: {len(data)} B for {w}x{h}")
+        cr.set_source_surface(surf[0], 0, 0)
         cr.paint()
     elif op == "hgrad":
         surf = cairo.ImageSurface(cairo.FORMAT_RGB24, w, h)
