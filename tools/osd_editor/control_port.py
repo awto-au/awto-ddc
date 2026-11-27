@@ -3,6 +3,7 @@ Connection threads parse and wait; requests run on the UI thread, device calls u
 Protocol, commands, security and flash: docs/monitor-gui.md "Control port"."""
 from __future__ import annotations
 
+import fcntl
 import json
 import os
 import queue
@@ -23,7 +24,10 @@ import gui_client as GC
 import kvm as KVM
 
 PROTOCOL = 1
-CODE_AT_START = GC.code_stamp()     # ping handshake: dev.py restarts an app whose code changed on disk (gui_client.stale_reason)
+CODE_AT_START = GC.code_stamp()     # ping handshake: dev.py restarts an app of another tree / changed code (gui_client.check_tree)
+HEAD_AT_START = GC.git_head()
+ROOT_AT_START = str(GC.ROOT)
+TREE = f"{ROOT_AT_START} @{HEAD_AT_START}"
 # A request waits for its chain of device calls (write + read back + save, each <= 5 s) plus queueing behind the other
 # units' serialised ddc calls (<= 2 x 5 s): worst ~25 s, x1.8 = 45 s. Expiry: error reply; the jobs still finish in the app.
 REQUEST_LIMIT_S = GC.SERVER_LIMIT_S
@@ -84,6 +88,7 @@ class ControlPort(QObject):
         self.idle_exit_s, self.on_quit = idle_exit_s, on_quit
         self.srv: socket.socket | None = None
         self.ident: tuple[int, int] | None = None        # (st_dev, st_ino) of our bound socket file
+        self.lockf = None                                # open <socket>.lock while we hold its flock
         self.why = ""
         self.subs: list[queue.Queue] = []
         self.sub_lock = threading.Lock()
@@ -96,15 +101,69 @@ class ControlPort(QObject):
         self.idle.timeout.connect(self._idle_tick)
 
     # --- socket lifecycle
+    @property
+    def lock_path(self) -> Path:
+        return self.path.with_name(self.path.name + ".lock")
+
+    def _lock(self) -> bool:
+        """flock on <socket>.lock for the app's life: at most one app per socket (= per user); holder pid + tree written in it"""
+        f = os.fdopen(os.open(self.lock_path, os.O_RDWR | os.O_CREAT, 0o600), "r+")
+        try:
+            fcntl.flock(f, fcntl.LOCK_EX | fcntl.LOCK_NB)
+        except OSError:
+            f.close()
+            return False
+        f.truncate(0)
+        f.write(f"{os.getpid()} {TREE}\n")
+        f.flush()
+        self.lockf = f
+        return True
+
+    def _holder(self) -> str:
+        try:
+            return self.lock_path.read_text().strip() or "?"
+        except OSError:
+            return "?"
+
+    def _unlock(self):
+        if getattr(self, "lockf", None):
+            self.lockf.close()                               # closing drops the flock; the file stays (unlinking a lock file races)
+            self.lockf = None
+
     def start(self) -> bool:
-        """bind the socket; False (reason in self.why) when another app instance owns it"""
+        """take the lock, bind the socket; False (reason in self.why) when another app instance owns them.
+        A window takes over from a headless app (asks it to quit, waits TAKEOVER_WAIT_S for its lock)"""
         self.why = ""
         self.path.parent.mkdir(parents=True, mode=0o700, exist_ok=True)
-        if self.path.exists():
+        if not self._lock():
+            peer = GC.try_call(self.path, "ping", {}, timeout=GC.PING_S)
+            pr = peer["result"] if peer and peer.get("ok") else {}
+            if not (pr.get("headless") and not self.headless):
+                self.why = (f"control port {self.path} is served by pid {pr.get('pid', '?')} ({GC.tree_of(pr) if pr else 'no ping reply'}); "
+                            f"lock {self.lock_path} held by {self._holder()}")
+                return False
+            GC.try_call(self.path, "quit", {}, timeout=GC.PING_S)
+            t0 = time.monotonic()
+            while not self._lock() and time.monotonic() - t0 < TAKEOVER_WAIT_S:
+                threading.Event().wait(0.05)
+            if not getattr(self, "lockf", None):
+                self.why = f"headless app pid {pr.get('pid')} still holds {self.lock_path} {TAKEOVER_WAIT_S} s after quit was asked"
+                return False
+        try:
+            ok = self._bind()
+        except BaseException:
+            self._unlock()
+            raise
+        if not ok:
+            self._unlock()
+        return ok
+
+    def _bind(self) -> bool:
+        if self.path.exists():                               # an app older than the lock may still serve the socket
             peer = GC.try_call(self.path, "ping", {}, timeout=GC.PING_S)
             if peer and peer.get("ok"):
                 if not (peer["result"].get("headless") and not self.headless):
-                    self.why = f"control port {self.path} is served by pid {peer['result'].get('pid')}"
+                    self.why = f"control port {self.path} is served by pid {peer['result'].get('pid')} ({GC.tree_of(peer['result'])}, no lock: older app)"
                     return False
                 GC.try_call(self.path, "quit", {}, timeout=GC.PING_S)         # a window takes over from the headless app
                 t0 = time.monotonic()
@@ -137,7 +196,7 @@ class ControlPort(QObject):
         threading.Thread(target=self._accept, name="gui-port-accept", daemon=True).start()
         if self.headless and self.idle_exit_s:
             self.idle.start()
-        self.page.say(f"control port listening on {self.path}{' (headless)' if self.headless else ''}")
+        self.page.say(f"control port listening on {self.path}{' (headless)' if self.headless else ''}, pid {os.getpid()}, tree {TREE}")
         return True
 
     def stop(self):
@@ -154,6 +213,7 @@ class ControlPort(QObject):
                 self.path.unlink()                           # only our own socket: a successor may already own the path
         except FileNotFoundError:
             pass
+        self._unlock()
 
     def _accept(self):
         while True:
@@ -192,11 +252,12 @@ class ControlPort(QObject):
                     fut: Future = Future()
                     self.request.emit(req, fut)
                     t0 = time.monotonic()
+                    lim = GC.request_limit_s(str(req["method"]), req.get("params") or {})
                     try:
-                        rep = fut.result(REQUEST_LIMIT_S)
+                        rep = fut.result(lim)
                     except FutureTimeout:
                         rep = {"id": req.get("id"), "ok": False, "elapsed_ms": int((time.monotonic() - t0) * 1000),
-                               "error": f"timed out after {REQUEST_LIMIT_S} s in the app (its jobs keep running)"}
+                               "error": f"timed out after {lim} s in the app (its jobs keep running)"}
                     f.write(json.dumps(rep).encode() + b"\n")
                     f.flush()
             except (OSError, ValueError):
@@ -335,7 +396,16 @@ class ControlPort(QObject):
     # --- methods
     def m_ping(self, p, done):
         done({"pid": os.getpid(), "headless": self.headless, "protocol": PROTOCOL, "socket": str(self.path),
-              "root": str(GC.ROOT), "code": CODE_AT_START})
+              "root": ROOT_AT_START, "head": HEAD_AT_START, "code": CODE_AT_START, "busy": self.busy()})
+
+    def busy(self) -> list[str]:
+        """what a restart would cut: flashes followed, queued / running device jobs (not the app's own probes)"""
+        pg = self.page
+        out = [f"flash on unit {n} ({pg.flash_why(n)})" for n in pg.flash_running()]
+        out += [f"unit {j[2]} {j[0]}" for j in pg.jobs.values() if not j[4]]
+        if pg.live_jobs:
+            out.append(f"{len(pg.live_jobs)} in-process DDC/CI call(s)")
+        return out
 
     def m_quit(self, p, done):
         fl = self.page.flash_running()
@@ -343,6 +413,8 @@ class ControlPort(QObject):
             why = "; ".join(f"unit {n}: {self.page.flash_why(n)}" for n in fl)
             raise PortError(f"refusing to quit: a flash is running on unit(s) {', '.join(fl)} ({why}); it would continue detached, "
                             f"but the app does not close while it is followed. `dev.py gui jobs` shows what the app believes")
+        if p.get("idle_only") and (b := self.busy()):
+            raise PortError(f"refusing to quit: busy: {'; '.join(b)}")
         done({"quitting": True})
         QTimer.singleShot(0, self._quit)
 
@@ -388,7 +460,8 @@ class ControlPort(QObject):
         quick["input"] = {"widget": pg.inp.currentIndex(), "text": pg.inp.currentText(), "enabled": pg.inp.isEnabled()}
         quick["screensaver"] = {"widget": pg.saver.currentData(), "text": pg.saver.currentText(), "enabled": pg.saver.isEnabled()}
         pidx = pg.stack.currentIndex()
-        return {"unit": pg.cur, "serial": st.info["serial"], "writable": st.writable, "status": st.dot(),
+        return {"tree": {"root": ROOT_AT_START, "head": HEAD_AT_START, "code": CODE_AT_START, "pid": os.getpid()},
+                "unit": pg.cur, "serial": st.info["serial"], "writable": st.writable, "status": st.dot(),
                 "page": MON.PAGES[pidx], "node": st.node, "mode": pg.state.text(), "banner": pg.banner.text() if pg.banner.isVisibleTo(pg) else "",
                 "unit_shows": pg.now_state.text(), "pending": st.pending, "flashing": st.flash or None, "quick": quick, "rows": rows,
                 "units": [self.unit_info(n) for n in pg.states], "output_tail": st.out[-400:]}
@@ -651,8 +724,10 @@ class ControlPort(QObject):
         if name not in GC.ROUTED:
             raise PortError(f"passthrough: {name!r} is not a routed command {sorted(GC.ROUTED)}")
         args = [str(a) for a in p.get("args", [])]
-        limit = {"settings": "list", "synclog": "synclog", "note": "synclog", "ddc": "ddcmany"}.get(name, "one")
+        limit = {"settings": "list", "note": "note", "ddc": "ddcmany"}.get(name, "one")
         self.focus(n)
+        if name == "synclog":                                # DRAM log reads: the limit is sized from the request (entries x rate)
+            return self._plain(done, pg.synclog_job(f"synclog {' '.join(args)}", args, None, unit=n, after=self._out(done, name)))
         self._plain(done, pg.run(f"{name} {' '.join(args)}", pg.dev(name, *args, unit=n), None, limit, unit=n, after=self._out(done, name)))
 
     def m_flash(self, p, done):

@@ -25,17 +25,19 @@ import isostamp  # noqa: E402
 import unit_lock  # noqa: E402
 import settings_table as T  # noqa: E402
 import unit_status  # noqa: E402
+import gui_client  # noqa: E402
 from live_writer import LiveWriter  # noqa: E402
 
 PYTHON = "python3"
 LOG = ROOT / "tmp" / "logs" / "osd_editor.log"
-# Per-call limits = 3x the slowest unit-3 call measured 2026-11-18 (docs/osd-editor-spec.md section 7); synclog: one episode / --dram
-# read from the DDR (awto-ddc#358).
+# Per-call limits = 3x the slowest unit-3 call measured 2026-11-18 (docs/osd-editor-spec.md section 7).
 # Expiry: TERM (dev.py's finally switches the debug link off), kill after TERM_GRACE_S, log line + banner.
-LIMIT_S = {"list": 20, "one": 4, "health": 13, "synclog": 9, "host_time": 5, "kvm": 10, "ddc": 5, "ddcmany": 10, "i2c": 5}
+# synclog is sized per request instead (gui_client.synclog_limit: entries x DDR rate x 1.25, awto-ddc#358); "note" keeps the old 4 s.
+LIMIT_S = {"list": 20, "one": 4, "health": 13, "note": 4, "host_time": 5, "kvm": 10, "ddc": 5, "ddcmany": 10, "i2c": 5}
 REFRESH_S = 15                                           # live refresh and status probe pace: one "list" takes ~6.4 s
 STALE_S = 60                                             # a unit view older than this is re-read when selected (Dan 2026-11-20)
 NO_ANSWER_RE = re.compile(r"no bus with (?:that )?EDID serial|DDC communication failed|no monitors detected")
+TREE = f"{ROOT} @{gui_client.git_head(ROOT)}"              # the tree this app runs: in every job log line (awto-ddc#358)
 SLOW_MS = 100                                            # sync log: a step slower than this is highlighted (#216)
 SLOW_BRUSH = QBrush(QColor("#ff5050"))
 INPUTS = ("D1", "D2", "D3")                              # scripts/kvm.py port names
@@ -52,7 +54,16 @@ VCP_ROW = {"volume": VCP_VOLUME, "mute": VCP_MUTE}       # quick rows written th
 QUICK_VCP = ("volume", "mute", "brightness", "input", "screensaver_now")   # registry rows read by DDC/CI VCP code
 VALUE_RE = re.compile(r"(?:^|\s)(\w+) = .* \(raw (-?\d+)\)\s*$")
 VCP_GET_RE = re.compile(r"VCP\s+([0-9A-Fa-f]{2})\s+(C|SNC|CNC)\s+((?:x?[0-9A-Fa-f]+\s*){1,4})")   # dev.py ddc get (ddcutil --brief)
-ROW_RE = re.compile(r"([ u][ \d-]\d:\d\d:\d\d\.\d{3}|u[ \d]{4}:\d\d:\d\d\.\d| {13}) ([+-][ \d]{3} ms|[+-][ \d]\d\.\d s|[+-][ \d]{4} [sh]| {7}):(.*)$")   # sync_log row: real time, delta (sync_log.fmt_delta), text
+# sync_log row (scripts/sync_log.py with_delta / row_lines; docs/sync-log-design.md "Console time columns"): [abs index] [real time] delta:text.
+# Real: " HH:MM:SS.mmm" host clock, "uHH:MM:SS.mmm" / "u-0:00:00.ddd" / "uhhhh:mm:ss.t" uptime. Delta: fmt_delta, 7 cells, blank = none.
+LINE_STAMP = r"^(?:\d{4}-\d\d-\d\dT\S+ )?"                                  # dev.py / _log.py time prefix of a printed line
+ROW_RE = re.compile(LINE_STAMP + r"\s*(?:(?P<abs>\d+) )?(?P<real>[ u](?:-0|\s*\d+):\d\d:\d\d\.\d{1,3})? ?"
+                    r"(?P<delta>[+-][ \d]{3} ms|[+-][ \d]\d\.\d s|[+-][ \d]{3}\d [sh]| {7}):(?P<text>.*)$")
+HOST_STAMP_RE = re.compile(r"^(\d{4}-\d\d-\d\dT\d\d:\d\d:\d\d\.\d{3}[+-]\d\d:\d\d)(~?) +")   # sync_log.stamp (decoder without the real column)
+RAW_TAIL_RE = re.compile(r"\s+(\[fw [^\]]*\])$")                          # row_lines: raw times last
+BOOT_RE = re.compile(LINE_STAMP + r"\s*--- boot (\d+)")                                   # --dram: boot counter separator
+WRAP_TEXT = "relative time reset: counter wrap"                               # sync_log.WRAP_TEXT
+START_BRUSH, START_BG = QBrush(QColor("#ffffff")), QBrush(QColor("#8b1a1a"))  # episode start / wrap rows: the console's red rule
 DOT = {"ok": "#3fb950", "busy": "#d29922", "down": "#ff5050", "unknown": "#808080", "flash": "#a371f7"}
 PAGE_ROLE = Qt.UserRole
 ROW_ROLE = Qt.UserRole + 1
@@ -107,25 +118,44 @@ def delta_ms(d: str) -> int | None:
     return -ms if d[0] == "-" else ms
 
 
-def sync_rows(text: str) -> list[tuple[str, str, bool]]:
-    """(delta, row, slow) per sync_log row: the decoder's own delta (32-bit fw ms; sync_log.con_rows), never recomputed here"""
+def sync_rows(text: str) -> list[dict]:
+    """rows of a dev.py synclog output, the decoder's own columns (never recomputed here):
+    {real, delta, ms, text, raw, slow, start, wrap, boot}; boot = a `--- boot N` separator row"""
     rows = []
     for ln in text.splitlines():
-        m = ROW_RE.search(ln)
+        b = BOOT_RE.match(ln)
+        if b:
+            rows.append({"real": "", "delta": "", "ms": None, "text": f"boot {b.group(1)}", "raw": "", "slow": False, "start": False,
+                         "wrap": False, "boot": int(b.group(1))})
+            continue
+        m = ROW_RE.match(ln)
         if not m:
             continue
-        d = delta_ms(m.group(2))
-        rows.append((m.group(2).strip(), ln[m.start():].rstrip(), d is not None and d > SLOW_MS))
+        body, raw = m.group("text").rstrip(), ""
+        if (t := RAW_TAIL_RE.search(body)):
+            body, raw = body[:t.start()], t.group(1)
+        start = body.startswith("-- ") and body.endswith(" --") or body.endswith(" ---")
+        if start:
+            body = body[3:].rstrip("-").rstrip()
+        real = (m.group("real") or "").strip()
+        if (h := HOST_STAMP_RE.match(body)):
+            real, body = h.group(1)[11:23] + h.group(2), body[h.end():]
+        body = body.strip()
+        wrap = body == WRAP_TEXT
+        d = delta_ms(m.group("delta"))
+        rows.append({"real": real, "delta": m.group("delta").strip(), "ms": d, "text": body, "raw": raw, "slow": d is not None and d > SLOW_MS,
+                     "start": start and not wrap, "wrap": wrap, "boot": None})
     return rows
 
 
-def sync_summary(rows: list[tuple[str, str, bool]]) -> str:
-    """timing line: rows, the slowest step, rows over SLOW_MS"""
+def sync_summary(rows: list[dict]) -> str:
+    """timing line: rows, episode starts, wrap rows, the slowest step, rows over SLOW_MS"""
     if not rows:
         return "no lines"
-    steps = [(delta_ms(d), ln) for d, ln, _ in rows if d]
-    slow = max((x for x in steps if x[0] is not None), default=None)
-    return (f"{len(rows)} rows, " + (f"slowest step {slow[0]} ms" if slow else "no steps") + f", {sum(s for *_, s in rows)} over {SLOW_MS} ms")
+    steps = [r for r in rows if r["ms"] is not None and not r["start"] and not r["boot"]]
+    slow = max(steps, key=lambda r: r["ms"], default=None)
+    return (f"{len(rows)} rows, {sum(r['start'] for r in rows)} episode starts, {sum(r['wrap'] for r in rows)} wrap rows, "
+            + (f"slowest step {slow['delta']}" if slow else "no steps") + f", {sum(r['slow'] for r in rows)} over {SLOW_MS} ms")
 
 
 REASON_RE = re.compile(r"missing|not found|no bus|failed|expired|refus|not booted")
@@ -849,11 +879,12 @@ class MonitorPage(QWidget):
         sl.addLayout(sb)
         self.sync_info = QLabel("")
         sl.addWidget(self.sync_info)
-        self.sync = QTableWidget(0, 2)
-        self.sync.setHorizontalHeaderLabels(["+ms", "line"])
+        self.sync = QTableWidget(0, 3)
+        self.sync.setHorizontalHeaderLabels(["time", "+delta", "line"])
         self.sync.horizontalHeader().setStretchLastSection(False)
-        self.sync.horizontalHeader().setSectionResizeMode(1, self.sync.horizontalHeader().ResizeMode.Stretch)
-        self.sync.setColumnWidth(0, 60)
+        self.sync.horizontalHeader().setSectionResizeMode(2, self.sync.horizontalHeader().ResizeMode.Stretch)
+        self.sync.setColumnWidth(0, 100)
+        self.sync.setColumnWidth(1, 64)
         self.sync.verticalHeader().hide()
         sl.addWidget(self.sync, 3)
         self.log_tabs.addTab(syncw, "Sync log")
@@ -1166,9 +1197,10 @@ class MonitorPage(QWidget):
         for f in list(self.listeners):
             f({"event": kind, **kw})
 
-    def run(self, label: str, argv: list, done, limit: str = "one", unit: str | None = None, probe: bool = False, after=None):
+    def run(self, label: str, argv: list, done, limit: str | float = "one", unit: str | None = None, probe: bool = False, after=None,
+            limit_why: str = ""):
         """queue a job on the unit's worker; returns the job id, or None when refused (reason in self.refused).
-        after(rc, out, secs) runs on the UI thread once the job's own handler has updated the view."""
+        limit: a LIMIT_S key or seconds (limit_why = its arithmetic, logged). after(rc, out, secs) runs on the UI thread."""
         n = unit or self.cur
         st = self.states[n]
         self.refused = ""
@@ -1179,12 +1211,13 @@ class MonitorPage(QWidget):
         if self.refused:
             self.say(f"unit {n} {label}: refused, {self.refused}")
             return None
-        jid = self.queues.submit(n, argv, LIMIT_S[limit])
-        self.jobs[jid] = (label, done, n, LIMIT_S[limit], probe, after)
+        lim = LIMIT_S[limit] if isinstance(limit, str) else float(limit)
+        jid = self.queues.submit(n, argv, lim)
+        self.jobs[jid] = (label, done, n, lim, probe, after)
         if not probe:
             st.pending += 1
             self._strip_text(n)
-            self.say(f"unit {n} {label}: started (limit {LIMIT_S[limit]} s)")
+            self.say(f"unit {n} {label}: started (limit {lim:g} s{': ' + limit_why if limit_why else ''}; tree {TREE})")
         return jid
 
     def bl_seen(self, n: str, v: int | None, before: int | None):
@@ -1314,7 +1347,7 @@ class MonitorPage(QWidget):
             self.banner.setText(st.banner)
             self.banner.setVisible(bool(st.banner))
         self._strip_text(unit)
-        self.say(f"unit {unit} {label}: {verdict}{extra} ({secs:.1f} s)")
+        self.say(f"unit {unit} {label}: {verdict}{extra} ({secs:.1f} s, tree {TREE})")
         self.emit("job", unit=unit, label=label, rc=rc, secs=round(secs, 3))
         if after:
             after(rc, out, secs)
@@ -1577,7 +1610,7 @@ class MonitorPage(QWidget):
         return self.run(f"input select {p}", [PYTHON, ROOT / "scripts" / "kvm.py", p, "--units", n], None, "kvm", unit=n, after=after)
 
     def note(self, text: str, unit: str | None = None, open_console: bool = False, after=None):
-        return self.run("host note", self.dev("note", *(["--open-console"] if open_console else []), text, unit=unit), None, "synclog",
+        return self.run("host note", self.dev("note", *(["--open-console"] if open_console else []), text, unit=unit), None, "note",
                         unit=unit, after=after)
 
     def host_time(self, unit: str | None = None, after=None):
@@ -1593,15 +1626,25 @@ class MonitorPage(QWidget):
     def sync_log(self, unit: str | None = None, whole: bool | None = None, after=None, as_json: bool = False):
         w = self.whole.isChecked() if whole is None else whole
         args = [*(["--whole"] if w else []), *(["--json"] if as_json else [])]
-        return self.run("sync log", self.dev("synclog", *args, unit=unit), None if as_json else self._synced, "synclog", unit=unit, after=after)
+        return self.synclog_job("sync log", args, None if as_json else self._synced, unit=unit, after=after)
+
+    def synclog_job(self, label: str, args: list[str], done, unit: str | None = None, after=None):
+        """a dev.py synclog job with its limit sized from the request (gui_client.synclog_limit)"""
+        lim, why = gui_client.synclog_limit(args)
+        return self.run(label, self.dev("synclog", *args, unit=unit), done, lim, unit=unit, after=after, limit_why=why)
 
     def _synced(self, rc, out) -> str:
         rows = sync_rows(out)
         self.sync.setRowCount(len(rows))
-        for i, (d, ln, slow) in enumerate(rows):
-            for c, t in enumerate((d, ln)):
+        for i, r in enumerate(rows):
+            for c, t in enumerate((r["real"], r["delta"], r["text"])):
                 it = QTableWidgetItem(t)
-                if slow and c == 0:
+                if r["raw"]:
+                    it.setToolTip(r["raw"])
+                if r["start"] or r["wrap"] or r["boot"] is not None:
+                    it.setForeground(START_BRUSH)
+                    it.setBackground(START_BG if r["boot"] is None else QBrush(QColor("#30363d")))
+                elif r["slow"] and c == 1:
                     it.setForeground(SLOW_BRUSH)
                     it.setBackground(QBrush(QColor("#3a1a1a")))
                 self.sync.setItem(i, c, it)

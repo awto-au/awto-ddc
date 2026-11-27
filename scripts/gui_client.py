@@ -35,6 +35,51 @@ QUIT_WAIT_S = 3                          # a quitting app closes its socket with
 FLASH_STATUS_S = 5                       # flash client: cross-check the job state when no event arrived (events may be missed)
 
 
+# synclog job limit, sized from the request (awto-ddc#358): 1.25 x (SYNC_BASE_S + entries / DRAM_RATE). See synclog_limit.
+SYNC_BASE_S = 2.2                        # fixed cost of one synclog job: dev.py + map + link on/off + header + decode (docs/monitor-gui.md "Job limits")
+DRAM_RATE = 77.0                         # DDR log entries/s over the debug link (one 16 B burst each; measured: docs/monitor-gui.md "Job limits")
+LIMIT_MULT = 1.25
+HDR = ROOT / "fw/sdk/Project/Header/RL6449_Project.h"
+
+
+def hdr_int(name: str, default: int) -> int:
+    import re
+    try:
+        m = re.search(rf"^#define\s+{name}\s+(\d+)", HDR.read_text(), re.MULTILINE)
+    except OSError:
+        return default
+    return int(m.group(1)) if m else default
+
+
+def synclog_entries(args: list[str]) -> tuple[int, str]:
+    """(DDR entries a `dev.py synclog ARGS` read may fetch at most, what decides it)"""
+    x = list(args)
+    if "--dram" in x:
+        if any(f in x for f in ("--all", "--boot", "--since")):
+            return hdr_int("AWTO_DLOG_SLOTS", 32768), "--all / --boot / --since: up to the whole DDR ring (AWTO_DLOG_SLOTS)"
+        last = _take(x, "--last")
+        return (int(last), "--last") if last not in (None, True) and str(last).isdigit() else (64, "--dram default --last 64")
+    if "--whole" in x:
+        return hdr_int("AWTO_SYNC_N", 88), "--whole: the ring view (AWTO_SYNC_N)"
+    return hdr_int("AWTO_SYNC_WRAP", 176) - 1, "one episode: up to the seq window (AWTO_SYNC_WRAP - 1) from the DDR"
+
+
+def synclog_limit(args: list[str]) -> tuple[float, str]:
+    """(limit s, the arithmetic) of one synclog job"""
+    n, why = synclog_entries(args)
+    lim = round(LIMIT_MULT * (SYNC_BASE_S + n / DRAM_RATE), 1)
+    return lim, f"{LIMIT_MULT} x ({SYNC_BASE_S} s + {n} entries / {DRAM_RATE:g} per s) = {lim} s ({why})"
+
+
+def request_limit_s(method: str, params: dict) -> float:
+    """server wait for one request: SERVER_LIMIT_S, or for a synclog its sized job limit + SERVER_LIMIT_S (queueing as any request)"""
+    if method == "synclog":
+        return synclog_limit(["--whole"] if params.get("whole", True) else [])[0] + SERVER_LIMIT_S
+    if method == "passthrough" and params.get("name") == "synclog":
+        return synclog_limit([str(a) for a in params.get("args", [])])[0] + SERVER_LIMIT_S
+    return SERVER_LIMIT_S
+
+
 class GuiError(Exception):
     pass
 
@@ -149,34 +194,84 @@ def code_stamp(root: Path | None = None) -> str:
     return h.hexdigest()[:12]
 
 
+GIT_LIMIT_S = 2                          # local `git rev-parse` ~5 ms; 2 s = a cold exec on a loaded box (as _repo.py). Expiry: head "?"
+META = ("ping", "list", "state", "jobs", "flash_status", "subscribe", "quit")   # port queries that run no unit code: served by any tree's app
+
+
+class GuiRefused(GuiError):
+    pass
+
+
+def git_head(root: Path | None = None) -> str:
+    """short HEAD of a tree ('?' when git does not answer)"""
+    try:
+        r = subprocess.run(["git", "-C", str(root or ROOT), "rev-parse", "--short=10", "HEAD"], capture_output=True, text=True,
+                           timeout=GIT_LIMIT_S, check=False)
+    except (OSError, subprocess.SubprocessError):
+        return "?"
+    return r.stdout.strip() or "?"
+
+
+def tree_of(ping: dict) -> str:
+    return f"{ping.get('root', '?')} @{ping.get('head', '?')}"
+
+
 def stale_reason(ping: dict, root: Path | None = None) -> str | None:
-    """why a running app must be replaced (None = fine). Another LIVE worktree's app is left alone (AWTO_GUI_SOCKET isolates)."""
+    """why the running app is not the caller's (None = same tree, same code): every tree uses the one per-user app (awto-ddc#358)"""
     r = Path(root or ROOT)
     app_root = ping.get("root")
     if not app_root or not ping.get("code"):
         return "no version in its ping (older than the handshake)"
     if not Path(app_root).is_dir():
         return f"its tree {app_root} is gone (deleted worktree)"
-    if Path(app_root) == r and ping["code"] != code_stamp(r):
+    if Path(app_root).resolve() != r.resolve():
+        return "it runs another tree"
+    if ping["code"] != code_stamp(r):
         return "its code changed on disk since it started"
     return None
 
 
-def restart_if_stale(path: Path, launcher, say=print) -> None:
-    """quit a stale app (refused while a flash is followed: then it is kept) and start a fresh one; bounded by QUIT_WAIT_S"""
+def client_log(line: str) -> None:
+    """one line per tree decision (restart / refuse / served by another tree) in the caller's tmp/logs/gui-client.log"""
+    import isostamp
+    log = ROOT / "tmp" / "logs" / "gui-client.log"
+    try:
+        log.parent.mkdir(parents=True, exist_ok=True)
+        with log.open("a") as f:
+            f.write(f"{isostamp.now()} pid {os.getpid()} {line}\n")
+    except OSError:
+        pass
+
+
+def check_tree(path: Path, strict: bool = True, say=print) -> bool:
+    """compare the live app's tree with the caller's. Same = nothing. Differs + idle = quit it (True: caller starts its own).
+    Differs + busy = GuiRefused naming both trees and the jobs (strict), or one line and served as is (META queries)."""
     r = try_call(path, "ping", {})
-    why = stale_reason(r["result"], ROOT) if r and r.get("ok") else None
+    if not (r and r.get("ok")):
+        return False
+    ping = r["result"]
+    why = stale_reason(ping, ROOT)
     if not why:
-        return
-    q = try_call(path, "quit", {}, timeout=PING_S)
-    if not q or not q.get("ok"):
-        say(f"gui: the running app is stale ({why}) but kept: {q.get('error') if q else 'no reply'}")
-        return
-    say(f"gui: restarting the app: {why}")
+        return False
+    mine = f"{ROOT} @{git_head(ROOT)}"
+    busy = ping.get("busy") or []
+    q = None if busy else try_call(path, "quit", {"idle_only": True}, timeout=PING_S)
+    if busy or not q or not q.get("ok"):
+        what = "; ".join(busy) if busy else (q.get("error") if q else "no reply to quit")
+        line = (f"gui: the shared app (pid {ping.get('pid')}) runs {tree_of(ping)}, this call is from {mine} ({why}); it is busy: {what}")
+        if not strict:
+            client_log(line + "; read-only query served by that app")
+            say(line + "; read-only query served by that app")
+            return False
+        client_log(line + "; refused")
+        raise GuiRefused(line + ". Refused: nothing was run. Wait for it, or isolate a tree with AWTO_GUI_SOCKET")
+    line = f"gui: restarting the app from {mine}: {why} (was pid {ping.get('pid')}, {tree_of(ping)})"
+    client_log(line)
+    say(line)
     t0 = time.monotonic()
     while app_live(path) and time.monotonic() - t0 < QUIT_WAIT_S:
         time.sleep(START_POLL_S)
-    launcher(path)
+    return True
 
 
 def app_live(path: Path | None = None) -> bool:
@@ -195,12 +290,13 @@ def default_launcher(path: Path):
                          env={**os.environ, "QT_QPA_PLATFORM": "offscreen", "AWTO_GUI_SOCKET": str(path)})
 
 
-def ensure_app(path: Path | None = None, launcher=default_launcher, wait_s: float | None = None, say=print) -> Path:
+def ensure_app(path: Path | None = None, launcher=default_launcher, wait_s: float | None = None, say=print, strict: bool = True) -> Path:
+    """the caller's tree's app on `path`: started when none answers, replaced when another tree / stale code serves it (check_tree)"""
     path = Path(path or socket_path())
     if app_live(path):
-        restart_if_stale(path, launcher, say)
+        check_tree(path, strict, say)
         if app_live(path):
-            return path                                # fine, or stale but kept (flash running)
+            return path                                # same tree, or busy and a META query (served as is)
     wait = START_WAIT_S if wait_s is None else wait_s
     say(f"gui: starting the GUI app headless ... (no app on {path}; waiting up to {wait:g} s, log {START_LOG})")
     proc = launcher(path)
@@ -340,7 +436,7 @@ def run_legacy(name: str, extra: list[str], unit: str, path: Path | None = None,
 
     def one(i: int, method: str, params: dict):
         try:
-            with Client(path) as c:
+            with Client(path, request_limit_s(method, params) + CLIENT_LIMIT_S - SERVER_LIMIT_S) as c:
                 rep = c.call(method, params)
         except GuiError as e:
             rcs[i], lines[i] = 1, f"gui: {e}"
@@ -551,7 +647,9 @@ def format_jobs(jobs: list[dict]) -> str:
 
 def run_gui(argv: list[str], default_unit: str | None = None, path: Path | None = None, launcher=default_launcher, say=print) -> int:
     reqs, opts = parse_gui(argv, default_unit)
-    path = ensure_app(path, launcher, say=say)
+    path = Path(path or socket_path())
+    if not ([m for m, _ in reqs] == ["quit"] and app_live(path)):          # quit goes to whichever app runs: never start one to stop it
+        path = ensure_app(path, launcher, say=say, strict=not all(m in META for m, _ in reqs))
     rc = 0
     if reqs[0][0] == "subscribe":
         with Client(path, None) as c:

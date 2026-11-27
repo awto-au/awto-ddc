@@ -14,6 +14,7 @@ Launch: `python3 tools/osd_editor/run.py --monitor` (opens on the monitor tab) o
 - Left: tree page > setting (counts per page; `[risky]`, `[action]`, `[ro]` tags).
 - Middle: form of the selected page, one `SettingRow` per row; selecting a setting highlights its row and shows id, VCP code, range, default, flags, note.
 - Right: host time, health, action log, boot / sync log, last output.
+- Sync table (`monitor.sync_rows`): the decoder's columns, never its own arithmetic: time (host clock / `u` uptime / the ISO stamp of a decoder without the real column), +delta (`sync_log.fmt_delta`), line. Episode start rows (`-- text --`) and `relative time reset: counter wrap` rows red, `--- boot N` grey; raw `[fw .. ms, ring ..]` in the tooltip; delta > 100 ms red. Parses the ring, `--dram` and the log-times row form (test: `test_smoke.py` `sync_rows_on_decoder_output`, input `sync_fixture.py` built with `scripts/sync_log.py`).
 - Bottom: status line of the selected unit (see "Status line").
 
 ## Unit strip
@@ -35,6 +36,14 @@ Launch: `python3 tools/osd_editor/run.py --monitor` (opens on the monitor tab) o
 - Backend stays `dev.py` / `scripts/` subprocesses with per-call limits (`LIMIT_S`); debug link on/off and EDID guard are inside dev.py. No I2C in the GUI.
 - A failed or timed-out call sets a per-unit red banner and the unit's dot red.
 
+## Job limits (awto-ddc#358)
+- `synclog` jobs: limit sized per request, `gui_client.synclog_limit`: 1.25 x (`SYNC_BASE_S` 2.2 s + entries / `DRAM_RATE` 77 per s). Logged in the job's started line with the arithmetic. The port request and client waits are that limit + `SERVER_LIMIT_S` (queueing, as any request).
+  - entries: `--dram --last K` = K (default 64); `--all` / `--boot` / `--since` = `AWTO_DLOG_SLOTS` (32768: 535 s); `--whole` = `AWTO_SYNC_N` (88); one episode = `AWTO_SYNC_WRAP` - 1 (175, read from the DDR).
+  - Measured 2026-11-27, unit 3, image `55cbc742`, through the app: `--dram --last 200` 202 bursts in 2.6 s, job 3.9 s; `--last 1000` (968 entries) 1002 bursts in 12.9 s, job 15.1 s: 77.7 entries/s, fixed part 1.3-2.2 s. One-episode ring read 1.8 s.
+  - Limits then: `--last 64` 3.8 s, `--last 200` 6.0 s, `--last 1000` 19.0 s, one episode 5.6 s. The old fixed 4 s killed `--last 200` (rc 124).
+  - No stall guard: sync_log prints nothing until the read ends. A progress line from the DRAM read would allow one (asked of the decoder owner, #358).
+- `note` keeps the old 4 s.
+
 ## Confirm
 - `risky` rows (11) and action rows (6) ask before Set / Run (dialog names the unit and row; notes a needed reboot).
 
@@ -44,7 +53,7 @@ Launch: `python3 tools/osd_editor/run.py --monitor` (opens on the monitor tab) o
 ## Tests
 - `tools/osd_editor/test_monitor_gui.py` (fake backend, offscreen; strip, hotkeys, tree counts, search, confirm, read-only, parallel vs serial queues, remembered unit, detect + probe, status line, screenshot).
 - `tools/osd_editor/test_smoke.py` (editor tabs, monitor page get / set / quick / banner).
-- `tools/osd_editor/test_control_port.py` (port: commands change model and view, save read back, failed call, parallel / serial queues, events, socket perms, auto-start, thin CLI, no-app error, `--direct` refusal, raw i2c, async flash, rc and gate refusal, detached survival + re-attach; fake backend and `fake_flasher.py`). `tests/test_flash_job_stale.py`: stale records, zombie. `tests/test_gui_client.py`: client translation, flash progress parsing (no Qt).
+- `tools/osd_editor/test_control_port.py` (port: commands change model and view, save read back, failed call, parallel / serial queues, events, socket perms, auto-start, thin CLI, no-app error, `--direct` refusal, raw i2c, async flash, rc and gate refusal, detached survival + re-attach, tree mismatch restart / busy refusal, second app exit + lock, sized synclog limit; fake backend and `fake_flasher.py`). `tests/test_flash_job_stale.py`: stale records, zombie. `tests/test_gui_client.py`: client translation, flash progress parsing (no Qt).
 - Run: `QT_QPA_PLATFORM=offscreen tools/osd_editor/.venv/bin/python tools/osd_editor/test_monitor_gui.py`.
 
 ## Live pass 2026-11-20 (units 1, 2, 3 read-only, locks held, GUI on Dan's desktop)
@@ -108,7 +117,14 @@ Launch: `python3 tools/osd_editor/run.py --monitor` (opens on the monitor tab) o
 - `./dev.py flash [IMAGE] [--unit N] [--full] [--write-mode ..] [--aux-fast ..] [--verify ..] [--force-ungated ...]` sends the job; the app starts `dev.py flash ... --direct` as a DETACHED worker (`scripts/flash_job.py`: own session, holds `unit_lock` for the whole flash, `AWTO_UNIT_OWNER` set for the child). Gate check (`check_gated`, `.gates.json`, `--force-ungated`) runs inside that worker exactly as before; a refusal = the worker's rc + message.
 - The port replies at once with the job; `flash` events stream parsed log progress (phase, sectors n/N, percent, ETA, errors, ISP recoveries, burst redone) and `flash_done` (rc). The client prints them and exits with the flash's rc; Ctrl-C only detaches. `FLASH_SILENCE_S` = 60 s without events prints a WARN; the client never stops a flash.
 - Job records: a spawn that fails or a record without a pid is closed as rc 255 ("stale", logged in `tmp/logs/unit_lock.log`), never left "running". Human cleanup: `python3 scripts/flash_job.py clean` (finished + stale records and logs).
-- Handshake: `ping` returns `root` (tree the app runs from) and `code` (stamp of dev.py, scripts/, tools/osd_editor/). dev.py replaces an app whose tree is gone (deleted worktree), whose code changed on disk, or that predates the handshake, unless a flash is running (then it is kept and a line says so). Another live worktree's app is left alone: isolate with `AWTO_GUI_SOCKET`.
+- Handshake: `ping` returns `root` (tree the app runs from), `head` (its git HEAD at start), `code` (stamp of dev.py, scripts/, tools/osd_editor/) and `busy` (flashes followed, queued / running device jobs). Code: `gui_client.check_tree` (awto-ddc#358).
+  - Every dev.py call compares the app's root + code with its own tree. Same = served.
+  - Differs (another tree, code changed on disk, tree gone, no handshake) and idle: `quit {idle_only}`, then one fresh app from the caller's tree. Line `gui: restarting the app from <tree> @<head>: <why> (was pid P, <tree> @<head>)`.
+  - Differs and busy: refused, nothing run. One line names both trees, their HEADs and the running jobs. Exception: queries that run no unit code (`gui ping / list / state / jobs / flash-status / events / quit`) are served by that app, with the same line.
+  - Decisions also go to the caller's `tmp/logs/gui-client.log`. The app logs `tree <root> @<head>` in every job's started / verdict line; `gui state` has `tree` {root, head, code, pid}.
+  - Two trees alternating calls restart the app each time (0.3-1.1 s start, see the start bound). Isolate a tree with `AWTO_GUI_SOCKET` to avoid it.
+- One app per socket (= per user): `flock` on `<socket>.lock` for the app's life, holder `pid root @head` written in it. A second headless app exits at once, rc 3, one line `headless app pid N exiting: control port unavailable: ... lock ... held by ...`. A window takes over from a headless app (quit, waits `TAKEOVER_WAIT_S` 3 s for the lock); a window that finds another window keeps its banner, no port.
+- Old orphans: `ensure_app` launched twice after a restart (restart path + start path), the second app lingered. Now one launch per call.
 - The control socket is per user, shared by all worktrees: a flash run by an app of worktree X uses X's dev.py.
 - Job file `tmp/flash_jobs/<serial>.json` (shared by worktrees; pid, unit, argv, log, rc). The app re-attaches on restart (running, or finished and not yet reported). A dead worker without rc = rc 255 and an ERROR line.
 - Nothing signals a flash. The app refuses `quit` (port, headless SIGINT / SIGTERM) while one is followed; the window asks before closing. The flash runs on either way.

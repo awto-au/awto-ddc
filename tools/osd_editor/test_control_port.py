@@ -756,11 +756,108 @@ def writes_need_an_explicit_unit():
     print("ok writes without unit / serial are refused (nothing sent); reads keep the window's unit")
 
 
+def in_thread(fn):
+    """run fn on a thread while the UI thread serves the port; returns (result, exception)"""
+    box = {}
+
+    def go():
+        try:
+            box["r"] = fn()
+        except Exception as e:  # noqa: BLE001  the failure is the test's result
+            box["e"] = e
+    t = threading.Thread(target=go)
+    t.start()
+    pump(lambda: not t.is_alive(), "client call")
+    return box.get("r"), box.get("e")
+
+
+def tree_mismatch_restart_or_refuse():
+    """#358: an app of another tree is restarted from the caller's tree when idle; busy = refused naming both trees + the job"""
+    other = WORK / "other-tree"
+    for d in ("scripts", "tools/osd_editor"):
+        (other / d).mkdir(parents=True, exist_ok=True)
+    (other / "dev.py").write_text("x")
+    r = Rig("tree")
+    root0 = GC.ROOT
+    lines, launched = [], []
+    try:
+        GC.ROOT = root0                                                           # same tree: nothing happens
+        assert in_thread(lambda: GC.check_tree(r.path, True, lines.append)) == (False, None) and not lines
+        GC.ROOT = other                                                           # the caller is another tree; the app is busy
+        r.fb.gated = {"1"}
+        a = r.call_async("set", {"unit": "1", "name": "gamma", "value": 1})
+        pump(lambda: r.fb.active.get("1", 0) == 1, "unit 1 job running")
+        res, err = in_thread(lambda: GC.ensure_app(r.path, lambda p: launched.append(p), say=lines.append))
+        assert isinstance(err, GC.GuiRefused), (res, err)
+        msg = str(err)
+        assert str(root0) in msg and str(other) in msg and "unit 1 set gamma" in msg and "nothing was run" in msg, msg
+        assert not launched and ping_pumped(r.path)                                # the busy app is kept, nothing started
+        res, err = in_thread(lambda: GC.ensure_app(r.path, lambda p: launched.append(p), say=lines.append, strict=False))
+        assert err is None and res == r.path and "read-only query served" in lines[-1], (err, lines)      # gui jobs / state still work
+        r.fb.gate.set()
+        assert r.wait(a)["ok"]
+        quit_seen = []
+        r.port.on_quit = lambda: quit_seen.append(1)
+        res, err = in_thread(lambda: GC.ensure_app(r.path, lambda p: launched.append(p), wait_s=0.3, say=lines.append))
+        assert quit_seen and any("restarting the app from" in ln and str(other) in ln for ln in lines), lines
+        assert len(launched) == 1, launched                                        # one launch only (was two: the second app was an orphan)
+        assert isinstance(err, GC.GuiUnavailable)                                  # the fake launcher starts nothing
+        log = (other / "tmp/logs/gui-client.log").read_text()
+        assert "refused" in log and "restarting" in log, log
+    finally:
+        GC.ROOT = root0
+        r.fb.gate.set()
+        r.close()
+    print("ok tree mismatch: idle app of another tree restarted once from the caller's tree; busy = refused with both trees + job; META queries served")
+
+
+def second_app_exits():
+    """#358: the lock allows one app per socket; a second headless app process exits at once with one line"""
+    r = Rig("second", headless=True)
+    assert r.port.lock_path.exists() and str(os.getpid()) in r.port.lock_path.read_text()
+    pg2 = MON.MonitorPage(StatefulBackend(), WORK / "second" / "gui2.log", QSettings(str(WORK / "second" / "y.ini"), QSettings.IniFormat),
+                          detect=lambda: set())
+    p2 = CP.ControlPort(pg2, r.path, headless=True)
+    ok, err = in_thread(p2.start)
+    assert ok is False and err is None and "lock" in p2.why and str(os.getpid()) in p2.why, p2.why
+    pg2.flash_timer.stop()
+    env = {**os.environ, "AWTO_GUI_SOCKET": str(r.path), "QT_QPA_PLATFORM": "offscreen"}
+    t0 = time.monotonic()
+    proc = subprocess.Popen([PY, str(HERE / "app.py"), "--headless"], cwd=ROOT, env=env, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True)
+    pump(lambda: proc.poll() is not None, "second app exit", 20)
+    out = proc.stdout.read()
+    assert proc.returncode == 3 and "exiting: control port unavailable" in out and "lock" in out, (proc.returncode, out)
+    print(f"ok second app: in-process start refused by the lock; a second headless process exits rc 3 in {time.monotonic() - t0:.1f} s with one line")
+    r.close()
+    assert ping_pumped(r.path) is False if r.path.exists() else True
+
+
+def synclog_limits_sized():
+    lim64, why = GC.synclog_limit(["--dram", "--last", "64"])
+    lim200, _ = GC.synclog_limit(["--dram", "--last", "200"])
+    assert lim200 > 200 / GC.DRAM_RATE and lim200 == round(GC.LIMIT_MULT * (GC.SYNC_BASE_S + 200 / GC.DRAM_RATE), 1) and "200 entries" in GC.synclog_limit(["--dram", "--last", "200"])[1]
+    assert lim64 < lim200 and GC.synclog_limit(["--dram"])[0] == lim64
+    assert GC.synclog_limit(["--dram", "--all"])[0] > 32768 / GC.DRAM_RATE
+    assert GC.request_limit_s("passthrough", {"name": "synclog", "args": ["--dram", "--last", "200"]}) == lim200 + GC.SERVER_LIMIT_S
+    r = Rig("lim")
+    seen, run0 = [], r.fb.run
+    r.fb.run = lambda argv, limit_s: (seen.append(limit_s), run0(argv, limit_s))[1]
+    rep = r.call("passthrough", {"unit": "3", "name": "synclog", "args": ["--dram", "--last", "200"]})
+    assert rep["ok"], rep
+    assert seen == [lim200], seen
+    log = (WORK / "lim" / "gui.log").read_text()
+    assert f"limit {lim200:g} s: 1.25 x" in log and "tree " in log, log[-600:]
+    r.close()
+    print(f"ok synclog limit from the request: --last 64 {lim64} s, --last 200 {lim200} s ({why})")
+
+
+
 def main():
     app = QApplication([])
     for fn in (commands_change_model_and_view, writes_need_an_explicit_unit, risky_and_actions, save_and_kvm, failed_call_keeps_view, parallel_and_serial, events_stream,
                security, autostart_and_no_app, cli_end_to_end, raw_i2c_parsing, flash_async_progress_and_guards, flash_client_and_rc,
-               flash_survives_app_and_reattaches, startup_wait_polls_and_fails_with_log, stale_job_state_is_rederived, gui_jobs_command, handover_and_late_unlink, window_without_port):
+               flash_survives_app_and_reattaches, startup_wait_polls_and_fails_with_log, stale_job_state_is_rederived, gui_jobs_command, handover_and_late_unlink, window_without_port,
+               tree_mismatch_restart_or_refuse, second_app_exits, synclog_limits_sized):
         fn()
     app.processEvents()
     print("PASS")

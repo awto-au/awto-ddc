@@ -457,6 +457,11 @@ def main(argv=None):
         ok = port.start()
     except Exception as e:  # noqa: BLE001  a window without the control port beats no window
         ok, port.why = False, f"{type(e).__name__}: {e}"
+    if not ok and headless:                                            # a second headless app has no way in: exit, never linger (#358)
+        line = f"headless app pid {os.getpid()} exiting: control port unavailable: {port.why}"
+        print(line, file=sys.stderr, flush=True)
+        w.monitor.say(line)
+        return 3
     if not ok:
         print(f"control port unavailable: {port.why}", file=sys.stderr, flush=True)
         w.monitor.say(f"control port unavailable: {port.why}")

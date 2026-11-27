@@ -139,7 +139,18 @@ def test_stale_app_reasons(tmp_path):
     assert "changed" in GC.stale_reason({**ok, "code": "other"}, r)
     other = tmp_path / "other"
     other.mkdir()
-    assert GC.stale_reason({"root": str(other), "code": "x"}, r) is None             # another live worktree's app is left alone
+    assert "another tree" in GC.stale_reason({"root": str(other), "code": "x"}, r)   # another live worktree's app: restarted / refused (#358)
+
+
+def test_synclog_limit_is_sized_from_the_request():
+    base = GC.LIMIT_MULT * GC.SYNC_BASE_S
+    lim, why = GC.synclog_limit(["--dram", "--last", "200"])
+    assert lim == round(base + GC.LIMIT_MULT * 200 / GC.DRAM_RATE, 1) and "200 entries" in why and "1.25 x" in why
+    assert GC.synclog_limit(["--dram"])[0] == GC.synclog_limit(["--dram", "--last", "64"])[0]
+    assert GC.synclog_limit(["--dram", "--all"])[0] == round(base + GC.LIMIT_MULT * GC.hdr_int("AWTO_DLOG_SLOTS", 0) / GC.DRAM_RATE, 1)
+    assert GC.synclog_limit(["--whole"])[0] < GC.synclog_limit([])[0]           # ring view 88 < one episode up to 175 from the DDR
+    assert GC.request_limit_s("ping", {}) == GC.SERVER_LIMIT_S
+    assert GC.request_limit_s("synclog", {"whole": False}) == GC.synclog_limit([])[0] + GC.SERVER_LIMIT_S
 
 
 def test_stale_job_record_is_closed_not_crashing(tmp_path, monkeypatch):

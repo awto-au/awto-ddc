@@ -15,6 +15,7 @@ from PySide6.QtWidgets import QApplication  # noqa: E402
 
 import app as A  # noqa: E402
 import monitor as MON  # noqa: E402
+import sync_fixture  # noqa: E402
 import model as M  # noqa: E402
 
 ROOT = A.ROOT
@@ -115,15 +116,35 @@ class FakeBackend:
             codes = a[a.index("get") + 1:a.index("--unit") if "--unit" in a else None]
             return 0, "".join(f"HDMI-A-2         bus=11  {vals[c]}\n" for c in codes)
         if "settings" in a and "list" in a:
-            return 0, "\n".join(f"{r['name']} = x (raw {r['default'] + (1 if r['type'] == 'int' and r['name'] == 'brightness' else 0)})"
+            return 0, "\n".join(f"{r['name']} = x (raw {51 if r['name'] == 'brightness' else r['default']})"
                                 for r in MON.T.ROWS if r["type"] != "action") + "\n"
         if "synclog" in a:
-            return 0, ("2026-11-15T10:00:00+10:00 sync episode: power on, 4 lines\n"
-                       "2026-11-15T10:00:00+10:00      0:power on\n2026-11-15T10:00:00+10:00     40:panel on\n"
-                       "2026-11-15T10:00:00+10:00    390:input lock D2\n2026-11-15T10:00:00+10:00    420:backlight on\n")
+            return 0, sync_fixture.ring_text()                    # the current decoder's own output (scripts/sync_log.py)
         if "health" in a:
             return 0, "diag ok\nPASS\n"
         return 0, "ok\n"
+
+
+def sync_rows_on_decoder_output():
+    """#358: the Sync table takes the decoder's delta / time / start / wrap columns, never its own 16-bit step"""
+    for synced in (True, False):
+        rows = MON.sync_rows(sync_fixture.ring_text(synced))
+        assert [r["ms"] for r in rows] == [5, 40, 350, 30, 0, 120], rows
+        assert [r["start"] for r in rows] == [True, False, False, False, True, False] and not any(r["wrap"] for r in rows)
+        assert rows[0]["text"] == "0:boot: power on" and rows[4]["text"] == "8995:switch to D1", rows
+        assert (rows[1]["real"] == "21:06:40.045") if synced else rows[1]["real"] == ""
+        assert [r["slow"] for r in rows] == [False, False, True, False, False, True]
+    rows = MON.sync_rows(sync_fixture.dram_text())
+    assert [r["boot"] for r in rows] == [7, None, None, None, None, 8, None, None]
+    assert [r["ms"] for r in rows if r["boot"] is None] == [5, 40, 350, 30, 0, 120] and rows[1]["start"] and rows[6]["start"]
+    rows = MON.sync_rows(sync_fixture.LOG_TIMES)
+    assert len(rows) == 7 and [r["wrap"] for r in rows] == [False, False, False, True, False, False, False], rows
+    assert rows[0]["real"] == "u00:00:00.005" and rows[0]["start"] and rows[0]["raw"] == "[fw 5 ms, ring 5]"
+    assert rows[4]["ms"] is None and rows[4]["delta"] == "" and rows[5]["start"] and rows[5]["real"] == "15:20:11.500"
+    assert MON.sync_rows("2026-11-27T15:00:00+10:00 " + sync_fixture.ring_text().splitlines()[3])[0]["ms"] == 40   # a dev.py time prefix
+    summ = MON.sync_summary(MON.sync_rows(sync_fixture.LOG_TIMES))
+    assert "2 episode starts" in summ and "1 wrap rows" in summ and "slowest step +350 ms" in summ, summ
+    print("ok sync_rows: ring (synced / not), --dram and log-times row forms; start, wrap, boot rows; no own 16-bit arithmetic")
 
 
 def settle(app, pg):
@@ -261,9 +282,11 @@ def monitor_test(app, win):
     for want in ("settings set brightness 60", "settings set gamma 3", "settings save", "kvm.py D2 --units 3",
                  "host_time.py --unit 3 --once", "health", "synclog --whole"):
         assert any(want in x for x in sent), (want, sent)
-    assert pg.sync.rowCount() == 4
-    assert [pg.sync.item(i, 0).text() for i in range(4)] == ["", "+40", "+350", "+30"]
-    assert pg.sync.item(2, 0).foreground().color().name() == "#ff5050" and pg.sync.item(1, 0).foreground().color().name() != "#ff5050"
+    assert pg.sync.rowCount() == 6
+    assert [pg.sync.item(i, 1).text() for i in range(6)] == ["+  5 ms", "+ 40 ms", "+350 ms", "+ 30 ms", "+  0 ms", "+120 ms"]
+    assert pg.sync.item(1, 0).text() == "21:06:40.045" and pg.sync.item(1, 2).text() == "40:panel on"
+    assert pg.sync.item(2, 1).foreground().color().name() == "#ff5050" and pg.sync.item(1, 1).foreground().color().name() != "#ff5050"
+    assert all(pg.sync.item(i, 2).background().color().name() == MON.START_BG.color().name() for i in (0, 4))      # red start rows
     log = logf.read_text().splitlines()
     iso = re.compile(r"^\d{4}-\d\d-\d\dT\d\d:\d\d:\d\d[+-]\d\d:\d\d unit 3 ")
     assert sum(bool(iso.match(x)) for x in log) >= 8 and any("health: ok, PASS" in x for x in log), log
@@ -308,6 +331,7 @@ def main():
     win.grab().save(str(SHOTS / "editor_screens.png"))
     print("screens loaded:", len(win.screens.rows))
     screens_2bpp_test(app, win)
+    sync_rows_on_decoder_output()
     monitor_test(app, win)
     print("PASS")
 
