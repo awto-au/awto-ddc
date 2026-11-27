@@ -338,6 +338,7 @@ const	_tAwtoSyncRowArg	7	0x209a	491
 const	_tAwtoSyncRowId	7	0x2285	491
 const	_tAwtoSyncTxtOff	10	0x036d	1283
 const	_tAwtoSyncTxtS	10	0x0870	24616
+const	_tAwtoSysByExt	5	0x6e41	13
 const	_tAwtoTxtOffS	7	0x1842	116
 const	_tAwtoTxtS	7	0x18b6	965
 const	_tAwtoVolGain	13	0x0553	32

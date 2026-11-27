@@ -21,7 +21,6 @@ awto_nvram_nvram	0xd700	1587	64
 RTDFactoryFunction	0xd700	1651	63
 RL6449_Series_FRC	0xd700	1714	62
 ScalerCommonSync	0xd700	1776	62
-diag	0xd700	1838	54
 awto_arith_arith	0xd700	1892	50
 ScalerSync	0xd700	1942	48
 text_layer	0xd700	1990	47
@@ -126,6 +125,7 @@ flash_screen	0xe380	185	1
 RL6449_Series_GDIPhy	0xe380	252	3
 RL6449_Series_DPRx1	0xe580	0	99
 sync	0xe780	37	745
+diag	0xe780	782	55
 ScalerMDomain	0xe780	962	135
 SysJudge	0xe780	1097	12
 UserCommonInterface	0xe780	1109	30
