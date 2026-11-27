@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """OSD SRAM hardware tests on the test unit (docs/osd-hw-tests.md): write paths, read-back, ladder, OT-8 cell mode.
 
-usage: osd_hw_test.py --bus B --serial S --map MAP [--bin BIN] TEST [TEST ...]
+usage: ./dev.py osd-hw-test [--unit N] TEST [TEST ...]   (runs osd_hw_test.py --bus B --serial S --map MAP [--bin BIN] TEST ...)
   Image built with -D _AWTO_OSD_HWTEST (fw/test/testcmd.c g_stAwtoOsdHw). The host drives the firmware over debug slave 0x35:
   params + ucGo = op, the main loop runs the op and clears ucGo. Read-back = 0x3A33 sram_read_en with the overlay off (the op does it).
   TESTs (PASS/FAIL criteria: docs/osd-hw-tests.md):
@@ -11,7 +11,7 @@ usage: osd_hw_test.py --bus B --serial S --map MAP [--bin BIN] TEST [TEST ...]
     t3     direct + gap sweep: the smallest gap with 0 errors (run only when t2 fails)
     cycle  T10 for a human: the ladder with a blue digit 1..6, variants 8 s each, looping until `cyclestop` (docs/osd-hw-tests.md)
     cyclestop  stop the cycle; check the ladder glyphs in SRAM are still as written
-    ladder 2-bit ids 0..255 as a 16 x 16 grid, plane A solid (left on screen) + sim renders (as built, if the fetch wraps at 4096)
+    ladder T9: 2-bit ids 0..255 as a 16 x 16 grid, plane A solid (left on screen) + the sim render of the same ladder
     ot8    OT-8, 24 x 36 cell mode on (3A43[6]): 8 test glyphs + 4 high ids, coded map; SRAM read back vs the host twin and the sim; left on screen
     ot8off OT-8 control: the same SRAM + map with the mode off (cells draw as 12 x 18 from the same words)
     ot8full OT-8 capacity: pattern over words 0..12221 (330 glyphs of 36 words + map, 99.5 % of the SRAM) written and read back M1 / M2; run BEFORE ot8 (overwrites the screen)
@@ -52,7 +52,6 @@ LD_FONT, LD_IDS, LD_STRIDE = 616, 256, 18
 LD_END = LD_FONT + LD_IDS * LD_STRIDE
 RANGES = {"glyphs": (LD_FONT, LD_IDS * LD_STRIDE), "map": (0, LD_FONT), "top": (0x2000, 0x1000)}
 SAVER_OFF = 0                             # VCP 0xEB value 0 (fw/awto/savers.tsv)
-WRAP_WORDS = 4096                         # ladder: hypothesis render, 2-bit glyph fetch wraps at 4096 words
 # poll limits: 1.25 x the measured worst case on unit 3 (docs/osd-hw-tests.md "op times"); expiry = FAIL, logged with the elapsed time
 US_PER_WRITE_BYTE = {M_SDK: 46.2, M_DIRECT: 46.2, M_GAP: 46.2, M_TRIPLE: 46.2}   # worst per byte incl. the pattern refill (all modes)
 US_GAP_PASS = 1.0                         # not measured (t3 not needed: t2 passed); estimate 1 us per delay pass
@@ -407,12 +406,9 @@ def main() -> int:
                         png = OUT / "ladder_sim_viewer.png"
                         OUT.mkdir(parents=True, exist_ok=True)
                         R.render_snap(st, "black", 4).rotate(180).save(png)
-                        for a_ in [x for x in st.font if LD_FONT <= x < LD_END and x >= WRAP_WORDS]:
-                            st.font[a_] = list(st.font.get(a_ % WRAP_WORDS, [0, 0, 0]))
-                        R.render_snap(st, "black", 4).rotate(180).save(png.with_name(png.stem + "_if_wrap4096.png"))
                     finally:
                         sim.close()
-                    say(f"  sim renders: {png} and {png.stem}_if_wrap4096.png")
+                    say(f"  sim render: {png}")
                 elif t in ("ot8", "ot8off"):                    # OT-8: 24 x 36 mode (3A43[6]) on / off; screen left on for a human
                     on = t == "ot8"
                     set_flags(dev, 0)
