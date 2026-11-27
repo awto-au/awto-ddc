@@ -212,7 +212,7 @@ def git_head(root: Path | None = None) -> str:
                            timeout=GIT_LIMIT_S, check=False)
     except (OSError, subprocess.SubprocessError):
         return "?"
-    return r.stdout.strip() or "?"
+    return (r.stdout.strip() or "?") if r.returncode == 0 else "?"
 
 
 def tree_of(ping: dict) -> str:
