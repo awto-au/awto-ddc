@@ -1,4 +1,4 @@
-# Open decisions, pending tests and unfiled findings (2026-11-19)
+# Open decisions, pending tests and unfiled findings (2026-11-19; issue states checked 2026-11-27)
 
 - One list; nothing here lives only in chat. Each row has its GitHub issue in the last column (filed 2026-11-19: #239..#246 new, comments on #101 #197 #206 #226 #236 #238); add new rows with their issue number.
 - Blocking = blocks a firmware change or a hardware step now. Decides: Dan (D) or agent (A, no decision needed, just run).
@@ -12,11 +12,10 @@
 | 5 | `AwtoMs` / Timer2 tick loss | EXINT0 handler >= ~1 ms loses ticks (sim 2.0 ms wall = 1.14 ms fw); not fixed | `docs/delay-audit.md` | no | D | #197 |
 | 6 | NVRAM write / erase at 350.8 | 9-cycle MOVX wrapper kept; untested above 87.7 (`C-NVWR`) | `docs/clock-sweep.md` | yes, for dropping the wrapper | A runs on unit 3 | #240 |
 | 7 | Temperature | DSS three-step sequence; IOSC / ADC proxies; #206 verdict unknown | `docs/temperature.md` | no | A runs, D on calibration | #206 |
-| 8 | Other units / HDMI input / audio-PWM at 350.8 | sweep ran DP on unit 3 only | `docs/clock-sweep.md` | no | D approves unit 1 / 2 tests | #240 |
+| 8 | HDMI input / audio-PWM at 350.8 | sweep ran DP on unit 3 only; hardware tests stay on unit 3 (Dan 2026-11-27, units 1 / 2 `test=false`) | `docs/clock-sweep.md` | no | A (unit 3, HDMI) | #240 |
 | 9 | M2PLL Phase B | steps past 350.8 (p372..p487, beyond 487 in small steps, stop after ~3 failures); retune table; `01E5[7]` lock untested | `docs/clock-sweep.md` | no | D go per run | #240 |
 | 10 | Flash 116.9 MHz default: open items | default since 2026-11-19 (Dan); not yet measured: hot / cold, other units, #238 boot CRC guard | `docs/clock-sweep.md` | no | D | #238 / #240 |
 | 11 | Dual-output flash read | unusable, cause unknown (SIO1 wiring?) | `docs/clock-sweep.md` | no | D (park or investigate) | #241 |
-| 12 | Scope 1 6.3 fps plateau | not CPU-bound up to 175.4; cause not investigated | `docs/clock-sweep.md` | no | A | #240 |
 | 13 | OSD port 0.54 us/B unexplained | hardware 1.08 vs sim 0.54 at 350.8; sweep Phase B | `docs/osd-write-sweep.md` | no | A | #242 |
 | 14 | DDR clock sweep (Phase C) | after Phase B, separate go; no display PLL / panel timing | `docs/osd-write-sweep.md` | no | D go | #240 |
 | 15 | Scope 2 tile garble | display-side, unresolved; T10 verdict (digits 2/3/4 flicker?) not recorded; scale-up-off test planned | `docs/osd/timing.md`, `docs/osd-hw-tests.md` | no | D records verdict | #226 |
@@ -27,9 +26,9 @@
 | 20 | Live register scan units 1 / 2 | read-only, running; results to `re/regmap/obs/` | `docs/register-audit.md` | no | A | #236 / #237 |
 | 21 | Debris cleanup (#237) | retire docs that only link; list in the session report, not moved | #237 | no | D | #237 |
 | 22 | Undocumented registers that vary | 6 listed (`21D8`, `7607[1]`, `A7E0..A7E2`, `AFE2`; `8F9D..` changes between passes C1 / C2) | `docs/register-audit.md` | no | A | #236 |
-| 24 | Stuck-key guard (D1) | a key / ladder stuck from power-on resets every setting after 10 s, every boot; latch a key already down at the first sample | `docs/monitoring.md` | no | D | #245 |
-| 25 | Cache meter in the monitor (D2) | enable `FDB3[0]` at boot, log miss rate; check speed at 350.8 MHz first | `docs/monitoring.md` | no | D | #245 |
-| 26 | HDMI RX error counter (D3) | regdb search before any monitor row | `docs/monitoring.md` | no | A | #245 |
+| 24 | Stuck-key guard (D1) | a key / ladder stuck from power-on resets every setting after 10 s, every boot; latch a key already down at the first sample | `docs/monitoring.md` | no | D | #245 (closed 2026-11-21) |
+| 25 | Cache meter in the monitor (D2) | enable `FDB3[0]` at boot, log miss rate; check speed at 350.8 MHz first | `docs/monitoring.md` | no | D | #245 (closed 2026-11-21) |
+| 26 | HDMI RX error counter (D3) | regdb search before any monitor row | `docs/monitoring.md` | no | A | #245 (closed 2026-11-21) |
 | 23 | Rule changes held in memory only | SDK unreliable; speed-limiting rules need Dan's ask; PS stays on IOSC | `docs/history.md` | no | D confirms wording in agent rules | agent rules (awto-dan) |
 
 - Not in this table, filed 2026-11-19: #239 (350.8 MHz boot failure), #244 (fragile checks), #245 (ADC / GPIO monitor), #246 (live scan policy), #101 (CEC).
