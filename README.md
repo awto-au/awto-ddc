@@ -1,7 +1,7 @@
 # awto-ddc
 
 Tools and notes for controlling monitors over DDC/CI and for reverse-engineering + reflashing
-Realtek RTD scaler monitors (the JXC/Dahua 28" 4K units, RTD2795-class). Private repo.
+Realtek RTD scaler monitors (the JXC/Dahua 28" 4K units, RTD2795-class). Public repo (Dan, 2026-11-13).
 
 ## The monitors (what we found and fixed)
 Dahua DHI-LM28-class 28"-marketed 4K monitors (ODM EDID vendor "JXC"). 27.0"-real panel (active 597x336 mm,
@@ -63,7 +63,7 @@ Identify any unit: `scripts/rtd_identify.py <bus>|--all`. Full RE + extraction t
 - Headless tool host: `scripts/rtd_headless/` — C host for the ISP plugin's version reads (see `docs/rtdtool-headless-feasibility.md`).
 
 ## Docs
-- `docs/history.md` — superseded beliefs; its last section is the former handover (frozen 2026-11-16). Current state: open issues, `docs/power-levels.md`, `./dev.py --help`.
+- `docs/README.md` — index of every doc. `docs/history.md` — superseded beliefs; its last section is the former handover (frozen 2026-11-16). Current state: open issues, `./dev.py --help`.
 - `docs/osd/README.md` — OSD manual (hardware, registers, every feature with a sim picture, limits, open tests); `docs/osd.md` — OSD system overview (our screens, fonts, inputs, tools, open work).
 - `docs/firmware-proposal.md` — technical OSD design notes.
 - `docs/history.md` — superseded, refuted or wrong claims, one line each.
@@ -75,5 +75,5 @@ Identify any unit: `scripts/rtd_identify.py <bus>|--all`. Full RE + extraction t
 
 ## Not in this repo
 - Vendor binaries, flash dumps, extracted TSVs, Ghidra projects: `~/vendors/realtek/analysis/` (helpers in its `scripts/`).
-- Exception (private repo only): decoded register/flash JSON under `re/regdb/` and `re/flashdb/` (see `CLAUDE.md`).
+- Exceptions: decoded register/flash JSON under `re/regdb/` and `re/flashdb/`, RE review docs under `re/lib-review/` (see `CLAUDE.md`).
 - Origin: moved from awto-dan (issue #86 → awto-ddc#1).
