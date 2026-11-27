@@ -1691,10 +1691,12 @@ bit ScalerDisplayDPTx1AuxRead(BYTE ucCommandAddrH, BYTE ucAddrM, BYTE ucAddrL, B
 
                 if(ScalerGetBit(P9D_B1_AUX_IRQ_EVENT, _BIT5) == _BIT5)
                 {
+                    // awto: one FIFO_WR_PTR read bounds both the check and the copy; longer than the request = stale FIFO, retried (#247)
+                    ucCheckLength = ScalerGetBit(P9D_AE_AUX_FIFO_WR_PTR, (_BIT4 | _BIT3 | _BIT2 | _BIT1 | _BIT0));
+
                     // Reply Error or Nack or Command is not ACK
-                    // A reply longer than the request is a stale FIFO (seen at 350.8 MHz): it would overrun the caller's buffer, so it is retried
                     if((ScalerGetBit(P9D_B1_AUX_IRQ_EVENT, _BIT2) != 0x00) || (ScalerGetBit(P9D_A9_AUX_REPLY_CMD, (_BIT5 | _BIT4)) != 0x00) ||
-                       (ScalerGetBit(P9D_AE_AUX_FIFO_WR_PTR, (_BIT4 | _BIT3 | _BIT2 | _BIT1 | _BIT0)) > ucLength))
+                       (ucCheckLength > ucLength))
                     {
                         // CLR Flag
                         ScalerSetByte(P9D_B1_AUX_IRQ_EVENT, 0x3F);
@@ -1710,7 +1712,6 @@ bit ScalerDisplayDPTx1AuxRead(BYTE ucCommandAddrH, BYTE ucAddrM, BYTE ucAddrL, B
                     }
                     else
                     {
-                        ucCheckLength = ScalerGetBit(P9D_AE_AUX_FIFO_WR_PTR, (_BIT4 | _BIT3 | _BIT2 | _BIT1 | _BIT0));
                         ucOffsetLength += ucCheckLength;
 
                         // Read Data From Buffer
