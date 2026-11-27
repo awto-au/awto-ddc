@@ -277,6 +277,34 @@ def cmd_clean(_extra: list[str]) -> int:
     return 0
 
 
+def _script(name: str, extra: list[str]) -> int:
+    return subprocess.call([sys.executable, str(REPO / "scripts" / name), *extra], cwd=REPO)
+
+
+@command("worktree sweep: dry-run list of every worktree (REMOVE = merged/twinned, clean, nothing changed for 3 h); --apply removes those",
+         args="[--apply]", kind="action")
+def cmd_worktree_sweep(extra: list[str]) -> int:
+    return _script("worktree_sweep.py", extra)
+
+
+@command("tmp/ audit (read-only): size, newest mtime, code / doc / issue citations per entry -> tmp/tmp_audit/<tree>-<sub>.tsv",
+         args="[--tree <checkout>] [--sub scratch] [--refresh]", kind="action")
+def cmd_tmp_audit(extra: list[str]) -> int:
+    return _script("tmp_audit.py", extra)
+
+
+@command("apply a tmp/ cleanup plan TSV (rm / waste to /mnt/1tnvme/wastebasket / move to a durable home / vendor); dry-run unless --apply",
+         args="<plan.tsv> --base <tmp root> [--apply]", kind="action")
+def cmd_tmp_cleanup(extra: list[str]) -> int:
+    return _script("tmp_cleanup.py", extra)
+
+
+@command("orphan scan of scripts/*.py (#304): used by code / docs only / referenced nowhere -> tmp/tmp_audit/orphans.tsv",
+         kind="action")
+def cmd_orphans(extra: list[str]) -> int:
+    return _script("orphan_scripts.py", extra)
+
+
 @command("fail-fast pre-commit gate: " + " + ".join(GATE) + "; --extensive also runs the EXTENSIVE firmware gate tier on the newest image (fw_gates --tier extensive)",
          args="[--extensive]", kind="aggregate")
 def cmd_gate(extra: list[str]) -> int:

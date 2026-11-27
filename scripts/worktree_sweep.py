@@ -20,7 +20,7 @@ KEEP_SUFFIX = ("tmp/scratch/qcsim",)
 HOT_BRANCHES = {"hot-data", "fix-340-hwtest-build", "conwrap-host-gate"}
 APPROVED = {"audio-merged", "pacman-sound", "freeze-port-255"}  # Dan: remove despite unique work
 GENERATED_TRACKED = {"fw/bank_layout.tsv"}
-RECENT_S = 2 * 3600
+RECENT_S = 3 * 3600  # Dan 2026-11-27: any file changed in the last 3 h = in use
 
 
 def repo_root() -> Path:
@@ -60,6 +60,19 @@ def du(path: str) -> int:
     return int(r.stdout.split()[0]) * 1024 if r.returncode == 0 and r.stdout else 0
 
 
+def newest_mtime(path: str) -> float:
+    """Newest file mtime under the worktree (a fresh checkout or a live agent's tmp counts)."""
+    best = 0.0
+    for d, dirs, files in os.walk(path):
+        dirs[:] = [x for x in dirs if x not in (".venv", "node_modules", ".git")]
+        for f in files:
+            try:
+                best = max(best, os.lstat(os.path.join(d, f)).st_mtime)
+            except OSError:
+                pass
+    return best
+
+
 def dirty(path: str):
     """Return (blocking, ignored) status lines."""
     blocking, ignored = [], []
@@ -92,9 +105,13 @@ def decide(wt):
         age = time.time() - (adm / "gitdir").stat().st_mtime if (adm / "gitdir").exists() else 0
         if age < RECENT_S:
             return "KEEP", f"agent worktree {age/60:.0f} min old", [], br
+    age = time.time() - newest_mtime(path)
+    if age < RECENT_S:
+        return "KEEP", f"file changed {age/60:.0f} min ago", [], br
     blocking, ignored = dirty(path)
     if blocking:
-        return "KEEP", f"dirty: {blocking[:3]}", ignored, br
+        merged = git("merge-base", "--is-ancestor", ref, BASE).returncode == 0
+        return "KEEP", f"dirty ({len(blocking)}, {'merged' if merged else 'unmerged'}): {blocking[:3]}", ignored, br
     anc = git("merge-base", "--is-ancestor", ref, BASE).returncode == 0
     plus = [ln for ln in git("cherry", BASE, ref).stdout.splitlines() if ln.startswith("+")]
     if anc:
