@@ -100,6 +100,7 @@ EXTENSIVE = {
     "sync": "~11 s CPU (sync-log sim boots)",
     "dramlog": "~40 s CPU (DRAM log image: boot, two 34000-line fills = wrap + stamps above 65 s, watchdog reset keeps the history)",
     "osdfitsim": "~21 s CPU (23 OSD shots x 2 timings, fit guard watched; the static half osdfit is normal)",
+    "edgesweep_full": "every registry row at min / min+1 / mid / max-1 / max + out of range (#214) (normal: brightness + backlight card, --quick)",
 }
 SIM_CPU = os.environ.get("AWTO_SIM_CPU", "dw8051")   # fast-core CPU model of the sims (#162 step 1); results are comparable only at the same model
 CPU_OF = {}      # per-gate CPU model override; wdt runs on dw8051 since the Timer0 cases use wall ms (the 8052 model has no clock: the 350.8 MHz boot never reaches stage 8 in wdt_test)
@@ -130,13 +131,15 @@ SKIP_IF_MISSING = {      # gate -> map symbols the image must define, else SKIP 
     "dramlog": ("_AwtoDlFlush",),
     "osdfitsim": ("_g_ucAwtoCardUp",),
     "infocard": ("_g_ucAwtoCardUp", "_g_ucAwtoSelWhy"),
+    "edgesweep": ("_vcp_box", "_menu_diag"),
 }
 
 
-for _k in ("keys", "wdt", "wake", "crash", "monitor", "conwrap"):       # the extensive twin of a gate has its limit and its image requirements
+for _k in ("keys", "wdt", "wake", "crash", "monitor", "conwrap", "edgesweep"):       # the extensive twin of a gate has its limit and its image requirements
     SKIP_IF_MISSING[_k + "_full"] = SKIP_IF_MISSING.get(_k, ())
     LIMIT_OF[_k + "_full"] = LIMIT_OF.get(_k, LIMIT_S)
 LIMIT_OF["crash"] = LIMIT_OF["crash_full"] = 60
+LIMIT_OF["edgesweep_full"] = 260          # 3x the cold run (86 s wall at load 22, 2026-11-27)
 SKIP_IF_MISSING["monitor_real"] = SKIP_IF_MISSING["monitor"]
 LIMIT_OF["monitor_real"] = 90
 LIMIT_OF["monitor"] = LIMIT_OF["monitor_full"] = 30
@@ -235,6 +238,8 @@ def gates(b: Path, m: Path, ref, tree):
     g["infocard"] = [*PY, f"{s}/info_card_sim.py", b, m, "--out", out / "info_card"]   # info card after boot: on-screen time, Found by
     g["sysm"] = [*PY, f"{s}/sysm_sim.py", b, m, *(["--tree", tree] if tree else [])]
     g["pacewake"] = [*PY, f"{s}/pacing_wake_sim.py", b, m, "--case", "fast", "--after", "13"]    # #313: the busy hook is off 12 s after a fast wake (~5 s CPU)
+    g["edgesweep"] = [*PY, f"{s}/edge_sweep_sim.py", b, m, "--quick", "--rows", "brightness"]   # #214 NORMAL: the 1 % backlight line, PWM, divide by 0
+    g["edgesweep_full"] = [*PY, f"{s}/edge_sweep_sim.py", b, m]                      # extensive: every registry row
     g["memreinit"] = [*PY, f"{s}/mem_reinit_sim.py", b, m]                           # #353: memory power cycle after 2 failed frame-buffer set-ups (~3 s CPU)
     fast = sibling(b, "clk87")                                        # `--build-inputs`: dev.py build --tag <tag>-clk87 -D AWTO_CLOCK_MHZ=87 (stock clock): measured too when present
     dv = ["--variant", "hwtest"] if V["hwtest"] else ["--variant", "freeze"] if V.get("freeze") else []    # docs/delay-audit-<variant>.tsv
