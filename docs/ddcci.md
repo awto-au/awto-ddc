@@ -35,8 +35,11 @@
     default; same install steps as ddc-idle in [ddc-control.md](ddc-control.md).
   - Several units: `--units 1,2,3` or `--units test` (every devices.json test unit), one send per unit per period; explicit only.
     An unreachable unit: one decoded line, skipped until the next period (no retry).
-  - `./dev.py flash` / `./dev.py reset`: one `--unit N --once --wait 5` send to that unit after it is back (fw clock restarted);
-    a failed send is a WARN line, never a failed flash.
+  - One `--unit N --once --wait 5` send after every dev.py path that restarts the fw clock: flash (ok or failed, not when held in ISP),
+    deploy / edid (sector write ends with an ISP reset), power-cycle on, reset (#358). A failed send is a WARN line, never a failed flash.
+  - `--loop`: also a get VCP E9 every 30 s (`BOOT_CHECK_S`); 0 syncs since boot (watchdog, mains, an unseen reset) = send at once;
+    skipped while a flash holds the unit lock. The 0x35 fallback takes the running image's map from the shared flash record.
+  - `./dev.py doctor`: host-time.service must be active and its installed ExecStart = `systemd/host-time.service`; notes when it runs another tree's script (#358).
 - Request: MCCS table write to VCP 0xE9, offset 0000, 7 data bytes; no reply.
   - `51 8B E7 E9 00 00 t3 t2 t1 t0 mH mL ofs chk`: unix s BE, ms within the second BE (0..999), UTC offset in 15 min (signed).
   - 14 bytes: fits only images with the 17-byte request buffer (`_AWTO_NET` on, the default); otherwise dropped.
@@ -48,8 +51,8 @@
     `(fw +N ms, host sync after a drift)` + `drift +D ms`. Drift = host time - local tick from the previous sync.
   - Console title: `HOST hh:mm:ss` ticks from the last sync; `--:--:--` before the first; `STALE` after 375 s without one
     (`AWTO_HT_STALE_MS` = 1.25 x the 300 s period; was Dan's 3 min for the 60 s period).
-- Host side: `scripts/sync_log.py` / `rtd_diag.py --sync` print each ring line with its host time from the latest sync.
-  - Ring ms are 16 bit: unwrapped from anchors (episode start C0: value bits 23..8 = fw ms bits 31..16; D8: full fw ms).
-  - `~` after a time: forward unwrap and back-from-now disagree (a gap of 65.5 s or more between lines hid a wrap).
+- Host side: `scripts/sync_log.py` / `rtd_diag.py --sync` print each ring line with its host time from the latest sync; columns: [sync-log-design.md](sync-log-design.md) "Console time columns".
+  - DRAM log images (default): 32-bit fw ms per line, exact over any gap.
+  - 16-bit ring (`_AWTO_DRAM_LOG` off): unwrapped from anchors (C0 / D8 full times); between anchors that do not land exactly: a `counter wrap` row.
 - Tests: `scripts/host_time_sim.py BIN` (fw_sim; gate `htime` of `fw_gates.py`). Hardware: `host_time.py --unit 3 --once`.
 - Debug link on (0x35 on the port) = DDC/CI off: DDC/CI send fails, the debug-link path (0x35) is tried; failure logged, next period retries.

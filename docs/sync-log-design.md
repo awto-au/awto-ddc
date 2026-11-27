@@ -1,6 +1,6 @@
 # Sync log: DONE / FAILED / link health lines
 
-Issue draft: `tmp/scratch/issue-sync-done.md`. Related: #257, #253, #139, #144. Log texts: `fw/awto/sync.tsv`; ring: `fw/log/sync.c`; decoders: `scripts/sync_log.py`, `fw/osd/console.c`.
+Related: #257, #253, #139, #144. Log texts: `fw/awto/sync.tsv`; ring: `fw/log/sync.c`; decoders: `scripts/sync_log.py`, `fw/osd/console.c`.
 Existing sync lines stay (C1 / C6 / C2 / F0..F4 / FC / system machine); the new lines summarise them and are not repeated by them.
 
 ## Goal
@@ -56,7 +56,7 @@ Existing sync lines stay (C1 / C6 / C2 / F0..F4 / FC / system machine); the new 
 - Not readable: the CDR lock instant, and BER beyond the CED counters (no register for symbol errors on DP in the regdb names used here).
 
 ## Cost
-- XDATA: 14 B (stamps 8 B, counters 4 B, flags 1 B, DP trainings 1 B); numbers in the issue draft.
+- XDATA: 14 B (stamps 8 B, counters 4 B, flags 1 B, DP trainings 1 B).
 - Idle cost per pass: one flag test in `AwtoSwPoll`; PHY dispatcher: one OR + branch.
 
 ## Limits
@@ -92,6 +92,15 @@ Existing sync lines stay (C1 / C6 / C2 / F0..F4 / FC / system machine); the new 
   - Not a start (value bits 31..24 = `AWTO_SYNC_BEGIN_IN`): the power-on BEGIN; inside an unsettled episode a switch (not after a switch), a picture lost (judge reset of a switch: AUTO key / KVM), a fast wake of the hold after a picture lost. One red row per start.
 - Picture lost (`AWTO_SYNC_K_LOST`, `C0 05 picture lost on Dn`): `SysJudge.c` when the judge check resets ACTIVE (any cause, also into the L1 hold) or DISPLAY SETTING (source unstable). No console auto-open. After a DONE: `FAILED:signal lost` at once, the detect state reset, so the resync writes a new `sync DONE` (fast wake / fast switch: at `AwtoSyncSettle`).
 
+## Line rules (Dan; logs-readable, #359, #360)
+- One decoded line per action; raw bytes go to `*.raw.log`. Never drop a line that marks a state change; never filter in the host decoder.
+- No-op lines (Dan 2026-11-27, replaces "never drop, say already on" of 2026-11-12):
+  - cheap no-op (state byte already set, the call returns at once): no line;
+  - the call did real work anyway (hardware writes, waits, measurable time): keep it, marked `(already on)`.
+- Skipping the call itself (state-byte test at the call site before a banked call): per-site numbers to Dan first (#360). Cost: +6 B flash per site, +8 cycles per real call; saves ~62 cycles per no-op only on a cross-bank call. Candidates and rates: `./dev.py rules-report --profile` ([dw8051-rules.md](dw8051-rules.md)).
+- Merges (Dan 2026-11-27, #359): a start / end pair with nothing logged between = one line with the duration; same-kind events at the same ms = one line listing each port; `system:<req> by <who> (already)` dropped for firmware-internal re-requests, kept when a key, DDC/CI or the host asked; NVRAM flush reason + result = one line.
+- Status 2026-11-27: the no-op and merge rules are on branch `log-merge` (#359), not on main; `fw/awto/sync.tsv` on main still has the `(already on)` rows.
+
 ## Gap lines (#284: where the time goes; no behaviour change)
 - `INITIAL:first exit check at Nms` / `longest gap between checks Nms` / `SDK <source|mode|OSD|other> flag set until Nms` (id 93, ms since INITIAL began, 4 ms steps): INITIAL ends when no SDK change flag is set at a judge pass; a flag line is written only for a flag seen set; a long gap = the main loop was blocked between passes (see the slow-wait / long-block lines).
 - `search reached Dn: predetect on|off, cable detected|no cable` and `search left Dn after Nms: no signal|predetect seen, N edges[, dwell re-armed]|port disabled, skipped` (F3, fmt `visit`): the edge count is a per-visit counter (the repeated C1 / C4 lines collapse in the ring). Visit lines stop after `AWTO_SCAN_LOG_MAX` visits per episode (counted at reached).
@@ -99,7 +108,7 @@ Existing sync lines stay (C1 / C6 / C2 / F0..F4 / FC / system machine); the new 
 - `ACTIVE wait:timer Nms, panel ready Nms` (id 94, both since the display setting ended): the SDK ACTIVE timer (`_WAIT_TIME_TO_ACTIVE_*`, 100 ms) and the first pass the panel video was ready; written before `sync DONE`.
 - `EDID load start:HPD mask N` / `EDID load end:took Nms` (FA 03 / 04, around `UserCommonInterfaceLoadEmbeddedEdidData` at boot, #289) next to `EDID channels on` and the HPD lines.
 - HPD edges (FA 00 / 01) are sampled every main-loop pass, now also in power saving; they are written without repeat collapse and carry the ring ms.
-- Host join (#284): `synclog --json` carries `fw_now` and per entry `fw` / `poll_wall` (read time of the fw clock minus the ms since the entry); `unit_log` lines without a host sync use it (marked `~`). A warm reset restarts the fw clock, so host-synced time needs `host_time.py` after the reset.
+- Host join (#284): `synclog --json` carries `fw_now` and per entry `fw` / `poll_wall` (read time of the fw clock minus the ms since the entry); `unit_log` lines without a host sync use it (marked `~`). A warm reset restarts the fw clock: dev.py sends host time after every reset path it runs, the service's 30 s boot check covers the rest ([ddcci.md](ddcci.md) "Host time").
 - Cost: XDATA 18 B (visit 3, INITIAL 8, tail 5, EDID 2), no new delay; per pass: one compare in `AwtoSyncDetect`, one call in the INITIAL judge pass.
 
 ## Main-loop stage timing (#311: where a slow pass goes; no behaviour change)
