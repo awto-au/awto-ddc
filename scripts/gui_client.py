@@ -74,6 +74,14 @@ def synclog_limit(args: list[str]) -> tuple[float, str]:
     return lim, f"{LIMIT_MULT} x ({SYNC_BASE_S} s + {n} entries / {DRAM_RATE:g} per s) = {lim} s ({why})"
 
 
+PROGRESS_N = 100                         # dram_log.PROGRESS_N: a --dram read prints "dram log: K of N entries read" every 100 entries
+
+
+def synclog_stall_s(args: list[str]) -> float | None:
+    """--dram reads print progress: no line for 1.25 x (SYNC_BASE_S + PROGRESS_N / DRAM_RATE) = stalled (TERM, rc 124). Others: None"""
+    return round(LIMIT_MULT * (SYNC_BASE_S + PROGRESS_N / DRAM_RATE), 1) if "--dram" in args else None
+
+
 def request_limit_s(method: str, params: dict) -> float:
     """server wait for one request: SERVER_LIMIT_S, or for a synclog its sized job limit + SERVER_LIMIT_S (queueing as any request)"""
     if method == "synclog":

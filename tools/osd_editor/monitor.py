@@ -1200,7 +1200,7 @@ class MonitorPage(QWidget):
             f({"event": kind, **kw})
 
     def run(self, label: str, argv: list, done, limit: str | float = "one", unit: str | None = None, probe: bool = False, after=None,
-            limit_why: str = ""):
+            limit_why: str = "", stall_s: float | None = None):
         """queue a job on the unit's worker; returns the job id, or None when refused (reason in self.refused).
         limit: a LIMIT_S key or seconds (limit_why = its arithmetic, logged). after(rc, out, secs) runs on the UI thread."""
         n = unit or self.cur
@@ -1214,7 +1214,7 @@ class MonitorPage(QWidget):
             self.say(f"unit {n} {label}: refused, {self.refused}")
             return None
         lim = LIMIT_S[limit] if isinstance(limit, str) else float(limit)
-        jid = self.queues.submit(n, argv, lim)
+        jid = self.queues.submit(n, argv, lim, stall_s)
         self.jobs[jid] = (label, done, n, lim, probe, after)
         if not probe:
             st.pending += 1
@@ -1633,7 +1633,10 @@ class MonitorPage(QWidget):
     def synclog_job(self, label: str, args: list[str], done, unit: str | None = None, after=None):
         """a dev.py synclog job with its limit sized from the request (gui_client.synclog_limit)"""
         lim, why = gui_client.synclog_limit(args)
-        return self.run(label, self.dev("synclog", *args, unit=unit), done, lim, unit=unit, after=after, limit_why=why)
+        stall = gui_client.synclog_stall_s(args)
+        if stall:
+            why += f"; stall guard {stall} s"
+        return self.run(label, self.dev("synclog", *args, unit=unit), done, lim, unit=unit, after=after, limit_why=why, stall_s=stall)
 
     def _synced(self, rc, out) -> str:
         rows = sync_rows(out)

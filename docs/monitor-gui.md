@@ -14,7 +14,9 @@ Launch: `python3 tools/osd_editor/run.py --monitor` (opens on the monitor tab) o
 - Left: tree page > setting (counts per page; `[risky]`, `[action]`, `[ro]` tags).
 - Middle: form of the selected page, one `SettingRow` per row; selecting a setting highlights its row and shows id, VCP code, range, default, flags, note.
 - Right: host time, health, action log, boot / sync log, last output.
-- Sync table (`monitor.sync_rows`): the decoder's columns, never its own arithmetic: time (host clock / `u` uptime / the ISO stamp of a decoder without the real column), +delta (`sync_log.fmt_delta`), line. Episode start rows (`-- text --`) and `relative time reset: counter wrap` rows red, `--- boot N` grey; raw `[fw .. ms, ring ..]` in the tooltip; delta > 100 ms red. Parses the ring, `--dram` and the log-times row form (test: `test_smoke.py` `sync_rows_on_decoder_output`, input `sync_fixture.py` built with `scripts/sync_log.py`).
+- Sync table (`monitor.sync_rows`): parses the decoder's row (docs/sync-log-design.md "Host decoded row"), never its own arithmetic: time (host clock / `u` uptime), +delta (`sync_log.fmt_delta`), line.
+  - Start rows (`-- text started --`) and `relative time reset: counter wrap` rows red, `--- boot N` grey; raw `[fw .. ms, ring ..]` in the tooltip; delta > 100 ms red.
+  - Test: `test_smoke.py` `sync_rows_on_decoder_output` (ring 32-bit and 16-bit with wrap rows, `--dram`), input `sync_fixture.py` built with `sync_log.ring_rows` / `dram_log.con_lines`.
 - Bottom: status line of the selected unit (see "Status line").
 
 ## Unit strip
@@ -41,19 +43,18 @@ Launch: `python3 tools/osd_editor/run.py --monitor` (opens on the monitor tab) o
   - entries: `--dram --last K` = K (default 64); `--all` / `--boot` / `--since` = `AWTO_DLOG_SLOTS` (32768: 535 s); `--whole` = `AWTO_SYNC_N` (88); one episode = `AWTO_SYNC_WRAP` - 1 (175, read from the DDR).
   - Measured 2026-11-27, unit 3, image `55cbc742`, through the app: `--dram --last 200` 202 bursts in 2.6 s, job 3.9 s; `--last 1000` (968 entries) 1002 bursts in 12.9 s, job 15.1 s: 77.7 entries/s, fixed part 1.3-2.2 s. One-episode ring read 1.8 s.
   - Limits then: `--last 64` 3.8 s, `--last 200` 6.0 s, `--last 1000` 19.0 s, one episode 5.6 s. The old fixed 4 s killed `--last 200` (rc 124).
-  - No stall guard: sync_log prints nothing until the read ends. A progress line from the DRAM read would allow one (asked of the decoder owner, #358).
+  - `--dram` reads also get a stall guard (`gui_client.synclog_stall_s`): `dram log: K of N entries read` every `PROGRESS_N` 100 entries (`dram_log.py`); no output line for 1.25 x (2.2 s + 100 / 77 s) = 4.4 s = TERM, rc 124, the last line named. The overall limit stays as the backstop (`--all` 535 s).
 - `note` keeps the old 4 s.
 
 ## Log view (awto-ddc#358, Dan 2026-11-27)
 - Window page "log" (toolbar, or `run.py --log`): one unit's whole DRAM log (up to `AWTO_DLOG_SLOTS` 32768 lines), not the 88-line ring view. Code `tools/osd_editor/log_view.py`.
-- Columns: index (absolute DDR index), time, +delta, line. Time = host clock of the read join (`poll_wall`, this boot, marked `~`) or `u` uptime of the line's boot. Delta / start from `sync_log.dram_deltas` / `is_start` (32-bit fw ms: exact over any gap; no wrap row on the DRAM path).
+- Columns: index (absolute DDR index), time, +delta, line. Rows = `sync_log.con_rows` over the JSON entries, as `dram_log.con_lines` (joined groups, starts with `started`, boot zero, 32-bit deltas). Time = the read join `poll_wall` (this boot, marked `~`), else the decoder's `u` uptime.
 - Red rows: episode starts (and `relative time reset: counter wrap` if the decoder prints one); grey `--- boot N ---` before each boot counter. Filter box (separators stay), jump list (boots + starts), Copy (selected rows, else all shown), Save... (shown rows).
 - Source: `dev.py synclog --dram --json` (SYNCJSON) through the unit's job queue, rows deduplicated by index; a new DDR log generation drops the old rows.
-  - History: newest `CHUNK` 300, then older chunks of <= 300 down to the oldest slot, one job at a time. Needs a range read in the decoder (`--since A --count K`, asked of its owner); without it one `--last 1000` job and the view says "newest 1000 only".
+  - History: newest `CHUNK` 300, then older pages `--since A --count 300` down to the oldest slot, one job at a time. A decoder without `--count` (older tree): one `--last 1000` job, the view says "newest 1000 only".
   - Follow: every `FOLLOW_S` 10 s, `--since next [--count 300]`.
 - Bus budget (measured 2026-11-27, unit 3, through the app): `--since` poll with a few new lines = 1.2 s job, debug link held ~0.4 s: ~4 % of the time at 10 s. A 300-entry chunk: 3.9 s at 77 entries/s + 2.2 s fixed (limit 7.6 s).
 - Yields: no read while the page is hidden (a headless app never reads), while the unit flashes, has other jobs, or has a log read in flight. A port `flash` that finds a log read running holds new reads (`log_hold`), waits for it (<= its limit + 2 s), then starts.
-- Real data (unit 3, 968 entries, 8 boots): lines before the Timer2 start carry a `poll_wall` from the unsigned ms (hours off); the view shows them as uptime. Decoder fix asked in #358.
 - Tests: `test_log_view.py` (fake DDR log of 1601 lines: chunked history, follow, dedupe, filter / jump / save, fallback, yields, screenshot `tmp/scratch/qt/log-view.png`); `--snapshot FILE` renders a captured `synclog --dram --json` output (`log-view-real.png`).
 
 ## Confirm

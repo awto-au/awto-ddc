@@ -48,7 +48,7 @@ class StatefulBackend(FakeBackend):
         self.fail_on = []                                 # [(substring, rc, text)] consumed one per matching call
         self.gate, self.gated, self.active, self.max_unit = threading.Event(), set(), {}, {}
 
-    def run(self, argv, limit_s):
+    def run(self, argv, limit_s, stall_s=None):
         a = [str(x) for x in argv]
         if "--direct" in a:
             a.remove("--direct")
@@ -393,7 +393,9 @@ def cli_end_to_end():
     r.close()
     rc, out = dev("ddc", "get", "0x62", "--unit", "1", extra_env={"AWTO_GUI_LAUNCHER": "true", "AWTO_GUI_START_WAIT_S": "0.5"})
     assert rc == 2 and "exited with rc 0 while starting" in out and "gui-headless.log" in out, (rc, out)        # launcher `true` exits at once
-    rc, out = dev("flash", "--unit", "1", extra_env={"AWTO_GUI_LAUNCHER": "true", "AWTO_GUI_START_WAIT_S": "0.5"})
+    fake = WORK / "cli" / "no-build.bin"                                       # an image without a build record: --any-image (dev.py check_image_tree)
+    fake.write_bytes(b"\xff" * 16)
+    rc, out = dev("flash", str(fake), "--any-image", "--unit", "1", extra_env={"AWTO_GUI_LAUNCHER": "true", "AWTO_GUI_START_WAIT_S": "0.5"})
     assert rc == 2 and "exited with rc 0" in out, (rc, out)
     print("ok dev.py ddc / settings / kvm / i2c are thin port clients; --direct while the app runs is refused; no app = error (no direct run)")
 
@@ -846,14 +848,25 @@ def synclog_limits_sized():
     assert GC.request_limit_s("passthrough", {"name": "synclog", "args": ["--dram", "--last", "200"]}) == lim200 + GC.SERVER_LIMIT_S
     r = Rig("lim")
     seen, run0 = [], r.fb.run
-    r.fb.run = lambda argv, limit_s: (seen.append(limit_s), run0(argv, limit_s))[1]
+    r.fb.run = lambda argv, limit_s, **kw: (seen.append(limit_s), run0(argv, limit_s))[1]
     rep = r.call("passthrough", {"unit": "3", "name": "synclog", "args": ["--dram", "--last", "200"]})
     assert rep["ok"], rep
     assert seen == [lim200], seen
     log = (WORK / "lim" / "gui.log").read_text()
     assert f"limit {lim200:g} s: 1.25 x" in log and "tree " in log, log[-600:]
     r.close()
-    print(f"ok synclog limit from the request: --last 64 {lim64} s, --last 200 {lim200} s ({why})")
+    assert GC.synclog_stall_s(["--dram", "--last", "200"]) == round(1.25 * (GC.SYNC_BASE_S + GC.PROGRESS_N / GC.DRAM_RATE), 1)
+    assert GC.synclog_stall_s(["--whole"]) is None
+    import dram_log
+    assert GC.PROGRESS_N == dram_log.PROGRESS_N
+    import unit_jobs                                                              # the real backend: a silent child is stopped by the stall guard
+    t0 = time.monotonic()
+    rc, out = unit_jobs.SubprocessBackend().run([PY, "-c", "print('first', flush=True); import threading; threading.Event().wait(20)"], 20, stall_s=0.5)
+    assert rc == 124 and "stall guard" in out and "last line: first" in out and time.monotonic() - t0 < 4, (rc, out)
+    rc, out = unit_jobs.SubprocessBackend().run([PY, "-c", "import time\nfor i in range(4): print(i, flush=True); time.sleep(0.3)"], 20, stall_s=0.6)
+    assert rc == 0 and out.split() == ["0", "1", "2", "3"], (rc, out)        # output every 0.3 s keeps a 0.6 s guard quiet
+    print(f"ok synclog limit from the request: --last 64 {lim64} s, --last 200 {lim200} s ({why}); --dram stall guard "
+          f"{GC.synclog_stall_s(['--dram'])} s stops a silent read, progress keeps it going")
 
 
 

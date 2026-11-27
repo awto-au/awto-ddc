@@ -94,33 +94,6 @@ def test_ring_v4_keeps_32bit_ms():
     assert sum("+ 285 s" in x for x in out) == 2 and not any(SL.WRAP_TEXT in x for x in out)
 
 
-def _gui_funcs():
-    """tools/osd_editor/monitor.py sync_rows / delta_ms / ROW_RE without Qt: their source, run alone"""
-    import ast
-    import re
-    src = (Path(__file__).resolve().parent.parent / "tools/osd_editor/monitor.py").read_text()
-    tree = ast.parse(src)
-    ns = {"re": re, "SLOW_MS": 100}
-    for node in tree.body:
-        if (isinstance(node, ast.Assign) and any(getattr(t, "id", "") == "ROW_RE" for t in node.targets)) or \
-           (isinstance(node, ast.FunctionDef) and node.name in ("delta_ms", "sync_rows", "sync_summary")):
-            exec(compile(ast.Module([node], []), "monitor.py", "exec"), ns)   # noqa: S102 - our own monitor.py source, the GUI functions without Qt
-    return ns
-
-
-def test_gui_sync_rows_use_the_decoders_delta():
-    """the GUI Sync table shows the decoder's own delta (32-bit), not a 16-bit step of its own (#358 item 7)"""
-    ms = full_ms()
-    evs = evs_of(ms)
-    ts = SL.unwrap(evs, None, ms)
-    out = "\n".join("2026-11-27T15:20:33+11:00   " + x for x in SL.row_lines(SL.con_rows(evs, texts(evs), ts, HT), ts, evs))
-    g = _gui_funcs()
-    rows = g["sync_rows"](out)
-    assert [d for d, _, _ in rows] == ["", "+ 285 s", "+ 285 s", "+ 280 s", "+ 289 s"]
-    assert all(slow for _, _, slow in rows[1:]) and g["delta_ms"]("+ 285 s") == 285000 and g["delta_ms"]("+12.3 s") == 12300
-    assert "slowest step 289000 ms" in g["sync_summary"](rows)
-
-
 def _v4_image(entries, gen=7, boot=1):
     """a DRAM log image (sync_log V4 header + 32-entry tail) and a DDR reader for entries [(id, arg, ms32, val)], oldest first"""
     n_all = len(entries)

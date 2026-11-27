@@ -126,25 +126,23 @@ class FakeBackend:
 
 
 def sync_rows_on_decoder_output():
-    """#358: the Sync table takes the decoder's delta / time / start / wrap columns, never its own 16-bit step"""
-    for synced in (True, False):
-        rows = MON.sync_rows(sync_fixture.ring_text(synced))
-        assert [r["ms"] for r in rows] == [5, 40, 350, 30, 0, 120], rows
-        assert [r["start"] for r in rows] == [True, False, False, False, True, False] and not any(r["wrap"] for r in rows)
-        assert rows[0]["text"] == "0:boot: power on" and rows[4]["text"] == "8995:switch to D1", rows
-        assert (rows[1]["real"] == "21:06:40.045") if synced else rows[1]["real"] == ""
-        assert [r["slow"] for r in rows] == [False, False, True, False, False, True]
-    rows = MON.sync_rows(sync_fixture.dram_text())
-    assert [r["boot"] for r in rows] == [7, None, None, None, None, 8, None, None]
-    assert [r["ms"] for r in rows if r["boot"] is None] == [5, 40, 350, 30, 0, 120] and rows[1]["start"] and rows[6]["start"]
-    rows = MON.sync_rows(sync_fixture.LOG_TIMES)
-    assert len(rows) == 7 and [r["wrap"] for r in rows] == [False, False, False, True, False, False, False], rows
-    assert rows[0]["real"] == "u00:00:00.005" and rows[0]["start"] and rows[0]["raw"] == "[fw 5 ms, ring 5]"
-    assert rows[4]["ms"] is None and rows[4]["delta"] == "" and rows[5]["start"] and rows[5]["real"] == "15:20:11.500"
-    assert MON.sync_rows("2026-11-27T15:00:00+10:00 " + sync_fixture.ring_text().splitlines()[3])[0]["ms"] == 40   # a dev.py time prefix
-    summ = MON.sync_summary(MON.sync_rows(sync_fixture.LOG_TIMES))
-    assert "2 episode starts" in summ and "1 wrap rows" in summ and "slowest step +350 ms" in summ, summ
-    print("ok sync_rows: ring (synced / not), --dram and log-times row forms; start, wrap, boot rows; no own 16-bit arithmetic")
+    """#358: the Sync table takes the decoder's real / delta / start / wrap columns (docs/sync-log-design.md "Host decoded row"),
+    never a 16-bit step of its own (moved here from tests/test_log_times.py)"""
+    rows = MON.sync_rows(sync_fixture.ring_text())
+    assert [r["ms"] for r in rows] == [5, 40, 350, 30, 285_000, 0, 120], rows
+    assert [r["delta"] for r in rows][4] == "+ 285 s" and MON.delta_ms("+ 285 s") == 285_000 and MON.delta_ms("+12.3 s") == 12_300
+    assert [r["start"] for r in rows] == [True, False, False, False, False, True, False] and not any(r["wrap"] for r in rows)
+    assert rows[0]["text"] == "boot: power on started" and rows[1]["text"] == "panel on" and rows[1]["real"] == "15:18:14.045", rows[:2]
+    assert rows[1]["raw"] == "[fw 45 ms, ring 45]" and [r["slow"] for r in rows] == [False, False, True, False, True, False, True]
+    v3 = MON.sync_rows(sync_fixture.ring_text(False, ms32=False))                  # 16-bit ring: the decoder's wrap rows
+    assert sum(r["wrap"] for r in v3) == 5 and v3[1]["text"] == MON.WRAP_TEXT and v3[2]["ms"] is None and v3[2]["real"] == "", v3[:3]
+    dr = MON.sync_rows(sync_fixture.dram_text())
+    assert [r["boot"] for r in dr] == [7, None, None, None, None, None, 8, None, None], dr
+    assert [r["ms"] for r in dr if r["boot"] is None] == [5, 40, 350, 30, 285_000, 0, 120] and dr[1]["start"] and dr[7]["start"]
+    assert dr[1]["real"] == "u00:00:00.005"
+    summ = MON.sync_summary(rows)
+    assert "2 episode starts" in summ and "0 wrap rows" in summ and "slowest step + 285 s" in summ, summ
+    print("ok sync_rows: ring (32-bit and 16-bit with wrap rows), --dram; start / wrap / boot rows from the decoder; no own arithmetic")
 
 
 def settle(app, pg):
@@ -282,11 +280,11 @@ def monitor_test(app, win):
     for want in ("settings set brightness 60", "settings set gamma 3", "settings save", "kvm.py D2 --units 3",
                  "host_time.py --unit 3 --once", "health", "synclog --whole"):
         assert any(want in x for x in sent), (want, sent)
-    assert pg.sync.rowCount() == 6
-    assert [pg.sync.item(i, 1).text() for i in range(6)] == ["+  5 ms", "+ 40 ms", "+350 ms", "+ 30 ms", "+  0 ms", "+120 ms"]
-    assert pg.sync.item(1, 0).text() == "21:06:40.045" and pg.sync.item(1, 2).text() == "40:panel on"
+    assert pg.sync.rowCount() == 7
+    assert [pg.sync.item(i, 1).text() for i in range(7)] == ["+  5 ms", "+ 40 ms", "+350 ms", "+ 30 ms", "+ 285 s", "+  0 ms", "+120 ms"]
+    assert pg.sync.item(1, 0).text() == "15:18:14.045" and pg.sync.item(1, 2).text() == "panel on"
     assert pg.sync.item(2, 1).foreground().color().name() == "#ff5050" and pg.sync.item(1, 1).foreground().color().name() != "#ff5050"
-    assert all(pg.sync.item(i, 2).background().color().name() == MON.START_BG.color().name() for i in (0, 4))      # red start rows
+    assert all(pg.sync.item(i, 2).background().color().name() == MON.START_BG.color().name() for i in (0, 5))      # red start rows
     log = logf.read_text().splitlines()
     iso = re.compile(r"^\d{4}-\d\d-\d\dT\d\d:\d\d:\d\d[+-]\d\d:\d\d unit 3 ")
     assert sum(bool(iso.match(x)) for x in log) >= 8 and any("health: ok, PASS" in x for x in log), log

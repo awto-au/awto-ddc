@@ -3,7 +3,6 @@ History in chunks of `dev.py synclog --dram --json` through the unit's job queue
 Columns and starts / deltas come from the decoder's own functions (scripts/sync_log.py); rows deduplicated by absolute index."""
 from __future__ import annotations
 
-import re
 import time
 from pathlib import Path
 
@@ -22,42 +21,39 @@ FOLLOW_S = 10
 CHUNK = 300
 FALLBACK_N = 1000                   # decoder without a range read: one `--last` job, 13 s at 77 per s (no older history)
 MAX_ROWS = 40_000                   # AWTO_DLOG_SLOTS (32768) + boot separators
-TEXT_RE = re.compile(r"^\s*-?\d+\.\d{3}s:")   # dram_log.decode's "  12.345s:" prefix: the seconds are in the time column
 SEP_BG, START_BG = QBrush(QColor("#30363d")), MON.START_BG
 WHITE = MON.START_BRUSH
 
 
 def has_range_read() -> bool:
-    """the decoder reads a DDR index range (`--since A --count K`, asked of its owner in #358)"""
+    """the decoder reads a DDR index range (`--since A --count K`, sync_log.py since #358)"""
     try:
         return '"--count"' in (MON.ROOT / "scripts" / "sync_log.py").read_text()
     except OSError:
         return False
 
 
-def real_col(e: dict) -> str:
-    """host time of the read join (poll_wall, this boot only: marked ~), else uptime of its boot from the 32-bit fw ms (marked u)"""
-    ms = e["ms"] - (1 << 32 if e["ms"] >= 1 << 31 else 0)
-    if e.get("poll_wall") and ms >= 0:                   # a re-based line (< 0) gets a poll_wall from the unsigned ms: hours off (#358)
-        return e["poll_wall"][11:23] + "~"
-    if ms < 0:
-        return f"u-0:00:00.{-ms:03d}"
-    s = ms // 1000
-    return f"u{s // 3600:02d}:{s // 60 % 60:02d}:{s % 60:02d}.{ms % 1000:03d}"
-
-
-def build_rows(ents: list[dict]) -> list[dict]:
-    """entries (sorted by abs) -> view rows: a `boot N` separator before each new boot counter, then one row per entry.
-    Delta and start come from sync_log.dram_deltas / is_start (32-bit fw ms: exact over any gap, no wrap row needed)"""
+def build_rows(ents: list[dict], cur_boot=None) -> list[dict]:
+    """entries (sorted by abs) -> view rows with the decoder's console rows (sync_log.con_rows, as dram_log.con_lines): real time,
+    delta, joined groups, starts; a `--- boot N ---` separator per boot counter. Time: the read join `poll_wall` (this boot, `~`)
+    over the decoder's uptime column (`u`), as the JSON carries no host-time block"""
+    if not ents:
+        return []
+    evs = [(e["id"], e["arg"], e["ms"] & 0xFFFF, e["val"]) for e in ents]
+    ts = [(S.signed32(e["ms"]), True) for e in ents]
+    texts = [e["text"].split(":", 1)[1] if ":" in e["text"] else e["text"] for e in ents]
+    rs = S.con_rows(evs, texts, ts, None, [e["boot"] for e in ents], ents[-1]["boot"] if cur_boot is None else cur_boot)
     rows, boot = [], None
-    for e, (d, st) in zip(ents, S.dram_deltas(ents)):
+    for r in rs:
+        e = ents[r["i"][0]]
         if e["boot"] != boot:
             boot = e["boot"]
             rows.append({"abs": None, "boot": boot, "sep": True, "real": "", "delta": "", "text": f"--- boot {boot} ---", "start": False, "wrap": False})
-        text = TEXT_RE.sub("", e["text"])
-        wrap = text.strip() == getattr(S, "WRAP_TEXT", "\0")
-        rows.append({"abs": e["abs"], "boot": boot, "sep": False, "real": real_col(e), "delta": S.fmt_delta(d).strip(), "text": text,
-                     "start": st and not wrap, "wrap": wrap})
+        if r["wrap"]:
+            rows.append({"abs": None, "boot": boot, "sep": False, "real": "", "delta": "", "text": S.WRAP_TEXT, "start": False, "wrap": True})
+        real = e["poll_wall"][11:23] + "~" if e.get("poll_wall") else r["real"].strip()
+        rows.append({"abs": e["abs"], "boot": boot, "sep": False, "real": real, "delta": S.fmt_delta(r["delta"]).strip(),
+                     "text": r["text"] + (f" {S.START_WORD}" if r["start"] else ""), "start": r["start"], "wrap": False})
     return rows
 
 
@@ -122,6 +118,7 @@ class UnitLog:
         self.done = False                   # history complete (index 0, or the ring's oldest slot)
         self.slots = None
         self.gen = None
+        self.cur_boot = None                # the unit's current boot counter (DDR header)
 
 
 class LogView(QWidget):
@@ -264,7 +261,7 @@ class LogView(QWidget):
         if lg.ents and snap.get("gen") != lg.gen:            # a new DDR log generation reuses the indexes: start over
             self.page.say(f"unit {n} log view: DDR log generation {lg.gen} -> {snap.get('gen')}, earlier lines dropped from the view")
             self.logs[n] = lg = UnitLog()
-        lg.gen, lg.slots = snap.get("gen"), snap.get("slots")
+        lg.gen, lg.slots, lg.cur_boot = snap.get("gen"), snap.get("slots"), snap.get("boot")
         new = [e for e in snap["entries"] if e["abs"] not in lg.ents]
         for e in snap["entries"]:
             lg.ents[e["abs"]] = e                    # a re-read replaces (poll_wall of the current boot gets sharper)
@@ -286,7 +283,7 @@ class LogView(QWidget):
         bar = self.table.verticalScrollBar()
         at_end = bar.value() >= bar.maximum() - 2
         ents = [lg.ents[a] for a in sorted(lg.ents)] if lg else []
-        self.model.set_rows(build_rows(ents))
+        self.model.set_rows(build_rows(ents, lg.cur_boot if lg else None))
         self._jumps()
         if at_end:
             self.table.scrollToBottom()

@@ -30,7 +30,7 @@ class DdrLog(FakeBackend):
         super().__init__()
         self.ents, self.reads = ents, []
 
-    def run(self, argv, limit_s):
+    def run(self, argv, limit_s, stall_s=None):
         a = [str(x) for x in argv]
         if not ("synclog" in a and "--dram" in a):
             return super().run(argv, limit_s)
