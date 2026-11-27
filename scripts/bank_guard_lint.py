@@ -40,7 +40,7 @@ def log(s: str) -> None:
 
 
 def strip_comments(t: str) -> str:
-    t = re.sub(r"/\*.*?\*/", lambda m: " " * len(m.group(0)), t, flags=re.S)
+    t = re.sub(r"/\*.*?\*/", lambda m: " " * len(m.group(0)), t, flags=re.DOTALL)
     return re.sub(r"//[^\n]*", "", t)
 
 
