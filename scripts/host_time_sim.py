@@ -261,7 +261,7 @@ def main() -> int:
     if pages:                                           # both pages: text + PNG; the GPIO page has no sync lines
         main_t = s.dump(a.out, f"{a.bin.stem}.main")
         full = len([r for r in main_t if r.strip()]) >= VIEW_ROWS          # a log that fills the view scrolls the heading out (one more ring line is enough)
-        s.check(any("EVENT LOG" in r for r in main_t[:4]) or (full and re.match(r"\s*[+-]", main_t[1] if len(main_t) > 1 else "") is not None),
+        s.check(any("EVENT LOG" in r for r in main_t[:4]) or (full and re.match(r"\s*(?:[u ][ \d-]\d:\d\d:\d\d\.\d{3}|u[ \d]{4}:\d\d:\d\d\.\d) [+-]", main_t[1] if len(main_t) > 1 else "") is not None),
                 "main page: event log heading (or the view full of log lines, heading scrolled out)")
         s.cmd(0x43)
         g = s.dump(a.out, f"{a.bin.stem}.gpio")

@@ -783,9 +783,10 @@ def main() -> int:
     ap.add_argument("--dram", action="store_true", help="DRAM log image: the history from the DDR ring (all boots), per boot ms since reset (scripts/dram_log.py)")
     g = ap.add_mutually_exclusive_group()
     g.add_argument("--last", type=int, help="with --dram: the newest K entries (default 64)")
-    g.add_argument("--all", action="store_true", help="with --dram: every entry in the DDR ring (slow over the debug link: ~25 entries/s)")
+    g.add_argument("--all", action="store_true", help="with --dram: every entry in the DDR ring (77.7 entries/s over the debug link, unit 3 2026-11-27)")
     g.add_argument("--boot", type=int, help="with --dram: only the entries of this boot counter value")
     g.add_argument("--since", type=int, help="with --dram: the entries with absolute index >= N (the unit log saver)")
+    ap.add_argument("--count", type=int, help="with --dram --since N: K entries from N on (a page of the history)")
     a = ap.parse_args()
     sys.path.insert(0, str(Path(__file__).resolve().parent))
     import dbg_xdata as X
@@ -820,7 +821,8 @@ def main() -> int:
         xh = X.read_blocks(io, sym(a.map, "g_stAwtoSync"), V4_HDR)
         wr = int.from_bytes(bytes(xh[19:23]), "big") if xh else None
         snap = D.snapshot(DDR_UNIT, rows, None if a.all or a.boot is not None else (a.last or 64), a.boot, a.serial,
-                          fw_now(ht, t2) if ht and t2 is not None else None, read_at, a.since, wr)
+                          fw_now(ht, t2) if ht and t2 is not None else None, read_at, a.since, wr, a.count,
+                          lambda k, n: log(f"dram log: {k} of {n} entries read"))       # progress: a reader's stall guard
         io.close()
         if snap is None:
             log("sync: no valid DDR log header (a cold power-up, or the image never ran with the DRAM log)")

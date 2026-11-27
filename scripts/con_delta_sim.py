@@ -169,18 +169,20 @@ def seq_deltas(s: W.Sim, name: str, a0: int):
             rows.append((m.group(2), r[m.end():].rstrip()))
     def txt(e):                                          # the entry's text (sync.tsv): aligns rows to indexes, never their times
         return W.norm(SL.line(s.rows, (e[1], e[2], e[3] & 0xFFFF, e[4]), 0).split(":", 1)[1])[:20]
+    def same(t, h):                                      # a row's first 20 cells vs the entry's text (either may be the shorter)
+        return t.startswith(h) or h.startswith(t)
     a, bad, n = nxt - 1, [], 0
     for col, body in reversed(rows[-20:]):
         rb = W.RULE.match(body)
-        head = W.norm(rb.group(1) if rb else body)[:20]
+        head = W.norm((rb.group(1) if rb else body).split(" | ")[0])[:20]
         for k in range(body.count(" | ") + 1):            # a joined row: its first entry is k lines up (a text may hold " | " itself)
-            if a - k in by and txt(by[a - k]).startswith(head):
+            if a - k in by and same(txt(by[a - k]), head):
                 a -= k
                 break
-        while a in by and a > nxt - 8 and not txt(by[a]).startswith(head) and n == 0:
+        while a in by and a > nxt - 8 and not same(txt(by[a]), head) and n == 0:
             a -= 1                                       # the newest lines may not be drawn yet (the bottom row is one of the last few)
         e, ep = by.get(a), by.get(a - 1)
-        if e is None or ep is None or not txt(e).startswith(head):
+        if e is None or ep is None or not same(txt(e), head):
             say(f"    {name}: alignment stops at abs {a}: row {head!r}, entry {txt(e) if e else None!r}; rows {[b[:25] for _, b in rows[-8:]]}; "
                 f"entries {[(x[0], txt(x)) for x in ents[-8:]]}")
             break

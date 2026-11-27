@@ -57,6 +57,11 @@ def header(read) -> dict | None:
     return {"gen": b[3], "boot": b[4], "hint": int.from_bytes(b[5:9], "big")}
 
 
+def signed32(x: int) -> int:
+    """fw ms of a line made before the Timer2 start is stored re-based below 0 (two's complement)"""
+    return x - (1 << 32) if x >= 1 << 31 else x
+
+
 def entry(read, a: int, gen: int) -> dict | None:
     """DDR entry with absolute index a of generation gen; None when the slot holds something else (or the read failed)"""
     b = read(C["AWTO_DLOG_UNITS0"] + (a % C["AWTO_DLOG_SLOTS"]) * C["AWTO_DLOG_ENTRY_UNITS"])
@@ -75,13 +80,21 @@ def newest(read, hdr: dict, ahead: int | None = None) -> int:
     return a
 
 
-def entries(read, hdr: dict, nxt: int, count: int) -> list[dict]:
-    """the newest `count` entries (oldest first), fewer when the ring is young or an older slot no longer validates"""
+PROGRESS_N = 100                  # entries between progress lines: ~1.3 s at the measured 77.7 entries/s (unit 3, 2026-11-27), a reader's stall guard sees them
+
+
+def entries(read, hdr: dict, nxt: int, count: int, first: int | None = None, progress=None) -> list[dict]:
+    """the newest `count` entries (oldest first), or `count` from abs index `first` on; fewer when the ring is young or an older slot
+    no longer validates. progress(done, total): every PROGRESS_N entries"""
+    a0 = max(0, nxt - min(count, C["AWTO_DLOG_SLOTS"])) if first is None else max(first, nxt - C["AWTO_DLOG_SLOTS"], 0)
+    a1 = nxt if first is None else min(nxt, a0 + count)
     out = []
-    for a in range(max(0, nxt - min(count, C["AWTO_DLOG_SLOTS"])), nxt):
+    for a in range(a0, a1):
         e = entry(read, a, hdr["gen"])
         if e is not None:
             out.append(e)
+        if progress and (a - a0 + 1) % PROGRESS_N == 0:
+            progress(a - a0 + 1, a1 - a0)
     return out
 
 
@@ -131,18 +144,24 @@ def decode(rows: list[dict], ents: list[dict]) -> list[str]:
     return out
 
 
-def snapshot(read, rows: list[dict], last: int | None, boot: int | None, serial: str | None, fw_now: int | None, read_at, since: int | None = None, wr: int | None = None) -> dict | None:
-    """machine form (unit_log.py): header, the entries asked for with abs index, boot, fw ms, text, host time of the read for the current boot"""
+def snapshot(read, rows: list[dict], last: int | None, boot: int | None, serial: str | None, fw_now: int | None, read_at, since: int | None = None,
+             wr: int | None = None, count: int | None = None, progress=None) -> dict | None:
+    """machine form (unit_log.py): header, the entries asked for with abs index, boot, fw ms, text, host time of the read for the current boot.
+    since + count: a page of `count` entries from abs index since (a history view); since alone: everything after it (the saver)"""
     import datetime as dt
     h = header(read)
     if h is None:
         return None
     # wr = the firmware's write index from its XDATA header (one block read): saves the forward scan from the header hint (up to 130 bursts)
     nxt = wr if wr is not None and (wr == 0 or entry(read, wr - 1, h["gen"]) is not None) else newest(read, h)
+    page = count
     count = C["AWTO_DLOG_SLOTS"] if (last is None or boot is not None) else last
-    if since is not None:                                    # the saver: only what came after the last entry it has
-        count = max(0, nxt - since)
-    ents = entries(read, h, nxt, count)
+    if since is not None and page is not None:              # one page of the history
+        ents = entries(read, h, nxt, page, since, progress)
+    else:
+        if since is not None:                                # the saver: only what came after the last entry it has
+            count = max(0, nxt - since)
+        ents = entries(read, h, nxt, count, None, progress)
     if boot is not None:
         ents = [e for e in ents if e["boot"] == boot]
     lines = decode(rows, ents)
@@ -150,7 +169,7 @@ def snapshot(read, rows: list[dict], last: int | None, boot: int | None, serial:
     for e, ln in zip(ents, lines):
         poll = None
         if fw_now is not None and e["boot"] == h["boot"]:
-            poll = (read_at - dt.timedelta(milliseconds=fw_now - e["ms"])).isoformat(timespec="milliseconds")
+            poll = (read_at - dt.timedelta(milliseconds=fw_now - signed32(e["ms"]))).isoformat(timespec="milliseconds")   # before Timer2: < 0
         out.append({"abs": e["abs"], "boot": e["boot"], "ms": e["ms"], "id": e["id"], "arg": e["arg"], "val": e["val"], "text": ln, "poll_wall": poll})
     return {"serial": serial, "read": read_at.isoformat(timespec="milliseconds"), "gen": h["gen"], "boot": h["boot"], "next": nxt, "fw_now": fw_now,
             "slots": C["AWTO_DLOG_SLOTS"], "entries": out}

@@ -210,6 +210,7 @@ def status_rows(k):
     k.tap("MENU")
 
 
+BL_MAX = 255                # usBackLight top: _BACKLIGHT_MAX (RTD2014Include.h, 8-bit PWM build)
 SRC_IDLE_MS = 2000          # RL6449_Project.h AWTO_SRC_IDLE_COMMIT_MS (#132)
 OSD_TIMEOUT_BAR_S = 11      # a timeout above the SDK's old "<= 10 = never" rule
 OSD_TIMEOUT_SHORT_S = 6     # <= 10 s: closes too (#132 item 6, Dan 2026-11-18)
@@ -227,8 +228,9 @@ def backlight_bar(k, sel):
     b = k.snap()
     k.tap("UP")
     v1 = k.backlight()
-    k.check("no OSD: UP -> backlight bar open, value up", k.osd_state() == bar and k.osd_on() and k.delta(b, "AwtoBlKey") == 1 and v1 > v0
-            and k.delta(b, "OsdDispOsdMessage") == 0, f"osd state {k.osd_state()} (bar {bar}), backlight {v0} -> {v1}")
+    up = (v1 > v0) if v0 < BL_MAX else (v1 == BL_MAX)          # brightness default 100 = the top (#355): UP holds it there, no wrap
+    k.check("no OSD: UP -> backlight bar open, value up (held at the top when already there)", k.osd_state() == bar and k.osd_on()
+            and k.delta(b, "AwtoBlKey") == 1 and up and k.delta(b, "OsdDispOsdMessage") == 0, f"osd state {k.osd_state()} (bar {bar}), backlight {v0} -> {v1}")
     k.shot("backlight_bar")
     b = k.snap()
     k.tap("DOWN")

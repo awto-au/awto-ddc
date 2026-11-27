@@ -226,3 +226,23 @@ def test_dram_previous_boot_row_from_its_own_reset():
     out = D.con_lines(ROWS, ents, 7, None)
     assert "+ 35 ms:-- boot:warm reset" in out[1] and out[1].split()[1].startswith("u00:00:00.035")
     assert "+118 ms:-- boot:cold" in D.con_lines(ROWS, ents, 7, None, 122)[-1]     # this boot: g_usAwtoBootBase read with the history
+
+
+def test_dram_page_and_progress_and_poll_wall_sign():
+    """GUI requests (#358): --since A --count K is one page; progress every PROGRESS_N; a line before Timer2 (ms < 0) has its poll time
+    a few ms before the boot, not 49 days off"""
+    import datetime as dt
+    ents = [(0xD0, 1, 0xFFFFFFFC, 0)] + [(0xE7, 3, 10 * k, 0) for k in range(1, 250)]
+    _img, rd = _v4_image(ents)
+    hdr = {"gen": 7}
+    seen = []
+    page = D.entries(rd, hdr, len(ents), 120, 100, lambda k, n: seen.append((k, n)))
+    assert [e["abs"] for e in page] == list(range(100, 220)) and seen == [(100, 120)]
+    t = dt.datetime(2026, 11, 27, 17, 0, tzinfo=dt.timezone.utc)
+    monkey = D.header
+    try:
+        D.header = lambda read: {"gen": 7, "boot": 1}
+        snap = D.snapshot(rd, ROWS, None, None, "S", 5000, t, 0, len(ents), 2)
+    finally:
+        D.header = monkey
+    assert snap["entries"][0]["poll_wall"] == (t - dt.timedelta(milliseconds=5004)).isoformat(timespec="milliseconds")

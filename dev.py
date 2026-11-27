@@ -1309,8 +1309,8 @@ def cmd_alert(extra: list[str]) -> int:
     return _py("alert.py", "--bus", str(_live_bus(u)), *(["--wait"] if _flag(extra, "--wait") else []))
 
 
-@command("boot / sync log ring of a running unit, decoded (scripts/sync_log.py, #139) through the GUI app's control port (#276); --whole = all episodes; --json = machine form; --dram = the DRAM log image's DDR history (all boots; --last K default 64, --boot B, --all; ~25 entries/s over the debug link); --follow [--save] [--interval S] = poll and append to tmp/logs/units/<serial>-sync.log (scripts/unit_log.py)",
-         args="[--unit N] [--map F] [--whole] [--json] [--dram [--last K | --boot B | --since ABS | --all]] [--follow --save --interval S --once] [--direct]", kind="action")
+@command("boot / sync log ring of a running unit, decoded (scripts/sync_log.py, #139) through the GUI app's control port (#276); --whole = all episodes; --json = machine form; --dram = the DRAM log image's DDR history (all boots; --last K default 64, --boot B, --all, --since A --count K = a page; 77.7 entries/s over the debug link, unit 3 2026-11-27); --follow [--save] [--interval S] = poll and append to <main checkout>/tmp/logs/units/<serial>-sync.log (scripts/unit_log.py, tree-independent #358)",
+         args="[--unit N] [--map F] [--whole] [--json] [--dram [--last K | --boot B | --since ABS [--count K] | --all]] [--follow --save --interval S --once] [--direct]", kind="action")
 def cmd_synclog(extra: list[str]) -> int:
     if _flag(extra, "--follow"):                  # log-keep: poll the ring, append to tmp/logs/units/<serial>-sync.log (scripts/unit_log.py)
         _flag(extra, "--save")                    # saving is what follow does
