@@ -97,3 +97,10 @@ def test_variant_and_label():
     assert S.variant_of([]) == "default"
     assert S.variant_of(["-DAWTO_CLOCK_MHZ=87", "_AWTO_FRC=_OFF"]) == "AWTO_CLOCK_MHZ=87+_AWTO_FRC=_OFF"
     assert S.label({"commit": "0123456789ab", "dirty": "1", "diff_hash": "ff00ff00"}) == "01234567*ff00ff00"
+
+
+def test_report_skips_direct_delta_across_iram_sources(tmp_path):
+    old = _row("c1", "aa", direct_free="3", iram_src="map", common_b="10")
+    new = _row("c2", "bb", direct_free="5", iram_src="link", common_b="10")
+    out = "\n".join(S.report(new, None, old, None, tmp_path))
+    assert "(map source)" in out and "+2" not in out

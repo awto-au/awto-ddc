@@ -22,7 +22,7 @@ Every `./dev.py build` (and the variant builds that go through it: gates, test_i
 | common_b | CODE areas below common_end (map) |
 | banked_b, bank_used, bank_free | CODE areas per bank; free = bank - common_end - used - a reserved block (message table) in that bank |
 | min_bank_free | smallest bank free (`bank:bytes`) |
-| direct_used / direct_free | link IRAM holes (build.json); backfill: map DSEG + OSEG + DDOVLn sizes (reads 2 B less free than the link at 29a3f8ac) |
+| direct_used / direct_free, iram_src | `link` = sdcc_link holes (build.json); `map` (backfill) = DSEG + OSEG + DDOVLn map sizes (DSEG's map size is synthetic: 2 B less free than the link at 29a3f8ac, equal at b3); the report gives no delta across sources |
 | idata, stack | ISEG size; stack space (0x100 - stack start) |
 | stack_static | `fw_stack.py` main + nested ISRs, worst of both IP states (as `./dev.py stats`); build rows only |
 | bseg_bits | map `l_BSEG` |

@@ -19,7 +19,7 @@ from pathlib import Path
 import chip_mem as CM
 
 COLS = ["time", "tree", "branch", "commit", "dirty", "diff_hash", "serial", "tag", "variant", "layout", "compiler", "src",
-        "common_b", "banked_b", "bank_used", "bank_free", "min_bank_free", "direct_used", "direct_free", "idata", "stack",
+        "common_b", "banked_b", "bank_used", "bank_free", "min_bank_free", "direct_used", "direct_free", "iram_src", "idata", "stack",
         "stack_static", "bseg_bits", "xdata_used", "xdata_free", "image_crc", "image"]
 NUM = ["common_b", "banked_b", "direct_used", "direct_free", "idata", "stack", "stack_static", "bseg_bits", "xdata_used", "xdata_free"]
 AREA = re.compile(r"^(\S+)\s+([0-9A-F]{8})\s+([0-9A-F]{8}) =\s+(\d+)\. bytes \(([^)]*)\)", re.MULTILINE)
@@ -126,10 +126,10 @@ def measure(bin_path: Path, map_path: Path, tree_bj: dict | None = None, stem_bj
     iram = tb.get("iram") or {}
     if iram.get("free_direct") is not None:
         dfree = sum(n for _a, n in iram["free_direct"])
-        dused = CM.DIRECT_END - dfree
+        dused, isrc = CM.DIRECT_END - dfree, "link"
     else:
         dused = size.get("DSEG", 0) + size.get("OSEG", 0) + sum(s for n, s in size.items() if re.fullmatch(r"DDOVL\d+", n))
-        dfree = CM.DIRECT_END - dused
+        dfree, isrc = CM.DIRECT_END - dused, "map"
     xused = sum(s for (_n, _a), (s, at) in areas.items() if "XDATA" in at)
     m = BSEG.search(text)
     xf = tb.get("xdata_free", sb.get("xdata_free"))
@@ -138,7 +138,7 @@ def measure(bin_path: Path, map_path: Path, tree_bj: dict | None = None, stem_bj
            "bank_used": ",".join(f"{b}:{banked[b]}" for b in sorted(banked)),
            "bank_free": ",".join(f"{b}:{free[b]}" for b in sorted(free)),
            "min_bank_free": ",".join(f"{b}:{f}" for b, f in smallest),
-           "direct_used": dused, "direct_free": dfree, "idata": size.get("ISEG", 0),
+           "direct_used": dused, "direct_free": dfree, "iram_src": isrc, "idata": size.get("ISEG", 0),
            "stack": iram.get("stack_bytes", size.get("SSEG", "")), "bseg_bits": int(m.group(1), 16) if m else "",
            "xdata_used": xused, "xdata_free": "" if xf is None else xf,
            "compiler": ((tb.get("compiler") or {}).get("commit") or "")[:10],
@@ -211,6 +211,13 @@ def _delta(a, b) -> str:
     return f"{d:+d} ({100 * d / b:+.2f} %)" if b else f"{d:+d}"
 
 
+def _cell(row: dict, ref: dict, c: str) -> str:
+    """Delta, or the reference's IRAM source when link holes and the map sum would be compared (backfill rows)."""
+    if c.startswith("direct_") and ref.get("iram_src") != row.get("iram_src"):
+        return f"({ref.get('iram_src') or '?'} source)"
+    return _delta(row.get(c), ref.get(c))
+
+
 def top_changes(new: dict, old: dict, n: int = TOP_N) -> tuple[list, list]:
     d = [(new.get(k, 0) - old.get(k, 0), k) for k in set(new) | set(old) if new.get(k, 0) != old.get(k, 0)]
     grew = sorted((x for x in d if x[0] > 0), key=lambda x: (-x[0], x[1]))[:n]
@@ -224,7 +231,7 @@ def report(row: dict, funcs: dict | None, prev: dict | None, main: dict | None, 
     refs = [(k, r) for k, r in (("prev", prev), ("main", main)) if r]
     out.append(f"  {'':12} {'this':>8}" + "".join(f"  {k + ' ' + label(r):>26}" for k, r in refs))
     for c in NUM:
-        out.append(f"  {c:12} {row.get(c, ''):>8}" + "".join(f"  {_delta(row.get(c), r.get(c)):>26}" for _k, r in refs))
+        out.append(f"  {c:12} {row.get(c, ''):>8}" + "".join(f"  {_cell(row, r, c):>26}" for _k, r in refs))
     free = bank_map(row.get("bank_free", ""))
     for k, r in refs:
         old = bank_map(r.get("bank_free", ""))
