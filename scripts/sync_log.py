@@ -363,7 +363,7 @@ def fmt_delta(d: int | None) -> str:
 # Joined rows (fw/osd/console.c AWTO_LN_PAIR / AWTO_LN_JOIN_MS): the next line shares the row when the pair is listed and it came within JOIN_MS
 JOIN_MS = 3
 MON_EV = 0xEA                                            # AWTO_SYNC_EV_MON: a joined monitor line shows its values only
-JOIN_PAIRS = {(MON_EV, MON_EV), (0xF5, 0xF6), (0xF7, 0xF8), (0xF8, 0xF9)}    # heartbeat rows (not an ADC move, arg 1), FBUF -> MCFG, DVF -> SCALE -> LIMIT
+JOIN_PAIRS = {(MON_EV, MON_EV), (0xF5, 0xF6), (0xF7, 0xF8), (0xF8, 0xF9), (0xC7, 0xC8)}    # heartbeat rows (not an ADC move, arg 1), FBUF -> MCFG, DVF -> SCALE -> LIMIT, VFREQ -> PCLK (#359)
 MON_ADC = 1
 HOST_EV, HOSTFW_EV = 0xD7, 0xD8                          # AWTO_SYNC_EV_HOST / _HOSTFW
 START_WORD = "started"                                  # after an episode start row's text, as the console (#358)

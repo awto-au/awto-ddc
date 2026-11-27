@@ -657,7 +657,7 @@ fn	_AwtoKeyStep	5	0x550d	620
 fn	_AwtoKeyTestSet	5	0x5924	18
 fn	_AwtoLedSet	2	0x9906	94
 fn	_AwtoLnDelta	7	0x8e20	911
-fn	_AwtoLnJoins	10	0x6aba	409
+fn	_AwtoLnJoins	10	0x6fae	498
 fn	_AwtoLoopBusy	0	0x8a65	156
 fn	_AwtoLoopIdle	0	0x76e4	12
 fn	_AwtoLoopPace	0	0x76f0	1210

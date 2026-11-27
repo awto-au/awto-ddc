@@ -1540,8 +1540,10 @@ static void AwtoPutMon(BYTE ucArg);            // fmt mon: health monitor rows (
 #define AWTO_LN_JOIN_MS     3
 #define AWTO_LN_MON(a, x)   (((a) == AWTO_SYNC_EV_MON) && ((x) != AWTO_MON_EV_ADC))      // heartbeat rows (an ADC move keeps its own row)
 #define AWTO_LN_PAIR(a, x, b, y)    ((AWTO_LN_MON(a, x) && AWTO_LN_MON(b, y)) || (((a) == AWTO_SYNC_EV_FBUF) && ((b) == AWTO_SYNC_EV_MCFG)) || \
-                                     (((a) == AWTO_SYNC_EV_DVF) && ((b) == AWTO_SYNC_EV_SCALE)) || (((a) == AWTO_SYNC_EV_SCALE) && ((b) == AWTO_SYNC_EV_LIMIT)))
-#define AWTO_LN_LEADS(a, x) (AWTO_LN_MON(a, x) || ((a) == AWTO_SYNC_EV_FBUF) || ((a) == AWTO_SYNC_EV_DVF) || ((a) == AWTO_SYNC_EV_SCALE))
+                                     (((a) == AWTO_SYNC_EV_DVF) && ((b) == AWTO_SYNC_EV_SCALE)) || (((a) == AWTO_SYNC_EV_SCALE) && ((b) == AWTO_SYNC_EV_LIMIT)) || \
+                                     (((a) == AWTO_SYNC_EV_VFREQ) && ((b) == AWTO_SYNC_EV_PCLK)))
+#define AWTO_LN_LEADS(a, x) (AWTO_LN_MON(a, x) || ((a) == AWTO_SYNC_EV_FBUF) || ((a) == AWTO_SYNC_EV_DVF) || ((a) == AWTO_SYNC_EV_SCALE) || \
+                             ((a) == AWTO_SYNC_EV_VFREQ))
 #define AWTO_LN_PER_S       1000UL              // ms per s
 #define AWTO_LN_PER_H       3600000UL           // ms per h
 #define AWTO_LN_MILLI_MAX   999UL               // "+999 ms", then "+xx.x s" up to AWTO_LN_TENTHS_MAX
