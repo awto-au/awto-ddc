@@ -44,7 +44,7 @@ font_two_maps	FRAME_CTRL_18[3:1], FRAME_CTRL_1A..1D, 24..29	yes	databook	test_fo
 font_mask	FRAME_CTRL_45..4C	option	databook	test_font_mask_region	spec-model	OT-20;C-FMASK	font_mask	rows / cols = map row / cell index
 font_row_total	FRAME_CTRL_3E..40	option	unknown	test_row_total_option	spec-model	OT-23;C-ROWTOT		option row_total; default off
 osd_area	FRAME_CTRL_38..3D	option	unknown	test_area_clip_option	spec-model	OT-23;C-AREA		option area_clip; default off
-pop_on_roll_up	FRAME_CTRL_18[7:6,0]	option	sdk-hypothesis	test_render_pixels	spec-model	C-POPON		pop-on shows map A or B; roll-up scroll is firmware driven
+pop_on_roll_up	FRAME_CTRL_18[7:6,0]	option	sdk-hypothesis	test_render_pixels,test_pop_on_without_fontx2	spec-model	C-POPON		pop-on shows base 0 or 1 (fontx2 not needed, QC frame 4); base 1 without fontx2 at font A's place; roll-up scroll is firmware driven
 vertical_boundary	FRAME_CTRL_18[5], FRAME_CTRL_1E..20	option	unknown	test_vertical_boundary	spec-model	OT-21;C-VBND		units = panel lines
 font_win_v_align	FRAME_CTRL_18[4]	no	unknown		unmodelled	C-VBND		alignment of font and window boundaries
 double_size	FRAME_CTRL_0A[1:0]	yes	hw	test_double_size	modelled		double_size	all windows and characters doubled

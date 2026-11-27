@@ -434,7 +434,7 @@ def _two(popon):
         s.r(0x18, 0x0A).r(0x03, 5).r(0x04, 1).r(0x05, 0x40)    # B origin delay2: hd 5 x 4 = 20 px, vd 40 lines
         s.r(0x24, 0).r(0x25, 3).r(0x26, 6)
     else:
-        s.r(0x18, 0xC8 | popon)
+        s.r(0x18, 0xC0 | popon)                                # fontx2 off, as the SDK QC frame 4 (#263)
         s.r(0x24, 0).r(0x25, 10).r(0x26, 10)
     return s
 
