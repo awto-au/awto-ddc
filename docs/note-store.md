@@ -19,7 +19,7 @@
 - Both wait for CMD idle / READ_FLAG with 255 spins then 50 ms (3 frames of DDR arbitration, as `ddr_draw.c`); on expiry the text is dropped ("text overwritten"), nothing else changes.
 
 ## Measured on unit 3 (2026-11-21, main-tip image + freeze image for the marker runs; live 4K60, line buffer mode, rotate 180)
-- Marker = address-in-data pattern over blocks 16320..16383 (128 KiB, units 0x3FC000..): `./dev.py ddr-keep fill | verify | cmd 0xNN` (`scripts/ddr_keep_probe.py`, freeze image `--freeze --savers pacman`). 8192 bursts verified with single reads after each event:
+- Marker = address-in-data pattern over blocks 16320..16383 (128 KiB, units 0x3FC000..): `./dev.py ddr-keep fill | verify | cmd 0xNN` (`scripts/ddr_keep_probe.py`, freeze image `./dev.py build --freeze`; the Pac-Man saver the 2026-11-21 runs used is removed, 723dc3df). 8192 bursts verified with single reads after each event:
 
 | event | bad bursts |
 |---|---|

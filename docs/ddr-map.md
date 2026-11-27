@@ -62,8 +62,15 @@
   - [HW] DRAM log entries written during a 17 h fake saving read back intact (#353); a real 394 s saving lost most of them.
 - #353: after 2 failed frame-buffer M-domain set-ups in one display setting, `SysMachineMemReinit` (`SysJudge.c`) runs memory power off / on once (DDR PLL, DC SYS / PHY, DRAM init); DDR clock off ~4 ms by the SDK delays (up to ~85 ms if both PLL lock polls run to their 40 ms limit); content after it not measured.
 - [HW] 4K60 rotate off = line-buffer mode: `cap_cap_en` stays 1 and blocks stay programmed, but neither chip is written (marker unchanged 2 s; rotate 180 control overwritten within 23 ms; #348). DDR is then free except the log; any switch to rotate 180 rewrites block 1.
+- DRAM log guard (#358): no DDR op while `ScalerMemoryPowerControl(_OFF)` has the memory off after this boot's first power up (`g_ucAwtoDdrOff`); lines wait in the XDATA tail ([dram-log-design.md](dram-log-design.md) "Memory powered off").
+- Keep the DDR powered and clocked over power saving and POWER off (Dan 2026-11-27: "all I want is the backlight off"): design + phase 2 in progress, #365. Until it lands, the loss figures above stand.
 - No clear / fill path in our build. Cold power-up: content undefined. Writes before the first main-loop pass are lost [HW].
 - Hazard: `MCU_DC_LEN` != 2 on port A kills port A [HW #255].
+
+## Tools (unit 3 only; freeze image where noted)
+- `./dev.py ddr-capture run | run-levels | run-rows | probe | analyse`: frame-to-DDR checks ([data-channels.md](data-channels.md) "Frame capture check").
+- `./dev.py ddr-keep [--port a|b|ab] [--blk0 B] [--blocks N] [--no-prep] fill | verify | cmd 0xNN`: address-in-data marker (default units 0x200000.., 2.5 MB per chip; refuses a port A region reaching the log), survival over an event (`scripts/ddr_keep_probe.py`, freeze image).
+- `./dev.py ddr-draw`, `ddr-addr`: [ddr-draw.md](ddr-draw.md). `./dev.py ddr-notes`: [note-store.md](note-store.md). `./dev.py synclog --dram`: [dram-log-design.md](dram-log-design.md).
 
 ## Open (#348, one run each on unit 3)
 - E/O mapping at 1080p60 (blocked: no picture, #350); buffering at 24 / 30 / 50 Hz; 10 bpc LINE_STEP; freeze cleared by mode set; retention without DDR clock; picture impact of MCU traffic.

@@ -61,7 +61,10 @@ DP carries rows 3-5, 18, 19, 22, 25 and 26 as well (same scaler path after the r
 - `MCU_DC_LEN` != 2 on port A (1, 4): flag never set, `CMD` stays 0xA0, later reads on A time out; port B kept working; the display was disturbed (M1 overflow, wrong DCR counts) until the SDK memory choice was restored (test cmd 0x0D).
 
 ## Frame capture check (video frame -> DDR, unit 3, Intel HDMI-A-2, 4K59.991, frame mode 0x0C, frozen by P5_27 / P45_27 bit2)
-- Tool: `./dev.py ddr-capture run` (`scripts/ddr_capture_check.py`); log `tmp/logs/ddr_capture_check.log`; issue: awto-ddc ddr-capture thread (see `docs/history.md` entry).
+- Tool: `./dev.py ddr-capture run | run-levels | run-rows [--size WxH] | probe | analyse [READS.json]` (`scripts/ddr_capture_check.py`); log `tmp/logs/ddr_capture_check.log`, reads `tmp/logs/ddr_capture_check.reads.json`; issues #347, #348.
+  - `run-rows`: every row independent (seeded levels), port A and B reads per memory line, 6 row maps x mirror x swap tested; pitch = ceil(W x 3 / 8) rounded to 4.
+  - `probe`: no frame mode forced; one 16 B marker per port in block 1, read back 2 s (does capture write DDR in the mode as it is).
+  - `analyse`: re-runs the compare offline from the reads file.
 - Memory (chip A, port A) = block 1 only: 1080 lines x 3840 px x B,G,R, pitch 1440 units, base 0; memory line L = frame row 2L, pixel p = frame x 3839 - p (rotate-180 capture, `CAP_M1_ROTATION` 3).
 - Odd rows go to chip B via M2 (E/O mode, `ddr-map.md`): [HW] port B line L = frame row 2L+1, 92/92 exact (#348 test 1).
 - Memory lines >= 1080 are not written (stale); usable 12 441 600 B per frame (3840 x 1080 x 3).

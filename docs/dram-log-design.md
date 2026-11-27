@@ -58,12 +58,12 @@ Host: `scripts/dram_log.py`, `sync_log.py` (`read_ring` version 4, `--dram`), `u
 - Why not a ms wait: the static masked-section analysis (docs/irq-masks.md) sees the loop under `AwtoSyncPush` in boot sections, and a ms-long wait in a pass stage breaks the 1 ms stage budget.
 
 ## Console
-- Redraw backfill (54 lines): `AwtoSyncAt` -> DDR for lines older than 16; one burst read each, one row per pass as before.
-- Boot warm reset: the console shows the previous boot's lines (read from the DDR) as with the XDATA ring.
+- Backfill: console open `AWTO_LOG_FILL_N` (54 lines), map-full redraw `AWTO_LOG_REDRAW_N` (27), under an episode start row `AWTO_LOG_VIEW_N` (`fw/osd/console.c`); `AwtoSyncAt` -> DDR for lines older than the XDATA tail; one burst read each, one row per pass.
+- Console open after a warm reset: the current episode from its start row (#358, [sync-log-design.md](sync-log-design.md)); older boots: `synclog --dram`.
 
 ## Host
 - `./dev.py synclog` (episode / `--whole`): version 4 image -> virtual version 3 ring (`sync_log.read_ring`), the DDR is read only for the lines asked for.
-- `./dev.py synclog --dram [--last K | --boot B | --since ABS | --all]`: DDR history, per boot, ms since reset, 32 bit.
+- `./dev.py synclog --dram [--last K | --boot B | --since ABS [--count K] | --all]`: DDR history, per boot, ms since reset, 32 bit; `--since A --count K` = one page (GUI log view); a progress line every 100 entries; ~77.7 entries/s over the debug link (unit 3, 2026-11-27, #358).
 - `./dev.py synclog --follow --save`: `unit_log.py` polls with `--since <saved index + 1>`; dedupe by absolute index; gap marker when entries between two polls are missing.
 - Sim: `fw_sim.DdrPort` (MCU_DC port A model, in every sim bus) keeps the DDR over the chip reset; `sync_log.DDR_UNIT` / `inject_lines`.
 
