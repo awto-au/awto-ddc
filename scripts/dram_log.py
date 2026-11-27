@@ -190,12 +190,13 @@ def main() -> int:
     return 0
 
 
-def con_lines(rows: list[dict], ents: list[dict], cur_boot: int, ht: dict | None = None) -> list[str]:
-    """entries as the console shows them (sync_log.con_rows: real time, +delta, joined groups), "--- boot N" per boot, abs index first"""
+def con_lines(rows: list[dict], ents: list[dict], cur_boot: int, ht: dict | None = None, boot_base: int | None = None) -> list[str]:
+    """entries as the console shows them (sync_log.con_rows: real time, +delta, joined groups), "--- boot N" per boot, abs index first.
+    boot_base: g_usAwtoBootBase of the current boot (its zero when its Timer2 start line is not among ents)"""
     import sync_log as S
     evs = [(e["id"], e["arg"], e["ms"] & 0xFFFF, e["val"]) for e in ents]
     ts = [(S.signed32(e["ms"]), True) for e in ents]
-    rs = S.con_rows(evs, [x.split(":", 1)[1] for x in decode(rows, ents)], ts, ht, [e["boot"] for e in ents], cur_boot)
+    rs = S.con_rows(evs, [x.split(":", 1)[1] for x in decode(rows, ents)], ts, ht, [e["boot"] for e in ents], cur_boot, boot_base=boot_base)
     out, boot = [], None
     for r, ln in zip(rs, S.row_lines(rs, ts, evs)):        # 32-bit times: no wrap row, one line per row
         e = ents[r["i"][0]]

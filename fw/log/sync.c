@@ -692,16 +692,17 @@ void AwtoSdTick(void)
     AwtoSyncPush(AWTO_SYNC_EV_SLINK, ucArg, ulV);
 }
 
-// New episode: time base, per-port detect state, console request. A switch inside a power-on / wake that has not settled
-// is one more line of that episode (the SDK switches to the stored port during boot), flagged AWTO_SYNC_BEGIN_IN.
+// New episode: time base, per-port detect state, console request. Inside an unsettled episode, a switch (not after a switch), a lost
+// picture, or a hold's fast wake after a lost picture is one more line of it, flagged AWTO_SYNC_BEGIN_IN.
 // K_LOST (picture lost): no console open; after a DONE its FAILED:signal lost line comes at once and the next ACTIVE writes a new DONE.
 void AwtoSyncBegin(BYTE ucKind, BYTE ucPort)
 {
     BYTE ucI;
     WORD usNow;
 
-    if((((ucKind == AWTO_SYNC_K_SWITCH) && (g_stAwtoSync.ucKind != AWTO_SYNC_K_SWITCH)) || (ucKind == AWTO_SYNC_K_LOST)) &&
-       (g_stAwtoSync.ucKind != 0) && (g_stAwtoSync.ucDone == 0))     // #358: one red row for a switch + judge reset, a lost picture inside an unsettled start
+    if((((ucKind == AWTO_SYNC_K_SWITCH) && (g_stAwtoSync.ucKind != AWTO_SYNC_K_SWITCH)) || (ucKind == AWTO_SYNC_K_LOST) ||
+        ((ucKind == AWTO_SYNC_K_WAKE) && (g_stAwtoSync.ucKind == AWTO_SYNC_K_LOST))) &&
+       (g_stAwtoSync.ucKind != 0) && (g_stAwtoSync.ucDone == 0))     // #358: one red row per start: a judge reset / the hold's fast wakes are its lines
     {
         AwtoSyncPush(AWTO_SYNC_EV_BEGIN, ucKind, ((DWORD)AWTO_SYNC_BEGIN_IN << 24) | ((AwtoMs() >> 16) << 8) | ucPort);
         return;
@@ -764,6 +765,7 @@ void AwtoSyncBegin(BYTE ucKind, BYTE ucPort)
 void AwtoSyncSettle(void)                           // fast wake / switch done: ACTIVE with no mode change, so no mode event ends the episode (#313)
 {
     g_stAwtoSync.ucDone = 1;                        // else ucOpenReq stays set: busy hook on (no pacing), no console open
+    AwtoSdMode(_MODE_STATUS_ACTIVE);                // its sync DONE line (once: a DONE since the last reset returns at once, #358)
 }
 
 static __xdata BYTE s_ucAwtoSyncRan;                // 0 until this boot's first AwtoSyncInit (the main loop may re-enter it)

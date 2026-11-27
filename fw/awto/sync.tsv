@@ -79,7 +79,7 @@ C0	01	-	power on	boot
 C0	02	vport	switch to %
 C0	03	vport	wake on %
 C0	04	vport	power key on, %
-C0	05	vport	picture lost on %:new search
+C0	05	vport	picture lost on %
 10	04	pby	panel on by % (accepted)
 10	05	pby	panel on by % (already on)
 10	06	pby	panel off by % (accepted)

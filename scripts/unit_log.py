@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
-"""Unit log saver (awto-ddc log-keep): the monitor's sync ring, APPENDED to ./tmp/logs/units/<serial>-sync.log, never wiped.
+"""Unit log saver (awto-ddc log-keep): the monitor's sync ring, APPENDED to <main checkout>/tmp/logs/units/<serial>-sync.log
+(tree-independent: $AWTO_DDC_REPO, else the git common dir's checkout), never wiped.
 
 usage: unit_log.py follow --unit N [--interval S] [--once]     poll the ring, append new lines (also `./dev.py synclog --follow --save`)
        (library) Store(serial, dir).ingest(snapshot) -> lines appended; note_written(serial, seq, text) (host_note.py)
@@ -26,7 +27,17 @@ from pathlib import Path
 from _log import log_line as _log_line
 from _repo import ROOT
 
-LOGDIR = ROOT / "tmp/logs/units"
+
+def _shared_root() -> Path:
+    """$AWTO_DDC_REPO, else the main checkout (git common dir): unit logs + notes outlive any worktree (#358)"""
+    import os
+    if os.environ.get("AWTO_DDC_REPO"):
+        return Path(os.environ["AWTO_DDC_REPO"])
+    from unit_lock import lock_root
+    return lock_root()
+
+
+LOGDIR = _shared_root() / "tmp/logs/units"
 LOG = ROOT / "tmp/logs/unit_log.log"
 INTERVAL_S = 30
 READ_LIMIT_S = 60                          # dev.py synclog through the port: server limit 45 s + 15 s

@@ -42,6 +42,7 @@ def dev(monkeypatch, tmp_path):
     monkeypatch.setattr(m, "_units", lambda: {k: dict(v) for k, v in UNITS.items()})   # synthetic table: no scripts/devices.json, no hardware
     monkeypatch.setattr(m, "_layout_watch", lambda: None)   # spawns desk_layout.py unless the real tree's watcher runs
     monkeypatch.setattr(m.i2cbus, "bus_kind", lambda bus, hint=None: hint or "unknown")   # no sysfs
+    monkeypatch.setattr(m, "check_image_tree", lambda img, tree, old_ok=False: None)   # tmp_path is no git tree (tests/test_process_preflight.py)
     yield m
     sys.modules.pop("dev_under_test", None)
 
@@ -275,7 +276,8 @@ def test_edid_recovery_uses_caller_proven_bus_without_reflashing(dev, tmp_path, 
                         calls.append((script, list(a), shield)) or 0)
     assert dev.cmd_edid(["--unit", "3", "--force", "--bus", "21", str(img)]) == 0
     assert calls == [("rtd_flash_sector.py",
-                      [21, "0x5000", patched, "--expect-current", expected, "--write"], True)]
+                      [21, "0x5000", patched, "--expect-current", expected, "--write"], True),
+                     ("host_time.py", ["--unit", "3", "--once", "--wait", dev.HOST_TIME_WAIT_S], False)]   # the ISP reset restarted the fw clock (#358)
 
 
 def test_dev_flash_bus_passes_identity(dev, tmp_path, monkeypatch):

@@ -353,44 +353,12 @@ def fmt_delta(d: int | None) -> str:
     return f"{sg}{u // 1000:4d} s" if u <= 9_999_999 else f"{sg}{u // 3_600_000:4d} h"
 
 
-def deltas(evs: list, ts: list | None = None) -> list[tuple[int | None, bool]]:
-    """per event (delta ms, start): since the line above (32 bit from ts = unwrap() when both known, else the 16-bit step);
-    a start counts from its zero: the boot line from the MCU reset (its own time), a BEGIN from itself (0)"""
-    out = []
-    for k, ev in enumerate(evs):
-        if is_start(ev):
-            t = ts[k][0] if ts and ts[k][0] is not None else ev[2] - (0x10000 if ev[2] >= 0x8000 else 0)
-            out.append((t if ev[0] == BOOT_EV else 0, True))
-        elif k == 0:
-            out.append((None, False))
-        elif ts and ts[k][0] is not None and ts[k - 1][0] is not None:
-            out.append((ts[k][0] - ts[k - 1][0], False))
-        else:
-            out.append((step(evs[k - 1][2], ev[2]), False))
-    return out
-
-
-def dram_deltas(ents: list[dict]) -> list[tuple[int | None, bool]]:
-    """deltas() for DRAM log entries (dram_log.snapshot: 32-bit fw ms per boot); a new boot counter has no line above"""
-    out, prev = [], None
-    for e in ents:
-        ms = e["ms"] - (1 << 32 if e["ms"] >= 1 << 31 else 0)
-        st = is_start((e["id"], e["arg"], ms & 0xFFFF, e["val"]))
-        out.append(((ms if e["id"] == BOOT_EV else 0) if st else (ms - prev[1] if prev and prev[0] == e["boot"] else None), st))
-        prev = (e["boot"], ms)
-    return out
-
-
-def with_delta(lines: list[str], ds: list) -> list[str]:
-    """lines prefixed with the console's delta column; an episode start as the console's rule: "-- line --" """
-    return [f"{fmt_delta(d)}:" + (f"-- {ln} --" if st else ln) for (d, st), ln in zip(ds, lines)]
-
-
 # Joined rows (fw/osd/console.c AWTO_LN_PAIR / AWTO_LN_JOIN_MS): the next line shares the row when the pair is listed and it came within JOIN_MS
 JOIN_MS = 3
 MON_EV = 0xEA                                            # AWTO_SYNC_EV_MON: a joined monitor line shows its values only
 JOIN_PAIRS = {(MON_EV, MON_EV), (0xF5, 0xF6), (0xF7, 0xF8), (0xF8, 0xF9)}    # heartbeat rows (not an ADC move, arg 1), FBUF -> MCFG, DVF -> SCALE -> LIMIT
 MON_ADC = 1
+START_WORD = "started"                                  # after an episode start row's text, as the console (#358)
 WRAP_TEXT = "relative time reset: counter wrap"          # a delta that is not known for certain (16-bit times only, Dan 2026-11-27)
 REAL_W = 13                                              # real-time column: marker + 12 cells
 S_PER_DAY = 86400
@@ -407,13 +375,12 @@ INIT_EV, INIT_T2 = 0xD2, 2                               # AWTO_SYNC_EV_INIT arg
 
 
 def boot_bases(evs: list) -> list:
-    """per event: its boot's ms from the MCU reset to fw ms 0 (the Timer2 start line after the boot line), None if not in the ring"""
+    """per event: its boot's ms from the MCU reset to fw ms 0 (the first Timer2 start line after its boot line), None if not in the ring"""
     out, cur = [], None
     for k, e in enumerate(evs):
         if e[0] == BOOT_EV:
-            cur = next((x[3] for x in evs[k + 1:] if x[0] == INIT_EV and x[1] == INIT_T2 and isinstance(x[3], int)), None)
             nb = next((j for j in range(k + 1, len(evs)) if evs[j][0] == BOOT_EV), len(evs))
-            cur = cur if any(evs[j][0] == INIT_EV and evs[j][1] == INIT_T2 for j in range(k + 1, nb)) else None
+            cur = next((evs[j][3] for j in range(k + 1, nb) if evs[j][0] == INIT_EV and evs[j][1] == INIT_T2 and isinstance(evs[j][3], int)), None)
         out.append(cur)
     return out
 
@@ -438,9 +405,11 @@ def real_col(t: int | None, ht: dict | None, wall: bool, base: int = 0) -> str:
     return f"u{sec // 3600:4d}:{sec // 60 % 60:02d}:{sec % 60:02d}.{t // 100 % 10}"
 
 
-def con_rows(evs: list, texts: list[str], ts: list, ht: dict | None = None, boots: list | None = None, cur_boot=None, join: bool = True) -> list[dict]:
+def con_rows(evs: list, texts: list[str], ts: list, ht: dict | None = None, boots: list | None = None, cur_boot=None, join: bool = True,
+             boot_base: int | None = None) -> list[dict]:
     """console rows: {i: entry indexes, real, delta, start, wrap (a wrap row goes before), text}. ts = [(fw ms or None, sure)].
-    Host clock only for the current boot (boots: per entry boot, cur_boot; else the lines after the newest boot line)."""
+    Host clock only for the current boot (boots: per entry boot, cur_boot; else the lines after the newest boot line).
+    boot_base: g_usAwtoBootBase (this boot's reset -> fw ms 0), used when its Timer2 start line is not in evs"""
     last_boot = max((k for k, e in enumerate(evs) if e[0] == BOOT_EV), default=0)
     base = boot_bases(evs)
     out, k = [], 0
@@ -450,7 +419,7 @@ def con_rows(evs: list, texts: list[str], ts: list, ht: dict | None = None, boot
             g.append(g[-1] + 1)
         ev, (t, sure) = evs[k], ts[k]
         cur = (boots[k] == cur_boot) if boots is not None else (k >= last_boot)
-        b0 = (base[k] or 0) if cur else 0                # as the console: the base is kept for this boot only (g_usAwtoBootBase)
+        b0 = base[k] if base[k] is not None else ((boot_base or 0) if cur else 0)    # any boot with its Timer2 line (the console: this boot)
         st, wrap, d = is_start(ev), False, None
         same_boot = boots is None or (k > 0 and boots[k - 1] == boots[k])
         if st:
@@ -477,7 +446,7 @@ def row_lines(rs: list[dict], ts: list | None = None, evs: list | None = None) -
         if ts is not None and evs is not None:
             t = ts[r["i"][0]][0]
             raw = f"  [fw {'?' if t is None else t} ms, ring {evs[r['i'][0]][2]}]"
-        out.append(f"{r['real']} {fmt_delta(r['delta'])}:" + (f"-- {r['text']} --" if r["start"] else r["text"]) + raw)
+        out.append(f"{r['real']} {fmt_delta(r['delta'])}:" + (f"-- {r['text']} {START_WORD} --" if r["start"] else r["text"]) + raw)
     return out
 
 
@@ -746,7 +715,7 @@ def ring_rows(h: dict, lines: list[str], ht: dict | None, t2: int | None, join: 
     -> [(plain, painted)]: painted = class colour of the row's first line on a TTY (rows = sync.tsv rows), else plain"""
     evs = h.get("events", [])
     ts = unwrap(evs, fw_now(ht, t2) if ht and t2 is not None else None, h.get("ms32"))
-    rs = con_rows(evs, [ln.split(":", 1)[1] for ln in lines], ts, ht, join=join)
+    rs = con_rows(evs, [ln.split(":", 1)[1] for ln in lines], ts, ht, join=join, boot_base=h.get("boot_base"))
     out, classes = [], (sync_classes.load() if rows is not None and sync_classes.use_colour() else None)
     for r in rs:
         for ln in row_lines([r], ts, evs):
@@ -846,6 +815,7 @@ def main() -> int:
         NOTE_DDR = lambda seq: notes.setdefault(seq, DN2.text_of(io, seq))      # note text from the DDR note store, as the ring path
         sys.modules.setdefault("sync_log", sys.modules[__name__])                # run as a script: dram_log's `import sync_log` must see this copy
         ht, t2 = read_ht(io, a.map)
+        bb = X.read_blocks(io, sym(a.map, "g_usAwtoBootBase"), 2) if " _g_usAwtoBootBase " in a.map.read_text(errors="replace") else None
         read_at = T2_READ_AT or dt.datetime.now().astimezone()
         xh = X.read_blocks(io, sym(a.map, "g_stAwtoSync"), V4_HDR)
         wr = int.from_bytes(bytes(xh[19:23]), "big") if xh else None
@@ -860,7 +830,7 @@ def main() -> int:
             return 0
         log(f"dram log: gen {snap['gen']} boot {snap['boot']} next index {snap['next']} (wraps {snap['next'] // snap['slots']}), {len(snap['entries'])} entries, "
             f"{stats.get('bursts', 0)} DDR bursts in {stats.get('s', 0):.1f} s")
-        for ln in D.con_lines(rows, snap["entries"], snap["boot"], ht):
+        for ln in D.con_lines(rows, snap["entries"], snap["boot"], ht, int.from_bytes(bytes(bb), "big") if bb is not None else None):
             log(ln)
         return 0
     ep_abs = None
@@ -869,21 +839,24 @@ def main() -> int:
         ep_abs = int.from_bytes(bytes(b), "big") if b is not None else None
     raw = read_ring(lambda ad, n: X.read_blocks(io, ad, n), sym(a.map, "g_stAwtoSync"), a.whole, ep_abs)
     ht, t2 = read_ht(io, a.map) if raw is not None else (None, None)
+    bb = X.read_blocks(io, sym(a.map, "g_usAwtoBootBase"), 2) if raw is not None and " _g_usAwtoBootBase " in a.map.read_text(errors="replace") else None
     note = read_note(io, a.map) if raw is not None else None
     if raw is not None and " _AwtoDdrNoteWrite " in a.map.read_text(errors="replace"):
         import ddr_note_read as DN
         cache: dict = {}
         NOTE_DDR = lambda seq: cache.setdefault(seq, DN.text_of(io, seq))
     try:
-        h, lines = (decode(bytes(raw), rows, a.whole, note, getattr(raw, "ms32", None)) if raw is not None else (None, []))
+        h, lines = (decode(raw if isinstance(raw, Ring) else bytes(raw), rows, a.whole, note, getattr(raw, "ms32", None))
+                    if raw is not None else (None, []))      # a Ring keeps ms32 + the long-episode entries
     finally:
         io.close()
     if raw is None:
         log("sync: read over 0x35 failed")
         return 1
+    h["boot_base"] = int.from_bytes(bytes(bb), "big") if bb is not None else None
     if h["magic"] != b"SY":                              # #158: wrong map (not the running image) reads another address
-        st = ROOT / f"tmp/fw/{a.serial}-flash-state.json" if a.serial else None
-        img = json.loads(st.read_text()).get("image") if st and st.exists() else "? (pass --serial)"
+        import flash_registry
+        img = (flash_registry.current(a.serial).get("tag") or "?") if a.serial else "? (pass --serial)"
         log(f"sync: header {bytes(raw[:HDR]).hex(' ')} has no 'SY' magic at {a.map.name}'s g_stAwtoSync: the map is not the "
             f"running image's? flash-state image {img}")
         return 2

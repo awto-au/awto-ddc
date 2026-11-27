@@ -5,7 +5,8 @@ usage: AWTO_SIM_CORE=fast con_keep_sim.py BIN [--map MAP]
 Marked lines = ring entries id 0x01 (no sync.tsv row, prints "event 01 NN"), injected like AwtoSyncPush writes them.
 - keep-episode: marks 1-5, a new episode (BEGIN + ep_seq moved), marks 6-7; the console closed and reopened (test cmd 0x27 / 0x26)
   must show all seven (older episodes stay in the view); the ring itself unchanged by the close / reopen.
-- keep-flood: 70 more marks (ring 80, map ~54 rows): after a reopen the newest lines are on the console, contiguous, newest last.
+- keep-flood: 70 more marks: after a reopen the episode start row, then the newest AWTO_LOG_VIEW_N - 1 lines, contiguous, newest last (#358).
+- keep-warm also: closed + reopened after the reset, the first log row is this boot's red boot row.
 - keep-warm: watchdog reset (test cmd 0x4C; the chip keeps RAM): the ring still holds the marks, followed by the boot line of the
   new boot ("previous boot" = the lines above it); a cold power-up (canary lost) starts an empty ring.
 Exit 1 on a failed check. Log: tmp/logs/con_keep_sim.log
@@ -31,6 +32,9 @@ OPEN_S = 4.0            # console open: font load + map clear + backfill (one li
 DRAW_MAX_S = 60.0       # 80 ring lines x 0.34 s per line in the sim (measured 2026-11-21, fast core), x2
 BITE_INSTR = 40_000_000  # boot_sim.py: test cmd 0x4C -> reset = 14 M instr (cmd 0.1 s + warning 1.03 s), x2.5
 RESET_S = 160_000_000   # boot instruction budget (con_wrap_sim)
+_CON = (ROOT / "fw/osd/console.c").read_text()
+_DEF = {k: int(re.search(rf"^#define {k}\s+(\d+)", _CON, re.MULTILINE).group(1)) for k in ("AWTO_VIEW_ROWS", "AWTO_LOG_HDR")}
+VIEW_N = _DEF["AWTO_VIEW_ROWS"] - (_DEF["AWTO_LOG_HDR"] + 1) - 2    # console.c AWTO_LOG_VIEW_N: backfill under the episode start row
 
 
 class KSim(C.Sim):
@@ -143,7 +147,8 @@ def main() -> int:
     reopen(s, lambda m: m[-27:] == want)
     on = marks_on(s)
     s.check(on[-27:] == want, "keep-flood: newest 27 marks on the reopened console, contiguous, newest last", f"{len(on)} marks, tail {on[-3:]}")
-    s.check(len(on) >= 45 and on == sorted(on), "keep-flood: at least 45 of the map's 54 rows are log lines (49 measured), in ring order", f"{len(on)} marks")
+    s.check(len(on) == VIEW_N - 1 and on == sorted(on), f"keep-flood: the episode start row + the newest AWTO_LOG_VIEW_N - 1 = {VIEW_N - 1} lines, in ring order (#358)",
+            f"{len(on)} marks")
 
     # keep-warm
     held = ddr_marks(s)
@@ -167,6 +172,15 @@ def main() -> int:
     s.until(lambda: "AWTO DIAGNOSTICS" in (s.text() or [""])[0], OPEN_S)
     s.check(s.until(lambda: any("keep-note-marker" in r for r in s.text()), 1.0) or True, "keep-warm: console open after the reset")
     s.check(boots and last_mark >= 0 and boots[-1] > last_mark, "keep-warm: this boot's reason line comes after the previous boot's lines", f"boot at {boots[-1:]} last mark {last_mark}")
+    s.cmd(CMD_CLOSE)
+    s.bus.wait(C.DRAW_S)
+    s.cmd(CMD_OPEN)                                         # reopened: drawn anew from the ring (the boot auto-open may have scrolled)
+    s.until(lambda: "AWTO DIAGNOSTICS" in (s.text() or [""])[0], OPEN_S)
+    s.bus.wait(C.DRAW_S)
+    first = next((r[C.LOG_COL:] for r in s.text()[1:] if C.HEAD.match(r[C.LOG_COL:])), "")
+    body = first[C.HEAD.match(first).end():].rstrip() if first else ""
+    s.check(C.RULE.match(body) is not None and body.startswith("-- boot:") and "event 01" not in body,
+            "keep-warm: the first log row is this boot's red '-- boot:... started ---' row (no previous-boot line above it, #358)", body[:90])
     C.say(f"{'PASS' if s.fails == 0 else 'FAIL'} con_keep_sim {a.bin.name}: {s.fails} failed")
     return 1 if s.fails else 0
 

@@ -168,3 +168,61 @@ def dt_wall(fw: int) -> str:
     import datetime as dt
     t = HT["epoch"] + (HT["frac"] + fw - HT["fw"]) / 1000
     return dt.datetime.fromtimestamp(t, dt.timezone(dt.timedelta(minutes=15 * HT["ofs"]))).strftime("%H:%M:%S.%f")[:12]
+
+
+ROWS = SL.load_rows(Path(__file__).resolve().parent.parent / "fw/awto/sync.tsv")
+
+
+def _rows_of(ents, ht=None, base=None, join=True):
+    """[(id, arg, ms32, val)] -> console rows as text, every line 32-bit (DRAM log)"""
+    evs = [(i, a, m & 0xFFFF, v) for i, a, m, v in ents]
+    ms = [m for _, _, m, _ in ents]
+    texts = [SL.line(ROWS, e, 0).split(":", 1)[1] for e in evs]
+    ts = SL.unwrap(evs, None, ms)
+    return SL.row_lines(SL.con_rows(evs, texts, ts, ht, join=join, boot_base=base), ts, evs)
+
+
+def test_gap_just_under_a_wrap_is_positive_not_negative():
+    """#358 item 2: a gap within 256 ms of 65.536 s read negative from 16 bits; hand values: 65436 ms and 65536 + 30 ms"""
+    out = _rows_of([(0xE7, 3, 1000, 0), (0xE7, 3, 1000 + 65436, 0), (0xE7, 3, 1000 + 65436 + 65566, 0)], join=False)
+    assert "+65.4 s:" in out[1] and "+65.5 s:" in out[2] and not any(" -" in x.split(":", 3)[2][:9] for x in out[1:])
+
+
+def test_start_rows_say_started_one_per_start():
+    """the boot line and a real BEGIN are red '-- ... started --' rows; a BEGIN flagged AWTO_SYNC_BEGIN_IN (inside an unsettled start) is not"""
+    ents = [(0xD0, 1, 0xFFFFFFFC, 0), (0xD2, 2, 0, 31), (0xC0, 1, 5, 0xFF),
+            (0xC0, 5, 400, (1 << 24) | 5),             # picture lost inside the unsettled power-on: a line, no red row
+            (0xC0, 3, 9000, 5),                        # wake on D2: a start
+            (0xC0, 3, 9020, (1 << 24) | 5),            # the hold's fast wake inside it: a line
+            (0xC0, 2, 20000, 6)]                       # switch to D3: a start
+    out = _rows_of(ents)
+    st = [x for x in out if " started --" in x]
+    assert len(st) == 3 and st[0].split(":", 3)[3].startswith("-- boot:") and "wake on" in st[1] and "switch to" in st[2]
+    assert "+  0 ms:-- wake on" in st[1] and "+  0 ms:-- switch to" in st[2]
+    assert "+ 27 ms:-- boot:" in st[0]                                          # since the MCU reset: -4 + 31 (Timer2 start line)
+
+
+def test_boot_row_zero_from_the_firmware_base_when_the_timer2_line_is_gone():
+    """the 88-line window lost the Timer2 start line: the boot row still counts from the MCU reset (g_usAwtoBootBase = 122)"""
+    out = _rows_of([(0xD0, 1, 0xFFFFFFFC, 0), (0xE7, 3, 5000, 0)], base=122)
+    assert "+118 ms:-- boot:" in out[0] and out[0].startswith("u00:00:00.118") and out[1].startswith("u00:00:05.122")
+
+
+def test_16bit_ring_gap_over_the_wrap_is_a_wrap_row():
+    """version 3 ring (no 32-bit ms): two lines 70 s apart with no anchor between -> a red wrap row, no number; anchors around -> sure"""
+    evs = [(0xD8, 1, 1000, 1000), (0xE7, 3, (1000 + 70_000) & 0xFFFF, 0)]
+    ts = SL.unwrap(evs, None)
+    out = SL.row_lines(SL.con_rows(evs, ["a", "b"], ts), ts, evs)
+    assert sum(SL.WRAP_TEXT in x for x in out) == 1 and "+ 4.4 s" not in out[-1]
+    evs.append((0xD8, 2, (1000 + 70_000 + 10) & 0xFFFF, 1000 + 70_000 + 10))   # the next full time: 70 s did wrap, still not sure
+    ts = SL.unwrap(evs, None)
+    assert ts[1][1] is False
+
+
+def test_dram_previous_boot_row_from_its_own_reset():
+    """dram_log history: a previous boot's boot row counts from its own MCU reset (its D2 02 line: 40 ms), not negative"""
+    ents = [{"abs": 0, "boot": 6, "id": 0xD0, "arg": 3, "ms": 0xFFFFFFFB, "val": 0}, {"abs": 1, "boot": 6, "id": 0xD2, "arg": 2, "ms": 0, "val": 40},
+            {"abs": 2, "boot": 7, "id": 0xD0, "arg": 1, "ms": 0xFFFFFFFC, "val": 0}]
+    out = D.con_lines(ROWS, ents, 7, None)
+    assert "+ 35 ms:-- boot:warm reset" in out[1] and out[1].split()[1].startswith("u00:00:00.035")
+    assert "+118 ms:-- boot:cold" in D.con_lines(ROWS, ents, 7, None, 122)[-1]     # this boot: g_usAwtoBootBase read with the history

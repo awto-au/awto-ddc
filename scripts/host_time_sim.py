@@ -223,8 +223,15 @@ def main() -> int:
     g = s.get()
     s.check(g is not None and 4950 <= g["cur"] <= 5050, "get E9: drift ~ +5000 ms", str(g))
     row = next((r for r in s.text() if "drift +" in r), "")
-    mt = re.search(r"([+-][ \d]{3} ms|[+-][ \d]\d\.\d s|[+-][ \d]{4} [sh]):drift", row)    # Dan 2026-11-27: delta column, not wall time
-    s.check(mt is not None, "console line time column = delta since the line above (+xxx ms:)", repr(row.strip()[:40]))
+    mt = re.search(r"([+-][ \d]{3} ms|[+-][ \d]\d\.\d s|[+-][ \d]{4} [sh]):drift", row)    # Dan 2026-11-27: real time AND delta
+    s.check(mt is not None, "console line delta column = since the line above (+xxx ms:)", repr(row.strip()[:40]))
+    mw = re.search(r"(?:^|\s) (\d\d):(\d\d):(\d\d)\.(\d{3}) [+-]", row)                     # #358: real-time column restored
+    got = (int(mw.group(1)) * 3600 + int(mw.group(2)) * 60 + int(mw.group(3))) + int(mw.group(4)) / 1000 if mw else None
+    want = sent3.hour * 3600 + sent3.minute * 60 + sent3.second + sent3.microsecond / 1e6
+    s.check(got is not None and abs(got - want) < 0.5, "console line real-time column = host wall time HH:MM:SS.mmm (synced: ' ', not 'u')",
+            f"{row.strip()[:40]!r} vs sent {sent3.time().isoformat('milliseconds')}")
+    mu = next((r for r in s.text() if re.search(r"u\s?\d+:\d\d:\d\d\.\d+ [+-].*boot:", r)), None)
+    s.check(mu is None, "after a sync, this boot's lines show host time (no 'u' uptime row for this boot)", repr((mu or "")[:40]))
 
     # changed cells only: OSD writes in one idle tick vs the whole title
     s.bus.wait(TICK_S)

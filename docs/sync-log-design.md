@@ -65,27 +65,32 @@ Existing sync lines stay (C1 / C6 / C2 / F0..F4 / FC / system machine); the new 
 - DP trainings count TP1 starts: a source that retrains with a new TP1 write counts each; one counted by the EXINT even before the main loop saw it.
 - A wake search that ends in POWER SAVING writes no FAILED line: the system line `wake search found no source` states it (a FAILED line there splits the system transition from its LED line: panel_sim LED gate).
 
-## Console time columns and episode starts (Dan 2026-11-27, awto-ddc#354)
+## Console time columns and episode starts (Dan 2026-11-27, awto-ddc#354, #358)
 - Columns, 22 cells + ':' (`AWTO_LOG_TIME_W`, text at `AWTO_LOG_TXT0` = 23): real time, space, delta (`fw/osd/console.c` `AwtoPutReal` / `AwtoPutDelta`, host `sync_log.real_col` / `fmt_delta`):
-  - real time, 13 cells: ` HH:MM:SS.mmm` = host clock (line of this boot, a host sync known); `uHH:MM:SS.mmm` = uptime of the line's boot; `u-0:00:00.ddd` = a line re-based before the Timer2 start; from 100 h `uhhhh:mm:ss.t`.
+  - real time, 13 cells: ` HH:MM:SS.mmm` = host clock (line of this boot, a host sync known); `uHH:MM:SS.mmm` = uptime since the MCU reset (fw ms + `g_usAwtoBootBase`; another boot's line: fw ms); `u-0:00:00.ddd` = another boot's line made before its Timer2 start; from 100 h `uhhhh:mm:ss.t`.
   - this boot: the line's absolute ring index >= `g_ulAwtoBootAbs` (index of this boot's `D0` line, set at the push, moved by `AwtoDlInit`); older lines keep their boot's uptime.
   - delta, 7 cells: ms since the ring line above. Up to 999 ms `+xxx ms`; up to 99.9 s `+xx.x s`; up to 9999 s `+xxxx s`; then `+xxxx h`; `-` = a step back (Timer2 re-base). Blank = no line above.
 - Full times: DRAM log images carry 32-bit fw ms per line (tail entry bytes 8..9, DDR entry): deltas and real time are exact over any gap; no wrap row is needed there.
-- `_AWTO_DRAM_LOG` off (16-bit ring, no gate builds it): real-time column blank, delta = 16-bit step (a gap of 65.5 s or more wraps unseen).
-- Host decoders (`sync_log.py`, `dram_log.py`): the same columns, then `[fw <32-bit ms> ms, ring <ms16>]`. A version 3 (16-bit) delta is used only between full times it lands on exactly (C0 / D8 anchors, now); otherwise a red row `-- relative time reset: counter wrap --`, blank delta and real time on the next line (Dan 2026-11-27).
+- `_AWTO_DRAM_LOG` off (16-bit ring, no gate builds it): real-time column blank, delta = 16-bit step (a gap of 65.5 s or more wraps unseen; no console wrap row: open, #358).
+- Host decoded row (`sync_log.row_lines`; `sync_log.py`, `dram_log.py`, `rtd_diag --sync`; the GUI parses it). Final for #358:
+  - `<real 13> <delta 7>:<text>  [fw <32-bit ms or ?> ms, ring <ms16>]`; `synclog` prefixes each row with its log stamp + two spaces.
+  - start row: `<real> <delta>:-- <text> started --` (the console draws `-- <text> started ---` to the row end; `(N lines not shown)` after `started` when the episode is longer than the view).
+  - wrap row: 13 spaces, 7 spaces, `:-- relative time reset: counter wrap --`; the next row has a blank delta and real time.
+  - joined row: texts after ` | ` (a text may hold ` | ` itself: `run << 4 | why`).
+- 16-bit deltas: a version 3 delta is used only between full times it lands on exactly (C0 / D8 anchors, now); otherwise the wrap row (Dan 2026-11-27). Every version 4 (DRAM log) line has its 32-bit ms.
 - Joined rows (`AWTO_LN_PAIR`, host `JOIN_PAIRS`): a listed next line within `AWTO_LN_JOIN_MS` (3 ms: pushes of one call) shares the row after ` | `; the live draw leaves a newest group leader for one call (the next push or the OSD poll), no time wait.
   - monitor heartbeat rows (not an ADC move): `monitor: IOSC 2001 | 300/s gap 12.6ms | free 301/s busy 39% worst 1.937ms | up 1150s stk D4`;
   - `frame buffers` + `memory`; `display frame rate` + `scaling` + `FRC width`.
   - Delta / real time of a joined row = its first line; the next row's delta counts from the last joined line.
   - Not joined: the backlight on / pin / PWM lines (joined they still take two rows), an ADC move.
-- Episode start row is never lost at the top (Dan 2026-11-27): `g_ulAwtoEpAbs` = absolute index of the current episode's start row (boot line / start BEGIN). A console open / redraw whose backfill starts after it draws that row first, from the DDR (`g_ucAwtoAtLaps` past a seq wrap), with `(N lines not shown)` before the rule; the backfill follows. Cost: XDATA 9 B (EpAbs 4, laps 2, hidden count 2, jump 1), no pass cost when the console is closed.
+- Console open / reopen / settle redraw = the current episode (#358): its start row first, never an older episode above it (also after a warm reset). `g_ulAwtoEpAbs` = absolute index of the start row (boot line / start BEGIN). Longer than the view: the start row from the DDR (`g_ucAwtoAtLaps` past a seq wrap) with `(N lines not shown)`, then the newest `AWTO_LOG_VIEW_N` - 1 lines (map-full redraw: `AWTO_LOG_REDRAW_N` - 1). Older episodes: `synclog --whole` / `--dram`. Cost: XDATA 9 B (EpAbs 4, laps 2, hidden count 2, jump 1), no pass cost when the console is closed.
 - Host one-episode read (DRAM log): every line of the episode from the DDR, up to 175 (seq window; a unit 3 boot is ~127), not the newest 88; `--dram` reads any length.
-- Episode start = a red row `-- text ---` to the row end (`AWTO_T_STYLE_EPOCH` = the alert style, palette `AWTO_PAL_DIAG_ALERT`). Coloured text row: the font is ASCII (no box-drawing glyph), and an OSD window per row is not available.
+- Episode start = a red row `-- text started ---` to the row end (`AWTO_T_STYLE_EPOCH` = the alert style, palette `AWTO_PAL_DIAG_ALERT`). Coloured text row: the font is ASCII (no box-drawing glyph), and an OSD window per row is not available.
 - Starts and their zero (the delta on the red row):
-  - boot line (`D0`, first of the power-on episode): MCU reset = fw ms 0; lines logged before Timer2 starts are re-based and can be a few ms below 0.
+  - boot line (`D0`, first of the power-on episode): ms since the MCU reset = its fw ms + `g_usAwtoBootBase` (ms from the reset to the Timer2 start = fw ms 0; also the value of `D2 02 Timer2 1ms tick running, N after the reset`). Never negative. Host: the D2 02 line of that boot, else `g_usAwtoBootBase` read with the ring.
   - `C0` BEGIN switch / wake / power key / picture lost: the BEGIN itself (0). Each is pushed where the trigger is seen: VCP 0x60 / key / selector (switch), the wake poll's trigger pass or the SDK power-status change (wake), the judge pass (picture lost).
-  - Not a start: the power-on BEGIN (inside the boot episode), a switch inside an unsettled power-on / wake (value bits 31..24 = `AWTO_SYNC_BEGIN_IN`).
-- Picture lost (`AWTO_SYNC_K_LOST`, `C0 05`): `SysJudge.c` when the judge check resets ACTIVE (any cause) or DISPLAY SETTING (source unstable) to SEARCH. No console auto-open; the sync-done state stays (its `FAILED:signal lost` line comes at NO SIGNAL). The L1 hold path is unchanged (signal back = a wake episode).
+  - Not a start (value bits 31..24 = `AWTO_SYNC_BEGIN_IN`): the power-on BEGIN; inside an unsettled episode a switch (not after a switch), a picture lost (judge reset of a switch: AUTO key / KVM), a fast wake of the hold after a picture lost. One red row per start.
+- Picture lost (`AWTO_SYNC_K_LOST`, `C0 05 picture lost on Dn`): `SysJudge.c` when the judge check resets ACTIVE (any cause, also into the L1 hold) or DISPLAY SETTING (source unstable). No console auto-open. After a DONE: `FAILED:signal lost` at once, the detect state reset, so the resync writes a new `sync DONE` (fast wake / fast switch: at `AwtoSyncSettle`).
 
 ## Gap lines (#284: where the time goes; no behaviour change)
 - `INITIAL:first exit check at Nms` / `longest gap between checks Nms` / `SDK <source|mode|OSD|other> flag set until Nms` (id 93, ms since INITIAL began, 4 ms steps): INITIAL ends when no SDK change flag is set at a judge pass; a flag line is written only for a flag seen set; a long gap = the main loop was blocked between passes (see the slow-wait / long-block lines).

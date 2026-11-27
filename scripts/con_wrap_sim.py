@@ -48,7 +48,7 @@ LONG = ((0x13, 0x4A, (0x8E << 24) | 0xFFFFFF), (0x14, 0x13, (0x0E << 8) | 0x04),
 PORT = re.compile(r"\b(DP-1|HDMI-\d+|Input D\d+|D\d)\b")
 REAL = r"(?P<real>[ u][ \d-]\d:\d\d:\d\d\.\d{3}|u[ \d]{4}:\d\d:\d\d\.\d| {13})"      # sync_log.real_col (console AwtoPutReal)
 HEAD = re.compile(r" ?" + REAL + r" ([+-][ \d]{3} ms|[+-][ \d]\d\.\d s|[+-][ \d]{4} [sh]| {7}):")   # + the delta column (sync_log.fmt_delta)
-RULE = re.compile(r"^-- (.*?) -+$")      # an episode start row: "-- text ---..." to the row end
+RULE = re.compile(r"^-- (.*?) started(?: \(\d+ lines not shown\))? -+$")      # an episode start row: "-- text started ---..." to the row end
 
 
 def say(s: str):
@@ -70,6 +70,10 @@ class Sim:
         self.eng = D.DdcEngine()
         self.bus = S.SimBus(binp, mapp, "conwrap-" + binp.stem, None, boot=False, devs=[self.model, self.eng], video="1080p60")
         self.m = self.bus.m
+        try:
+            self.a_base = self.m.addr("g_usAwtoBootBase")     # this boot's reset -> fw ms 0 (console uptime / boot row zero)
+        except Exception:                                  # noqa: BLE001 - an image without it (SimError per core)
+            self.a_base = None
         self.mccs = D.Mccs(self.bus, self.eng)
         self.rows = SL.load_rows(SL.tsv_for(mapp))
         self.a_sync, self.a_pwr = self.m.addr("g_stAwtoSync"), self.m.addr("isr_g_stPowerInfo")
@@ -109,7 +113,8 @@ class Sim:
         """the ring as console rows (sync_log.con_rows: 32-bit times of a DRAM log image, joined groups)"""
         h, lines = SL.decode(SL.read_ring(self.m.rd, self.a_sync), self.rows, whole=True)
         ts = SL.unwrap(h["events"], None, h.get("ms32"))
-        return SL.con_rows(h["events"], [x.split(":", 1)[1] for x in lines], ts, ht)
+        bb = int.from_bytes(bytes(self.m.rd(self.a_base, 2)), "big") if self.a_base is not None else None
+        return SL.con_rows(h["events"], [x.split(":", 1)[1] for x in lines], ts, ht, boot_base=bb)
 
     def ring(self) -> list[str]:
         """console row texts (joined), each as a host line "text" """

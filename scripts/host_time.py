@@ -114,9 +114,9 @@ def dbg_bus(u: dict) -> int | None:
 def send_dbg(u: dict, bus: int) -> bool:
     """Host time over the debug link: payload into aucPend, then the apply command; confirmed by the sync count."""
     import dbg_xdata as X
+    import flash_registry
     import rtd_i2c_bridge as B
     from sync_log import sym
-    import flash_registry
     rec = flash_registry.current(u["serial"])                 # the shared flash record: the running image's map, any tree (#358)
     if not rec.get("map"):
         raise OSError(f"no map in the flash record of {u['serial']} (dev.py flash-record show)")
@@ -149,9 +149,18 @@ def send_dbg(u: dict, bus: int) -> bool:
 BOOT_CHECK_S = 30   # --loop: get VCP E9 (syncs since boot) this often; 0 = the unit booted (watchdog, power, a reset dev.py did not see): send at once
 
 
+def flashing(u: dict) -> str:
+    """'owner tool' while a live flash holds the unit lock (no DDC/CI during ISP), else ''"""
+    import unit_lock
+    cur = unit_lock.read(u["serial"])
+    if not cur or "flash" not in cur.get("tool", "") or not unit_lock.alive(int(cur.get("pid", "0") or 0)):
+        return ""
+    return f"{cur.get('owner')} {cur.get('tool')}"
+
+
 def booted(u: dict, bus: int | None) -> bool:
-    """True when the unit answers get VCP E9 with 0 syncs since boot; any error: False (the period send logs it)"""
-    if bus is None:
+    """True when the unit answers get VCP E9 with 0 syncs since boot; any error or a flash running: False (the period send logs it)"""
+    if bus is None or flashing(u):
         return False
     try:
         i2cbus.require_unit(bus, u["serial"])
@@ -166,6 +175,9 @@ WAIT_GAP_S = 0.5    # --wait: between tries (each try = a bus scan, ~0.7 s); the
 
 def one(n: str, u: dict, bus: int | None) -> tuple[bool, int | None]:
     """one send to unit n: DDC/CI, else the debug link; (ok, bus to reuse next period)"""
+    if f := flashing(u):
+        log(f"unit {n} {u['serial']}: not sent: a flash holds the unit ({f}); dev.py flash sends one after its reset")
+        return False, bus
     try:
         bus = bus if bus is not None else kvm.find_bus(u)
         if bus is not None:

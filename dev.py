@@ -240,8 +240,29 @@ def cmd_doctor(_extra: list[str]) -> int:
     if missing:
         log(f"missing tools: {', '.join(sorted(set(missing)))}", "ERROR")
         return 1
+    if not _host_time_service_ok():
+        return 1
     log("doctor ok", "ALERT")
     return 0
+
+
+def _host_time_service_ok() -> bool:
+    """#358: host-time.service active, and its installed ExecStart = systemd/host-time.service of this tree; one line either way"""
+    def sc(*a: str) -> str:
+        return subprocess.run(["systemctl", "--user", *a], capture_output=True, text=True, check=False).stdout.strip()
+    want = next((ln.split("=", 1)[1].strip() for ln in (REPO / "systemd/host-time.service").read_text().splitlines()
+                 if ln.startswith("ExecStart=")), "")
+    have = next((ln.split("=", 1)[1].strip() for ln in sc("cat", "host-time.service").splitlines() if ln.startswith("ExecStart=")), "")
+    state = sc("is-active", "host-time.service") or "unknown"
+    if state != "active" or have != want:
+        log(f"host-time : service {state}; installed ExecStart {have or '(none)'!r}, repo {want!r} "
+            f"(install: ln -sf {REPO}/systemd/host-time.service ~/.config/systemd/user/; systemctl --user daemon-reload; "
+            f"systemctl --user restart host-time.service)", "ERROR")
+        return False
+    script = Path(want.split()[1]) if len(want.split()) > 1 else None
+    same = script is not None and script.is_file() and script.read_bytes() == (REPO / "scripts/host_time.py").read_bytes()
+    log("host-time : active, ExecStart = repo file" + ("" if same else f"; NOTE: it runs {script}, not this tree's host_time.py"))
+    return True
 
 
 @command("remove build output only (tmp/sdcc-port, tmp/fw/<serial>/ build dirs); images, maps, manifests, regs, logs kept",
@@ -411,6 +432,19 @@ def _thin(name: str, extra: list[str], direct_fn) -> int:
     try:
         if name == "flash":
             args = [str(Path(a).resolve()) if a.endswith(".bin") and Path(a).is_file() else a for a in extra]
+            if not any(a.endswith(".bin") for a in args):           # no image: this caller's own last build, never the app tree's (#358)
+                u = _units().get(unit) or {}
+                last = FW / f"{u.get('serial', '?')}-last.txt"
+                if not last.is_file():
+                    _say(f"flash: refused: no image given and no {last} in this tree ({REPO}); give the image path")
+                    return 2
+                args.append(str(FW / f"{last.read_text().strip()}.bin"))
+                _say(f"flash: image = this tree's last build {args[-1]}")
+            try:
+                check_image_tree(Path(next(a for a in args if a.endswith(".bin"))), REPO, "--any-image" in args)
+            except SystemExit as e:
+                _say(f"flash: {e}")
+                return 2
             return GC.run_flash(args, unit, say=_say)
         return GC.run_legacy(name, extra, unit, say=_say)
     except GC.GuiError as e:
@@ -538,6 +572,24 @@ def check_image_identity(u: dict, img: Path) -> None:
     if me.encode() not in found:
         raise SystemExit(f"image {img.name} does not embed serial {me} (not built by `dev.py build --unit`?); "
                          f"--any-image to flash it anyway")
+
+
+def check_image_tree(img: Path, tree: Path, old_ok: bool = False) -> None:
+    """#358: the image's commit (<stem>.build.json) must be in `tree`'s HEAD history: scripts older than the image never flash it.
+    old_ok (--any-image): an image with no build commit is flashed with a WARN; a commit outside the history is always refused."""
+    c = flash_registry.build_commit(img).removesuffix("+dirty")
+    head = subprocess.run(["git", "-C", str(tree), "rev-parse", "--short=8", "HEAD"], capture_output=True, text=True, check=False).stdout.strip()
+    if not c and old_ok:
+        log(f"flash: image {img.name} has no build commit; tree {tree} at {head} cannot check it (--any-image)", "WARN")
+        return
+    if not c:
+        raise SystemExit(f"image {img.name} has no build commit ({img.stem}.build.json); tree {tree} at {head} cannot check it: "
+                         f"--any-image to flash it anyway; nothing done")
+    r = subprocess.run(["git", "-C", str(tree), "merge-base", "--is-ancestor", c, "HEAD"], capture_output=True, text=True, check=False)
+    if r.returncode != 0:
+        raise SystemExit(f"image {img.name} is built from {c}, which is not in the history of tree {tree} (HEAD {head}): "
+                         f"flash it from the tree that built it; nothing done")
+    log(f"flash: image commit {c} is in the history of {tree} (HEAD {head})")
 
 
 def check_gated(img: Path, force: bool) -> None:
@@ -845,6 +897,7 @@ def _flash_direct(extra: list[str]) -> int:
         img = FW / f"{tag}.bin"
     if not any_image:
         check_image_identity(u, img)
+    check_image_tree(img, REPO, any_image)  # the tree running this flash (the app's worker may be another tree's)
     check_gated(img, ungated)
     disk_guard.require_free("flash")        # before the flash-state file is touched (#77)
     identity = None
@@ -891,9 +944,8 @@ def _flash_direct(extra: list[str]) -> int:
             _bus(u, wait_s=RECOVER_BUS_WAIT_S)     # EDID back = rebooted (and the same unit)
     if rc == 5 and before is not None:      # nothing erased: the flash still holds the old image
         flash_registry.restore(u["serial"], before)
-    if rc:
-        _log_unit_state(u, bus, img, rc)
-        _host_time_now(_n)                  # #358: a failed / partial flash also reset the unit (old or held image: one try, WARN only)
+    if rc and not _log_unit_state(u, bus, img, rc):
+        _host_time_now(_n)                  # #358: a failed flash that reset the unit (not one held in ISP on a mixed image)
     if rc == 0:
         rec = flash_registry.record(u["serial"], img)
         log(f"flash: recorded {rec['tag']} ({rec['sha256'][:12]}) in the shared flash record")
@@ -937,16 +989,19 @@ def _unit_settings(u: dict, bus: int, m: Path) -> None:
 FLASH_BUDGET_MIN = 20
 
 
-def _log_unit_state(u: dict, bus: int, img: Path, rc: int) -> None:
-    """After a failed flash: what the unit holds, from the manifest (rtd_flash_image never resets onto a mixed image, #177)."""
+def _log_unit_state(u: dict, bus: int, img: Path, rc: int) -> bool:
+    """After a failed flash: what the unit holds, from the manifest (rtd_flash_image never resets onto a mixed image, #177).
+    True = held in ISP on a mixed image (no reset, no host time)."""
     import flash_state
     st = flash_state.FlashState.load(FW / f"{u['serial']}-flash-state.json", u["serial"], lambda _m: None)
     if st is not None and st.source in ("write-in-progress", "write-failed"):
         log(f"flash rc={rc}: {u['serial']} holds a MIXED image ({st.image}); the scaler is HALTED in ISP (no reset sent). "
             f"Continue: ./dev.py flash --unit <n> --bus {bus} {img}. Do not power-cycle: it boots the mix "
             f"(over DP that kills the bus; then recover over an HDMI DDC cable)", "FATAL")
-    elif rc == 8:
+        return True
+    if rc == 8:
         log(f"flash rc=8: refused by the time budget before any erase; {u['serial']} unchanged and reset (old image)", "WARN")
+    return False
 
 
 @command("deploy one shared firmware image, then separately program this monitor's unique EDID tables",
