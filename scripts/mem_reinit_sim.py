@@ -106,6 +106,12 @@ def main() -> int:
         got = until("->ACTIVE:display set", RECOVER_S)
         check(any("passed after it (set-up try 3)" in ln for ln in got), "set-up try 3 passes after the re-init")
         check(any("->ACTIVE:display set" in ln for ln in got), "back to ACTIVE")
+        try:
+            off = s.bus.m.rd(s.bus.m.addr("g_ucAwtoDdrOff"))[0]
+        except Exception:                     # noqa: BLE001 - core-specific lookup error
+            off = None                        # an image without the DRAM log guard
+        check(off in (None, 0) and not any("log overflow" in ln for ln in got),
+              f"#358: memory up again (g_ucAwtoDdrOff {off}), no DRAM log line dropped across the power cycle")
 
         say("  case stuck: sticky underflow stays")
         fault(True)

@@ -1242,6 +1242,7 @@ extern __xdata StAwtoSyncEv g_stAwtoSyncPin;  // #150: this boot's reason line, 
 extern __xdata unsigned int g_usAwtoBootBase;       // ms from the MCU reset to the Timer2 start (fw/log/sync.c)
 extern __xdata unsigned char g_ucAwtoAtLaps;        // AwtoSyncAt: AWTO_SYNC_WRAP laps further back (console start row only, fw/log/hostnote.c)
 extern __xdata unsigned char g_ucAwtoDdrOff;        // 1 while the memory is powered off (ScalerMemoryPowerControl; fw/log/hostnote.c)
+extern __xdata unsigned char g_ucAwtoDdrUp;         // 1 after this boot's first memory power up (fw/log/hostnote.c)
 #if(_AWTO_DRAM_LOG == _ON)
 #define AWTO_SYNC_ENT(n)                                        ((unsigned char __xdata *)&g_stAwtoSync.stTl[(unsigned char)(g_stAwtoSync.ucHead - (n)) & (AWTO_SYNC_TAIL - 1)])
 extern unsigned char __xdata *AwtoSyncAt(unsigned char ucSeq);

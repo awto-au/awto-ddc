@@ -11,6 +11,7 @@ static __xdata BYTE s_ucDdrN;                       // spin counter and start ti
 static __xdata DWORD s_ulDdrT;
 __xdata BYTE g_ucAwtoAtLaps;                        // AwtoSyncAt: seq laps (AWTO_SYNC_WRAP lines) further back; set by the console for one row only (0 without the DRAM log)
 __xdata BYTE g_ucAwtoDdrOff;                        // 1 while ScalerMemoryPowerControl has the memory off: no port A op (writes were lost, #358)
+__xdata BYTE g_ucAwtoDdrUp;                         // 1 after this boot's first memory power up: the boot-time power down (SysPowerInitial) is not guarded
 
 #pragma place bank(5)
 static unsigned char AwtoDdrIdleMs(void)           // port A command idle (write ~1.7 us); 0 = stall for AWTO_DDRN_STALL_MS, the op is dropped
