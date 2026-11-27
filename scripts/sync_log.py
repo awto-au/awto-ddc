@@ -657,8 +657,9 @@ def read_ring(rd, addr: int, whole: bool = True):
 read_ring.dram_missing = 0
 
 
-def decode(raw: bytes, rows: list[dict], whole: bool = False, note: bytes | None = None):
-    """whole=True: every entry still in the ring (all episodes), times relative to the current episode's t0"""
+def decode(raw: bytes, rows: list[dict], whole: bool = False, note: bytes | None = None, ms32: dict | None = None):
+    """whole=True: every entry still in the ring (all episodes), times relative to the current episode's t0.
+    ms32: ring seq -> 32-bit fw ms (DRAM log), default the Ring's own (bytes(raw) drops it: pass it on)"""
     h = {"magic": raw[0:2], "version": raw[2], "seq": raw[3], "ep_seq": raw[4], "kind": raw[5], "port": raw[6],
              "t0": raw[7] << 8 | raw[8], "done": raw[9], "open_req": raw[10]}
     if h["magic"] != b"SY":
@@ -679,7 +680,7 @@ def decode(raw: bytes, rows: list[dict], whole: bool = False, note: bytes | None
     h["lost"] = lost
     h["n"], h["wrap"] = n_, wrap
     h["events"], h["seqs"], h["raws"] = evs, seqs, raws
-    m = getattr(raw, "ms32", None)
+    m = ms32 if ms32 is not None else getattr(raw, "ms32", None)
     h["ms32"] = [m.get(s) for s in seqs] if m is not None else None
     return h, [line(rows, ev, h["t0"]) for ev in evs]
 
@@ -841,7 +842,7 @@ def main() -> int:
         cache: dict = {}
         NOTE_DDR = lambda seq: cache.setdefault(seq, DN.text_of(io, seq))
     try:
-        h, lines = (decode(bytes(raw), rows, a.whole, note) if raw is not None else (None, []))
+        h, lines = (decode(bytes(raw), rows, a.whole, note, getattr(raw, "ms32", None)) if raw is not None else (None, []))
     finally:
         io.close()
     if raw is None:

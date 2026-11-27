@@ -89,5 +89,6 @@ def test_ring_v4_keeps_32bit_ms():
     raw = SL.read_ring(lambda a, k: img[a:a + k], 0, True)
     h, lines = SL.decode(raw, rows, whole=True)
     assert h["ms32"] == ms
+    assert SL.decode(bytes(raw), rows, whole=True, ms32=raw.ms32)[0]["ms32"] == ms     # main() passes it over the bytes() copy
     out = [ln for ln, _ in SL.ring_rows(h, lines, HT, 0)]
     assert sum("+ 285 s" in x for x in out) == 2 and not any(SL.WRAP_TEXT in x for x in out)
