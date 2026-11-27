@@ -136,6 +136,9 @@ def sync_visit(a: int, v: int) -> str:
     return out + (", dwell re-armed" if a & 8 else "")
 
 
+INI_FLAGS = ("source", "mode", "OSD", "other")        # SDK change flags of the INITIAL exit check (fw/log/sync.c AwtoSyncInitial)
+
+
 def value(fmt: str, arg: int, v: int) -> str:
     if fmt == "vport":
         return "auto" if (v & 0xFF) == 0xFF else f"D{(v & 0xFF) - D0}"
@@ -156,6 +159,8 @@ def value(fmt: str, arg: int, v: int) -> str:
         return SRC.get(v, str(v))
     if fmt == "visit":
         return sync_visit(arg, v)
+    if fmt == "iniflg":                                  # #359 arg = flags seen, value = ms / 4 per flag from bit 31 (console AwtoPutIniFlg)
+        return ",".join(f" {w} {((v >> (24 - 8 * k)) & 0xFF) << 2}ms" for k, w in enumerate(INI_FLAGS) if (arg >> k) & 1)
     if fmt == "pins":                                    # #359 value = changed mask << 8 | levels: "D1 low, D2 high" (console AwtoPutPins)
         return ", ".join(f"D{i + 1} {'high' if (v >> i) & 1 else 'low'}" for i in range(3) if (v >> (8 + i)) & 1)
     if fmt == "pms":                                     # #139 value = port << 16 | ms: "D2, 188ms"

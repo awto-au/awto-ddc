@@ -97,7 +97,9 @@ def test_gap_rows_decode():
     line = S.line(ROWS, (0xF3, 0x80 | 3, 500, 6 << 16), 0)
     assert line == "  500:search reached D3: predetect on, cable detected"
     assert S.line(ROWS, (0x94, 0, 700, (102 << 16) | 100), 0) == "  700:ACTIVE wait:timer 100ms, panel ready 102ms"
-    assert S.line(ROWS, (0x93, 3, 400, 120 << 2), 0).endswith("SDK OSD flag set until 480ms")
+    assert S.line(ROWS, (0x93, 0x0F, 400, 0x09090909), 0).endswith(":INITIAL:SDK flags set until: source 36ms, mode 36ms, OSD 36ms, other 36ms")
+    assert S.line(ROWS, (0x93, 0x04, 400, 120 << 8), 0).endswith(":INITIAL:SDK flags set until: OSD 480ms")
+    assert S.line(ROWS, (0x93, 0, 166, (68 << 16) | 36), 0).endswith(":INITIAL:first exit check at 36ms, longest gap between checks 68ms")
     assert S.line(ROWS, (0x95, 5, 900, 4025), 0).startswith("  900:D2 search dwell re-armed")
 
 
