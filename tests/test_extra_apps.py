@@ -1,6 +1,7 @@
 """Extra source root + app hooks (docs/extra-apps.md): the AWTO_APP scan / generator, the build flag, the fw_dirs lists, the example image.
 Run: pytest tests/test_extra_apps.py [--slow]  (--slow builds fw/apps/example, runs fw_gates and the apps_sim on it)"""
 import json
+import os
 import subprocess
 import sys
 from pathlib import Path
@@ -17,6 +18,21 @@ import image_variant as IV
 
 EXAMPLE = ROOT / "fw/apps/example"
 TRACKED = ("fw/bank_map.tsv", "fw/xdata_layout.tsv")
+LEAKY_ENV = (FD.EXTRA_ENV, "K2S_SDCC_EXTRA")     # fw_build.parse_args writes os.environ directly (#356)
+
+
+@pytest.fixture(autouse=True)
+def restore_build_env():
+    """Each test leaves AWTO_EXTRA_FW / K2S_SDCC_EXTRA as it found them: a leak made later variant builds EXTRA_APPS (#356)."""
+    saved = {k: os.environ.get(k) for k in LEAKY_ENV}
+    try:
+        yield
+    finally:
+        for k, v in saved.items():
+            if v is None:
+                os.environ.pop(k, None)
+            else:
+                os.environ[k] = v
 
 
 def src(tmp_path, text, name="a.c"):
