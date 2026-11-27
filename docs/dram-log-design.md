@@ -44,6 +44,13 @@ Host: `scripts/dram_log.py`, `sync_log.py` (`read_ring` version 4, `--dram`), `u
 - So the DDR work (header check, cold clear, write index, flushes) starts at the first drain (`AwtoDlFlush` without FORCE, main loop). Before it, lines wait in the tail (a cold boot makes ~20 lines before the first pass: tail 32).
 - Lines the previous boot left pending (`ucOld`) are written first, with the previous boot's number, not re-based.
 
+## Memory powered off (#358)
+- Measured on unit 3 (800e5789, 2026-11-27T17:31): DDC/CI sleep, wake poll 316 ms later. Lines written while `ScalerMemoryPowerControl(_OFF)` held the memory off were accepted by the port and lost: abs 5457..5464, the wake BEGIN among them. Older lines and the note store survived.
+- `g_ucAwtoDdrOff` (set at OFF after this boot's first ON, cleared at the end of ON): `AwtoDlBurstW / R` and the note port wait return 0, so lines stay pending in the tail and drain after the ON. The boot-time OFF (`SysPowerInitial`) is not guarded: it comes before any ON, and the first-drain rule above covers it.
+- Paths: power saving / power off (SysPower.c), the #353 re-init (`SysMachineMemReinit`: OFF then ON in one call).
+- Re-init burst: lines pushed between OFF and ON are slow-wait lines of the ON path (14 delay / poll sites in docs/delay-audit.tsv: MPLL / DDR2 PLL set, DC PHY init), plus the re-init line and up to `AWTO_DLOG_DRAIN_MAX` 4 pending = at most 19, under the tail flush mark of 28 (32 - `AWTO_SYNC_RESERVE` 4). `mem_reinit_sim` checks no line is dropped.
+- A power saving that logs more than 32 lines: the lines past a full tail are dropped and counted (`log overflow: N lines lost`), never silently.
+
 ## Stall bound (MCU_DC port A)
 - Waits for: CMD idle before a command, READ_FLAG after a read. Expected: idle within the 255-poll spin (a few tens of us; `CMD slow polls 0` in docs/ddr-draw.md).
 - The log only spins (`AWTO_DDRN_SPIN`), no ms wait: a busy port leaves a write pending (retried next pass) or a read unread (zero line, skipped by the console). Each expiry is counted in `g_ucAwtoDlBusy` (255 max).
