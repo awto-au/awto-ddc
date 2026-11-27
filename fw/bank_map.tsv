@@ -720,7 +720,7 @@ fn	_AwtoPortIsDp	7	0x62a7	92
 fn	_AwtoPortMonCable	5	0x76b4	103
 fn	_AwtoPortMonClock	5	0x771b	260
 fn	_AwtoPortMonDdc	0	0x902c	35
-fn	_AwtoPortMonPoll	5	0x781f	442
+fn	_AwtoPortMonPoll	5	0xa965	612
 fn	_AwtoPortName	7	0x6303	252
 fn	_AwtoPortRow	5	0x644d	50
 fn	_AwtoPortSearchSkip	14	0xaa86	101

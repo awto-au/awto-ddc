@@ -3,7 +3,7 @@
 
 usage: portmon_sim.py BIN MAP [--case status|order|all] [--mode 1080p60]
   status  boot to ACTIVE on D3: g_pucAwtoPortSt D3 = cable + clock, D1 / D2 = valid only; then a cable appears on D2 and goes again:
-          the word follows and the FA lines (cable pin high / low) are in the sync log.
+          the word follows and the FA lines (`cable pin: D2 high`, one per poll, #359) are in the sync log.
   nolive  no cable on any port: every port is still searched (the full pass, no port skipped).
   order   boot with D2 uncabled (dead: the search never reaches it) and with D2 cabled but silent (left within SILENT_MAX_MS,
           not the 2 s HDMI dwell); both end ACTIVE on D3.
@@ -73,8 +73,9 @@ def main() -> int:
             say(f"status D2 cable off: {'PASS' if ok else 'FAIL'} {[f'{v:02X}' for v in st]}")
             rc |= 0 if ok else 1
             lines = DP.synclog(a, bus, lambda _s: None)
-            for want in ("D2 cable pin high", "D2 cable pin low", "D3 cable pin high", "D3 TMDS clock stable"):
-                ok = any(want in ln for ln in lines)
+            cab = [ln.split("cable pin: ", 1)[1] for ln in lines if "cable pin: " in ln]
+            for want in ("D2 high", "D2 low", "D3 high", "D3 TMDS clock stable"):
+                ok = any(want in ln for ln in lines) if "TMDS" in want else any(want in c.split(", ") for c in cab)
                 say(f"status line '{want}': {'PASS' if ok else 'FAIL'}")
                 rc |= 0 if ok else 1
         bus.close()
