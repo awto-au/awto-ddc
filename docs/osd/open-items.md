@@ -49,4 +49,4 @@ Every `[?]` in the manual. Tests only on unit 3 (bus 11); nothing here has been 
 
 ## Model gaps (for the model owner; the manual shows "not modelled" for these)
 - Fixed (#263): `sha` / `bor` colour bits 4 / 5, round-corner size codes + tables, chessboard `ADR4` on WIN4_x / 5_x (36ecdc16); pop-on without `fontx2_en`.
-- Not modelled: 24 x 36 layout, font mask regions, roll-up, vertical boundary units, window rotate, HLW border, DISP_PG, scale-up filter / edge modes, VLC-turn, shadow type 1..4 differences.
+- Not modelled: [sim-coverage.md](sim-coverage.md) "Not modelled" and the `unmodelled` rows of [sim-coverage.tsv](sim-coverage.tsv).

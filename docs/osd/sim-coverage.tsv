@@ -32,7 +32,7 @@ blend_level_direction	0x006C[4:2], 0x008F[7:3]	option	sdk-hypothesis	test_blend_
 blend_specific_colour	FRAME_CTRL_08[4:2], FRAME_CTRL_09[7,3:0]	yes	databook	test_specific_colour_blend_nibble_match	modelled	OT-19		bit4 = 0 matches index [3:0] only
 win6_win7_blend	FRAME_CTRL_21[6:2], FRAME_CTRL_09[6:5]	yes	sdk-hypothesis	test_window7_mask_and_window6_function	modelled	OT-16		window 6 blend types, window 7 mask
 highlight_4_1_to_4_8	FRAME_CTRL_2A..56	yes	databook	test_highlight_windows_4_1_to_4_8	modelled	OT-17	highlight	fg / bg colours inside windows 4_1..4_8
-hlw_video_highlight	0x0060, 0x0061, 0x006C[6]	no	spec		unmodelled	OT-18		RGB rectangle border; over / under OSD unknown (not a character-layer feature)
+hlw_video_highlight	0x0060, 0x0061, 0x006C[6]	option	spec	test_hlw_border	spec-model	OT-18		RGB border inside [start, end) on the picture, under the OSD, sides 0x61_0C[7:4], 006C[6] hides; no port auto-increment (SDK sets the address per byte)
 font_1bit	char B0[7:6]=01	yes	hw	test_font_1bit,test_render_pixels	modelled		font_1bit	bg index 0 = transparent
 font_width_zone	char B0[4:0], FRAME_CTRL_02[2:1]	yes	databook	test_font_width_and_zone	modelled	C-NARROW	font_width	minimum width < 4 px unknown
 font_2bit	char B0[7:6]=10, FRAME_CTRL_21..22	yes	hw	test_font_2bit_plane_order,test_font_2bit_offset,test_char_2bit_colours_roundtrip	modelled		font_2bit	plane A = low bit

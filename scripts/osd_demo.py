@@ -60,6 +60,7 @@ class Img:
         self.pal = list(PAL16) + [(4 * i, 255 - 4 * i, 128) for i in range(48)]
         self.ovl = [0x01, 0x00]
         self.pg = bytearray(16)
+        self.hlw = bytearray(M.HLW_PORTS)                 # highlight window port 0x61_00..1F
         self.nfont = 0
         self.rowcmds: list = []
         self.chars: list = []
@@ -83,6 +84,14 @@ class Img:
         self.reg(0x01, x >> 2).reg(0x02, (x & 3) << 6, 0xC0).reg(0x06, x >> 10 << 2, 0x0C)
         self.reg(0x00, y >> 3).reg(0x02, (y & 7) << 3, 0x38)
         self.reg(0x24, font[0] >> 8 << 4 | font[1] >> 8, 0xFF).reg(0x25, font[0] & 255).reg(0x26, font[1] & 255)
+        return self
+
+    def hlw_border(self, x0, y0, x1, y1, width, rgb, sides=(1, 1, 1, 1)):
+        """Highlight window [x0, x1) x [y0, y1) panel px, border width px, RGB, sides L / R / T / B (port 0x61_00..0C, regdb)."""
+        for k, v in enumerate((x0, x1, y0, y1)):
+            self.hlw[2 * k], self.hlw[2 * k + 1] = v >> 8 & 0x1F, v & 255
+        self.hlw[8], self.hlw[9:12] = width & 0x1F, bytes(rgb)
+        self.hlw[12] = sum((not on) << b for on, b in zip(sides, (7, 6, 5, 4), strict=True)) | 1
         return self
 
     def set_pal(self, idx, rgb):
@@ -167,7 +176,7 @@ class Img:
     # -- output
     def state(self) -> M.OsdState:
         return M.OsdState({k: list(v) for k, v in self.win.items()}, {k: list(v) for k, v in self.font.items()}, list(self.pal),
-                          bytes(self.regs), tuple(self.ovl), 0.0, 0, bytes(self.pg))
+                          bytes(self.regs), tuple(self.ovl), 0.0, 0, bytes(self.pg), bytes(self.hlw))
 
     def render(self, W: int = DW, H: int = DH, bg: str = "bars", opt=None, opaque: bool = False) -> np.ndarray:
         return M.render(self.state(), W, H, bg=background(bg, W, H), alpha_opaque=opaque, opt=opt)

@@ -35,4 +35,4 @@ Typed table: [sim-coverage.tsv](sim-coverage.tsv) (feature | registers | modelle
 
 ## Not modelled
 
-- Engine download turn (`3A0B`), hardware remap / lib rotation (`3A41[3:1]`, `3A42`), scale-up edge modes / phase, zero-width windows, `3A57..5A` enable mirrors, `3A18[4]`, `3A07[2]` (regdb contradicts SDK + photo), video highlight window `0x60/0x61`, random pattern mode, SRAM size limit.
+- Engine download turn (`3A0B`), hardware remap / lib rotation (`3A41[3:1]`, `3A42`), scale-up edge modes / phase, zero-width windows, `3A57..5A` enable mirrors, `3A18[4]`, `3A07[2]` (regdb contradicts SDK + photo), video highlight window picture-processing regions (border modelled), random pattern mode, SRAM size limit.

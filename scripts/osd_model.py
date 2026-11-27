@@ -25,6 +25,9 @@ from glyph_decode import CODES, tile
 
 ADR_MSB, ADR_LSB, DATA, MISC, WOPT = 0x90, 0x91, 0x92, 0x93, 0x94
 LUT_ADDR, LUT_PORT = 0x6E, 0x6F
+HLW_ADDR, HLW_DATA = 0x60, 0x61                   # highlight window port (regdb HLW_ADDR_PORT / HLW_DATA_PORT)
+HLW_PORTS = 32                                    # window_reg_adr[4:0]
+OVL_HLW_BORDER_OFF = 0x40                         # 0x006C[6] hlw_border_overlay_disable
 SRAM_WIN, SRAM_FONT = 0, 2
 GW, GH = 12, 18                                   # 1-bit glyph cell
 SRAM_WORDS = 12288                                # _OSD_SRAM_SIZE, RL6449_OSD_Gen_Option.h
@@ -134,6 +137,7 @@ class OsdState:
     t_ms: float = 0.0
     nwr: int = 0
     pg: bytes = b""                                  # page 7 0x07F0..0x07FF: display pattern generator
+    hlw: bytes = b""                                 # highlight window port registers 0x61_00..1F
 
     def reg(self, a: int) -> int:
         return self.regs[a - FRAME] if self.regs else 0
@@ -142,7 +146,7 @@ class OsdState:
 class OsdModel(S.Dev):
     """Write tap on the OSD port + palette; state in .st. `mem` = callable(addr) -> XRAM byte (m.rd) for the protection/VLC regs."""
     reads = (TB_OUT, DATA)
-    writes = (ADR_MSB, ADR_LSB, DATA, WOPT, LUT_ADDR, LUT_PORT, 0xFFF3, TB_CTRL, TB_IN)
+    writes = (ADR_MSB, ADR_LSB, DATA, WOPT, LUT_ADDR, LUT_PORT, HLW_ADDR, HLW_DATA, 0xFFF3, TB_CTRL, TB_IN)
 
     def __init__(self):
         self.st = OsdState()
@@ -152,6 +156,7 @@ class OsdModel(S.Dev):
         self.vlc: VlcDecoder | None = None
         self.vbytes: list[int] = []
         self.lut_idx, self.lut_buf = None, []
+        self.hlw_idx, self.hlw = 0, bytearray(HLW_PORTS)
         self.log: list[tuple] = []                   # (kind, ...) of notable events, for tests
         self.img = b""                               # flash image for the burst-DMA engine (set by the session)
         self.trace: list[tuple] = []                 # (wopt, addr, value) of data-port writes when trace_on
@@ -193,6 +198,12 @@ class OsdModel(S.Dev):
                 if len(self.lut_buf) == 3:
                     self.st.pal[self.lut_idx] = tuple(self.lut_buf)
                     self.lut_idx, self.lut_buf = (self.lut_idx + 1) & 0x3F, []
+            return
+        if a == HLW_ADDR:
+            self.hlw_idx = v % HLW_PORTS
+            return
+        if a == HLW_DATA:                                  # no auto-increment: the SDK sets the address before every byte [spec-model]
+            self.hlw[self.hlw_idx] = v
             return
         if a == 0xFFF3:
             self._burst(m, v)
@@ -318,7 +329,7 @@ class OsdModel(S.Dev):
     def snapshot(self, m, t_ms: float = 0.0) -> OsdState:
         s = self.st
         return OsdState({k: list(v) for k, v in s.win.items()}, {k: list(v) for k, v in s.font.items()}, list(s.pal),
-                        bytes(m.rd(FRAME, 0x100)), (self._rd(m, 0x6C), self._rd(m, 0x8F)), t_ms, s.nwr, bytes(m.rd(PG_BASE, 16)))
+                        bytes(m.rd(FRAME, 0x100)), (self._rd(m, 0x6C), self._rd(m, 0x8F)), t_ms, s.nwr, bytes(m.rd(PG_BASE, 16)), bytes(self.hlw))
 
 
 # --- decoders over a snapshot ---------------------------------------------------------------------------------------
@@ -477,6 +488,18 @@ def pg_image(pg: bytes, W: int, H: int, opt: Opt | None = None) -> np.ndarray | 
     return out
 
 
+def hlw_border(st: OsdState) -> dict | None:
+    """Highlight window border (D-domain, under the OSD) from the port registers 0x61_00..0C [regdb], None when not shown.
+    Start / end 13 bit, end = start + size (SDK ScalerColorHLWDDomainAdjust); width 5 bit; colour R / G / B MSB 8 bit;
+    sides L / R / T / B disabled by 0x61_0C[7:4]; 0x006C[6] hides it. [spec-model] border inside [start, end), panel px (OT-18)."""
+    h = st.hlw
+    if len(h) < 13 or not h[12] & 1 or st.ovl[0] & OVL_HLW_BORDER_OFF or not h[8] & 0x1F:
+        return None
+    w13 = lambda k: (h[k] & 0x1F) << 8 | h[k + 1]
+    return {"x0": w13(0), "x1": w13(2), "y0": w13(4), "y1": w13(6), "w": h[8] & 0x1F, "rgb": (h[9], h[10], h[11]),
+            "sides": tuple(not h[12] >> b & 1 for b in (7, 6, 5, 4))}      # L, R, T, B shown
+
+
 def decode_char(w: list[int]) -> dict:
     """Char command [B0, B1, B2].
     1-bit: B0[7:6]=01, B0[5] = id bit 8 (font 256..511), B0[4:0] = width px; B2 = fg<<4|bg [SDK].
@@ -593,6 +616,12 @@ def render(st: OsdState, W: int = 3840, H: int = 2160, bg=(128, 128, 128), alpha
     pgi = pg_image(st.pg, W, H, opt)                          # pattern generator replaces the picture
     if pgi is not None:
         img[:] = pgi
+    hb = hlw_border(st)                                       # video path: drawn on the picture, the OSD overlays it [spec-model]
+    if hb and hb["x1"] > hb["x0"] and hb["y1"] > hb["y0"]:
+        x0, x1, y0, y1, bw = hb["x0"], hb["x1"], hb["y0"], hb["y1"], hb["w"]
+        for on, (a, b, c, d) in zip(hb["sides"], ((x0, y0, x0 + bw, y1), (x1 - bw, y0, x1, y1), (x0, y0, x1, y0 + bw), (x0, y1 - bw, x1, y1)), strict=True):
+            if on:
+                img[max(b, 0):min(d, H), max(a, 0):min(c, W)] = hb["rgb"]
     g = frame_geometry(st)
     if not g["en"] or not st.ovl[0] & 1:                      # 0x6C[0] overlay port off = ScalerOsdDisableOsd (SRAM keeps its content)
         return img
