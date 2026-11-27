@@ -2719,6 +2719,7 @@ extern __xdata unsigned char g_ucAwtoCardUp;
 #define AWTO_KEY_CLICK_MS                                       30      // key click audible length (Dan 2026-11-18, #229)
 extern void AwtoAudioAmpBoot(void);                             // fw/audio/audio.c: the one owner of P7.3 AMP_MUTE / P7.4
 extern void AwtoAudioAmp(bit bMute);
+extern __xdata BYTE g_ucAwtoAudioTestN;          // fw/audio/audio.c: ear-test step held (PCB_AMP_MUTE guard)
 extern void AwtoAudioAmpEnable(void);                            // P7.4 on, P7.3 stays muted (tone start)
 #define AWTO_AUDIO_TEST_VCP                                     0x63    // VCP code: ear-test steps (+ the internal sine in -D _AWTO_AUDIO_TEST test builds)
 #define AWTO_AUDIO_TEST_STEPS                                   6       // ear-test steps (fw/audio/audio.c), VCP 0x63 (dev.py sound-test)
