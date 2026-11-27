@@ -537,6 +537,9 @@ def line(rows: list[dict], ev: tuple, t0: int) -> str:
     if row["fmt"] == "ms2":                              # #162 s3b: two values, two % (second ms << 16 | first ms)
         p0, p1, p2 = row["text"].split("%")
         return head + pre + f"{p0}{v & 0xFFFF}ms{p1}{v >> 16}ms{p2}"
+    if row["fmt"] == "msn":                              # #359 value = number << 16 | ms: "took 0ms (HPD mask 6)"
+        p0, p1, p2 = row["text"].split("%")
+        return head + pre + f"{p0}{v & 0xFFFF}ms{p1}{v >> 16}{p2}"
     before, _, after = row["text"].partition("%")
     val = (sync_done(a, v, dt) if row["fmt"] == "sdone" else sync_link(a, v) if row["fmt"] == "slink" else
            v if row["fmt"] == "note" else pass_value(rows, i, a, v) if row["fmt"] == "pass" else sys_value(rows, row["fmt"], a, v) if row["fmt"] in ("sys", "sysreq") else

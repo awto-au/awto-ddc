@@ -26,7 +26,7 @@ from _repo import repo_root
 ROOT = repo_root()
 TSV = ROOT / "fw/awto/sync.tsv"
 LOG = ROOT / "tmp/logs/gen_awto_sync.log"
-FMTS = {"-": 0, "vport": 1, "res": 2, "mhz1": 3, "hz1": 4, "hz3": 5, "mhz3": 6, "dp": 7, "src": 8, "harg": 9, "pc": 10, "ms": 11, "n": 12, "x": 13, "htime": 14, "sms": 15, "wdt": 16, "sys": 17, "sysreq": 18, "ms2": 19, "pby": 20, "sname": 21, "nvw": 22, "mon": 23, "cec": 24, "note": 25, "pms": 26, "psrc": 27, "rms": 28, "lim": 29, "dly": 30, "sdone": 31, "slink": 32, "visit": 33, "pass": 34, "pins": 35}
+FMTS = {"-": 0, "vport": 1, "res": 2, "mhz1": 3, "hz1": 4, "hz3": 5, "mhz3": 6, "dp": 7, "src": 8, "harg": 9, "pc": 10, "ms": 11, "n": 12, "x": 13, "htime": 14, "sms": 15, "wdt": 16, "sys": 17, "sysreq": 18, "ms2": 19, "pby": 20, "sname": 21, "nvw": 22, "mon": 23, "cec": 24, "note": 25, "pms": 26, "psrc": 27, "rms": 28, "lim": 29, "dly": 30, "sdone": 31, "slink": 32, "visit": 33, "pass": 34, "pins": 35, "msn": 36}
 PORT_FLAG = 0x80                                     # fmt bit7: "Dn " prefix from arg
 
 
@@ -73,8 +73,8 @@ def rows(path: Path = TSV, classes: dict | None = None):
     n = logged(out)
     assert all(x["cls"] == sync_classes.DEFAULT for x in out[n:]), "name table rows (15..1B) are never logged: no colour class"
     assert n < ROW_MAX and len(out) - n < 255, "logged rows are a WORD index (0 = no row, cap ROW_MAX); name rows a byte index (cap 254)"
-    for t in out:                                    # one value per line; ms2 has two
-        n, two = t["text"].count("%"), (t["fmt"] & 0x7F) == FMTS["ms2"]
+    for t in out:                                    # one value per line; ms2 / msn have two
+        n, two = t["text"].count("%"), (t["fmt"] & 0x7F) in (FMTS["ms2"], FMTS["msn"])
         assert (n == 2) if two else (n <= 1), f"{t['id']:02X} {t['arg']:02X}: {n} % marks"
     return out
 
@@ -402,7 +402,7 @@ def segments(x: dict, r: list, port: list) -> list:
     for k, p in enumerate(parts):
         seg.append([p])
         if k + 1 < len(parts):
-            seg += [num5ms()] if f == "ms2" else value_segs(f, r, port)
+            seg += [num5ms()] if f == "ms2" or (f == "msn" and k == 0) else [["99999"]] if f == "msn" else value_segs(f, r, port)
     return seg
 
 

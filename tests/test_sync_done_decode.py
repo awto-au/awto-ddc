@@ -107,6 +107,7 @@ def test_pins_row_decode():
     assert S.line(ROWS, (0xFA, 5, 55, (7 << 8) | 6), 0).endswith(":HPD: D1 low, D2 high, D3 high")
     assert S.line(ROWS, (0xFA, 5, 548, (1 << 8) | 7), 0).endswith(":HPD: D1 high")
     assert S.line(ROWS, (0xFA, 0x10, 56, (3 << 8) | 3), 0).endswith(":cable pin: D1 high, D2 high")
+    assert S.line(ROWS, (0xFA, 3, 48, 6 << 16), 0).endswith(":EDID load: took 0ms (HPD mask 6)")
 
 def test_pass_rows_decode():
     """#311 main-loop stage timing: slow stage line (96) and boot passes line (97); names / words from RL6449_Project.h AWTO_PSTG_NAMES"""
