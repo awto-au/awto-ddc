@@ -152,6 +152,12 @@ def static_counts(files: list[Path]) -> dict:
             "isr_shared_only": shared}
 
 
+def _same(a: str, b: str) -> bool:
+    """Map names cut at 32 chars (stub symbols), bank-local stub suffix _b<n>: equal, or one a >= 28-char prefix of the other."""
+    a, b = re.sub(r"_b\d+$", "", a), re.sub(r"_b\d+$", "", b)
+    return a == b or (min(len(a), len(b)) >= 28 and (a.startswith(b) or b.startswith(a)))
+
+
 def profile_sites(stem: Path, cands: dict) -> dict:
     import fw_profile
     watch = {a for c in cands.values() for a in c["rets"]}
@@ -194,12 +200,12 @@ def main(argv: list[str], *, say=None) -> int:
     prof = profile_sites(ROOT / a.image, cands) if a.profile and a.image else None
     out = ROOT / "tmp/dw8051/guard_sites.tsv"
     out.parent.mkdir(parents=True, exist_ok=True)
-    rows = ["caller\tcaller_region\tcallee\tcallee_region\tguard_sym\tkind\tsite_calls_per_pass\tcallee_calls_per_pass\tnoop_per_pass\tnoop_fraction"]
+    rows = ["# calls = lcall entries per idle main pass (tail ljmp entries not counted); noop = executions of the guard ret\ncaller\tcaller_region\tcallee\tcallee_region\tguard_sym\tkind\tsite_calls_per_pass\tcallee_calls_per_pass\tnoop_per_pass\tnoop_fraction"]
     edges = (prof or {}).get("edges", {})
     for caller, creg, callee, kind in sorted(sites):
         c = cands[callee]
-        ent = sum(v for k, v in edges.items() if k.split()[-1] == callee)
-        site = sum(v for k, v in edges.items() if k.split()[0] == caller and k.split()[-1] == callee)
+        ent = sum(v for k, v in edges.items() if _same(k.split()[-1], callee))
+        site = sum(v for k, v in edges.items() if _same(k.split()[0], caller) and _same(k.split()[-1], callee))
         noop = sum((prof or {}).get("watch", {}).get(r, 0) for r in c["rets"])
         p = f"{noop / ent:.3f}" if ent else ""
         rows.append("\t".join(map(str, [caller, creg, callee, region(c["addr"]), c["sym"], kind,
