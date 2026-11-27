@@ -81,6 +81,11 @@ def test_gates_pass_the_variant_to_xlayout_and_delays(tmp_path):
     assert dl[dl.index("--variant") + 1] == "hwtest"
 
 
+def test_freeze_image_gates_use_the_freeze_audit_file(tmp_path):
+    _xl, dl = _cmd(tmp_path, ["_AWTO_FREEZE=_ON"])
+    assert dl[dl.index("--variant") + 1] == "freeze"         # #349
+
+
 def test_default_image_gates_stay_strict(tmp_path):
     xl, dl = _cmd(tmp_path, [])
     assert "--layout" not in xl and "--variant" not in dl
@@ -111,8 +116,9 @@ def test_hwtest_site_missing_from_both_files_still_fails(monkeypatch, tmp_path):
     assert DA.check(tmp_path, tmp_path / "m.map", "hwtest") == 1
 
 
-def test_variant_delay_rows_are_typed_and_disjoint_from_the_main_file():
-    rows = list(csv.DictReader(DA.VARIANT_TSV["hwtest"].open(), delimiter="\t"))
+@pytest.mark.parametrize("variant", sorted(DA.VARIANT_TSV))
+def test_variant_delay_rows_are_typed_and_disjoint_from_the_main_file(variant):
+    rows = list(csv.DictReader(DA.VARIANT_TSV[variant].open(), delimiter="\t"))
     main = {r["key"] for r in csv.DictReader(DA.TSV.open(), delimiter="\t")}
     assert rows and list(rows[0].keys()) == DA.COLS
     assert not {r["key"] for r in rows} & main, "a site in both files"
