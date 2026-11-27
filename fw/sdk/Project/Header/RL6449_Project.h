@@ -1326,7 +1326,6 @@ extern void AwtoDlFlush(unsigned char ucOp);                    // main context 
 #define AWTO_FLIP_HV                                            0x03    // flip bits: 1 = left-right (H), 2 = top-bottom (V); both = 180
 #define AWTO_ROT_APPLIED                                        0       // what: display re-set now
 #define AWTO_ROT_STORED                                         1       // not ACTIVE / boot: applies at the next display setting
-#define AWTO_ROT_ALREADY                                        2
 #define AWTO_ROT_NOT_BUILT                                      3       // image without _AWTO_ROTATION: stored only
 #define AWTO_ROT_OSD_180                                        0x20    // E4 arg: awto OSD now rotated 180 with the picture (fw/osd/text_layer.c AwtoOsdOrient)
 #define AWTO_ROT_OSD_UPRIGHT                                    0x21    // E4 arg: awto OSD upright again
