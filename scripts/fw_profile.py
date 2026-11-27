@@ -50,10 +50,11 @@ def boot(img, mapp, be, log):
     raise RuntimeError("boot did not reach stage 8 + heartbeat")
 
 
-def profile(binp: Path, mapp: Path, passes: int, be: bool, log, search_index: int | None = 0):
+def profile(binp: Path, mapp: Path, passes: int, be: bool, log, search_index: int | None = 0, watch: set | None = None):
     """search_index: source search port pinned before sampling (None = leave as booted). The bare sim has no source, so
     each image sits on whichever port its search starts at (wk11 HDMI index 0, #60/#79 images DP index 1): different
-    detect paths, not comparable. Pinned to the same index, every image measures the same pass."""
+    detect paths, not comparable. Pinned to the same index, every image measures the same pass.
+    watch: addresses (bank << 16 | pc above common) whose executions are counted per pass ("watch" in the result)."""
     img = binp.read_bytes()
     mp = mapp.read_text(errors="replace")
     s, _sym, where = boot(img, mapp, be, log)
@@ -121,7 +122,7 @@ def profile(binp: Path, mapp: Path, passes: int, be: bool, log, search_index: in
 
     cur = step()[0]
     excl, incl, reg = Counter(), Counter(), Counter()
-    cnt = Counter()
+    cnt, wcnt = Counter(), Counter()
     xcalls, calls, edges = Counter(), Counter(), Counter()   # edges: every call caller -> callee fn, direct or via stub
     r2_ok = lambda a: region(a) == ""          # direct call to a real function (stub entries are counted at the trampoline)
     per_pass = []
@@ -138,6 +139,8 @@ def profile(binp: Path, mapp: Path, passes: int, be: bool, log, search_index: in
             n_instr += 1
             if mn in ("MOVC", "MOVX"):
                 cnt[mn.lower()] += 1
+            if watch and fa(pc) in watch:
+                wcnt[fa(pc)] += 1
             t_pass += ticks
             nm = r and f"[{r}]" or sym_pc
             if r == "stub":
@@ -199,7 +202,8 @@ def profile(binp: Path, mapp: Path, passes: int, be: bool, log, search_index: in
     return {"image": binp.name, "passes": n, "cycles_per_pass_list": [t // 12 for t in per_pass],
             "cycles_per_pass": sum(per_pass) / 12 / n, "instr_per_pass": n_instr / n,
             "excl": {k: v / 12 / n for k, v in excl.items()}, "incl": {k: v / 12 / n for k, v in incl.items()},
-            "region": {k: v / 12 / n for k, v in reg.items()}, "calls": {k: v / n for k, v in calls.most_common(80)}, "xbank_calls": {k: v / n for k, v in xcalls.most_common(40)}, "edges": {k: v / n for k, v in edges.items()}, "counts": {k: v / n for k, v in cnt.items() if k != "passes"}}
+            "region": {k: v / 12 / n for k, v in reg.items()}, "calls": {k: v / n for k, v in calls.most_common(80)}, "xbank_calls": {k: v / n for k, v in xcalls.most_common(40)}, "edges": {k: v / n for k, v in edges.items()}, "counts": {k: v / n for k, v in cnt.items() if k != "passes"},
+            "watch": {k: v / n for k, v in wcnt.items()}}
 
 
 def main():

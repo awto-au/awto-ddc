@@ -816,6 +816,14 @@ def cmd_size_graph(extra: list[str]) -> int:
     return size_log.graph_main(extra, say=log)
 
 
+@command("DW8051 rules sweep report of the tree's last build (awto-dan dw8051-rules.md, #361): constexpr, isr_shared, single-bit tests, _PARM_n, "
+         "ISR banked calls, recursion, #360 guard sites (--profile: per-site calls + no-op fraction from fw_profile)",
+         args="[--image tmp/fw/<stem>] [--profile]", kind="action")
+def cmd_rules_report(extra: list[str]) -> int:
+    import dw8051_sweep
+    return dw8051_sweep.main(extra, say=log)
+
+
 LAYOUT_PID = TMP / "desk_layout_watch.pid"
 
 
