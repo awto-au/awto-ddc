@@ -94,7 +94,7 @@ static const __code BYTE tAwtoPanelW[3] = {60, 36, 36};
 // (field writes at console positions) would corrupt that screen, so the console lets go (no OSD change) and returns 1.
 static bit AwtoConLost(void)
 {
-    if((d_s_ucConOpen == 0) || ((g_ucOsdWidth == AWTO_CON_COLS) && (g_ucOsdHeight == AWTO_CON_ROWS + 1)))
+    if((d_s_ucConOpen == 0) || (g_ucAwtoMapBTo != 0) || ((g_ucOsdWidth == AWTO_CON_COLS) && (g_ucOsdHeight == AWTO_CON_ROWS + 1)))   // map B draw: card dims (#357)
     {
         return 0;
     }
@@ -3523,9 +3523,9 @@ static void AwtoConLogTail(void)
 #define AWTO_LOG_EV(s)      (AwtoSyncAt(s)[0])
 void AwtoConLogSync(void)                       // #139: new sync ring lines, one log row each (same decoder as the selector)
 {
-    if(AWTO_CON_LIVE() == _FALSE)
+    if((AWTO_CON_LIVE() == _FALSE) || (g_ucAwtoMapBTo != 0))
     {
-        return;                                 // #162 s3: a fast switch's frame checks first; the OSD poll draws the lines after
+        return;                                 // #162 s3: a fast switch's frame checks first; a map B card draw (#357): the OSD poll draws the lines after
     }
     while((s_ucConSyncSeq != g_stAwtoSync.ucSeq) && (AWTO_LOG_EV(s_ucConSyncSeq) == 0))
     {

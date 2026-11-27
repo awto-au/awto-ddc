@@ -2025,6 +2025,7 @@ extern __xdata unsigned char g_ucAwtoMapB;
 extern __xdata unsigned char g_ucAwtoMapBAsk;
 extern __xdata unsigned char g_ucAwtoMapBHas;
 extern __xdata unsigned char g_ucAwtoMapBRow;
+extern __xdata unsigned char g_ucAwtoMapBTo;        // a map B card is being drawn: g_ucOsdWidth / Height are the card's
 extern void osd_tc_b_off(unsigned char ucWhy);
 extern void osd_tc_b_keep(unsigned char ucKeep);
 extern void osd_tc_b_open(unsigned char ucChars, unsigned char ucLines);
