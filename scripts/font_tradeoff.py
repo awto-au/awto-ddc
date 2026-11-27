@@ -117,8 +117,8 @@ class Variant:
         return [arr[:, i * self.uw:(i + 1) * self.uw] for i in range(n)]
 
     def pack(self, unit):
-        """Row-major pixels, MSB-first bpp bits, 24-bit words, low byte first (osd_vlc.pack_unit) [derived for 2/4 bpp and 24x36]."""
-        return osd_vlc.pack_unit(unit, self.bpp)
+        """Bit planes, plane k = bit k, each like a 1 bpp glyph (osd_vlc.pack_planes, #234); 24x36 layout [derived] (OT-8)."""
+        return osd_vlc.pack_planes(unit, self.bpp)
 
 
 # ---------------- VLC: the one codec, scripts/osd_vlc.py ----------------

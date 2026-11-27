@@ -50,10 +50,7 @@ class GlyphSet:
         return self.variant().pack(tile)
 
     def unpack(self, data: bytes):
-        bits = "".join(format(data[i + 2], "08b") + format(data[i + 1], "08b") + format(data[i], "08b")
-                       for i in range(0, len(data), 3))
-        vals = [int(bits[i:i + self.bpp], 2) for i in range(0, len(bits), self.bpp)]
-        return np.array(vals, np.uint8).reshape(self.uh, self.uw)
+        return np.array(V.unpack_planes(data, self.uw, self.uh, self.bpp), np.uint8)
 
     def raw(self) -> bytes:
         return b"".join(self.pack(t) for t in self.tiles)

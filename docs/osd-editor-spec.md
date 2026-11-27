@@ -53,7 +53,7 @@ Own words. Source of facts: running Realtek's OsdEdit GUI under Wine (2026-11-08
 | feature | status |
 |---|---|
 | 1 bpp 12x18 tile, 27 B, VLC encode / decode | have: `font_compare.py` (main), `osd_logo_encode.py` (branches; byte-identical to SDK blobs), `glyph_decode.py` |
-| 2 / 4 bpp, 24x36 | pack layout [derived], `font_compare.Variant`; hardware bit order not measured; the editor packs row-major, `osd_model.py` draws 2 / 4 bpp as bit planes (QC icons, #227): the two layouts differ |
+| 2 / 4 bpp, 24x36 | bit planes, plane k = bit k, each like a 1 bpp glyph (`osd_vlc.pack_planes`, #234): 2-bit order [hw] T9, 4-bit [?] OT-1; 24x36 layout [derived] OT-8; round trip through `osd_model`: `tests/test_osd_editor_pack.py` |
 | tile editor, paste, shifts, flips, Inv | editor: pixel paint, undo, 1/2/4 bpp, 12x18 and 24x36; shifts / flips / Inv not done |
 | text stamp from a font | editor: TTF import of ASCII range; free text stamp not done |
 | PNG / SVG import | editor: sheet sliced into tiles; `make_logo.py` / `osd_logo_big.py` do logo art |
@@ -69,7 +69,6 @@ Own words. Source of facts: running Realtek's OsdEdit GUI under Wine (2026-11-08
 ## 6. Open points
 - Hardware check of 2 / 4 bpp word packing and the 24x36 mode (`0x3A43[6]`) before they ship in an image.
 - Decide the END-code convention for blobs the hardware loader reads (SDK has END; 2523V does not). `osd_vlc.decode(need_end=False)` reads both.
-- Editor 2 / 4 bpp tile packing (row-major) vs the bit-plane layout the model draws (#227).
 
 ## 7. Monitor page (#217)
 - Backend limits (`monitor.py LIMIT_S`) = 3x the slowest call on unit 3, 2026-11-18, idle unit, `dev.py` incl. debug-link swap:
