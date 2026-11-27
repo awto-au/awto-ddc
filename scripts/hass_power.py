@@ -46,6 +46,8 @@ def creds() -> tuple[str, str]:
 
 
 def call(path: str, body: dict | None = None) -> dict | list:
+    if os.environ.get("AWTO_NO_HW") == "1":          # tests without --hw never switch a relay (#358)
+        raise SystemExit(f"hass_power {path}: AWTO_NO_HW=1 (test run without --hw): no relay call made")
     srv, tok = creds()
     req = urllib.request.Request(srv + path, data=None if body is None else json.dumps(body).encode(),
                                  headers={"Authorization": f"Bearer {tok}", "Content-Type": "application/json"},

@@ -23,9 +23,38 @@ def pytest_addoption(parser):
     parser.addoption("--hw", action="store_true", help="run tests marked hw (real hardware; unit from AWTO_TEST_UNIT)")
 
 
+TESTS = Path(__file__).resolve().parent
+NO_HW_BIN = TESTS / "no_hw_bin"                 # ddcutil / gdctl stand-ins: exit 1, one line
+
+
+def _test_socket() -> Path:
+    p = TI.ROOT / "tmp" / "run" / f"pytest-gui-{os.getpid()}.sock"
+    if len(str(p)) < 100:                        # sun_path is 108 bytes
+        return p
+    return Path(os.environ.get("XDG_RUNTIME_DIR", f"/run/user/{os.getuid()}")) / f"awto-pytest-gui-{os.getpid()}.sock"
+
+
+def _no_hardware() -> None:
+    """#358: without --hw, nothing in this run (nor a dev.py it starts) reaches a unit: i2cbus refuses, hass_power refuses,
+    ddcutil / gdctl are stand-ins, and a dev.py unit command talks to tests/fake_gui_app.py on a per-run socket"""
+    os.environ["AWTO_NO_HW"] = "1"
+    os.environ["PATH"] = f"{NO_HW_BIN}{os.pathsep}{os.environ.get('PATH', '')}"
+    os.environ["AWTO_GUI_SOCKET"] = str(_test_socket())
+    os.environ["AWTO_GUI_LAUNCHER"] = f"{sys.executable} {TESTS / 'fake_gui_app.py'}"
+
+
 def pytest_configure(config):
     config.addinivalue_line("markers", "slow: long simulator run, only with --slow")
     config.addinivalue_line("markers", "hw: needs real hardware, only with --hw or AWTO_TEST_HW=1")
+    if not (config.getoption("--hw") or os.environ.get("AWTO_TEST_HW") == "1"):
+        _no_hardware()
+
+
+def pytest_unconfigure(config):
+    sock = os.environ.get("AWTO_GUI_SOCKET")
+    if os.environ.get("AWTO_NO_HW") == "1" and sock and Path(sock).exists():
+        import gui_client
+        gui_client.try_call(Path(sock), "quit", {})       # the fake app of this run
 
 
 def pytest_collection_modifyitems(config, items):
