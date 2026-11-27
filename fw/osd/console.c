@@ -190,7 +190,10 @@ static void AwtoTextOpen(BYTE ucCols, BYTE ucLines, BYTE ucView, bit bTitleBar) 
     ucLines++;
     ucWin = (ucView != 0) ? (ucView + 1) : ucLines;                         // one blank pad row: the frame border covers the last 2 px of a full-height row
     AwtoTextOpenInit(ucCols);
-    g_ucAwtoMapBAsk = (ucView != 0);            // the console map leaves the map B card room (#357)
+    if(ucView != 0)
+    {
+        g_ucAwtoMapBAsk = 1;                    // the console map leaves the map B card room (#357); ApplyMap clears it
+    }
     osd_tc_open(ucCols, ucLines, AwtoDiagFont((ucView != 0) ? AWTO_CON_FONT : 3));     // console / probe font
     UserCommonInterfacePanelPowerTick();        // #162: map clear and font load are the long parts of a console open (boot,
                                                 // wake): panel steps due meanwhile (T3, backlight-to-PWM) are not held up
