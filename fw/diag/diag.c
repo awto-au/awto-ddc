@@ -84,11 +84,17 @@ static unsigned long AwtoQ8Now(void)
     unsigned int usT2;
     unsigned int usCnt;
     unsigned int usRl;
+    BYTE ucH;
 
     do
     {
         usT1 = d_isr_g_usTimerCounter;
-        usCnt = ((unsigned int)TH2 << 8) | TL2;
+        do                                      // running Timer2: high, low, high; a carry between the byte reads retries (#361)
+        {
+            ucH = TH2;
+            usCnt = ((unsigned int)ucH << 8) | TL2;
+        }
+        while(ucH != TH2);
         usT2 = d_isr_g_usTimerCounter;
     }
     while(usT1 != usT2);
