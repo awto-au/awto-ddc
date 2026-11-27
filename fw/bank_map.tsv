@@ -6,7 +6,7 @@
 #stubs 37
 # kind	name	region	offset	slot    (dev layout: scripts/sdcc_layout.py; region C = common, n = bank n)
 const	_OperationFactoryTable	13	0x0000	827
-const	_UserInterfaceGetOverScanStatus_tusOverscanEnTable_10000_1376	C	0x23a5	90
+const	_UserInterfaceGetOverScanStatus_tusOverscanEnTable_10000_1377	C	0x23a5	90
 const	___str_0	7	0x0072	27
 const	___str_1	9	0x007c	38
 const	___str_10	7	0x008d	11
@@ -278,11 +278,11 @@ const	_pent	5	0x0149	153
 const	_pinfo	5	0x01e2	58
 const	_ptitle	5	0x021c	41
 const	_s_aucRev	6	0x090e	296
-const	_set_ap_rotate_tFlipToSdk_10000_1400	5	0x02b0	12
+const	_set_ap_rotate_tFlipToSdk_10000_1401	5	0x02b0	12
 const	_tAwtoAudioTestAmp	13	0x0522	14
 const	_tAwtoAudioTestGain	13	0x0530	21
 const	_tAwtoAudioTestMute	13	0x0545	14
-const	_tAwtoCardS	7	0x0d9e	588
+const	_tAwtoCardS	7	0xacac	711
 const	_tAwtoCecNameS	7	0x0fea	604
 const	_tAwtoCecOp	7	0x1246	33
 const	_tAwtoDdcCaps	11	0x0dfd	108
@@ -486,6 +486,7 @@ fn	_AwtoCardCentre	5	0x425b	175
 fn	_AwtoCardOpen	5	0x430a	20
 fn	_AwtoCardOpenW	9	0x5fd9	443
 fn	_AwtoCardShow	5	0x431e	17
+fn	_AwtoCardTimeout	7	0x9a2e	67
 fn	_AwtoCardTxt	7	0x3a56	72
 fn	_AwtoClkField	7	0x3a9e	24
 fn	_AwtoClkMhz10	7	0x3ab6	163
@@ -586,7 +587,8 @@ fn	_AwtoFastScalerStatus	0	0x89e3	30
 fn	_AwtoFbRegCount	5	0x11f8	44
 fn	_AwtoFff4Probe	5	0x9bc6	100
 fn	_AwtoFieldBegin	7	0x4959	14
-fn	_AwtoFieldEnd	7	0x4967	65
+fn	_AwtoFieldEnd	7	0x0171	84
+fn	_AwtoFitCheck	7	0x4967	62
 fn	_AwtoFl	12	0x9c24	96
 fn	_AwtoFlIo	3	0x8e9c	173
 fn	_AwtoFlashDraw	6	0x8f6e	1050
@@ -885,7 +887,7 @@ fn	_AwtoT0EvIsr	12	0x9cff	279
 fn	_AwtoTableStatic	7	0x9908	176
 fn	_AwtoTextAt	7	0x99b8	118
 fn	_AwtoTextDiagPal	9	0x6439	118
-fn	_AwtoTextLine	7	0x9a2e	80
+fn	_AwtoTextLine	7	0x0d9e	132
 fn	_AwtoTextOpen	9	0x64af	204
 fn	_AwtoTextOpenInit	9	0x657b	28
 fn	_AwtoTextShow	5	0x4b96	11
@@ -3407,6 +3409,7 @@ stub	4__ar_muldiv	4	0x9eb4	8
 stub	5__AwtoBlDraw	5	0xa219	8
 stub	5__AwtoBootConsole	5	0xa221	8
 stub	5__AwtoCardOpenW	5	0xa229	8
+stub	5__AwtoCardTimeout	5	0xa139	8
 stub	5__AwtoCardTxt	5	0xa231	8
 stub	5__AwtoConLogSync	5	0xa239	8
 stub	5__AwtoConLost	5	0xa241	8
@@ -3521,12 +3524,13 @@ stub	6__ScalerOsdSetColorPalette	6	0x9e24	8
 stub	6__osd_tc_close	6	0x9e9c	8
 stub	6__osd_tc_show	6	0x9ea4	8
 stub	6__osd_tc_win_draw	6	0x9eac	8
-stub	7__AwtoCardOpen	7	0xa7c8	8
+stub	7__AwtoCardOpenW	7	0xa7c8	8
 stub	7__AwtoCardShow	7	0xa7d0	8
 stub	7__AwtoConStepRun	7	0xa7d8	8
 stub	7__AwtoConWrapBreak	7	0xa888	8
 stub	7__AwtoDdrNoteRead	7	0xa810	8
 stub	7__AwtoDiagConsole	7	0xa7e0	8
+stub	7__AwtoHoldBlocksDisable	7	0xa7f8	8
 stub	7__AwtoInText	7	0xa7e8	8
 stub	7__AwtoKeyConSet	7	0xa820	8
 stub	7__AwtoOsdRoll	7	0xa848	8
@@ -3537,6 +3541,7 @@ stub	7__AwtoSyncConPoll	7	0xa800	8
 stub	7__AwtoSyncPushW	7	0xa838	8
 stub	7__AwtoSyncStage	7	0xa840	8
 stub	7__AwtoSyncTxt	7	0xa808	8
+stub	7__OsdDispDisableOsd	7	0x0297	8
 stub	7__ScalerDpRx1GetDpcdBitInfoHM	7	0xa7a0	8
 stub	7__ScalerDpRx1MacInitial	7	0xa7a8	8
 stub	7__ScalerFmtCnvGetSourceType	7	0xa798	8

@@ -1,0 +1,36 @@
+# OSD fit (scripts/osd_fit.py, run by ./dev.py build and fw_gates osdfit): the widest text each fixed-width box row can draw.
+# One cell per character (AwtoPutChar, cell font). Rule: col + width <= limit; limit = the box's last free cell + 1
+# (framed boxes: cols - 1, the last cell sits under the frame).
+# text: tokens joined by " ++ ": lit:TEXT | ct:EXPR (tAwtoCardS[EXPR]) | ct:EXPR..EXPR (the longest of that range, inclusive)
+# EXPR / col / limit: integers or #define names of fw/osd/console.c and RL6449_Project.h, + - only.
+# box	col	limit	text	worst case: why
+info title	1	AWTO_INFO_COLS - 1	ct:AWTO_CT_INFO	card title
+info label	1	AWTO_INFO_VAL_COL - 1	ct:AWTO_CT_INPUT	labels end one blank before the value column
+info label	1	AWTO_INFO_VAL_COL - 1	ct:AWTO_CT_RES..AWTO_CT_STATUS	labels
+info label	1	AWTO_INFO_VAL_COL - 1	ct:AWTO_CT_FOUND	label
+info input	AWTO_INFO_VAL_COL	AWTO_INFO_COLS - 1	lit:Input D6	AwtoPortName: "Input D" + port digit (DP-1 / HDMI-n shorter)
+info status	AWTO_INFO_VAL_COL	AWTO_INFO_COLS - 1	ct:AWTO_CT_STATE..AWTO_CT_STATE + 3	ui_port_state 0..3 (the input on screen is never disabled)
+info res	AWTO_INFO_VAL_COL	AWTO_INFO_COLS - 1	lit:65535x65535	two WORDs, AwtoPutNum
+info refresh	AWTO_INFO_VAL_COL	AWTO_INFO_COLS - 1	lit:999.999 ++ ct:AWTO_CT_HZ	AwtoPutMilli of mHz, 3 integer digits (sources <= 240 Hz); tenths fallback "6553.5" is shorter
+info hfreq	AWTO_INFO_VAL_COL	AWTO_INFO_COLS - 1	lit:999.999 ++ ct:AWTO_CT_HZ + 1	kHz, 3 integer digits (4K60 135 kHz)
+info pclk	AWTO_INFO_VAL_COL	AWTO_INFO_COLS - 1	lit:1188.000 ++ ct:AWTO_CT_HZ + 2	MHz, 4 integer digits (HDMI 2.0 max 600)
+info hdcp	AWTO_INFO_VAL_COL	AWTO_INFO_COLS - 1	lit:2.2 ++ ct:AWTO_CT_SINK..AWTO_CT_SINK + 1	version + sink / repeater
+info hdcp off	AWTO_INFO_VAL_COL	AWTO_INFO_COLS - 1	ct:AWTO_CT_OFF	off
+info dp link	AWTO_INFO_VAL_COL	AWTO_INFO_COLS - 1	lit:4 ++ ct:AWTO_CT_LANES ++ ct:AWTO_CT_RBR..AWTO_CT_RBR + 2	lanes + rate (an unknown rate prints 2 hex digits, shorter)
+info swing	AWTO_INFO_VAL_COL	AWTO_INFO_COLS - 1	lit:3/3 3/3 3/3 3/3	4 lanes swing / pre-emphasis, one digit each
+info found by	AWTO_INFO_VAL_COL	AWTO_INFO_COLS - 1	ct:AWTO_CT_WHY..AWTO_CT_WHY + AWTO_SEL_WHYS - 1	AWTO_SEL_WHY_* labels
+card title	1	AWTO_CARD_COLS - 1	ct:AWTO_CT_AWTO	message card title
+card message	1	AWTO_CARD_COLS - 1	ct:AWTO_CT_NOSIGNAL..AWTO_CT_PANEL	message texts, centred
+card ddcci	1	AWTO_CARD_COLS - 1	ct:AWTO_CT_DDCCI ++ lit:Input D6	"DDC/CI on " + port name, one row
+card port	1	AWTO_CARD_COLS - 1	lit:Input D6	no signal / no cable / no support: port name row
+card on/off	1	AWTO_CARD_COLS - 1	ct:AWTO_CT_ON..AWTO_CT_ON + 1	panel uniformity
+card saving	1	AWTO_CARD_COLS - 1	ct:AWTO_CT_SAVING	saving to memory
+card backlight	1	AWTO_CARD_COLS - 1	ct:AWTO_CT_BACKLIGHT	backlight bar title
+card reset	1	AWTO_CARD_COLS - 1	ct:AWTO_CT_RESET	key-hold reset title
+card reset in	1	AWTO_CARD_COLS - 1	ct:AWTO_CT_IN ++ lit:255 ++ ct:AWTO_CT_IN + 1	"in N s", N one BYTE
+card freeze / mst	1	AWTO_CARD_COLS - 1	ct:AWTO_CT_COND..AWTO_CT_COND + 1	conditional texts (both counted)
+selector title	1	AWTO_SRC_COLS - 1	ct:AWTO_CT_INPUT	selector title
+selector state	AWTO_SRC_STATE_COL	AWTO_SRC_COLS - 1	ct:AWTO_CT_STATE..AWTO_CT_STATE + 3	port state
+selector disabled	AWTO_SRC_STATE_COL	AWTO_SRC_COLS - 1	ct:AWTO_CT_DISABLED	port off by setting
+selector rate	AWTO_SRC_RATE_COL	AWTO_SRC_COLS - 1	lit:4096x2160 240.000Hz 600.000MHz	widest HDMI 2.0 timing (rate field AWTO_SRC_RATE_W)
+wdt boot row	1	AWTO_WDT_POP_W	lit:THIS BOOT HW WDT MAX PASS 8160 POKE 1167MS AT 255	console panel (no frame): BYTE fields at their max

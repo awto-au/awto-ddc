@@ -75,13 +75,14 @@ Input: `docs/sdk-model-inventory.md` (state machines, hooks, collisions C1-C16, 
 - Backlight: own sub-state beside the link states since 2026-11-13 (section "Backlight at once"); T3 / BL_PWM / BL_ON / BL_OFF (5..8) retired.
 
 ## Backlight delay (Dan 2026-11-20; was "Backlight at once", 2026-11-13)
-- Backlight pin comes on registry `backlight_on_delay` (id 127, default 100 ms, 0..255 step 5 (one stored byte), GUI / menu Display page) after power-up (boot, POWER on, wake); read at each panel-up, a lit backlight is not changed. 0 = old behaviour (pin at MCU boot + 15 ms).
+- 2026-11-27 (Dan): the pin waits for eDP stream on (link VIDEO); `backlight_on_delay` from power-up stays a minimum (whichever is later). Sync 11 E6 = on at stream on, 11 E7 = on at the min delay (stream was on first).
+- Backlight pin comes on registry `backlight_on_delay` (id 127, default 120 ms, 0..255 step 5 (one stored byte), GUI / menu Display page) after power-up (boot, POWER on, wake); read at each panel-up, a lit backlight is not changed. 0 = old behaviour (pin at MCU boot + 15 ms).
 - Evidence: camera, unit 3, docs/camera-lcd-timing.md: pin at MCU boot + 15 ms -> 200-240 ms white flash (9 of 9 runs); pin at +91 ms or later -> 0 flash frames in every run. Valid picture on the LCD 1.44 s after the reset.
-- Test record 0xF697 (`bl-sweep`) overrides the registry (valid record wins); sync rows 11 E6 (registry default) vs 11 E2 / E4 / E5 (record).
+- Test record 0xF697 (`bl-sweep`) overrides the registry (valid record wins); sync rows 11 E6 / E7 (registry default) vs 11 E2 / E4 / E5 (record).
 - Boot: `UserCommonInterfacePanelBoot` keeps the pin dark; the machine lights it once the settings are loaded and the delay has run (failsafe: 5 s from power-up). Old text below: 2026-11-13 rule, superseded for the delay only.
 - Dan's rule: backlight pin + PWM duty right after the M2PLL switch at cold boot, and at POWER on / wake as soon as VDD is on; not gated by HPD, link, video or T3. Panel datasheet T8 (>= 200 ms video -> LED) deliberately not followed.
 - Sub-state `s_ucPnlBl` (`AWTO_PNL_BL_*`): DARK -> PIN (pin on) -> LIT (PWM duty) -> DIM (PWM dark) -> DARK (pin off). Stepped each tick before the link step (`UserCommonInterfacePanelBlStep`).
-- Wanted = target BL and link state VDD .. VIDEO. Wait: registry `backlight_on_delay` (id 127, default 100; id 118 `bl_on_delay` retired) from wanted to the pin; `bl_pwm_ms` (id 74, default 0) pin -> PWM.
+- Wanted = target BL and link state VDD .. VIDEO. Wait: registry `backlight_on_delay` (id 127, default 120; id 118 `bl_on_delay` retired) from wanted, and link state VIDEO (stream on), to the pin; `bl_pwm_ms` (id 74, default 0) pin -> PWM.
 - Boot: `UserCommonInterfacePanelBoot` (right after GPIO / pin set-up on M2PLL): VDD kept on, backlight pin on, PWM outputs enabled, duty full; `UserCommonInterfacePanelBootDuty` applies the user brightness once the settings load (lines 11 C2 / CA).
 - Going down: backlight dark first (DIM, `_PANEL_POWER_OFF_PWM_TO_BL`), then T4 from the pin-off edge, T5, VDD off, T6. Off before the stream (VDD / HPD): VDD off right after the pin off.
 - Cold boot: request after pin share + `ScalerTimerInitialTimerEvent` (the pin arms the panel-time timer event). Wake (PS_TO_NORMAL) requests the backlight too (was video only).

@@ -251,7 +251,7 @@ def do_block(d, waddr: int) -> None:
 
 
 OVERLAY = 0x006C                 # P0_6C bit0 = OSD overlay enable (ScalerOsdEnableOsd): any OSD card / pop-up on screen
-POPUP_S = 6.0 * 1.15             # _AWTO_INFO_POPUP_SEC 6 s x 1.15: the input-info pop-up the frame-mode re-set-up opens (ACTIVE event)
+POPUP_S = 11.0 * 1.15            # _AWTO_INFO_POPUP_SEC 11 s x 1.15: the input-info pop-up the frame-mode re-set-up opens (ACTIVE event)
 
 
 SETUP_S = 3.0                    # display set-up after the memory re-set (~0.2 s measured, panel / OSD ~0.4 s) x ~5: the pop-up opens in this window

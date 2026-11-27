@@ -36,6 +36,8 @@ Measures in the video itself how long after a restart the LCD shows a good pictu
 - The flash is a panel start-up state, not tied to video: white from the backlight pin edge until ~200-240 ms later if the pin comes within the first ~100 ms after MCU boot; later pins show black (+ console once drawn). Reference event does not matter, absolute time after reset does.
 - Sleep / wake (DDC/CI sleep, 3 s hold, wake; `--kind wake --ref powerup`, 3 runs per value): the monitor lights itself ~1.5 s after the sleep command (white flash 4 / 4 / 5 frames at N = 0, 0 frames at N = 200 / 400 / 1000), desktop returns 5.1-5.2 s after the sleep command. Same flash, same cure; the sleep-path events are timed from the sleep command, not the wake.
 
+- Decision 2026-11-27 (Dan): unit 2 at POWER on showed a slight break-up with the pin at 122 ms and stream on at 201 ms (~80 ms backlit before the stream). Pin now at eDP stream on, `backlight_on_delay` (120 ms) from power-up as a minimum; sync line 11 E6 / E7.
+
 ## Camera limits
 
 - 25 fps = 40 ms per frame; rolling shutter splits a frame (old / new picture at a scan line): +-1 frame on every edge. A flash shorter than ~40 ms may fall between exposures or show as one partial frame; shorter than ~20 ms may be missed (exposure is ~1/50 s indoors).

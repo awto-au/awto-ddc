@@ -111,7 +111,8 @@ C0	05	vport	picture lost on %:new search
 11	E2	ms	panel:test knob backlight on delay %, counts from video ready (ACTIVE)	timing
 11	E4	ms	panel:test knob backlight on delay %, counts from stream on (eDP trained)	timing
 11	E5	ms	panel:test knob backlight on delay %, counts from power-up (panel-up)	timing
-11	E6	ms	panel:backlight on delay % from power-up (registry backlight_on_delay, default; no test record)	timing
+11	E6	ms2	panel:backlight on at stream on, % after power-up (min delay %)	timing
+11	E7	ms2	panel:backlight on at the min delay, % after power-up (min delay %; stream was on before)	timing
 11	E3	ms	panel:test knob: no reference event in %, backlight on anyway	warning
 11	C6	ms	panel:backlight PWM duty set, % after the pin	timing
 11	C7	ms	panel:backlight off wanted % after the pin, PWM dark	timing
@@ -322,10 +323,12 @@ CF	04	vport	wake suppressed (DPCD 600h, once per sleep):%
 CF	05	vport	wake suppressed (cable unplug, once per sleep):%
 CF	06	vport	wake suppressed (TMDS clock, once per sleep):%
 # Input-sync timeline + SDK decisions (docs/input-sync-timeline.md; fmts pms psrc rms lim added for them)
-F0	00	psrc	input taken:% (fixed port: selector / VCP 0x60 / menu / setting)
+F0	00	psrc	input taken:% (fixed port, the stored setting)
 F0	01	psrc	input taken:% (auto search, the last used port answered)
 F0	02	psrc	input taken:% (auto search, not the last used port)
 F0	03	psrc	input taken:% (other scan type)
+F0	04	psrc	input taken:% (fixed port, chosen in the input selector)
+F0	05	psrc	input taken:% (fixed port, input select: VCP 0x60 / menu / test cmd)
 F1	01	ms	stage:measure took %	timing
 F1	02	ms	stage:display setting took % (M-domain, DCLK, scaling)	timing
 F1	03	ms	stage:colour set-up took %	timing
@@ -608,5 +611,7 @@ ED	11	-	pop-up opened: panel uniformity card
 ED	39	-	pop-up opened: saving to memory card
 ED	81	n	pop-up suppressed: the input selector is open and keeps the screen (message %)
 ED	82	n	pop-up suppressed: the console is open and keeps the screen (message %)
+ED	7F	ms	pop-up closed: its on-screen time ran out, up %
+ED	7E	n	OSD text row cut: % cell(s) over its box (the last cell is the frame)	error
 EE	*	note	%
 FD	*	dly	micro-delay over its limit (>= {AWTO_DLY_SLACK_TICKS} ticks): call at %	warning

@@ -662,7 +662,7 @@ void UserInterfaceTimerEventProc(EnumScalerTimerEventID enumEventID)
             }
             else
             {
-                OsdDispDisableOsd();
+                AwtoCardTimeout();                  // logs a card's timeout close (#266), then OsdDispDisableOsd
             }
             break;
 

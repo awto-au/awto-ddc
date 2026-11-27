@@ -434,6 +434,7 @@ static __xdata WORD s_usBlk;                    // test knob, read at each panel
 static __xdata BYTE s_ucBlkRef;                 // knob: 0 video not ready, 1 ready (s_usBlkRefAt), 2 pin on this panel-up
 static __xdata BYTE s_ucBlkSel;                 // knob reference: AWTO_BLK_REF_*
 static __xdata _Bool s_bBlSet;                  // settings loaded (boot): the registry delay can be read
+static __xdata _Bool s_bBlStream;               // the min delay was over first: the pin waited for stream on (log arg)
 static __xdata WORD s_usBlkRefAt;               // (WORD)AwtoMs() at the reference event
 static void UserCommonInterfacePanelBlkMark(BYTE ucRef);
 
@@ -554,8 +555,8 @@ void UserCommonInterfacePanelStreamOn(void)        // eDP trained, stream on (pa
     UserCommonInterfacePanelBlkMark(AWTO_BLK_REF_STREAM);
 }
 
-// Backlight beside the link: wanted = target BL while VDD is on (VDD .. VIDEO). Pin on backlight_on_delay after wanted (power-up;
-// docs/camera-lcd-timing.md), or per the test record. Off: PWM dark, PWM-to-backlight, pin off (before T4 / VDD off).
+// Backlight beside the link: wanted = target BL while VDD is on (VDD .. VIDEO). Pin on at stream on (VIDEO), not before backlight_on_delay
+// after wanted (power-up; docs/camera-lcd-timing.md), or per the test record. Off: PWM dark, PWM-to-backlight, pin off (before T4 / VDD off).
 static void UserCommonInterfacePanelBlStep(void)
 {
     WORD usNow = (WORD)AwtoMs();
@@ -573,17 +574,23 @@ static void UserCommonInterfacePanelBlStep(void)
             if(s_bPnlWant == _FALSE)
             {
                 s_bPnlWant = _TRUE;
+                s_bBlStream = _FALSE;
                 s_usPnlBlAt = usNow;
                 usIn = 0;
             }
-            if(s_usBlk == 0)                    // product: registry backlight_on_delay from power-up (wanted)
+            if(s_usBlk == 0)                    // product (Dan 2026-11-27): pin at stream on, backlight_on_delay from power-up as a minimum
             {
                 if((usIn < AWTO_BL_ON_DELAY_MS) || ((s_bBlSet == _FALSE) && (usIn < AWTO_BLK_REF_MAX_MS)))
                 {
                     return;
                 }
-                AWTO_PNL_LOG(AWTO_SW_EV_PANEL, AWTO_PNL_X_BLK_DEF, AWTO_BL_ON_DELAY_MS);
-                AWTO_PNL_LOG(AWTO_SW_EV_PANEL, AWTO_PNL_X_BLK, ((DWORD)usIn << 16) | usNow);
+                if(s_ucPnlState != AWTO_PNL_VIDEO)
+                {
+                    s_bBlStream = _TRUE;
+                    return;
+                }
+                AWTO_PNL_LOG(AWTO_SW_EV_PANEL, (s_bBlStream != _FALSE) ? AWTO_PNL_X_BLK_DEF : AWTO_PNL_X_BLK_MIN,
+                             ((DWORD)AWTO_BL_ON_DELAY_MS << 16) | usIn);
             }
             else if(s_ucBlkRef != 2)            // test record: pin on at its reference + ms (or late after the cap)
             {

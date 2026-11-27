@@ -12,7 +12,10 @@ usage: fw_gates.py IMAGE_STEM [--tier normal|extensive] [--build-inputs] [--tree
   nvlog: nv_test --sim flushlog (#151: NVRAM flush line per close / power off, "wrote N B ..." vs "nothing changed").
   sync: sync_sim (#139). bootsim: boot_sim (#144, #29, #216: Until signal = console after the picture; bootsim_always: console at power-on; `boot` is the fw_sim --boot-check). wake: wake_sim (#144 task 4). pokes: poke_loops TREE (static, #138).
   panel: panel_sim (#162 step 2): panel VDD / backlight pin / PWM / DPTx link only from the panel machine; no blink; backlight
-    pin at once after VDD on / the M2PLL switch (Dan 2026-11-13, no T3); T4..T6 kept.
+    pin at eDP stream on, >= backlight_on_delay after VDD on (Dan 2026-11-27); T4..T6 kept.
+  osdfit: osd_fit.py --check (static: fw/osd/osd_fit.tsv worst-case rows vs their box; also a build step). osdfitsim (extensive):
+    osd_fit_sim.py, every card_shot shot at 1080p60 + 2160p60, no firmware fit-guard line (ED 7E). infocard: info_card_sim.py
+    (the info card after boot stays _AWTO_INFO_POPUP_SEC, one open + one timeout close line).
   sysm: sysm_sim (#162 step 3): power status / mode state only from the system machine; transition chain + request lines; --tree lint.
   delays: delay_sim.py (docs/delay-audit.md): panel_sim scenario at the image's clock (+ the sibling `<stem>-clk87` image of `-D AWTO_CLOCK_MHZ=87` when built): class A waits vs
     wall ms, Timer2 / wall = 1, every executed DELAY_5US / DELAY_XUS loop >= nominal, loop counts = AWTO_DELAY_CNT, DDC debounce wall time equal at both clocks; --audit:
@@ -93,10 +96,11 @@ EXTENSIVE = {
     "sysm": "~10 s CPU (power / mode machine chain)",
     "sync": "~11 s CPU (sync-log sim boots)",
     "dramlog": "~40 s CPU (DRAM log image: boot, two 34000-line fills = wrap + stamps above 65 s, watchdog reset keeps the history)",
+    "osdfitsim": "~21 s CPU (23 OSD shots x 2 timings, fit guard watched; the static half osdfit is normal)",
 }
 SIM_CPU = os.environ.get("AWTO_SIM_CPU", "dw8051")   # fast-core CPU model of the sims (#162 step 1); results are comparable only at the same model
 CPU_OF = {}      # per-gate CPU model override; wdt runs on dw8051 since the Timer0 cases use wall ms (the 8052 model has no clock: the 350.8 MHz boot never reaches stage 8 in wdt_test)
-NO_SIM = {"link", "xlayout", "pokes", "speed", "magic", "regs", "regmap", "rules", "edid", "conhost"}   # every other gate runs a sim on the in-process DW8051 core (fw_sim default; ucsim is a cross-check only)
+NO_SIM = {"link", "xlayout", "pokes", "speed", "magic", "regs", "regmap", "rules", "edid", "conhost", "osdfit"}   # every other gate runs a sim on the in-process DW8051 core (fw_sim default; ucsim is a cross-check only)
 SKIP_IF_MISSING = {      # gate -> map symbols the image must define, else SKIP (the script would FAIL on an older image)
     "keys": ("_AwtoSourceOpen",),
     "crash": ("_AwtoWdtHang",),
@@ -120,6 +124,8 @@ SKIP_IF_MISSING = {      # gate -> map symbols the image must define, else SKIP 
     "memreinit": ("_g_stAwtoSync", "_SysMachineMemReinit"),
     "nvlog": ("_g_stAwtoNv", "_AwtoNvLog"),
     "dramlog": ("_AwtoDlFlush",),
+    "osdfitsim": ("_g_ucAwtoCardUp",),
+    "infocard": ("_g_ucAwtoCardUp", "_g_ucAwtoSelWhy"),
 }
 
 
@@ -220,6 +226,8 @@ def gates(b: Path, m: Path, ref, tree):
     g["wake_full"] = [*PY, f"{s}/wake_sim.py", b, m, "--out", out / "wake"]
     g["wake"] = [*g["wake_full"], "--quick"]                                          # NORMAL: cable / EDID / AUX / SOURCE-key wakes
     g["panel"] = [*PY, f"{s}/panel_sim.py", b, m, *(["--tree", tree] if tree else [])]
+    g["osdfitsim"] = [*PY, f"{s}/osd_fit_sim.py", b, m]                         # every card / selector / menu shot: no cut row (firmware fit guard)
+    g["infocard"] = [*PY, f"{s}/info_card_sim.py", b, m, "--out", out / "info_card"]   # info card after boot: on-screen time, Found by
     g["sysm"] = [*PY, f"{s}/sysm_sim.py", b, m, *(["--tree", tree] if tree else [])]
     g["pacewake"] = [*PY, f"{s}/pacing_wake_sim.py", b, m, "--case", "fast", "--after", "13"]    # #313: the busy hook is off 12 s after a fast wake (~5 s CPU)
     g["memreinit"] = [*PY, f"{s}/mem_reinit_sim.py", b, m]                           # #353: memory power cycle after 2 failed frame-buffer set-ups (~3 s CPU)
@@ -269,6 +277,8 @@ def gates(b: Path, m: Path, ref, tree):
             g["xlayout"] = [*PY, f"{tree}/scripts/xdata_layout.py", "check", "--tree", tree, "--map", m,
                             *(["--layout", V["layout"]] if V["layout"] else [])]   # a variant never promotes the tracked layout (#268): its own
         g["rules"] = [*PY, f"{tree}/scripts/sdk_rules_lint.py", "--tree", tree]     # #162: no build step patches the SDK
+        if (Path(tree) / "scripts/osd_fit.py").is_file():                            # OSD rows fit their boxes, static (fw/osd/osd_fit.tsv)
+            g["osdfit"] = [*PY, f"{tree}/scripts/osd_fit.py", "--check", "--tree", tree]
         for nm, sc in (("gensync", "gen_awto_sync.py"), ("geninputs", "gen_awto_inputs.py"), ("gensavers", "gen_awto_savers.py")):      # #162: generated C tables current
             if (Path(tree) / "scripts" / sc).is_file():
                 g[nm] = [*PY, f"{tree}/scripts/{sc}", "--check"]

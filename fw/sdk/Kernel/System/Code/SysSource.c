@@ -1264,18 +1264,23 @@ void SysSourceSearchTimeInitial(BYTE ucSearchIndex)
 // Output Value : None
 //--------------------------------------------------
 // Input-sync timeline: a port is taken; why = the scan type, and for an auto search whether the last used (NVRAM) port answered.
+__xdata BYTE g_ucAwtoSelWhy;
+__xdata BYTE g_ucAwtoSelAsk;
+
 static void AwtoSyncSelect(void)
 {
     BYTE ucWhy = AWTO_SEL_WHY_OTHER;
 
     if(GET_SOURCE_SCAN_TYPE() == _SOURCE_SWITCH_FIXED_PORT)
     {
-        ucWhy = AWTO_SEL_WHY_FIXED;
+        ucWhy = g_ucAwtoSelAsk;                 // selector / input select, else the stored setting
     }
     else if((GET_SOURCE_SCAN_TYPE() == _SOURCE_SWITCH_AUTO_IN_GROUP) || (GET_SOURCE_SCAN_TYPE() == _SOURCE_SWITCH_AUTO_WITHOUT_GROUP))
     {
         ucWhy = (g_ucSearchIndex == SysSourceConvertSearchPort(UserCommonNVRamGetSystemData(_SEARCH_PORT))) ? AWTO_SEL_WHY_AUTO_LAST : AWTO_SEL_WHY_AUTO_OTHER;
     }
+    g_ucAwtoSelWhy = ucWhy;
+    g_ucAwtoSelAsk = AWTO_SEL_WHY_FIXED;        // one take per request: later re-syncs are the stored setting
     AwtoSyncPush(AWTO_SYNC_EV_SELECT, ucWhy, ((WORD)GET_INPUT_PORT(GET_INPUTPORT_TYPE(g_ucSearchIndex)) << 8) | GET_SOURCE_TYPE(g_ucSearchIndex));
 }
 

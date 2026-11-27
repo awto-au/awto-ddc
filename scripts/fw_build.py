@@ -55,7 +55,8 @@ BANK = CM.BANK_SIZE
 NBANKS = CM.CODE_BANKS
 # Step timeouts = stall guards; measured: port 15 s, compile --asm 64 s worst file (whole run ~70 s), overlay 10 s,
 # bank 5 s, link 20 s (first runs 2026-11-04). 3x cold worst case per awto-dan#53.
-TIMEOUT = {"port": 60, "edid": 60, "pp": 180, "asm": 240, "overlay": 60, "isr": 60, "bank": 60, "link": 120}
+TIMEOUT = {"port": 60, "edid": 60, "pp": 180, "asm": 240, "overlay": 60, "isr": 60, "bank": 60, "link": 120,
+           "osdfit": 5}                                  # osdfit: 0.03 s idle (2026-11-27); 5 s = a cold Python start at load ~25
 LIB_UV2 = "Kernel/Scaler/RL6449_Series_Scaler/Lib/RL6449_Series_Lib.Uv2"   # Realtek ships it as a .LIB
 WORK_DIR = ROOT / "tmp/sdcc-port"
 ASM = ROOT / "tmp/sdcc-port/asm"
@@ -425,6 +426,7 @@ def main() -> int:
         run("edid", [py, "scripts/fw_edid_tables.py", "--serial", a.serial])
         # #162: conditionals that pick a branch silently (undefined names, never-defined #ifdef, ...): fw/pp_audit_allow.tsv
         run("pp", [py, "scripts/pp_audit.py", "--check"])     # TIMEOUT pp: 3x the worst run (commit message)
+        run("osdfit", [py, "scripts/osd_fit.py", "--check"])   # fixed-width OSD rows fit their boxes (fw/osd/osd_fit.tsv), fail fast
         for f in ASM.glob("*.asm"):                           # only this build's modules get linked: a stale one (a file no
             f.unlink()                                        # longer compiled) rode along until the new linker caught it
         run("asm",[py, "scripts/fw_compile.py", "compile", "STD_FW_1P.Uv2", "--target", "RL6449_Project", "--asm"])

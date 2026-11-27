@@ -263,6 +263,7 @@ void OsdDispDisableOsd(void)
         return;
     }
     AwtoSaverTaken();                           // a boot splash on screen ends with this reset
+    g_ucAwtoCardUp = 0;
 #ifdef _AWTO_NEW_SETTINGS
     if(GET_OSD_STATE() == _MENU_HOTKEY_BACKLIGHT)
     {

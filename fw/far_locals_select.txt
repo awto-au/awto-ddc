@@ -1769,6 +1769,7 @@ console:AwtoCardCentre
 console:AwtoCardOpen
 console:AwtoCardOpenW
 console:AwtoCardShow
+console:AwtoCardTimeout
 console:AwtoCardTxt
 console:AwtoConLogEnd
 console:AwtoConLogEvent
@@ -1788,6 +1789,7 @@ console:AwtoDbgShow
 console:AwtoDiagConsole
 console:AwtoFieldBegin
 console:AwtoFieldEnd
+console:AwtoFitCheck
 console:AwtoInName
 console:AwtoInRowField
 console:AwtoInRowFull

@@ -29,6 +29,7 @@ Three separate numbers, never added together (Dan 2026-11-19):
 | conwrap | `--scope inject`: boot, injected widest lines, map end, demo burst | `conwrap_full`: + real power off / on / saving / wake |
 | delays | own clock + delay audit | `delays_full`: + the sibling `-clk87` image |
 | menu, deadport, inputrate, canary, bootsim_always | - | extensive only |
+| osdfit (static, also a `./dev.py build` step) / infocard | normal | osdfitsim: every OSD shot at 1080p60 + 2160p60, firmware fit guard (ED 7E) |
 
 Opt-in switches (each is easy to undo, Dan decides): inputrate `--info` (two informational sweeps), the minimal variants above.
 

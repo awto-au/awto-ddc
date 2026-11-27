@@ -34,8 +34,6 @@ monitor	0xd700	2227	35
 freq	0xd700	2262	34
 ScalerCommonMcu	0xd700	2296	33
 RTD2014UserInterfaceCec	0xd700	2329	28
-SysSource	0xd700	2357	27
-UserCommonInterface	0xd700	2384	27
 delaycal	0xd700	2411	27
 flash_io	0xd700	2438	25
 saver	0xd700	2463	25
@@ -131,6 +129,8 @@ sync	0xe780	37	733
 hostnote	0xe780	770	192
 ScalerMDomain	0xe780	962	135
 SysJudge	0xe780	1097	12
+UserCommonInterface	0xe780	1109	30
+SysSource	0xe780	1139	29
 ScalerCommonDebug	0xe780	1285	363
 awto_settings_settings	0xe780	1648	335
 console	0xe780	1983	322

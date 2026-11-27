@@ -45,12 +45,12 @@ Datasheet (source = monitor, sink = panel). Firmware: `UserCommonInterfacePanelS
 | T5 | link training | - / - | `ScalerDisplayDPTxLinkSequence` | - | ~32 ms (#162) | no limit |
 | T6 | training end -> valid video | - / 100 | stream start after training + Mvid measure | - | link 380 -> stream 434 = 54 ms (unit 2, s2-7) | ok |
 | T7 | valid video -> panel shows it | 0 / 50 | (sink) | - | - | panel side |
-| T8 | valid video -> LED on | 200 / - | none: backlight pin 100 ms after power-up (registry `backlight_on_delay`, default 100; camera: >= 91 ms hides the white start-up flash) | 100 after power-up | - | **not followed (Dan)** |
+| T8 | valid video -> LED on | 200 / - | backlight pin at eDP stream on, not before `backlight_on_delay` (default 120) after power-up (camera: >= 91 ms hides the white start-up flash) | stream on | - | **not followed (Dan)** |
 | T9 | LED off -> video idle | 200 / - | T4 | 250 | - | ok |
 | T10 | video end -> VDD off | 0 / 500 | T5 (+ SSC / PHY off) | 20 | - | ok |
 | T11 | VDD off (10 %) -> VDD on | 1000 / - | T6 (from the VDD-off edge), done before power off / saving completes | 900 | VDD decay not measured | datasheet - 10 % (delay rule, Dan 2026-11-13) |
 
-- T8 is deliberately NOT followed (Dan, 2026-11-13; delay changed 2026-11-20): backlight pin `backlight_on_delay` (100 ms) after power-up at boot and wake, then the user brightness once settings load. Not gated by video. Accepted risk per datasheet note 2: a momentarily abnormal screen. Firmware: design-162.md "Backlight at once"; registry T3 rows retired.
+- T8 is deliberately NOT followed (Dan, 2026-11-13; delay changed 2026-11-20; 2026-11-27: pin at stream on): backlight pin at eDP stream on, `backlight_on_delay` (120 ms) after power-up as a minimum, at boot and wake, then the user brightness once settings load. Not gated by the source's video / T8. Accepted risk per datasheet note 2: a momentarily abnormal screen. Firmware: design-162.md "Backlight at once"; registry T3 rows retired.
 - T6 vs T11: datasheet counts from VDD at 10 %; firmware from the switch edge; VDD decay time not measured.
 - Panel VDD default on: GPIO init drives it on, so a warm reset never cuts it; T6 runs at power-down / saving, not at the next power-on.
 - Not in the datasheet: `_PANEL_POWER_ON_BL_TO_PWM` 50, `_PANEL_POWER_OFF_PWM_TO_BL` 50 (SDK defaults, Panel_Default.h; external LED driver).

@@ -208,7 +208,7 @@ Abbreviations in the table:
 
 ## (a) Added margin: the code value exceeds its source
 
-- **Backlight on delay** (registry 127 `backlight_on_delay`, default 100 ms after power-up): measured, not datasheet. Camera 2026-11-20 (docs/camera-lcd-timing.md): pin at MCU boot + 15 ms -> white flash 200-240 ms; +91 ms or later -> none. 100 ms is +9 ms over the 91 ms edge (Dan's pick).
+- **Backlight on delay** (registry 127 `backlight_on_delay`, default 120 ms after power-up, Dan 2026-11-27; a minimum: the pin waits for eDP stream on): measured, not datasheet. Camera 2026-11-20 (docs/camera-lcd-timing.md): pin at MCU boot + 15 ms -> white flash 200-240 ms; +91 ms or later -> none. 100 ms is +9 ms over the 91 ms edge (Dan's pick).
 
 - **Panel T3**: 550 ms against the datasheet T8 min 200 ms (2.75x). Against the registry note "500 ms per 27-inch 4K eDP datasheets" it is +10 %.
 - **Panel T4**: 250 ms against datasheet T9 min 200 ms (1.25x, plus 1 tick).
@@ -217,7 +217,7 @@ Abbreviations in the table:
 - **`AWTO_TMDS_HPD_LOW_MS`**: 110 ms against the HDMI 1.4b 100 ms (+10 %).
 - **`AWTO_DELAY_TARGET_PCT`**: all the `DELAY_*US` loops are calibrated to 105 % of nominal.
 - **Audio PLL waits**: six sites coded 2 ms for a "Delay 1000us" comment (2.0x). The two audio-detect waits are 3 ms for "2 ms" (1.5x).
-- **`_AWTO_INFO_POPUP_SEC`**: 6 s against the SDK 3 s (2.0x).
+- **`_AWTO_INFO_POPUP_SEC`**: 11 s (6 + 5, Dan 2026-11-27) against the SDK 3 s; a UI display time, Dan's value, not a hardware delay.
 - **`AWTO_MSG_HOST_MS`**: 100 ms against about 5 ms (20x, far above the 1.25 timeout rule).
 - **`AWTO_WDT_PROBE_MS`**: 1.28x.
 - **`AWTO_SRC_DDC_POLLS`**: 3 s against 2.5 s (1.2x).
@@ -315,7 +315,7 @@ Scope note: awto-ddc has uncommitted changes (docs/nvram-settings.md, docs/speed
 | /mnt/2tb/git/awto-ddc/fw/timer/t0ev.c:250 | ScalerTimerDelayXms(ucMs + (ucMs >> 2)) | requested event time ucMs | +25 | "the event fires inside (x1.25), still at the PS reload" (test hook, ucHow 6/7) | firmware (test code) |
 | RL6449_Project.h:568 | AWTO_MSTEP_MAX 7 (a count of log lines, not time) | 5 lines for the first set-up | +40 (count) | "first set-up 5 lines x1.25" | firmware |
 | RL6449_Project.h:994 | AWTO_SYNC_N 48 (ring slots, not time) | 38 lines x 1.25 = 47.5 (boot_sim) | +0.5 | ">= cold boot 38 lines x1.25 (boot_sim, #165); divides WRAP (#233)" | firmware |
-| RL6449_Project.h:1433 | _AWTO_INFO_POPUP_SEC 6 | SDK value 3 s | +100 (deviation, no margin wording) | "input-info pop-up on-screen time (SDK: 3)" | firmware |
+| RL6449_Project.h | _AWTO_INFO_POPUP_SEC 11 (base 6 + extra 5) | SDK value 3 s | UI display time (Dan 2026-11-27), not a margin | "input-info pop-up on-screen time (SDK: 3)"; "+5 s after boot" | firmware |
 | /mnt/2tb/git/awto-ddc/fw/sdk/Panel/AWTO_M280DCA_E3B.h:49 (overridden by AWTO_SET at :61-66 when the registry is used) | _PANEL_POWER_ON_T3 550 | datasheet T8 >= 200 ms (header's own citation, docs/monitors/panel-innolux-m280dca-e3b.md) | +175 | "video valid -> backlight on; datasheet T8 >= 200 ms (panel-innolux-m280dca-e3b.md)" | firmware |
 | /mnt/2tb/git/awto-ddc/fw/sdk/Panel/AWTO_M280DCA_E3B.h:48 | _PANEL_POWER_ON_T2 250 | HPD bound: datasheet T2 max 200 ms (docs/monitors/panel-edid.md:47) | +25 | no comment in header; docs/monitors/panel-innolux-m280dca-e3b.md:41 "ok: bound = 1.25 x 200"; re/delays_reasons.tsv:65 "datasheet T2 max 200 ms, value 250" | firmware |
 | /mnt/2tb/git/awto-rtdfw/settings/registry.tsv:95 and set_table.c:88 (docs/nvram-settings.md:223) | panel_t6 default 1100 (range 500..5000) | BOE MV270QUM-N50 spec T8 >= 1000 ms (docs/monitors/panel-edid.md:47; re/delays.tsv:1025) | +10 | registry "minimum VDD off time [vendor-value]"; re/delays_reasons.tsv "datasheet T8 >= 1000 ms, value 1100" | firmware (registry default) |

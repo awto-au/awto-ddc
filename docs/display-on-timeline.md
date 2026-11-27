@@ -77,7 +77,7 @@ No timeout expired in either stage (0 `EXPIRED` lines in 10 boots); the 100 ms b
 | colour set-up (`UserCommonInterfaceAdjustColorP...` DEN_STOP 9..14, `UserAdjustContrast` DEN_STOP 15..16) | 30..32 (`stage:colour set-up`) | 2 frame waits | SDK colour path: candidate (issue) |
 | SDK ACTIVE timer | 100..115 ms, `ACTIVE wait:timer` | timer | closed: the picture is already up in the same ms (nothing visible waits for it) |
 | panel video ready | 115 ms | panel T-chain | not shortened (panel sequence timings are out of scope) |
-| backlight on delay | 100 ms from power-up | registry 127, by design | camera-measured, docs/camera-lcd-timing.md |
+| backlight on | eDP stream on, >= 120 ms from power-up | registry 127 minimum + stream on (Dan 2026-11-27) | camera-measured, docs/camera-lcd-timing.md |
 
 ## Changes made (one commit each)
 

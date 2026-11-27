@@ -1659,10 +1659,17 @@ extern unsigned char AwtoSysStateNow(void);
 #define AWTO_SD_WHY_LOST                                        0x41    // signal lost after ACTIVE (value ms = since ACTIVE)
 #define AWTO_SD_F_HEALTH                                        0x08    // g_ucAwtoSdFlags bit: link health read pending
 #define AWTO_SD_HEALTH_MS                                       100     // link health read this long after ACTIVE: ~6 frames at 60 Hz, a non-blocking check from the main loop (no wait)
-#define AWTO_SEL_WHY_FIXED                                      0
+#define AWTO_SEL_WHY_FIXED                                      0       // how the input on screen was found (F0 arg, info card "Found by"): fixed port, stored setting
 #define AWTO_SEL_WHY_AUTO_LAST                                  1
 #define AWTO_SEL_WHY_AUTO_OTHER                                 2
 #define AWTO_SEL_WHY_OTHER                                      3
+#define AWTO_SEL_WHY_SELECTOR                                   4       // fixed port chosen in the input selector
+#define AWTO_SEL_WHY_KVM                                        5       // fixed port by input select: VCP 0x60 / menu / test cmd
+#define AWTO_SEL_WHY_FAST                                       6       // fast path: cached set-up, no search (#60; no F0 line, the request line has it)
+#define AWTO_SEL_WHY_FAST_WAKE                                  7       // fast wake: signal back on the held port
+#define AWTO_SEL_WHYS                                           8
+extern __xdata unsigned char g_ucAwtoSelWhy;    // AWTO_SEL_WHY_* of the input on screen
+extern __xdata unsigned char g_ucAwtoSelAsk;    // fixed-port origin (SELECTOR / KVM) for the next take; FIXED = stored setting
 #define AWTO_STG_MEASURE                                        1       // probes 17 -> 18
 #define AWTO_STG_DISPLAY                                        2       // 14 -> 15
 #define AWTO_STG_COLOUR                                         3       // 15 -> 16
@@ -1917,19 +1924,20 @@ extern unsigned char g_pucSourceSearchPriority[];
 #undef _AWTO_WAKE_HOLD
 #define _AWTO_WAKE_HOLD                                         _OFF
 #endif
-// Backlight on (Dan 2026-11-20): power-up -> pin on after backlight_on_delay (default 100 ms), pin -> PWM duty after bl_pwm_ms
+// Backlight on (Dan 2026-11-27): pin at eDP stream on, backlight_on_delay (default 120 ms) after power-up as a minimum; pin -> PWM after bl_pwm_ms
 #ifdef _AWTO_NEW_SETTINGS
-#define AWTO_BL_ON_DELAY_MS                                     AWTO_SET(BACKLIGHT_ON_DELAY)       // #67 registry, default 100 (docs/camera-lcd-timing.md)
+#define AWTO_BL_ON_DELAY_MS                                     AWTO_SET(BACKLIGHT_ON_DELAY)       // #67 registry, default 120 (docs/camera-lcd-timing.md)
 #define AWTO_BL_TO_PWM_MS                                       AWTO_SET(BL_PWM_MS)         // #67 registry, default 0
 #else
-#define AWTO_BL_ON_DELAY_MS                                     100
+#define AWTO_BL_ON_DELAY_MS                                     120
 #define AWTO_BL_TO_PWM_MS                                       0
 #endif
 #define AWTO_PNL_X_BLK                                          0xE1    // line 11 args of the backlight test knob: E1 pin on (value = ms2 since boot / since video ready)
 #define AWTO_PNL_X_BLK_SET                                      0xE2    // knob in effect, reference ACTIVE (value = ms); E4 stream on, E5 power-up
 #define AWTO_PNL_X_BLK_SET_STREAM                               0xE4
 #define AWTO_PNL_X_BLK_SET_POWERUP                              0xE5
-#define AWTO_PNL_X_BLK_DEF                                      0xE6    // pin on by the registry delay, no test record (value = ms)
+#define AWTO_PNL_X_BLK_DEF                                      0xE6    // pin on at stream on, no test record (value = min delay << 16 | ms since power-up)
+#define AWTO_PNL_X_BLK_MIN                                      0xE7    // pin on at the min delay, the stream was on before (same value)
 #define AWTO_PNL_X_BLK_LATE                                     0xE3    // no video ready event in time (value = ms from wanted)
 // #162 panel machine (UserCommonInterface.c): the one driver of panel VDD, eDP-1 PHY / link / stream, backlight pin and PWM.
 // Callers request (UserCommonInterfacePanelPowerAction); UserCommonInterfacePanelPowerTick() steps it, never waits. docs/design-162.md.
@@ -2106,7 +2114,9 @@ extern __xdata unsigned char g_ucAwtoSleepOk;      // pwr_l3_en: 0 = every power
 extern bit SysMachineOffOrGoing(void);
 // D1 DPCD default: SDK OSD default is DP 1.1 = HBR max (4K60 pruned by the host); vendor runs 4K60 over DP = HBR2 (#28)
 #define _AWTO_DP_D1_VERSION                                     _DP_VER_1_DOT_2
-#define _AWTO_INFO_POPUP_SEC                                    6       // input-info pop-up on-screen time (SDK: 3)
+#define _AWTO_INFO_POPUP_BASE_SEC                               6       // input-info pop-up on-screen time before 2026-11-27 (SDK: 3)
+#define _AWTO_INFO_POPUP_EXTRA_SEC                              5       // Dan 2026-11-27: +5 s after boot; one timer for every sync to ACTIVE
+#define _AWTO_INFO_POPUP_SEC                                    (_AWTO_INFO_POPUP_BASE_SEC + _AWTO_INFO_POPUP_EXTRA_SEC)
 #define _CHECKSUM                                               0xA3    // awto NVRAM layout id; change = defaults reload (SDK 0x1A)
 
 
@@ -2669,9 +2679,13 @@ extern bit SysMachineOffOrGoing(void);
 #define AWTO_AUDIO_OUT_DEFAULT                                  _AUDIO_DAC_OUTPUT_SPEAKER
 #define AWTO_SYNC_EV_AUDIO                                      0xE5    // speaker amp pins: arg AWTO_AUDIO_EV_*, value 0
 #define AWTO_SYNC_EV_DEMO                                       0xE6    // test cmd 0x3A demo log: 01..03 'line N test ...' short / medium / long
-#define AWTO_SYNC_EV_CARD                                       0xED    // pop-up card opened (#266, opens only): arg = AWTO_CT_* text id of the card, 0x80 | AWTO_CARD_SUP_* = not opened (value = message)
+#define AWTO_SYNC_EV_CARD                                       0xED    // pop-up card opened / timed out (#266): arg = AWTO_CT_* text id of the card, 0x80 | AWTO_CARD_SUP_* = not opened (value = message)
 #define AWTO_CARD_SUP_SEL                                       0x01    // the input selector is open and keeps the screen
 #define AWTO_CARD_SUP_CON                                       0x02    // the open console keeps the screen
+#define AWTO_CARD_CLOSE_TIMEOUT                                 0x7F    // ED arg: a card closed by its on-screen timer (value = ms up)
+#define AWTO_CARD_ROW_CUT                                       0x7E    // ED arg: an OSD text row wider than its box (value = cells over, incl. the frame cell)
+extern void AwtoCardTimeout(void);
+extern __xdata unsigned char g_ucAwtoCardUp;
 #define AWTO_SYNC_EV_FRZ                                        0xEC    // #255 picture freeze (_AWTO_FREEZE build): arg AWTO_FRZ_EV_*
 #define AWTO_FRZ_EV_ON                                          0x01    // test cmd AWTO_TC_FREEZE_ON: capture frozen
 #define AWTO_FRZ_EV_OFF                                         0x02    // test cmd AWTO_TC_FREEZE_OFF: capture running again

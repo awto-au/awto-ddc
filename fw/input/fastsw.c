@@ -210,6 +210,7 @@ void AwtoWakePoll(void)                         // every pass while held
     g_ucAwtoHold = 0;
     g_ucAwtoWakePending = 1;
     AwtoSwFastGo(ucI, SysSourceGetInputPort(), s_pstAwtoSwCache[ucI].ucSourceType);
+    g_ucAwtoSelWhy = AWTO_SEL_WHY_FAST_WAKE;
     SysMachineRequest(AWTO_SYS_REQ_FAST, AWTO_SYS_BY_HOLD_BACK);
     if(s_ucAwtoHoldLevel != 0)                  // still blanked: the backlight is back before the unblank
     {
@@ -252,6 +253,7 @@ unsigned char AwtoSwFast(unsigned char ucPort)  // _TRUE = fast path taken, no m
         return _FALSE;
     }
     AwtoSwFastGo(ucI, ucPort, ucType);
+    g_ucAwtoSelWhy = AWTO_SEL_WHY_FAST;
     AwtoSwEvent(AWTO_SW_EV_FAST, 0);
     SysMachineRequest(AWTO_SYS_REQ_FAST, AWTO_SYS_BY_FAST);
     return _TRUE;
@@ -310,6 +312,7 @@ void AwtoSwFastPoll(void)                       // once per main-loop pass: fini
     if(ucWhy == 0)
     {
         g_ucAwtoFastPending = 0;
+        g_ucAwtoSelAsk = AWTO_SEL_WHY_FIXED;    // KVM request served; a full-path fallback keeps it for its take
 #if(_AWTO_WAKE_HOLD == _ON)
         s_ucAwtoWoke = g_ucAwtoWakePending;
         s_usAwtoWokeMs = ((WORD)AwtoMs());

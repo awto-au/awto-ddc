@@ -7,7 +7,7 @@ Issues: #78 (wake time), #139 (sync log), #239 (350.8 MHz boot), #256 / #147 / #
 
 | id | arg | value | text (example) |
 |---|---|---|---|
-| F0 | why: 0 fixed, 1 auto + last used, 2 auto + other, 3 other | port, source | `input taken:D2 HDMI (fixed port: selector / VCP 0x60 / menu / setting)` |
+| F0 | why (`AWTO_SEL_WHY_*`, also the info card "Found by" row): 0 fixed + stored setting, 1 auto + last used, 2 auto + other, 3 other, 4 fixed + selector, 5 fixed + input select (VCP 0x60 / menu / test cmd); 6 fast switch / 7 fast wake are card-only (the request line logs them) | port, source | `input taken:D2 HDMI (fixed port, the stored setting)` |
 | F1 | stage 1 measure, 2 display setting, 3 colour, 4 first-active | ms | `stage:display setting took 117ms` |
 | F2 | scan outcome (below) | port, ms in the scan call | `scan fail:CDR not locked at 1:10, retry 1:40 (D2, 3ms)` |
 | F3 | 0 | port left, ms on it | `search left the port:D3, 2012ms` |

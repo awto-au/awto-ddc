@@ -127,7 +127,7 @@ static const struct setting __code tab[SET_COUNT] = {
     {124, 0, 0, 10, 0x03, 0, 1, 1, 1, 0x00, 0, 1971u, 0xFFFFu},  /* monitor */
     {125, 0, 0,  6, 0x03, 0, 1, 1, 1, 0x00, 0, 1986u, 0xFFFFu},  /* cec_en */
     {126, 0, 0,  6, 0x03, 0, 1, 1, 0, 0x00, 0, 1990u, 0xFFFFu},  /* cec_ctl */
-    {127, 2, 2,  3, 0x01, 0, 255, 5, 100, 0x00, 0, 2002u, 0xFFFFu},  /* backlight_on_delay */
+    {127, 2, 2,  3, 0x01, 0, 255, 5, 120, 0x00, 0, 2002u, 0xFFFFu},  /* backlight_on_delay */
     {134, 0, 0,  6, 0x01, 0, 1, 1, 1, 0x00, 0, 2021u, 0xFFFFu},  /* hdmi_ratio_mem */
     {135, 0, 0, 13, 0x01, 0, 1, 1, 0, 0x00, 0, 2039u, 0xFFFFu},  /* hdmi_ratio_d2 */
     {136, 0, 0, 13, 0x01, 0, 1, 1, 0, 0x00, 0, 2050u, 0xFFFFu},  /* hdmi_ratio_d3 */
