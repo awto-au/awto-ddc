@@ -358,6 +358,7 @@ JOIN_MS = 3
 MON_EV = 0xEA                                            # AWTO_SYNC_EV_MON: a joined monitor line shows its values only
 JOIN_PAIRS = {(MON_EV, MON_EV), (0xF5, 0xF6), (0xF7, 0xF8), (0xF8, 0xF9)}    # heartbeat rows (not an ADC move, arg 1), FBUF -> MCFG, DVF -> SCALE -> LIMIT
 MON_ADC = 1
+HOST_EV, HOSTFW_EV = 0xD7, 0xD8                          # AWTO_SYNC_EV_HOST / _HOSTFW
 START_WORD = "started"                                  # after an episode start row's text, as the console (#358)
 WRAP_TEXT = "relative time reset: counter wrap"          # a delta that is not known for certain (16-bit times only, Dan 2026-11-27)
 REAL_W = 13                                              # real-time column: marker + 12 cells
@@ -431,6 +432,9 @@ def con_rows(evs: list, texts: list[str], ts: list, ht: dict | None = None, boot
             else:
                 wrap = True
         txt = texts[k] + "".join(" | " + (texts[j].split("monitor: ", 1)[-1] if evs[j][0] == MON_EV else texts[j]) for j in g[1:])
+        if evs[g[-1]][0] == HOST_EV and g[-1] + 1 < len(evs) and evs[g[-1] + 1][0] == HOSTFW_EV:
+            g.append(g[-1] + 1)                          # as the console (AwtoConLogTail): the D8 fw line on the D7 host time row
+            txt += " " + texts[g[-1]]
         out.append({"i": g, "real": real_col(t if sure else None, ht, cur, b0), "delta": d, "start": st, "wrap": wrap, "text": txt})
         k = g[-1] + 1
     return out

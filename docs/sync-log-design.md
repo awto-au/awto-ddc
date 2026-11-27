@@ -76,7 +76,7 @@ Existing sync lines stay (C1 / C6 / C2 / F0..F4 / FC / system machine); the new 
   - `<real 13> <delta 7>:<text>  [fw <32-bit ms or ?> ms, ring <ms16>]`; `synclog` prefixes each row with its log stamp + two spaces.
   - start row: `<real> <delta>:-- <text> started --` (the console draws `-- <text> started ---` to the row end; `(N lines not shown)` after `started` when the episode is longer than the view).
   - wrap row: 13 spaces, 7 spaces, `:-- relative time reset: counter wrap --`; the next row has a blank delta and real time.
-  - joined row: texts after ` | ` (a text may hold ` | ` itself: `run << 4 | why`).
+  - joined row: texts after ` | ` (a text may hold ` | ` itself: `run << 4 | why`); the D8 `(fw +N ms, ...)` line follows the D7 `host time` text after one space (console `AwtoConLogTail`).
 - 16-bit deltas: a version 3 delta is used only between full times it lands on exactly (C0 / D8 anchors, now); otherwise the wrap row (Dan 2026-11-27). Every version 4 (DRAM log) line has its 32-bit ms.
 - Joined rows (`AWTO_LN_PAIR`, host `JOIN_PAIRS`): a listed next line within `AWTO_LN_JOIN_MS` (3 ms: pushes of one call) shares the row after ` | `; the live draw leaves a newest group leader for one call (the next push or the OSD poll), no time wait.
   - monitor heartbeat rows (not an ADC move): `monitor: IOSC 2001 | 300/s gap 12.6ms | free 301/s busy 39% worst 1.937ms | up 1150s stk D4`;
