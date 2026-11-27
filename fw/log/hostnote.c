@@ -297,6 +297,7 @@ static BYTE AwtoDlInit(void)                        // first drain whose header 
         return 0;                                   // not answering: the next drain asks again; a failed read must not look like an empty DDR (that starts a new generation)
     }
     g_ulAwtoBootAbs -= g_stAwtoSync.ulWr + g_stAwtoSync.ucPend;        // its distance from the ring end stays: re-added below
+    g_ulAwtoEpAbs -= g_stAwtoSync.ulWr + g_stAwtoSync.ucPend;
     ucOk = (s_aucDl[0] == AWTO_DLOG_HDR_ID) && (s_aucDl[1] == 'L') && (s_aucDl[2] == AWTO_DLOG_HDR_VER) && (AwtoDlSum() == s_aucDl[15]);
     ulHint = ((DWORD)s_aucDl[5] << 24) | ((DWORD)s_aucDl[6] << 16) | ((DWORD)s_aucDl[7] << 8) | s_aucDl[8];
     g_usAwtoNoteN = ((WORD)s_aucDl[9] << 8) | s_aucDl[10];
@@ -324,6 +325,7 @@ static BYTE AwtoDlInit(void)                        // first drain whose header 
     g_stAwtoSync.ucBoot++;
     g_stAwtoSync.ucLost = 0;
     g_ulAwtoBootAbs += g_stAwtoSync.ulWr + g_stAwtoSync.ucPend;
+    g_ulAwtoEpAbs += g_stAwtoSync.ulWr + g_stAwtoSync.ucPend;
     AwtoDlHdr(g_stAwtoSync.ulWr);
     return 1;
 }
@@ -426,6 +428,7 @@ static BYTE AwtoDlRead(DWORD ulA, BYTE __xdata *pucOut)
     return 1;
 }
 
+__xdata BYTE g_ucAwtoAtLaps;                        // AwtoSyncAt: seq laps (AWTO_SYNC_WRAP lines) further back; set by the console for one row only
 static __xdata DWORD s_ulAtA;                       // AwtoSyncAt temporaries in XDATA: it sits on the deepest DATA overlay path (console line -> DDR read)
 static __xdata BYTE s_ucAtD;
 static __xdata BYTE s_ucAtS;
@@ -434,11 +437,13 @@ static __xdata BYTE s_ucAtS;
 BYTE __xdata *AwtoSyncAt(BYTE ucSeq)                // the ring line ucSeq (AWTO_SYNC_N back at most) as a 10 B entry (AWTO_DLOG_AT_B); an unwritten / lost one is all 0
 {
     s_ucAtD = AWTO_SYNC_BACK(g_stAwtoSync.ucSeq, ucSeq);
-    if((s_ucAtD != 0) && (s_ucAtD <= AWTO_SYNC_TAIL))
+    if((s_ucAtD != 0) && (s_ucAtD <= AWTO_SYNC_TAIL) && (g_ucAwtoAtLaps == 0))
     {
         return AWTO_SYNC_ENT(s_ucAtD);              // the tail: lines not yet in the DDR and the newest written ones
     }
-    s_ulAtA = g_stAwtoSync.ulWr + g_stAwtoSync.ucPend - s_ucAtD;
+    s_ulAtA = (DWORD)g_ucAwtoAtLaps * AWTO_SYNC_WRAP + s_ucAtD;     // lines back (laps: the console's episode start row, past one seq wrap)
+    s_ucAtD = (s_ulAtA != 0) && ((g_stAwtoSync.ulWr + g_stAwtoSync.ucPend) >= s_ulAtA);
+    s_ulAtA = g_stAwtoSync.ulWr + g_stAwtoSync.ucPend - s_ulAtA;
     for(s_ucAtS = 0; s_ucAtS < 2; s_ucAtS++)
     {
         if(s_pulAtAbs[s_ucAtS] == s_ulAtA)
@@ -449,7 +454,7 @@ BYTE __xdata *AwtoSyncAt(BYTE ucSeq)                // the ring line ucSeq (AWTO
     s_ucAtS = s_ucAtNext;
     s_ucAtNext ^= 1;
     s_pulAtAbs[s_ucAtS] = 0xFFFFFFFFUL;
-    if((s_ucAtD != 0) && ((g_stAwtoSync.ulWr + g_stAwtoSync.ucPend) >= s_ucAtD) && (AwtoDlRead(s_ulAtA, s_aucAtC[s_ucAtS]) != 0))
+    if((s_ucAtD != 0) && (AwtoDlRead(s_ulAtA, s_aucAtC[s_ucAtS]) != 0))
     {
         s_pulAtAbs[s_ucAtS] = s_ulAtA;
     }

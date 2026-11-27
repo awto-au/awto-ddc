@@ -55,8 +55,11 @@ def say(s: str):
     _log_line(s, LOG)
 
 
+HID = re.compile(r" \(\d+ lines not shown\)")    # the episode start row drawn first (fw/osd/console.c s_usLnHid)
+
+
 def norm(s: str) -> str:
-    return PORT.sub("<P>", s.rstrip())
+    return PORT.sub("<P>", HID.sub("", s.rstrip()))
 
 
 class Sim:
@@ -112,6 +115,8 @@ class Sim:
         """console row texts (joined), each as a host line "text" """
         rs = self.con_rows()
         self.seen |= {norm(r["text"]) for r in rs}
+        _h, ep = SL.decode(SL.read_ring(self.m.rd, self.a_sync, False), self.rows)     # the episode from the DDR: its start row may be past the 88-line window
+        self.seen |= {norm(x.split(":", 1)[1]) for x in ep}
         return [":" + r["text"] for r in rs]
 
     def ring_deltas(self) -> dict[str, list[str]]:

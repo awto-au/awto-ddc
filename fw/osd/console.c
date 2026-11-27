@@ -77,6 +77,7 @@ static __xdata BYTE s_ucLogI;                   // GPIO page backfill: change-ri
 #define AWTO_LOG_LINES      (AWTO_VIEW_ROWS - AWTO_LOG_ROW0)
 #define AWTO_LOG_FILL_N     (AWTO_CON_ROWS - AWTO_LOG_ROW0)   // lines a console open backfills: one map row each
 #define AWTO_LOG_REDRAW_N   ((AWTO_CON_ROWS - AWTO_LOG_ROW0) / 2)   // lines a map-full redraw backfills (2 rows each at most)
+#define AWTO_LOG_VIEW_N     (AWTO_VIEW_ROWS - AWTO_LOG_ROW0 - 2)    // backfill under an episode start row drawn first (2 rows at most): all in view
 static __data BYTE d_s_ucConOpen;                // 0 closed, else the page: AWTO_CON_MAIN / AWTO_CON_GPIO
 static BYTE s_ucPanelCol;
 static BYTE s_ucPanelRow;
@@ -1617,6 +1618,9 @@ static __xdata BYTE s_ucLnJoinN;                // lines AwtoSyncLine joined to 
 static __xdata BYTE s_ucLnJ;                    // seq of the last line on the row
 static BYTE __xdata *__xdata s_pucLnW;          // AwtoConLogSync: entry of the row's last line (the wait for the rest of a group)
 static __xdata BYTE s_ucLnWaitSeq;              // newest line the live draw waited on once (no time wait: no pacing change)
+static __xdata WORD s_usLnHid;                  // console backfill: lines between the episode start row drawn first and the backfill
+static __xdata BYTE s_ucLnLaps;                 // its AwtoSyncAt laps (g_ucAwtoAtLaps while that row draws)
+static __xdata BYTE s_ucLnJumpSeq;              // the backfill's first line (after that start row)
 
 static void AwtoPutReal(void)                   // 13 cells: ' ' + host clock "HH:MM:SS.mmm", or 'u' + uptime of the line's boot
 {
@@ -1680,7 +1684,7 @@ static void AwtoLnDelta(BYTE ucSeq)             // s_lLnD / s_ucLnStart / s_ucLn
     puc = AwtoSyncAt(ucSeq);
 #if(_AWTO_DRAM_LOG == _ON)
     s_ulLnMs = AWTO_LN_MS(puc);
-    s_ucLnBoot = ((g_stAwtoSync.ulWr + g_stAwtoSync.ucPend - AWTO_SYNC_BACK(g_stAwtoSync.ucSeq, ucSeq)) >= g_ulAwtoBootAbs);
+    s_ucLnBoot = ((g_stAwtoSync.ulWr + g_stAwtoSync.ucPend - AWTO_SYNC_BACK(g_stAwtoSync.ucSeq, ucSeq) - (DWORD)g_ucAwtoAtLaps * AWTO_SYNC_WRAP) >= g_ulAwtoBootAbs);
 #endif
     s_ucLnStart = (puc[0] == AWTO_SYNC_EV_BOOT) ||
                   ((puc[0] == AWTO_SYNC_EV_BEGIN) && (puc[1] != AWTO_SYNC_K_POWER_ON) && (puc[4] != AWTO_SYNC_BEGIN_IN));
@@ -1925,6 +1929,12 @@ AwtoLnNext:
     }
     if(s_ucLnStart != 0)
     {
+        if(s_usLnHid != 0)
+        {
+            AwtoPutStr(" (");
+            AwtoPutNum(s_usLnHid, 1);
+            AwtoPutStr(" lines not shown)");         // the episode's start row stays first; the lines are in the DDR (synclog --dram)
+        }
         AwtoPutChar(' ');
         while(d_s_ucAwtoLen < s_ucAwtoCols)
         {
@@ -3283,6 +3293,17 @@ void AwtoConLogInit(void)
     // The console is a view of the ring (never a clear): the newest lines that fit the map, older episodes included.
     // One-row lines fill the map (AWTO_LOG_FILL_N); a map-full redraw takes AWTO_LOG_REDRAW_N (fits even if every line wraps).
     s_ucConSyncSeq = AWTO_SYNC_BACK(g_stAwtoSync.ucSeq, (s_ucConRedraw != 0) ? AWTO_LOG_REDRAW_N : AWTO_LOG_FILL_N);
+#if(_AWTO_DRAM_LOG == _ON)
+    s_ulLnT = g_stAwtoSync.ulWr + g_stAwtoSync.ucPend - g_ulAwtoEpAbs;     // lines back to the episode's start row (Dan: always the first row)
+    if((s_ulLnT > AWTO_SYNC_BACK(g_stAwtoSync.ucSeq, s_ucConSyncSeq)) && (s_ulLnT <= AWTO_DLOG_SLOTS))
+    {
+        s_ucConSyncSeq = AWTO_SYNC_BACK(g_stAwtoSync.ucSeq, (s_ucConRedraw != 0) ? (AWTO_LOG_REDRAW_N - 1) : AWTO_LOG_VIEW_N);   // start row + backfill fit (redraw: the map, else the view)
+        s_usLnHid = (WORD)(s_ulLnT - 1 - AWTO_SYNC_BACK(g_stAwtoSync.ucSeq, s_ucConSyncSeq));   // between it and the backfill: "(N lines not shown)"
+        s_ucLnJumpSeq = s_ucConSyncSeq;
+        s_ucLnLaps = (BYTE)(s_ulLnT / AWTO_SYNC_WRAP);                    // past a seq wrap: AwtoSyncAt reads it by laps (from the DDR)
+        s_ucConSyncSeq = AWTO_SYNC_BACK(g_stAwtoSync.ucSeq, (BYTE)(s_ulLnT % AWTO_SYNC_WRAP));
+    }
+#endif
     s_ucConT0Ok = 0;
     AwtoConLogSync();
 }
@@ -3433,6 +3454,7 @@ void AwtoConLogSync(void)                       // #139: new sync ring lines, on
         {
             return;                             // the redraw backfills it
         }
+        g_ucAwtoAtLaps = (s_usLnHid != 0) ? s_ucLnLaps : 0;     // the start row drawn first may be past a seq wrap
         s_ucLnJoinOk = 1;
         for(s_ucLnJ = s_ucConSyncSeq; AwtoLnJoins(AwtoSyncAt(s_ucLnJ), s_ucLnJ) != 0; s_ucLnJ = AWTO_SYNC_NEXT(s_ucLnJ))
         {
@@ -3442,6 +3464,7 @@ void AwtoConLogSync(void)                       // #139: new sync ring lines, on
         {
             s_ucLnWaitSeq = s_ucLnJ;            // the rest of its group comes in this call: drawn at the next call (push or OSD poll), one row
             s_ucLnJoinOk = 0;
+            g_ucAwtoAtLaps = 0;
             return;
         }
         AWTO_WDT_FEED(AWTO_WDT_S_CONLINE);      // bounded: <= AWTO_SYNC_N lines (a map-full redraw backfills AWTO_LOG_REDRAW_N in one pass)
@@ -3452,7 +3475,9 @@ void AwtoConLogSync(void)                       // #139: new sync ring lines, on
             AwtoConWrapLine();
         }
         s_ucLnJoinOk = 0;
-        s_ucConSyncSeq = AWTO_SYNC_NEXT(s_ucLnJ);   // past the lines joined to the row
+        s_ucConSyncSeq = (s_usLnHid != 0) ? s_ucLnJumpSeq : AWTO_SYNC_NEXT(s_ucLnJ);    // past the joined lines / from the start row to the backfill
+        s_usLnHid = 0;
+        g_ucAwtoAtLaps = 0;
         if((s_ucConSyncSeq != g_stAwtoSync.ucSeq) && (AWTO_LOG_EV(s_ucConSyncSeq) == AWTO_SYNC_EV_HOSTFW) &&
            (AWTO_LOG_EV(AWTO_SYNC_BACK(s_ucConSyncSeq, 1)) == AWTO_SYNC_EV_HOST))
         {

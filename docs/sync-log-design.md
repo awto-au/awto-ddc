@@ -78,6 +78,8 @@ Existing sync lines stay (C1 / C6 / C2 / F0..F4 / FC / system machine); the new 
   - `frame buffers` + `memory`; `display frame rate` + `scaling` + `FRC width`.
   - Delta / real time of a joined row = its first line; the next row's delta counts from the last joined line.
   - Not joined: the backlight on / pin / PWM lines (joined they still take two rows), an ADC move.
+- Episode start row is never lost at the top (Dan 2026-11-27): `g_ulAwtoEpAbs` = absolute index of the current episode's start row (boot line / start BEGIN). A console open / redraw whose backfill starts after it draws that row first, from the DDR (`g_ucAwtoAtLaps` past a seq wrap), with `(N lines not shown)` before the rule; the backfill follows. Cost: XDATA 9 B (EpAbs 4, laps 2, hidden count 2, jump 1), no pass cost when the console is closed.
+- Host one-episode read (DRAM log): every line of the episode from the DDR, up to 175 (seq window; a unit 3 boot is ~127), not the newest 88; `--dram` reads any length.
 - Episode start = a red row `-- text ---` to the row end (`AWTO_T_STYLE_EPOCH` = the alert style, palette `AWTO_PAL_DIAG_ALERT`). Coloured text row: the font is ASCII (no box-drawing glyph), and an OSD window per row is not available.
 - Starts and their zero (the delta on the red row):
   - boot line (`D0`, first of the power-on episode): MCU reset = fw ms 0; lines logged before Timer2 starts are re-based and can be a few ms below 0.

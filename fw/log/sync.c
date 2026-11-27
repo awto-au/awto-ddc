@@ -230,6 +230,7 @@ void AwtoSyncT2Start(void)                          // every Timer2 reload (Awto
 
 #if(_AWTO_DRAM_LOG == _ON)
 __xdata DWORD g_ulAwtoBootAbs;                      // absolute index of this boot's boot line: older lines are another boot's (console real time)
+__xdata DWORD g_ulAwtoEpAbs;                        // absolute index of the current episode's start row (boot line / start BEGIN)
 #endif
 __xdata StAwtoSyncEv g_stAwtoSyncPin;               // #150: copy of this boot's reason line (the ring may lose it)
 
@@ -738,10 +739,17 @@ void AwtoSyncBegin(BYTE ucKind, BYTE ucPort)
     {
 #if(_AWTO_DRAM_LOG == _ON)
         g_ulAwtoBootAbs = g_stAwtoSync.ulWr + g_stAwtoSync.ucPend;      // absolute index of this boot line (AwtoDlInit moves it with the ring)
+        g_ulAwtoEpAbs = g_ulAwtoBootAbs;                                // the power-on episode's start row = the boot line
 #endif
         AwtoSyncPush(AWTO_SYNC_EV_BOOT, AwtoBootReason(), AwtoBootValue());     // first line: why it is running (#29)
         AwtoSyncPush(AWTO_SYNC_EV_STAGE, 1, 0);
     }
+#if(_AWTO_DRAM_LOG == _ON)
+    if(ucKind != AWTO_SYNC_K_POWER_ON)
+    {
+        g_ulAwtoEpAbs = g_stAwtoSync.ulWr + g_stAwtoSync.ucPend;        // this BEGIN is the episode's start row (console: never lost at the top)
+    }
+#endif
     AwtoSyncPush(AWTO_SYNC_EV_BEGIN, ucKind, ((AwtoMs() >> 16) << 8) | ucPort);   // #157 anchor: fw ms bits 31..16 above the port
 }
 

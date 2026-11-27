@@ -591,11 +591,12 @@ def _ring_v4(rd, addr: int, whole: bool = True):
     b = bytes(b)
     seq, n, wrap, gen, pend, head, wr = b[3], b[12], b[13], b[14], b[16], b[18], int.from_bytes(b[19:23], "big")
     nxt = wr + pend                                          # index of the next line to be made
+    n = n if whole else wrap                                 # one episode: all its lines from the DDR (up to wrap - 1; a boot is ~130), not the newest N
     ring = bytearray(HDR + n * EV)
     ring[:HDR] = b[:HDR]
-    ring[2] = 3
+    ring[2], ring[12] = 3, n
     missing, ms32 = 0, {}
-    want = n if whole else min(n, (seq - b[4]) % wrap)       # the current episode only: no DDR reads for older lines
+    want = n if whole else min(wrap - 1, (seq - b[4]) % wrap)    # the current episode only: no DDR reads for older lines
     for d in range(1, min(want, nxt) + 1):
         a = nxt - d
         if d <= V4_TAIL:

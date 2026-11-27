@@ -6,6 +6,7 @@ Scenario: cold boot 1080p60 with the console opened at the first main-loop passe
 at ACTIVE; power saving (VCP D6 = 4), SOURCE-key wake, console again, shot (the sim's wake goes on searching: power NORMAL
 is the check, as con_wrap_sim); then a host time sync, the fw clock jumped 131 s (a gap over the 16-bit ring time), a monitor
 pair injected, console reopened, shot.
+Also: 200 lines added to the boot episode, console reopened: the red boot row is still the first row ("(N lines not shown)").
 FAIL: a shown row whose real-time column or delta is not the ring's (sync_log.con_rows); a ring episode start in view that is not a red rule row
 (`-- text ---`, palette AWTO_PAL_DIAG_ALERT); a rule row that is no episode start; no rule in the boot and wake shots.
 Out: <name>.txt / .png per shot, host.txt = sync_log's decoded ring (same delta column and rules). Log: tmp/logs/con_delta_sim.log
@@ -36,6 +37,8 @@ UP_HI_OFF = 14                          # StAwtoHt.usUpHi (RL6449_Project.h; syn
 GAP_UNITS = 2                           # the gap: 2 x 65.536 s = 131.072 s, over the 16-bit ring time
 OFS = 44                                # +11:00, 15 min units
 T0 = dt.datetime(2026, 11, 27, 15, 18, 14, 833000, dt.timezone(dt.timedelta(hours=11)))
+FILLER = (0xE7, 3, 0)                   # "D1 EDID read" (AWTO_SYNC_EV_EDID): a plain row, never joined
+OVERFLOW_N = 200                        # lines added to the boot episode: past the console map (57 rows), the 88-line window and a seq wrap (176)
 JOIN_PAIR = ((0xEA, 2, 2001), (0xEA, 4, 1150 << 8 | 0xD4))     # monitor IOSC + uptime rows (AWTO_MON_EV_TRIM / _UP)
 ALERT = int(re.search(r"^#define AWTO_PAL_DIAG_ALERT\s+(\d+)", (ROOT / "fw/osd/console.c").read_text() + (ROOT / "fw/sdk/Project/Header/RL6449_Project.h").read_text(), re.MULTILINE).group(1))
 
@@ -79,6 +82,15 @@ def shot(s: W.Sim, name: str, out: Path) -> int:
     return rules
 
 
+def reopen(s: W.Sim):
+    """console closed and opened again: drawn anew from the ring"""
+    s.cmd(CMD_CLOSE)
+    s.bus.wait(W.DRAW_S)
+    s.cmd(CMD_CON)
+    s.until(lambda: "AWTO DIAGNOSTICS" in (s.text() or [""])[0], W.DRAW_S)
+    s.bus.wait(W.DRAW_S)
+
+
 def ht(s: W.Sim) -> dict:
     return SL.ht_decode(bytes(s.m.rd(s.m.addr("g_stAwtoHt"), SL.HT_SIZE)))
 
@@ -109,6 +121,14 @@ def main() -> int:
     s.check(s.until(lambda: s.bus.mode_state() == MODE_ACTIVE, W.ON_S), "cold boot: ACTIVE")
     s.bus.wait(W.DRAW_S)
     shot(s, "2-boot-active", out)
+    hi = int.from_bytes(bytes(s.m.rd(s.m.addr("g_stAwtoHt") + UP_HI_OFF, 2)), "big")
+    SL.inject_lines(s.m.rd, s.m.wr, s.a_sync, [FILLER] * OVERFLOW_N, bytes(s.m.rd(0xF6D0 + SL.DIAG_T2, 2)), hi)
+    reopen(s)
+    first = next((r[W.LOG_COL:] for r in s.text()[1:] if W.HEAD.match(r[W.LOG_COL:])), "")
+    body = first[W.HEAD.match(first).end():] if first else ""
+    s.check(body.startswith("-- boot:") and "lines not shown)" in body,
+            f"boot overflowing the console ({OVERFLOW_N} more lines): the red boot row is still the first row", body.strip()[:90])
+    shot(s, "2b-boot-overflow", out)
     s.mccs.set(0xD6, 4)
     s.check(s.until(lambda: s.power() == W.PWR_SAVING, W.PS_S), "VCP D6 = 4: power saving")
     s.cmd(W.K_SOURCE)
@@ -123,11 +143,7 @@ def main() -> int:
     ms2 = bytes(s.m.rd(0xF6D0 + SL.DIAG_T2, 2))
     SL.inject_lines(s.m.rd, s.m.wr, s.a_sync, JOIN_PAIR, ms2, hi)        # a monitor pair after the gap: one joined row
     say(f"  fw clock + {GAP_UNITS} x 65.536 s, then {len(JOIN_PAIR)} monitor lines (one call) injected")
-    s.cmd(CMD_CLOSE)                                                     # close and open: every row drawn with the host sync known
-    s.bus.wait(W.DRAW_S)
-    s.cmd(CMD_CON)
-    s.until(lambda: "AWTO DIAGNOSTICS" in (s.text() or [""])[0], W.DRAW_S)
-    s.bus.wait(W.DRAW_S)
+    reopen(s)                                                            # every row drawn with the host sync known
     shot(s, "4-gap-host-time", out)
     rs = s.con_rows(ht(s))
     gap = [r for r in rs if r["delta"] is not None and r["delta"] >= GAP_UNITS * 0x10000]
