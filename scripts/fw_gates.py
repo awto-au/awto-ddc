@@ -14,6 +14,7 @@ usage: fw_gates.py IMAGE_STEM [--tier normal|extensive] [--build-inputs] [--tree
   sync: sync_sim (#139). bootsim: boot_sim (#144, #29, #216: Until signal = console after the picture; bootsim_always: console at power-on; `boot` is the fw_sim --boot-check). wake: wake_sim (#144 task 4). pokes: poke_loops TREE (static, #138).
   panel: panel_sim (#162 step 2): panel VDD / backlight pin / PWM / DPTx link only from the panel machine; no blink; backlight
     pin at eDP stream on, >= backlight_on_delay after VDD on (Dan 2026-11-27); T4..T6 kept.
+  dptxaux: dptx_aux_sim (#247, #248): ScalerDisplayDPTx1AuxRead vs an AUX controller model, full / partial / over-long replies.
   osdfit: osd_fit.py --check (static: fw/osd/osd_fit.tsv worst-case rows vs their box; also a build step). osdfitsim (extensive):
     osd_fit_sim.py, every card_shot shot at 1080p60 + 2160p60, no firmware fit-guard line (ED 7E). infocard: info_card_sim.py
     (the info card after boot stays _AWTO_INFO_POPUP_SEC, one open + one timeout close line).
@@ -229,7 +230,8 @@ def gates(b: Path, m: Path, ref, tree):
     g["wake_full"] = [*PY, f"{s}/wake_sim.py", b, m, "--out", out / "wake"]
     g["wake"] = [*g["wake_full"], "--quick"]                                          # NORMAL: cable / EDID / AUX / SOURCE-key wakes
     g["panel"] = [*PY, f"{s}/panel_sim.py", b, m, *(["--tree", tree] if tree else [])]
-    g["osdfitsim"] = [*PY, f"{s}/osd_fit_sim.py", b, m]                         # every card / selector / menu shot: no cut row (firmware fit guard)
+    g["dptxaux"] = [*PY, f"{s}/dptx_aux_sim.py", b, m]                          # #247 / #248: AUX read vs partial / over-long replies, no write past the buffer
+    g["osdfitsim"] = [*PY, f"{s}/osd_fit_sim.py", b, m]                       # every card / selector / menu shot: no cut row (firmware fit guard)
     g["infocard"] = [*PY, f"{s}/info_card_sim.py", b, m, "--out", out / "info_card"]   # info card after boot: on-screen time, Found by
     g["sysm"] = [*PY, f"{s}/sysm_sim.py", b, m, *(["--tree", tree] if tree else [])]
     g["pacewake"] = [*PY, f"{s}/pacing_wake_sim.py", b, m, "--case", "fast", "--after", "13"]    # #313: the busy hook is off 12 s after a fast wake (~5 s CPU)
