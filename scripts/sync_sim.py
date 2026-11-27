@@ -148,7 +148,7 @@ def main():
         r.check(h["magic"] == b"SY" and h["kind"] == 1, "ring: power-on episode", f"magic {h['magic']!r} kind {h['kind']}")
         for want in ("power on", "->ACTIVE:", "backlight pin on", "timing ", "console opened"):
             r.check(want in txt, f"power-on log has '{want}'")
-        for want in ("INITIAL:first exit check", "INITIAL:longest gap", "search reached D2", "ACTIVE wait:timer", "EDID load: took ", "HPD: D1 ", "boot passes:INITIAL longest"):
+        for want in ("INITIAL:first exit check", ", longest gap between checks ", "search reached D2", "ACTIVE wait:timer", "EDID load: took ", "HPD: D1 ", "boot passes:INITIAL longest"):
             r.check(want in txt, f"power-on gap log has '{want}'")      # #284
         r.sync_summary(lines, "power-on", 1, 0)
         r.check(con_open, "console opened by itself after power-on")

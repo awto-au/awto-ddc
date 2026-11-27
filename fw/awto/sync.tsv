@@ -16,6 +16,7 @@
 #   slink link health (FF): HDMI = SCDC ratio / scrambling + CED error counters, DP = rate / lanes / DPCD 202 203 (docs/sync-log-design.md)
 #   pins  value = changed mask << 8 | levels (bit n = D(n+1)) -> "D1 low, D2 high, D3 high" (#359: one line per poll)
 #   msn   two % marks: value = number << 16 | ms -> "0ms" ... "6" (#359 EDID load)
+#   iniflg INITIAL flags (93): arg = flags seen (bit 0 source, 1 mode, 2 OSD, 3 other), value = their last ms / 4, one byte each from bit 31 -> " source 36ms, mode 36ms"
 #   visit search visit (F3): arg bit 7 = reached (bit 0 predetect on, bit 1 cable), else left (bit 2 predetect seen, bit 1 port disabled, bit 3 dwell re-armed), value = predetect edges << 24 | port << 16 | ms on the port
 #   pass  main-loop stage timing (#311), the fmt prints the whole line (words + stage names: RL6449_Project.h AWTO_PSTG_NAMES): 96 slow: arg = stage id, value = state << 24 | count << 16 | ms -> "slow pass stage OSD handler took 268ms in INITIAL (#1)"; 97 boot passes: arg = stage, value = state << 24 | ms -> "boot passes:INITIAL longest 268ms in stage OSD handler"
 #   pms   value = port << 16 | ms -> "D2, 188ms"   psrc  value = port << 8 | source type -> "D2 HDMI"   rms  value = register << 16 | ms -> "71A4 40ms"
@@ -414,12 +415,8 @@ FB	11	rms	EXPIRED poll of register (hex) + took:%	error
 FB	02	rms	slow wait for event (hex) + took:%	warning
 FB	12	rms	EXPIRED wait for event (hex) + took:%	error
 FC	01	pms	DP link trained:% after the loop first saw it training	timing
-93	00	ms	INITIAL:first exit check at %	timing
-93	05	ms	INITIAL:longest gap between checks %	timing
-93	01	ms	INITIAL:SDK source flag set until %	timing
-93	02	ms	INITIAL:SDK mode flag set until %	timing
-93	03	ms	INITIAL:SDK OSD flag set until %	timing
-93	04	ms	INITIAL:SDK other flag set until %	timing
+93	00	ms2	INITIAL:first exit check at %, longest gap between checks %	timing
+93	*	iniflg	INITIAL:SDK flags set until:%	timing
 94	00	ms2	ACTIVE wait:timer %, panel ready %	timing
 95	*	portms	search dwell re-armed, % after reaching	warning
 9A	*	portms	HPD pulse (SDK long HPD, source re-reads EDID): high again in %	timing

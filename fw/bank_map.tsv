@@ -5,6 +5,7 @@
 #resid_end 0x890
 #stubs 37
 # kind	name	region	offset	slot    (dev layout: scripts/sdcc_layout.py; region C = common, n = bank n)
+const	_AwtoPutIniFlg_tName_10000_2901	7	0x06db	17
 const	_OperationFactoryTable	13	0x0000	827
 const	_UserInterfaceGetOverScanStatus_tusOverscanEnTable_10000_1377	C	0x23a5	90
 const	___str_0	7	0x0072	27
@@ -159,9 +160,13 @@ const	___str_231	7	0x3e26	58
 const	___str_232	7	0x54b7	26
 const	___str_233	7	0x3ea9	58
 const	___str_234	7	0x0249	26
-const	___str_235	7	0x04ae	19
+const	___str_235	7	0x0276	32
 const	___str_236	7	0x0f4e	26
+const	___str_237	7	0x3fa3	58
+const	___str_238	7	0x5429	27
+const	___str_239	7	0x04ae	19
 const	___str_24	7	0x095d	15
+const	___str_240	7	0x3fdd	26
 const	___str_25	7	0x096c	10
 const	___str_26	7	0x0976	13
 const	___str_27	7	0x0983	12
@@ -759,6 +764,7 @@ fn	_AwtoPutCol	7	0x6b4b	30
 fn	_AwtoPutDelta	7	0xaaf6	438
 fn	_AwtoPutDpRate	7	0x6b69	112
 fn	_AwtoPutHex2	7	0x6bd9	51
+fn	_AwtoPutIniFlg	7	0xa890	239
 fn	_AwtoPutInput	7	0x6c0c	183
 fn	_AwtoPutIso	7	0x6cc3	975
 fn	_AwtoPutKeyMsg	7	0x7092	85
