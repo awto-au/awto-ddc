@@ -36,6 +36,35 @@ CPU_MODES = ("dw8051", "8052")
 MODEL_JSON = HERE / "dw8051_model.json"
 
 
+DELAY_SCAN = 32     # bytes searched from a delay routine's entry for its loop (past the push / save prologue)
+
+
+def delay_ffwd_sites(code, sym: dict) -> list[dict]:
+    """Counted loops of fw/timer/delay.c, decoded from the image for install_delay_ffwd (#342); ValueError if a routine has no such loop.
+    - AwtoDelayLoops: `mov Rn,direct ; djnz Rn,$` then pop / ret: hook at the djnz, counter = Rn.
+    - AwtoDelayXus: `L: mov Rn,Base ; djnz Rn,$ ; djnz Counter,L`: hook at the inner djnz, one pass per skip."""
+    sites = []
+    for name, kind in (("AwtoDelayLoops", "loops"), ("AwtoDelayXus", "xus")):
+        v = sym.get("_" + name)
+        if v is None:
+            continue
+        a = v & 0xFFFF
+        b = bytes(code[a:a + DELAY_SCAN + 8])
+        site = None
+        for i in range(DELAY_SCAN):
+            if b[i] & 0xF8 == 0xA8 and b[i + 2] == 0xD8 | (b[i] & 7) and b[i + 3] == 0xFE:      # mov Rn,direct ; djnz Rn,$
+                rn, j = b[i] & 7, i + 4
+                if kind == "loops" and b[j] == 0xD0 and b[j + 2] == 0x22:                     # pop direct ; ret
+                    site = {"kind": kind, "pc": a + i + 2, "rn": rn}
+                elif kind == "xus" and b[j] == 0xD5 and (j + 3 + int.from_bytes(b[j + 2:j + 3], signed=True)) == i:
+                    site = {"kind": kind, "pc": a + i + 2, "rn": rn, "base": b[i + 1], "counter": b[j + 1]}
+                break
+        if site is None:
+            raise ValueError(f"{name}: no {kind} delay loop in {b.hex()} (fw/timer/delay.c changed: update delay_ffwd_sites, #342)")
+        sites.append(site)
+    return sites
+
+
 def cpu_mode() -> str:
     """AWTO_SIM_CPU (set by --cpu): dw8051 (default; gates, sim_live, tests) or 8052 (ucsim -t 52 compatible: classic 12-clock cycles)."""
     m = os.environ.get("AWTO_SIM_CPU", "dw8051")
@@ -601,32 +630,22 @@ class FastMachine:
         clk / cycles / instructions as the dw8051 model counts them, wall_ms, ticks, the loop counter. Skips only inside the window the
         core says is free of timer deadlines (an IRQ then comes at the same iteration as interpreted) and the model tickers' deadlines;
         needs the flash code cache on (a loop already fetched once costs no stall). tests/test_delay_ffwd.py proves state equality.
-        The routine's code is read from the image: anything but the expected shape refuses (SimError)."""
+        The loop is decoded from the image (delay_ffwd_sites): a routine whose loop is not the expected shape refuses (SimError)."""
         S = self._S()
         import json
         j = json.loads(MODEL_JSON.read_text())
-        cpc, cyc = j["clk_per_cycle"], j["cycles"]
-        c = self.core
-        for name, shape in (("AwtoDelayLoops", "loops"), ("AwtoDelayXus", "xus")):
-            v = self.sym.get("_" + name)
-            if v is None:
-                continue
-            a = v & 0xFFFF
-            b = bytes(c.code[a:a + 10])
-            if shape == "loops":
-                if not (b[0] == 0x85 and b[3] == 0xD5 and b[4] == b[2] and b[5] == 0xFD and b[6] == 0x22):
-                    raise S.SimError(f"{name}: unexpected code {b.hex()}")
-                ctr, djnz_pc = b[2], a + 3
-                self._ff_hook(djnz_pc, "djnz", ctr, None, cpc, cyc)
-            else:
-                if not (b[0] == 0x85 and b[3] == 0xD5 and b[4] == b[2] and b[5] == 0xFD and b[6] == 0xD5 and b[8] == 0xF7 and b[9] == 0x22):
-                    raise S.SimError(f"{name}: unexpected code {b.hex()}")
-                self._ff_hook(a + 3, "xus", b[2], (b[1], b[7], b[2]), cpc, cyc)     # first djnz of a pass (I = Base): mov I,Base ; djnz I ; djnz Counter
+        try:
+            sites = delay_ffwd_sites(self.core.code, self.sym)
+        except ValueError as e:
+            raise S.SimError(str(e)) from None
+        for s in sites:
+            self._ff_hook(s, j["clk_per_cycle"], j["cycles"])
 
-    def _ff_hook(self, pc, kind, ctr, extra, cpc, cyc):
+    def _ff_hook(self, s, cpc, cyc):
         c, p = self.core, self.p
         state = {"clk": -1}
-        d, mv = cyc[0xD5], cyc[0x85]
+        kind, pc, rn = s["kind"], s["pc"], s["rn"]
+        d = cyc[0xD8 | rn]                                        # djnz Rn,$
 
         def room_ok(s_clk):
             room = c.ffwd_room()
@@ -640,19 +659,22 @@ class FastMachine:
         def hook(m, r):
             if not m.dw or m.clock is None or not getattr(m, "_ff_on", True):
                 return
-            if kind == "djnz":
-                v = c.iram[ctr]
-                per_clk, per_cyc, per_ins = d * cpc, d, 1
-                n_left = v if v else 256
-            else:
-                base_var, cnt_var, ivar = extra
-                if c.iram[ivar] != c.iram[base_var]:             # not the first iteration of a pass
+            reg = (c.sfr[0x50] & 0x18) | rn                       # Rn of the PSW (0xD0) register bank
+            if kind == "loops":                                  # djnz Rn,$: one count per hit
+                v = c.iram[reg]
+                per_cyc, ops = d, ((0xD8 | rn, 1, d),)
+                ctr = reg
+            else:                                                # pass = mov Rn,Base ; Base x djnz Rn,$ ; djnz Counter
+                b = c.iram[s["base"]]
+                if c.iram[reg] != b:                             # not the first inner iteration of a pass
                     return
-                b = c.iram[base_var]
-                v = c.iram[cnt_var]
-                n_left = v if v else 256
-                per_cyc = mv + (b if b else 256) * d + d
-                per_clk, per_ins = per_cyc * cpc, 2 + (b if b else 256)
+                nb = b if b else 256
+                mv, dd = cyc[0xA8 | rn], cyc[0xD5]
+                per_cyc, ops = mv + nb * d + dd, ((0xA8 | rn, 1, mv), (0xD8 | rn, nb, nb * d), (0xD5, 1, dd))
+                ctr = s["counter"]
+                v = c.iram[ctr]
+            n_left = v if v else 256
+            per_clk, per_ins = per_cyc * cpc, sum(k for _, k, _ in ops)
             prev_ok = (p.clk - state["clk"]) == per_clk
             state["clk"] = p.clk
             if not prev_ok or n_left < 4:                       # the first iteration of a call runs interpreted (it fills the code cache line)
@@ -660,11 +682,9 @@ class FastMachine:
             n = min(n_left - 2, room_ok(0) // per_clk)
             if n < 2:
                 return
-            c.ffwd(n * per_clk, n * per_cyc, n * per_ins, 0xD5)
-            if kind == "djnz":
-                c.iram[ctr] = (v - n) & 0xFF
-            else:
-                c.iram[cnt_var] = (v - n) & 0xFF
+            for i, (op, k, cy) in enumerate(ops):               # per-opcode counts as interpreted; clk once
+                c.ffwd(n * per_clk if i == 0 else 0, n * cy, n * k, op)
+            c.iram[ctr] = (v - n) & 0xFF
             m.wall_ms += n * per_clk * 1000.0 / m.clock.f_cpu
             m.ticks += n * per_cyc * 12
             m.instr += n * per_ins
