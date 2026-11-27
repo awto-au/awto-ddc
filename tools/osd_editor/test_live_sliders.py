@@ -209,6 +209,7 @@ def failure_reverts():
     pg, fb = fresh(0.01)
     fb.live_fail = "live set: NAK"
     sr = pg.rows["brightness"]
+    pg.states[UNIT].values["brightness"] = 50                          # the unit reports 50 (the registry default is 100 since #355)
     sr.put(50)
     drag(pg, sr, [60, 70], wait_ms=30)
     sr.w.setSliderDown(False)

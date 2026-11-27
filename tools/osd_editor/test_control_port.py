@@ -777,7 +777,7 @@ def tree_mismatch_restart_or_refuse():
     for d in ("scripts", "tools/osd_editor"):
         (other / d).mkdir(parents=True, exist_ok=True)
     (other / "dev.py").write_text("x")
-    r = Rig("tree")
+    r = Rig("tree", headless=True)
     root0 = GC.ROOT
     lines, launched = [], []
     try:
@@ -804,6 +804,11 @@ def tree_mismatch_restart_or_refuse():
         assert isinstance(err, GC.GuiUnavailable)                                  # the fake launcher starts nothing
         log = (other / "tmp/logs/gui-client.log").read_text()
         assert "refused" in log and "restarting" in log, log
+        r.close()
+        w = Rig("tree-window")                                                     # a window of another tree is never closed by a client
+        res, err = in_thread(lambda: GC.ensure_app(w.path, lambda p: launched.append(p), say=lines.append))
+        assert isinstance(err, GC.GuiRefused) and "it is a window" in str(err) and len(launched) == 1 and ping_pumped(w.path), err
+        w.close()
     finally:
         GC.ROOT = root0
         r.fb.gate.set()

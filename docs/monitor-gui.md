@@ -44,6 +44,18 @@ Launch: `python3 tools/osd_editor/run.py --monitor` (opens on the monitor tab) o
   - No stall guard: sync_log prints nothing until the read ends. A progress line from the DRAM read would allow one (asked of the decoder owner, #358).
 - `note` keeps the old 4 s.
 
+## Log view (awto-ddc#358, Dan 2026-11-27)
+- Window page "log" (toolbar, or `run.py --log`): one unit's whole DRAM log (up to `AWTO_DLOG_SLOTS` 32768 lines), not the 88-line ring view. Code `tools/osd_editor/log_view.py`.
+- Columns: index (absolute DDR index), time, +delta, line. Time = host clock of the read join (`poll_wall`, this boot, marked `~`) or `u` uptime of the line's boot. Delta / start from `sync_log.dram_deltas` / `is_start` (32-bit fw ms: exact over any gap; no wrap row on the DRAM path).
+- Red rows: episode starts (and `relative time reset: counter wrap` if the decoder prints one); grey `--- boot N ---` before each boot counter. Filter box (separators stay), jump list (boots + starts), Copy (selected rows, else all shown), Save... (shown rows).
+- Source: `dev.py synclog --dram --json` (SYNCJSON) through the unit's job queue, rows deduplicated by index; a new DDR log generation drops the old rows.
+  - History: newest `CHUNK` 300, then older chunks of <= 300 down to the oldest slot, one job at a time. Needs a range read in the decoder (`--since A --count K`, asked of its owner); without it one `--last 1000` job and the view says "newest 1000 only".
+  - Follow: every `FOLLOW_S` 10 s, `--since next [--count 300]`.
+- Bus budget (measured 2026-11-27, unit 3, through the app): `--since` poll with a few new lines = 1.2 s job, debug link held ~0.4 s: ~4 % of the time at 10 s. A 300-entry chunk: 3.9 s at 77 entries/s + 2.2 s fixed (limit 7.6 s).
+- Yields: no read while the page is hidden (a headless app never reads), while the unit flashes, has other jobs, or has a log read in flight. A port `flash` that finds a log read running holds new reads (`log_hold`), waits for it (<= its limit + 2 s), then starts.
+- Real data (unit 3, 968 entries, 8 boots): lines before the Timer2 start carry a `poll_wall` from the unsigned ms (hours off); the view shows them as uptime. Decoder fix asked in #358.
+- Tests: `test_log_view.py` (fake DDR log of 1601 lines: chunked history, follow, dedupe, filter / jump / save, fallback, yields, screenshot `tmp/scratch/qt/log-view.png`); `--snapshot FILE` renders a captured `synclog --dram --json` output (`log-view-real.png`).
+
 ## Confirm
 - `risky` rows (11) and action rows (6) ask before Set / Run (dialog names the unit and row; notes a needed reboot).
 
@@ -120,7 +132,7 @@ Launch: `python3 tools/osd_editor/run.py --monitor` (opens on the monitor tab) o
 - Handshake: `ping` returns `root` (tree the app runs from), `head` (its git HEAD at start), `code` (stamp of dev.py, scripts/, tools/osd_editor/) and `busy` (flashes followed, queued / running device jobs). Code: `gui_client.check_tree` (awto-ddc#358).
   - Every dev.py call compares the app's root + code with its own tree. Same = served.
   - Differs (another tree, code changed on disk, tree gone, no handshake) and idle: `quit {idle_only}`, then one fresh app from the caller's tree. Line `gui: restarting the app from <tree> @<head>: <why> (was pid P, <tree> @<head>)`.
-  - Differs and busy: refused, nothing run. One line names both trees, their HEADs and the running jobs. Exception: queries that run no unit code (`gui ping / list / state / jobs / flash-status / events / quit`) are served by that app, with the same line.
+  - Differs and busy, or the app is a window (the user's GUI is never closed by a client): refused, nothing run. One line names both trees, their HEADs and the running jobs. Exception: queries that run no unit code (`gui ping / list / state / jobs / flash-status / events / quit`) are served by that app, with the same line.
   - Decisions also go to the caller's `tmp/logs/gui-client.log`. The app logs `tree <root> @<head>` in every job's started / verdict line; `gui state` has `tree` {root, head, code, pid}.
   - Two trees alternating calls restart the app each time (0.3-1.1 s start, see the start bound). Isolate a tree with `AWTO_GUI_SOCKET` to avoid it.
 - One app per socket (= per user): `flock` on `<socket>.lock` for the app's life, holder `pid root @head` written in it. A second headless app exits at once, rc 3, one line `headless app pid N exiting: control port unavailable: ... lock ... held by ...`. A window takes over from a headless app (quit, waits `TAKEOVER_WAIT_S` 3 s for the lock); a window that finds another window keeps its banner, no port.

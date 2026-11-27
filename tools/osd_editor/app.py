@@ -10,6 +10,7 @@ from pathlib import Path
 import model as M
 import numpy as np
 from control_port import ControlPort
+from log_view import LogView
 from monitor import MonitorPage
 from PySide6.QtCore import QProcess, QSettings, QSize, Qt, QTimer, Signal
 from PySide6.QtGui import (
@@ -334,6 +335,9 @@ class Window(QMainWindow):
         self.stack.addWidget(self.screens)
         self.monitor = MonitorPage(settings=QSettings("awto", "osd_editor_headless") if headless else None)   # the port must not move the window's remembered unit
         self.stack.addWidget(self.monitor)
+        self.logview = LogView(self.monitor)                           # whole DRAM log per unit (#358); reads only while shown
+        self.monitor.log_view = self.logview
+        self.stack.addWidget(self.logview)
         root = QWidget()
         root.setObjectName("root")
         lay = QVBoxLayout(root)
@@ -366,7 +370,7 @@ class Window(QMainWindow):
             a.triggered.connect(fn)
         tb.addSeparator()
         self.nav = []
-        for i, txt in enumerate(("glyphs", "screens", "monitor")):
+        for i, txt in enumerate(("glyphs", "screens", "monitor", "log")):
             a = tb.addAction(txt)
             a.setCheckable(True)
             a.triggered.connect(lambda _=False, i=i: self.go(i))
@@ -452,6 +456,8 @@ def main(argv=None):
     w = Window(headless)
     if "--monitor" in argv or headless:
         w.go(2)                                                        # open straight on the monitor tab
+    if "--log" in argv and not headless:
+        w.go(3)                                                        # open on the log view (#358)
     port = ControlPort(w.monitor, headless=headless, on_quit=app.quit)
     try:
         ok = port.start()

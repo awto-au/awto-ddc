@@ -55,6 +55,9 @@ def synclog_entries(args: list[str]) -> tuple[int, str]:
     """(DDR entries a `dev.py synclog ARGS` read may fetch at most, what decides it)"""
     x = list(args)
     if "--dram" in x:
+        cnt = _take(list(x), "--count")
+        if "--since" in x and cnt not in (None, True) and str(cnt).isdigit():
+            return int(cnt), "--since A --count K: K entries"
         if any(f in x for f in ("--all", "--boot", "--since")):
             return hdr_int("AWTO_DLOG_SLOTS", 32768), "--all / --boot / --since: up to the whole DDR ring (AWTO_DLOG_SLOTS)"
         last = _take(x, "--last")
@@ -254,7 +257,9 @@ def check_tree(path: Path, strict: bool = True, say=print) -> bool:
     if not why:
         return False
     mine = f"{ROOT} @{git_head(ROOT)}"
-    busy = ping.get("busy") or []
+    busy = list(ping.get("busy") or [])
+    if ping.get("headless") is False:
+        busy.append("it is a window (the user's GUI): a client never closes it")
     q = None if busy else try_call(path, "quit", {"idle_only": True}, timeout=PING_S)
     if busy or not q or not q.get("ok"):
         what = "; ".join(busy) if busy else (q.get("error") if q else "no reply to quit")

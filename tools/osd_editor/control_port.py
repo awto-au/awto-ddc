@@ -38,6 +38,11 @@ TAKEOVER_WAIT_S = 3         # a window app asks a headless one to quit and waits
 EVENT_Q_MAX = 1000          # a subscriber that does not read is dropped, never blocks the UI
 
 
+def unit_jobs_grace() -> float:
+    import unit_jobs
+    return unit_jobs.TERM_GRACE_S                            # an expired job is TERMed, then killed after this
+
+
 class PortError(Exception):
     pass
 
@@ -733,10 +738,31 @@ class ControlPort(QObject):
     def m_flash(self, p, done):
         """async: replies with the job at once; progress and the result stream as flash / flash_done events (see flash_status)"""
         n = self.unit_of(p, write=True)
+        pg = self.page
+        lv = getattr(pg, "log_view", None)
+        jid = lv.inflight.get(n) if lv else None
+        if jid is not None and jid in pg.jobs:               # the log view yields: no new reads, the running one (<= its limit) finishes first
+            pg.log_hold[n] = True
+            lim, t0 = pg.jobs[jid][3], time.monotonic()
+            pg.say(f"unit {n} flash: waiting for the log view read to finish (limit {lim:g} s)")
+
+            def retry():
+                if lv.inflight.get(n) is not None and time.monotonic() - t0 < lim + unit_jobs_grace():
+                    return QTimer.singleShot(50, retry)
+                self._flash_go(n, p, done)
+            return retry()
+        self._flash_go(n, p, done)
+
+    def _flash_go(self, n, p, done):
+        pg = self.page
         try:
-            job = self.page.flash_start(n, [str(a) for a in p.get("args", [])])
+            job = pg.flash_start(n, [str(a) for a in p.get("args", [])])
         except ValueError as e:
-            raise PortError(str(e)) from None
+            pg.log_hold.pop(n, None)
+            return done(error=str(e))
+        finally:
+            if pg.states[n].flash:
+                pg.log_hold.pop(n, None)                     # the flash itself now keeps the log view off (st.flash)
         self.focus(n)
         done({"job": {k: job[k] for k in ("id", "pid", "started", "log")}, "unit": n, "async": True})
 

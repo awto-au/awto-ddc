@@ -611,6 +611,8 @@ class MonitorPage(QWidget):
         self.log_path, self.detect = log_path, detect
         self.settings = settings or QSettings("awto", "osd_editor")
         self.queues = UnitQueues(backend or SubprocessBackend(), self)
+        self.log_hold: dict[str, bool] = {}              # unit -> a flash waits for the log view's read (log_view.LogView yields)
+        self.log_view = None                             # set by the window (app.Window)
         self.queues.done.connect(self._finish, Qt.QueuedConnection)   # UI-thread slot, emitted from the worker
         self.live_jobs: dict[int, object] = {}              # job id -> callback(rc, out, secs) of an in-process live write / read-back
         self.live_writer = LiveWriter(self)                 # live sliders: coalesced writes while a control moves (awto-ddc#277)
