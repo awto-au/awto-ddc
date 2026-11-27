@@ -32,8 +32,8 @@ EV_DONE, EV_RETRY_MAX = 0x20, 0x02
 REQ_NATIVE_READ, REQ_NATIVE_WRITE = 0x9, 0x8
 FIFO_MAX = 31                       # FIFO_WR_PTR[4:0]
 GUARD = 32                          # bytes checked past the buffer: a 31-byte reply into a 1-byte read reaches buffer + 30
-MAX_XACT = 40                       # per AuxRead call: 7 retries x (1 + 16 one-byte partials) is the legal worst; more = runaway
-CASES = ("full", "oversize")
+MAX_XACT = 40                       # per AuxRead call: the cases need <= 16 + 1 (16 one-byte replies + one retry); 40 = runaway stop
+CASES = ("full", "partial", "oversize")
 SEQ_INSTR = 160_000_000             # boot to LinkSequence (dptx_lt_sim run_until_mode budget)
 CASE_INSTR = 40_000_000             # LinkSequence -> TrainPatternEnd
 
