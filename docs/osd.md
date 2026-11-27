@@ -11,7 +11,7 @@ Never write bare "vendor": say which one.
 | **Realtek SDK menu** | Realtek's RTD2014 demo OSD: 9-icon main menu and its pages | built out of the default image since 2026-11-11 (#120): [osd-realtek-sdk-menu.md](osd-realtek-sdk-menu.md) |
 | **awto menu** | our registry menu (#67) | our images (AUTO key default) |
 
-- Tag `[sdk-ui]` in `awto-rtdfw/settings/registry.tsv` = Realtek SDK menu fact.
+- Tag `[sdk-ui]` in `fw/rtdfw/settings/registry.tsv` = Realtek SDK menu fact.
 
 ## 1. Layers
 ### Hardware (RL6449 / RTD2795T)
@@ -19,7 +19,7 @@ Never write bare "vendor": say which one.
 - No framebuffer: everything (menus, pop-ups, console) is glyph cells + windows.
 
 ### Text layer (`osd_tc_*`): the one text path for our screens
-- API: `awto-rtdfw-ui` `awto/include/osd.h` (`osd_tc_open`, `osd_tc_rowh`, `osd_tc_cells`, `osd_tc_bar`, `osd_tc_place`, `osd_tc_show`, `osd_tc_close`, `osd_tc_viewport`, `osd_tc_scroll`, `osd_tc_vlc_*`).
+- API: `fw/rtdfw/awto/include/osd.h` (`osd_tc_open`, `osd_tc_rowh`, `osd_tc_cells`, `osd_tc_bar`, `osd_tc_place`, `osd_tc_show`, `osd_tc_close`, `osd_tc_viewport`, `osd_tc_scroll`, `osd_tc_vlc_*`).
 - Implementation: `fw/osd/text_layer.c`.
 - Grid: one map row per text row; cell width and row height come from the loaded font (`osd_cw` / `osd_rh`).
 - Viewport + hardware scroll: `osd_tc_viewport` fixes the shown height; `osd_tc_scroll` rolls the view (0x3A18..0x3A1C). Limits: [Limits](#limits).
@@ -33,8 +33,7 @@ Never write bare "vendor": say which one.
 
 ### Realtek SDK engine (RTD2014 demo OSD, compiled into our image)
 - Ours on the text layer (`fw/osd/console.c`): message cards and the input-info card (`OsdDispOsdMessage`, SDK body removed, #124), source selector (`AwtoSourceOpen` / `AwtoSourceKey`, SDK hot-key source menu removed, #134). SDK timers and OSD states still drive them.
-- Still SDK-drawn: DDC/CI and DP-version hot-key menus (proportional font, `OsdPropPutString*`, `tFONT1_GLOBAL`, VLC icons).
-- DDC/CI and DP-version hot-key menus: no normal entry point left (#122).
+- SDK DDC/CI and DP-version hot-key menus: removed (42862ea, #122); `OsdPropPutString*` is no longer in the linked source.
 - Source: Realtek SDK `RTD2014*Osd*.c`, rewritten by `scripts/keil2sdcc.py` (generated output in `tmp/sdcc-port/src`); drawn by `OsdDispOsdMessage` and the OSD state machine.
 - Realtek 9-icon main menu: built out by default (`_AWTO_REALTEK_MENU`, `RL6449_Project.h`, default `_OFF`). Re-enable with `-D _AWTO_REALTEK_MENU=_ON` (works at 6bd79ce; #129 removes the operation-table path it uses).
 - Walkthrough of its pages and key actions (historical): [osd-realtek-sdk-menu.md](osd-realtek-sdk-menu.md).
@@ -74,21 +73,27 @@ Never write bare "vendor": say which one.
   - Power-on in the sim: `scripts/boot_sim.py` (PNGs at set times, console survives display setting).
   - Inputs panel: rows from `fw/awto/inputs.tsv` through `scripts/gen_awto_inputs.py` (generated `AWTO_IN_*`); unlogged inputs red with a legend.
   - Owns the OSD only while its map is in place: an SDK pop-up or mode reset releases it (`AwtoConLost`).
+- Information card (input info pop-up, `OsdDispOsdMessage`, `fw/osd/console.c`; #357)
+  - On screen `_AWTO_INFO_POPUP_SEC` = 11 s (base 6 + 5, Dan 2026-11-27): one timer for every sync to ACTIVE (boot, switch, wake, VCP 0x60 / KVM, fast path).
+  - Row "Found by" = `g_ucAwtoSelWhy` (`AWTO_SEL_WHY_*`, `RL6449_Project.h`; also the F0 sync line arg): Fixed, stored / Auto, previous / Auto, other / Other scan / Input selector / KVM / menu / Fast switch / Fast wake.
+  - Width `AWTO_INFO_COLS` (value column + frame cell); close line `pop-up closed: its on-screen time ran out, up N ms`.
+  - Console open (e.g. `console_mode` Always): the card is suppressed (`pop-up suppressed: the console is open ...`). Card in its own OSD window next to the console: in progress (Dan 2026-11-27, #357).
+- OSD fit check (#357): static `scripts/osd_fit.py` + `fw/osd/osd_fit.tsv` (build step + gate `osdfit`); sim gate `osdfitsim` (extensive); firmware guard `AwtoFitCheck` logs `OSD text row cut: N cell(s) over its box`. Log panes (selector, GPIO page) are exempt (`AWTO_FIT_OFF`); wrapping them like the main console: decided (Dan 2026-11-27, #357), not built.
 - Boot splash: registry `boot_splash` (default On): big Pac-Man (flash screen drawing, title AWTO) on a cold power-up only, drawn in the first INITIAL main pass until ACTIVE / key / console / 3 s: [flash-screen.md](flash-screen.md) "Boot splash".
 - Boot logo: removed (#144); the console shows the power-on log instead. Dahua splash RE notes: [boot-logo.md](boot-logo.md).
 - Registry menu (#67)
-  - Code: `/mnt/2tb/git/awto-rtdfw/awto/settings/menu.c`, `ui.c`, `set_table.c` (generated), `settings.c`, `vcp.c`; header `awto/include/menu.h`; registry `/mnt/2tb/git/awto-rtdfw/settings/registry.tsv` + `pages.tsv`.
+  - Code: `fw/rtdfw/awto/settings/menu.c`, `settings.c`, `vcp.c`, `set_table.c` (generated); `fw/rtdfw/awto/osd/ui.c`; header `fw/rtdfw/awto/include/menu.h`; registry `fw/rtdfw/settings/registry.tsv` + `pages.tsv`.
   - Drawn through the text layer with our fonts; blue text on white (`tAwtoPal`).
   - Opened with the front keys, `menu_cli.py open`, or VCP 0xE4. Key roles use SDK names (Menu / Right / Left / Exit); physical keys (Dan, 2026-11-08, keys6): AUTO = open / enter / edit / confirm (Menu role), UP / DOWN = move, MENU = back (Exit role). Footer: `UP/DOWN move  AUTO open  MENU back`.
   - Look target: #89 (white on black, red decorations, decided 2026-11-08); not yet built.
   - Doc (generated): [settings.md](settings.md).
-- Key test panel (#39, open)
+- Key test panel (#39)
   - Shown in the console; `AwtoKeyTestSet` (`fw/keys/keytest.c`).
   - Live ADC key values + decoded key; host log reader `scripts/rtd_keywatch.py`.
   - Key routing: #129.
 
 ## 2. Fonts in use
-- Our text fonts: 7 fixed fonts generated by `awto-rtdfw-ui` `tools/gen_font.py` from native Spleen and Tamzen bitmaps (`awto/osd/*.hex`) into `awto/osd/font_data.inc`; loader `awto/osd/font.c` (`osd_font_load`).
+- Our text fonts: 7 fixed fonts generated by `fw/rtdfw/tools/gen_font.py` from native Spleen and Tamzen bitmaps (`fw/rtdfw/awto/osd/*.hex`) into `fw/rtdfw/awto/osd/font_data.inc`; loader `fw/rtdfw/awto/osd/font.c` (`osd_font_load`).
 
   | font | cell (w x row h, px) |
   |---|---|
@@ -105,12 +110,12 @@ Never write bare "vendor": say which one.
 - Tile = 9 OSD words (27 bytes); VLC-downloaded (`osd_tc_vlc_*`).
 - Menu font setting `osd_font` (registry id 106): Spleen | Tamzen. Console: font 0 (Spleen 8x16) by default (#144); limit probe: font 3 (Spleen 5x8).
 - Blob bank pin: font loader and constants in different ROM banks (#111, build workaround).
-- Realtek SDK pop-ups: SDK font tables from flash, VLC-compressed (`0x3A17[0]`), 1-/2-/4-bit modes; glyph blobs of the Dahua firmware: [osd-font-download.md](reversing/realtek-rtd/osd-font-download.md). Proportional widths come from the char command width field (B0 [4:0], [osd/tiles-fonts.md](osd/tiles-fonts.md)). Our message cards still use the SDK proportional font (#89).
-- Diagnostic tables, register views, pin ledgers, and similar dense data screens use fixed-cell text. The SDK-backed diagnostic renderer may reuse the normal Realtek glyph shapes, but must emit one glyph per OSD cell; normal menus, labels, and message cards remain proportional.
+- Realtek SDK pop-ups: SDK font tables from flash, VLC-compressed (`0x3A17[0]`), 1-/2-/4-bit modes; glyph blobs of the Dahua firmware: [osd-font-download.md](reversing/realtek-rtd/osd-font-download.md). Proportional widths come from the char command width field (B0 [4:0], [osd/tiles-fonts.md](osd/tiles-fonts.md)).
+- Our screens (console, message cards, selector, menu) use the fixed-cell text layer; SDK proportional text is left only in SDK-drawn screens.
 - Font SRAM budget and id limits: [osd/limits.md](osd/limits.md).
 
 ## 3. Inputs to the OSD
-- Front keys: physical order SOURCE, MENU, DOWN, UP, AUTO, POWER (POWER = digital P3.0, others on ADC A0 / A1). Decode, ADC bands: [reversing/realtek-rtd/buttons.md](reversing/realtek-rtd/buttons.md). #85: firmware uses the SDK reference decode, not the JXC ladder; fix open. #129: one input poller and one dispatcher (in progress).
+- Front keys: physical order SOURCE, MENU, DOWN, UP, AUTO, POWER (POWER = digital P3.0, others on ADC A0 / A1). Decode, ADC bands (settled, #85): [reversing/realtek-rtd/buttons.md](reversing/realtek-rtd/buttons.md), `fw/awto/inputs.tsv`. #129: one input poller and one dispatcher (in progress).
 - Test command byte (`fw/test/testcmd.c`, host `scripts/osd_test.py`):
   - 0x01..0x05 = key messages menu (AUTO) / UP / DOWN / exit (MENU) / SOURCE, injected.
   - 0x10+n = OSD event n.
@@ -138,10 +143,7 @@ Never write bare "vendor": say which one.
 - #89: one design system for every screen (style, font, components; screens as data: [osd-screens-as-data.md](osd-screens-as-data.md)).
 - #128: menu on the console display (one text layer, any font size, viewport scroll).
 - #129: one key dispatcher; remove the SDK OSD state table.
-- #85: key decode to the real SOURCE / MENU / DOWN / UP / AUTO / POWER ladder.
-- #39: key test panel (open).
-- #67: registry menu; inert rows listed in [settings.md](settings.md).
-- #117, #122: SDK card bodies and hot-key menus still linked.
+- Inert registry rows: [settings.md](settings.md).
 - #108: SDK defect list.
 - #111: font loader bank pin.
 
