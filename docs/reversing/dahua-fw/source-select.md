@@ -14,7 +14,7 @@ Evidence: bank 0 `dd7c` (page builder), `e7b1` (page handler, state 0x52), `a62d
 - Row -> port code (bank 6 `667d`, called as `0f6f`): 0 -> 4, 1 -> 5, 2 -> 6. [fw]
 - Port code -> class: byte table at bank 4 `28c6`, index = port, high nibble = port code, low nibble = class: ports 4, 5, 6 = `0x44`, `0x53`, `0x63` (class 4, 3, 3). The DDC/CI capabilities choice by class nibble (3, 5, 6 -> string A, 4 -> string B, `~/vendors/realtek/analysis/NOTES.md`) uses the same nibble. [fw]
 - Current port = `056d` (bank 4 `fea4`) = `table28c6[ e0ea + e108 ]` high nibble: `e108` is the current slot (0..2), `e0ea..e0ec` hold three slot -> table-index bytes. `0cbd` (bank 4 `fdec`) sets `e108` = the slot whose entry matches the given port. [fw]
-- Which physical connector is port 4, 5, 6: [?]. The firmware has HPD drivers D1 (P4.2), D2 (P1.1), D3 (P1.0) (`gpio-ir.md` 5), so ports 4..6 are plausibly D1..D3 in some order. [guess] Settle: read `e108` / `e0ea..e0ec` over ISP with the cable on a known connector, or `docs/handover.md` input table.
+- Which physical connector is port 4, 5, 6: [?]. The firmware has HPD drivers D1 (P4.2), D2 (P1.1), D3 (P1.0) (`gpio-ir.md` 5), so ports 4..6 are plausibly D1..D3 in some order. [guess] Settle: read `e108` / `e0ea..e0ec` over ISP with the cable on a known connector, or `docs/history.md` (former handover, last section) input table.
 
 ## 3. Keys while the page is open (`e7b1`, state 0x52)
 | key (e151) | action |

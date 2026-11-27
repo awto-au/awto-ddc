@@ -47,4 +47,4 @@ Status 2026-11-17. The only simulator is ours; no ucsim in any flow except the c
   - Measure: `bus.m.instr` at request injection -> at the first DOUT write of the reply (~3.5 k instr).
   - Limit: `(1 - REPLY_MARGIN) x N_ms x instr_per_ms` = 0.75 x N x measured rate (~7.5 k instr/ms in the sim, measured over a 100 ms window after the check, +-1 %). N = the delay's argument (2).
   - Fail message: `<actual> instr from request to first reply byte, limit <L> (0.75 x N ms x R instr/ms)`.
-  - `pump_sim.py --phase F` sets Timer2 to F of a tick left at injection; `tests/test_pump_budget.py` sweeps phases and feeds extra instructions to show a slow path fails (old stamp check fails for F < ~0.2, new one never flips).
+  - `pump_sim.py --phase F` sets Timer2 to F of a tick left at injection. `tests/test_pump_budget.py` was deleted (ecce3f6c, #244).

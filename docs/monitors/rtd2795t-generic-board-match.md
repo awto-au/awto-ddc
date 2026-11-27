@@ -50,7 +50,7 @@ Primary local evidence:
 - [`../boot-logo.md`](../boot-logo.md)
 - [`pinshare-live-AWT26110003.tsv`](pinshare-live-AWT26110003.tsv)
 - [`../edid-fix.md`](../edid-fix.md)
-- [`../../fw/overlay/Pcb/RL6449/LQFP_216/RL6449_AWTO_JXC4K.h`](../../fw/overlay/Pcb/RL6449/LQFP_216/RL6449_AWTO_JXC4K.h)
+- [`../../fw/sdk/Pcb/RL6449/LQFP_216/RL6449_AWTO_JXC4K.h`](../../fw/sdk/Pcb/RL6449/LQFP_216/RL6449_AWTO_JXC4K.h)
 
 ## Candidate comparison
 

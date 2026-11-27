@@ -1,4 +1,3 @@
-!! what nmonitors support that ?
 # Realtek libraries (FunctionLib, AdvancedLib)
 
 Status 2026-11-06. Issues: #11 (toolchain, audit), #30 (library signature DB).
