@@ -1,0 +1,14 @@
+🤖 Fixed on branch `tools-flash` (419427b, 58025d8), not merged.
+- New `scripts/sdcc_rolled.py` is the one place that names the compiler: install-440cfd2 bin, commit 440cfd2d55, src awto-sdcc-kc, sdcccall 3.
+  - `env()` returns AWTO_SDCC_BE/BIN/SDCCCALL/SRC plus AWTO_SDCC_EXPECT, so sdcc_tools refuses any other install.
+  - `check()` compares the install stamp.
+- Users:
+  - `wb_build.py` (defaults and stamp check)
+  - `dev.py build` (refuses on a stamp mismatch, logs the compiler); `dev.py gate`'s build leg is `dev.py build`
+  - `fw_variants.py`
+  - `sdk_option_audit.py`
+  - The stale `SDCC_BE_BIN = awto-sdcc-be/tmp/be-install` is gone.
+- `dev.py build`: without `--unit` it now uses the first test unit in devices.json (unit 2). The old default was unit 3, which the working-screen guard refuses, so the gate's build leg could never run.
+- `dev.py build`: the `trace_ids.tsv` copy is optional; that file has not been produced since the fw/sdk build (#162).
+- Checked: `./dev.py build --unit 2` in /mnt/2tb/git/awto-ddc-flash passed (rc 0), with compiler 440cfd2d55, sdcccall 3, BE; image `tmp/fw/AWT26110002-419427b+-be.bin`.
+- `./dev.py gate` still fails at its **test** step: 37 pytest failures that are the same on main b3a1057. None of them come from this branch. Draft issue: tmp/flash/gate-tests-issue.md.
