@@ -4,6 +4,7 @@ Typed table: [sim-coverage.tsv](sim-coverage.tsv) (feature | registers | modelle
 
 - Status: `modelled` (hw / databook / sdk behaviour), `spec-model` (most literal reading, behind `osd_model.Opt` where it changes pixels, tagged in captions), `unmodelled`, `not-visible`.
 - `settle_test`: `OT-n` = [open-items.md](open-items.md); `C-*` = `scripts/osd_conform.py` case (host-only, unit 3, not run by agents): `--sim` render, `--hw` write over ISP, `--conform CASE PHOTO` diff of a capture against the model.
+- Picture gates (#263): `fw_gates` `osdman` (normal) = `osd_manual.py --check`; `osdgold` (extensive) = `./dev.py osd-golden`, firmware cards / selector / awto menu in fw_sim vs `tests/golden/osd_cards/`, pixels exact; `--bless` after a reviewed UI or model change.
 - Demos / register-image builder: `scripts/osd_demo.py` (`Img`, `DEMOS`, `render_png`).
 
 ## Opt switches (defaults keep every measured result and the saver frames unchanged)
