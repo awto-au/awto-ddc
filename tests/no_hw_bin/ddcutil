@@ -1,0 +1,7 @@
+#!/usr/bin/env python3
+"""First on PATH in `./dev.py test` without --hw (tests/conftest.py, #358): no DDC/CI or desktop call reaches a unit. Exit 1, one line."""
+import os
+import sys
+
+print(f"{os.path.basename(sys.argv[0])} {' '.join(sys.argv[1:])}: AWTO_NO_HW=1 (test run without --hw): not run", file=sys.stderr)
+sys.exit(1)

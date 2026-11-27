@@ -67,11 +67,21 @@ def dev_hint(cmd: str, script: str) -> None:
           file=sys.stderr)
 
 
+NO_HW_ENV = "AWTO_NO_HW"       # set by tests/conftest.py unless --hw: `./dev.py test` never reaches a unit (#358)
+
+
+class NoHardware(RuntimeError):
+    """not an OSError: a NAK-tolerant caller must not read it as 'no answer' and go on"""
+
+
 class Bus:
     """One open /dev/i2c-N. Every transfer is shown to the rtd_proto taps (decoded + raw logs)."""
 
     def __init__(self, bus: int):
         self.bus = bus
+        self.fd = None
+        if os.environ.get(NO_HW_ENV) == "1":
+            raise NoHardware(f"/dev/i2c-{bus}: {NO_HW_ENV}=1 (test run without --hw): no bus opened")
         self.fd = os.open(f"/dev/i2c-{bus}", os.O_RDWR)
 
     def close(self) -> None:
