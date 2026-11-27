@@ -92,7 +92,7 @@ typedef struct
 //****************************************************************************
 // VARIABLE EXTERN
 //****************************************************************************
-extern StructColorInfo __data d_isr_g_stColorInfo [[awto::isr_shared("main sets it at mode change; EXINT0 only reads the packed colour bits")]];  // awto: IRAM direct, hot variable (#335)
+extern volatile StructColorInfo __data d_isr_g_stColorInfo [[awto::isr_shared("main sets it at mode change; EXINT0 only reads the packed colour bits")]];  // awto: IRAM direct, hot variable (#335)
 
 //****************************************************************************
 // FUNCTION EXTERN

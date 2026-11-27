@@ -1653,7 +1653,7 @@ fn	_ScalerDpRx1SecDataBlockReset	14	0x7520	53
 fn	_ScalerDpRx1SetColorInfo	4	0x6096	580
 fn	_ScalerDpRx1SetDFEInitial	2	0x6cbf	717
 fn	_ScalerDpRx1SetDFEInitial_EXINT0	11	0x475c	614
-fn	_ScalerDpRx1SetDpLaneMapping	2	0x6f8c	216
+fn	_ScalerDpRx1SetDpLaneMapping	2	0xa4b1	334
 fn	_ScalerDpRx1SetDpcdBitValueHM	4	0x9ef9	67
 fn	_ScalerDpRx1SetDpcdBitValueHM_EXINT0	11	0x400f	60
 fn	_ScalerDpRx1SetDpcdValueHM	4	0x9f3c	49

@@ -20,7 +20,7 @@ void AwtoFastScalerSave(BYTE __xdata *pucBuf)
 
     memcpy(&pstS->stTiming, &g_stInputTimingData, sizeof(StructTimingInfo));
     memcpy(&pstS->stSync, &g_stMeasureSyncHV, sizeof(StructMeasureSyncData));
-    memcpy(&pstS->stColor, &d_isr_g_stColorInfo, sizeof(StructColorInfo));
+    memcpy(&pstS->stColor, (const StructColorInfo *)&d_isr_g_stColorInfo, sizeof(StructColorInfo));   // volatile (#361): one snapshot copy
     pstS->usPixelClk = GET_INPUT_PIXEL_CLK();
     pstS->ucFcSrc = ScalerGetByte(P31_00_FC_INPUT_SEL_P01) & 0xF0;
     pstS->pucIvs2Dvs[0] = ScalerGetByte(P0_3D_IV_DV_DELAY_CLK_FINE);

@@ -256,7 +256,7 @@
 // VARIABLE DECLARATIONS
 //****************************************************************************
 volatile bit d_isr_g_bNotifyTimer2Int = _FALSE;
-StructTimerEventTableType isr_g_pstTimerEvent[_TIMER_EVENT_COUNT] [[awto::isr_shared("EXINT0 only clears an entry id (1 B store); main writes id + time in a critical section")]];
+volatile StructTimerEventTableType isr_g_pstTimerEvent[_TIMER_EVENT_COUNT] [[awto::isr_shared("EXINT0 only clears an entry id (1 B store); main writes id + time in a critical section")]];
 
 #if(_RECORD_TIMER_SUPPORT == _ON)
 WORD g_usTimerRecordStartTime;

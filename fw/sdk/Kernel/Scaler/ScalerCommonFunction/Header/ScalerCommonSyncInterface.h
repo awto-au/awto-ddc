@@ -295,7 +295,7 @@
 // INTERFACE VARIABLE DECLARATIONS
 //****************************************************************************
 #if(_DIGITAL_PORT_SUPPORT == _ON)
-extern BYTE isr_g_ucDigitalSwitch [[awto::isr_shared("main sets the switch bits at port change; EXINT1 only reads them")]];
+extern volatile BYTE isr_g_ucDigitalSwitch [[awto::isr_shared("main sets the switch bits at port change; EXINT1 only reads them")]];
 extern __xdata _Bool g_bDpDCOffHPDHigh;
 extern BYTE g_ucHDMIHotPlug;
 extern __xdata _Bool g_bDigitalColorInfoChangeReset;

@@ -51,7 +51,7 @@
 //****************************************************************************
 __xdata _Bool g_bPsWakeupHpd;
 volatile WORD isr_g_usInputPixelClk;
-WORD isr_g_usTmdsOffLineMeasureClk [[awto::isr_shared("main writes it with EX0 masked (TMDS Rx2/Rx3 PhySetDeferred); EXINT0 only reads")]];
+volatile WORD isr_g_usTmdsOffLineMeasureClk [[awto::isr_shared("main writes it with EX0 masked (TMDS Rx2/Rx3 PhySetDeferred); EXINT0 only reads")]];
 
 BYTE g_ucDpRx0LTStatus = _DP_LINK_TRAINING_NONE;
 DPRX_T1(volatile BYTE, isr_g_pucDpRxLTStatus, isr_g_ucDpRx1LTStatus) = {_DP_LINK_TRAINING_NONE}; AWTO_LT_RING_DEF AWTO_PROBE_DEF
@@ -79,7 +79,7 @@ StructDpCableStatus g_stDpCableStatus;
 #if(_DIGITAL_PORT_SUPPORT == _ON)
 
 __xdata _Bool g_bDpDCOffHPDHigh = 0;
-BYTE isr_g_ucDigitalSwitch [[awto::isr_shared("main sets the switch bits at port change; EXINT1 only reads them")]];
+volatile BYTE isr_g_ucDigitalSwitch [[awto::isr_shared("main sets the switch bits at port change; EXINT1 only reads them")]];
 BYTE g_ucHDMIHotPlug;
 
 #if(_DP_HDMI_COMPATIBLE_MODE == _ON)
@@ -216,7 +216,7 @@ StructFreeSyncIIInfo g_stFreeSyncIISetting;
 #endif
 
 #if((_DVI_SUPPORT == _ON) || (_HDMI_SUPPORT == _ON))
-WORD isr_g_usDDCDebounceCnt [[awto::isr_shared("main writes it at power-saving and clock test; EXINT1 only uses it as a delay-loop count")]];
+volatile WORD isr_g_usDDCDebounceCnt [[awto::isr_shared("main writes it at power-saving and clock test; EXINT1 only uses it as a delay-loop count")]];
 
 #if(_TMDS_TOGGLE_HPD_Z0_FOR_ACER == _ON)
 StructTmdsZ0ToggleFlag g_stTmdsToggleZ0Flag;
