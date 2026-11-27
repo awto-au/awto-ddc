@@ -23,7 +23,6 @@ RL6449_Series_FRC	0xd700	1714	62
 ScalerCommonSync	0xd700	1776	62
 awto_arith_arith	0xd700	1892	50
 ScalerSync	0xd700	1942	48
-text_layer	0xd700	1990	47
 ScalerDPRx1_INT_SeptPhy	0xd700	2037	40
 qc_osd	0xd700	2077	39
 awto_settings_vcp	0xd700	2116	38
@@ -135,5 +134,5 @@ awto_settings_settings	0xe780	1648	335
 hostnote	0xe780	1983	195
 swlog	0xe780	2305	278
 inputs	0xe780	2583	232
-console	0xe780	2815	342
+console	0xe780	2815	346
 OsdChange4BitColor	0xe780	3420	3

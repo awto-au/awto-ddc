@@ -4,6 +4,8 @@
 #ifdef _AWTO_NEW_SETTINGS
 extern void osd_font_load(BYTE ucFont);
 extern BYTE osd_font_cw(BYTE ucFont);
+extern BYTE __xdata osd_cw;
+extern BYTE __xdata osd_rh;
 
 //---- text layer on the OSD engine (osd.h osd_tc_*, awto-ddc#89): native Spleen 8 x 16 bitmap glyphs ----
 // palette (index: colour): our own entries over the SDK's, restored when the Realtek SDK menu loads its palette.
@@ -14,6 +16,11 @@ static __code BYTE tAwtoPal[AWTO_PAL_N][3] = {
 // 1 bit glyph foreground for each osd_style; background 0 is transparent and exposes the white/blue window.
 static __code BYTE tAwtoStyle[8] = {AWTO_PAL_ACCENT, AWTO_PAL_GREY, AWTO_PAL_SURFACE, AWTO_PAL_ACCENT, AWTO_PAL_ALERT,
                                     AWTO_PAL_DIAG_WARN, AWTO_PAL_DIAG_TIMING, AWTO_PAL_DIAG_BOOT};      // styles 4..7: diagnostic console only (alert, log classes)
+// Map B card (#357): opaque cells on the console's palette (no windows: they would need delay set 2, OT-6); styles 0..3 used.
+#define AWTO_B2_INK         AWTO_OSD_CELL_B2(AWTO_PAL_CARDB_INK, AWTO_PAL_CARDB_SURF)
+static __code BYTE tAwtoStyleB[8] = {AWTO_B2_INK, AWTO_OSD_CELL_B2(AWTO_PAL_CARDB_DIM, AWTO_PAL_CARDB_SURF),
+                                     AWTO_OSD_CELL_B2(AWTO_PAL_CARDB_SURF, AWTO_PAL_CARDB_INK), AWTO_B2_INK,
+                                     AWTO_OSD_CELL_B2(AWTO_PAL_DIAG_ALERT, AWTO_PAL_CARDB_SURF), AWTO_B2_INK, AWTO_B2_INK, AWTO_B2_INK};
 #define AWTO_BAR_SURFACE            AWTO_PAL_SURFACE
 #define AWTO_BAR_ACCENT             AWTO_PAL_ACCENT
 #define AWTO_OSD_WIN_MIN_PX         2           // narrowest window drawn as asked; end == start runs to the line end (photo 2026-11-15)
@@ -56,9 +63,30 @@ static void AwtoOsdOrient(BYTE ucRows)
     ScalerOsdMapRotation(_OSD_ROTATE_DEGREE_0, _ENABLE, ucRows, _DISABLE, 0, _ENABLE);    // chip auto rotation off (undoes rot3 images)
 }
 
+// Map B (#357): a card in font B (delay set 2) next to the console in font A. While B shows, roll-up is off (regdb: fs_base1
+// "not effective when ROLL-UP"); with fontx2_en font A still reads row_base0 / fs_base0, so osd_tc_scroll keeps scrolling A.
+__xdata BYTE g_ucAwtoMapB;                       // 1 = font B on screen
+__xdata BYTE g_ucAwtoMapBAsk;                    // the next OsdFuncApplyMap leaves the map B room (console open)
+__xdata BYTE g_ucAwtoMapBHas;                    // the map in place has the room: g_ucAwtoMapBRow = its first word
+__xdata BYTE g_ucAwtoMapBRow;
+static __xdata BYTE s_ucRollWant;                // roll-up wanted by font A (back on when B goes)
+static __xdata BYTE s_ucMapBTo;                  // osd_tc_* address map B (between osd_tc_b_open and osd_tc_b_show)
+static __xdata BYTE s_ucMapBKeep;                // the console redraws itself: B, and the card's OSD_DISABLE timer, stay
+static __xdata BYTE s_ucSaveW, s_ucSaveH, s_ucSaveVp;
+static __xdata BYTE s_ucMapBLines;
+static __xdata WORD s_usSaveFs;
+static __xdata WORD s_usMapBMs;                  // (WORD)AwtoMs() at the B open: the close line's on-screen ms
+#define AWTO_MAPB_FS()      ((WORD)g_ucAwtoMapBRow + AWTO_MAPB_ROWS + 1)   // B char words after B's rows + end word
+#define AWTO_MAPB_F18      (AWTO_F_FRAME_CTRL_18_OSD_SPECIAL_EN | AWTO_F_FRAME_CTRL_18_POP_ON_EN | AWTO_F_FRAME_CTRL_18_FONTX2_EN | AWTO_F_FRAME_CTRL_18_FONT_B_DELAY_SEL)
+
 // FRAME_CTRL_18 special function: roll-up (viewport scroll) on / off.
 void AwtoOsdRoll(BYTE ucOn)
 {
+    s_ucRollWant = ucOn;
+    if(g_ucAwtoMapB != 0)
+    {
+        return;                                 // font B on: A scrolls by its bases alone (above)
+    }
     if(ucOn != 0)
     {
         ScalerSetBit(AWTO_R_FRAME_CTRL_18, ~(AWTO_F_FRAME_CTRL_18_OSD_SPECIAL_EN | AWTO_F_FRAME_CTRL_18_POP_ON_EN), AWTO_F_FRAME_CTRL_18_OSD_SPECIAL_EN);
@@ -69,12 +97,86 @@ void AwtoOsdRoll(BYTE ucOn)
     }
 }
 
+// Map B off (one FRAME_CTRL_18 write: font B off, A's roll-up back as A wants it); ucWhy = AWTO_CARD_MAPB_* close line.
+void osd_tc_b_off(BYTE ucWhy)
+{
+    if((g_ucAwtoMapB == 0) || (s_ucMapBKeep != 0))
+    {
+        return;
+    }
+    g_ucAwtoMapB = 0;
+    ScalerSetBit(AWTO_R_FRAME_CTRL_18, (BYTE)~AWTO_MAPB_F18, (s_ucRollWant != 0) ? AWTO_F_FRAME_CTRL_18_OSD_SPECIAL_EN : 0x00);
+    AwtoSyncPush(AWTO_SYNC_EV_CARD, ucWhy, (WORD)((WORD)AwtoMs() - s_usMapBMs));
+}
+
+static void osd_tc_b_on(void)
+{
+    ScalerSetByte(AWTO_R_FRAME_CTRL_40, s_ucMapBLines);                        // font B row total (the console open writes 0)
+    ScalerSetBit(AWTO_R_FRAME_CTRL_18, (BYTE)~AWTO_MAPB_F18, AWTO_F_FRAME_CTRL_18_FONTX2_EN | AWTO_F_FRAME_CTRL_18_FONT_B_DELAY_SEL);
+}
+
+// 1 around the console's own redraw: B and its timer stay; 0 after it: B on again (the redraw reset FRAME_CTRL_18 / 40)
+void osd_tc_b_keep(BYTE ucKeep)
+{
+    s_ucMapBKeep = ucKeep;
+    if((ucKeep == 0) && (g_ucAwtoMapB != 0))
+    {
+        osd_tc_b_on();
+    }
+}
+
+// ucChars x ucLines card in map B: rows, blank surface cells, bases. Until osd_tc_b_show the osd_tc_* calls address map B.
+void osd_tc_b_open(BYTE ucChars, BYTE ucLines)
+{
+    BYTE ucI;
+
+    s_ucSaveW = g_ucOsdWidth;
+    s_ucSaveH = g_ucOsdHeight;
+    s_ucSaveVp = s_ucVpRows;
+    s_usSaveFs = g_usFontSelectStart;
+    g_ucOsdWidth = ucChars;
+    g_ucOsdHeight = ucLines;
+    s_ucMapBLines = ucLines;
+    s_ucVpRows = 0;
+    g_usFontSelectStart = AWTO_MAPB_FS();
+    s_ucMapBTo = 1;
+    for(ucI = 0; ucI < ucLines; ucI++)
+    {
+        ScalerOsdCommandAllByte((WORD)g_ucAwtoMapBRow + ucI, AWTO_OSD_ROW_ON, osd_rh - 1, ucChars);
+    }
+    ScalerOsdCommandByte((WORD)g_ucAwtoMapBRow + ucLines, _OSD_BYTE0, AWTO_OSD_ROW_END);
+    ScalerOsdCharCommandAllByteSeries(g_usFontSelectStart, AWTO_OSD_CHAR_1BIT_W(osd_cw), AWTO_OSD_GLYPH_BLANK, AWTO_OSD_CELL_B2(AWTO_PAL_CARDB_INK, AWTO_PAL_CARDB_SURF),
+                                      (WORD)ucChars * ucLines);
+    ScalerOsdSramBaseAddressSet(_OSD_B, g_ucAwtoMapBRow, g_usFontSelectStart, g_usFontTableStart);
+    ScalerSetByte(AWTO_R_FRAME_CTRL_27, ScalerGetByte(AWTO_R_FRAME_CTRL_24));     // font B origin offset = font A's
+    ScalerSetByte(AWTO_R_FRAME_CTRL_28, ScalerGetByte(AWTO_R_FRAME_CTRL_25));
+    ScalerSetByte(AWTO_R_FRAME_CTRL_29, ScalerGetByte(AWTO_R_FRAME_CTRL_26));
+}
+
+// Back to map A, font B on (roll-up off in the same write); the OSD itself stays as it is (no disable / enable).
+void osd_tc_b_show(void)
+{
+    g_ucOsdWidth = s_ucSaveW;
+    g_ucOsdHeight = s_ucSaveH;
+    s_ucVpRows = s_ucSaveVp;
+    g_usFontSelectStart = s_usSaveFs;
+    s_ucMapBTo = 0;
+    s_usMapBMs = (WORD)AwtoMs();
+    g_ucAwtoMapB = 1;
+    ScalerTimerWaitForEvent(_EVENT_DEN_STOP);
+    osd_tc_b_on();
+}
+
 // Map + palette + font: blank cells get the font's width (a part-written row keeps blanks; at Rotate 180, map mirrored, they
 // come before its text, and blanks of another width shifted it sideways, Dan's photo 2026-11-13).
 // Three parts, one per main-loop pass in the stepped console open (#311): map, palette, font.
 static void osd_tc_open_map(BYTE ucChars, BYTE ucLines, BYTE ucFont)
 {
-    ScalerTimerCancelTimerEvent(_USER_TIMER_EVENT_OSD_DISABLE);
+    if(s_ucMapBKeep == 0)
+    {
+        ScalerTimerCancelTimerEvent(_USER_TIMER_EVENT_OSD_DISABLE);
+        osd_tc_b_off(AWTO_CARD_MAPB_GONE);
+    }
     OsdFuncDisableOsd();
     OsdFuncCloseWindow(_OSD_WINDOW_ALL);
     SET_OSD_DOUBLE_SIZE(GET_OSD_NVRAM_DOUBLE_SIZE());
@@ -128,9 +230,6 @@ void osd_tc_open(BYTE ucChars, BYTE ucLines, BYTE ucFont)
     osd_tc_open_part(0xFF, ucChars, ucLines, ucFont);
 }
 
-extern BYTE __xdata osd_cw;
-extern BYTE __xdata osd_rh;
-
 void osd_tc_rowh(BYTE ucRh)
 {
     BYTE ucI;
@@ -176,13 +275,8 @@ BYTE osd_tc_scroll(BYTE ucFirst)
     s_ucVpEnd = ucEnd;
     s_ucVpFirst = ucFirst;
     usFs = g_usFontSelectStart + (WORD)ucPs * g_ucOsdWidth;
-    if(ucPs == 0)
-    {
-        AwtoOsdRoll(0);                                                                         // top: roll-up off (roll-up at row 0 showed a blank OSD on unit 2, Dan 2026-11-12)
-        return ucFirst;
-    }
-    AwtoOsdRoll(1);                                                                             // special function on, 0 = roll-up
-    ScalerSetByte(AWTO_R_FRAME_CTRL_19, ucPs);
+    AwtoOsdRoll(ucPs);                                                                          // top: roll-up off (roll-up at row 0 showed a blank OSD on unit 2, Dan 2026-11-12)
+    ScalerSetByte(AWTO_R_FRAME_CTRL_19, ucPs);                                                  // also at the top: font A reads them while map B shows (#357)
     ScalerSetBit(AWTO_R_FRAME_CTRL_1B, (BYTE)~AWTO_F_FRAME_CTRL_1B_FS_BASE0, (BYTE)((usFs >> 8) << 4));
     ScalerSetByte(AWTO_R_FRAME_CTRL_1C, (BYTE)usFs);
     return ucFirst;
@@ -198,7 +292,7 @@ void osd_tc_viewport(BYTE ucRows)
 void osd_tc_cells(BYTE ucRow, BYTE ucCell, BYTE __xdata *pucTiles, BYTE ucN, BYTE ucStyle)
 {
     BYTE ucB0 = AWTO_OSD_CHAR_1BIT_W(osd_cw);   // 1 bit font, cell width = the loaded font's pixel width
-    BYTE ucB2 = tAwtoStyle[ucStyle] << 4;         // foreground; transparent background
+    BYTE ucB2 = (s_ucMapBTo != 0) ? tAwtoStyleB[ucStyle] : (tAwtoStyle[ucStyle] << 4);   // foreground; transparent background (map B: opaque)
 
     if(s_ucAwtoOsdRot == _OSD_ROTATE_DEGREE_180)      // row r cell c -> row H-1-r cell W-1-c: write the run backwards from its last cell
     {
@@ -379,6 +473,11 @@ void osd_tc_place_top_right(WORD usRight, WORD usTop, BYTE ucBig)
         usX = usRight;
         usY = ((DWORD)_PANEL_DV_HEIGHT > ulH + usTop) ? (WORD)((DWORD)_PANEL_DV_HEIGHT - ulH - usTop) : 0;
     }
+    if(s_ucMapBTo != 0)                                 // map B: delay set 2; the scale is font A's too (one global double size)
+    {
+        OsdFuncSetPosition(_OSD_POSITION_GLOBAL_B, usX / ucStep / (ucBig + 1), usY / (ucBig + 1));
+        return;
+    }
     SET_OSD_DOUBLE_SIZE(ucBig);
     ScalerOsdDoubleFunction(ucBig, ucBig);
     OsdFuncSetPosition(_OSD_POSITION_GLOBAL_A, usX / ucStep / (ucBig + 1), usY / (ucBig + 1));
@@ -399,6 +498,7 @@ void osd_tc_show(BYTE ucOn)
 
 void osd_tc_close(void)
 {
+    osd_tc_b_off(AWTO_CARD_MAPB_GONE);
     g_ucAwtoMenuOn = 0;
     AwtoOsdRoll(0);                                                                             // viewport roll-up off: the next screen starts at row 0
     s_ucVpRows = 0;

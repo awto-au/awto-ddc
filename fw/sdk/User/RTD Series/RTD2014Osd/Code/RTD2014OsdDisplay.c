@@ -264,6 +264,7 @@ void OsdDispDisableOsd(void)
     }
     AwtoSaverTaken();                           // a boot splash on screen ends with this reset
     g_ucAwtoCardUp = 0;
+    osd_tc_b_off(AWTO_CARD_MAPB_GONE);          // awto: a map B card goes with the OSD (not while the console redraws itself, #357)
 #ifdef _AWTO_NEW_SETTINGS
     if(GET_OSD_STATE() == _MENU_HOTKEY_BACKLIGHT)
     {

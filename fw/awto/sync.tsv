@@ -598,6 +598,9 @@ ED	39	-	pop-up opened: saving to memory card
 ED	81	n	pop-up suppressed: the input selector is open and keeps the screen (message %)
 ED	82	n	pop-up suppressed: the console is open and keeps the screen (message %)
 ED	7F	ms	pop-up closed: its on-screen time ran out, up %
+ED	7D	-	pop-up in its own OSD map (font B, delay set 2) beside the console; the console stays open
+ED	7C	ms	pop-up closed (font B): its on-screen time ran out, up %; the console stays open
+ED	7B	ms	pop-up closed (font B): the console closed or another screen opened, up %
 ED	7E	n	OSD text row cut: % cell(s) over its box (the last cell is the frame)	error
 EE	*	note	%
 FD	*	dly	micro-delay over its limit (>= {AWTO_DLY_SLACK_TICKS} ticks): call at %	warning

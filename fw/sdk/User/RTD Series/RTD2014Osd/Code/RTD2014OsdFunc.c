@@ -109,7 +109,10 @@ void OsdFuncApplyMap(BYTE ucWidth, BYTE ucHeight, BYTE ucColor, BYTE ucCellW)   
     ScalerOsdCommandByte(ucHeight, _OSD_BYTE0, 0x00);
 
     // Frame Control (set font start address)
-    g_usFontSelectStart = ucHeight + 1;
+    g_ucAwtoMapBHas = g_ucAwtoMapBAsk;          // awto: map B room after the row end word, asked by the console (#357)
+    g_ucAwtoMapBAsk = 0;
+    g_ucAwtoMapBRow = ucHeight + 1;
+    g_usFontSelectStart = ucHeight + 1 + ((g_ucAwtoMapBHas != 0) ? AWTO_MAPB_WORDS : 0);
     g_usFontTableStart = g_usFontSelectStart + (WORD)(ucWidth * ucHeight);
     ScalerOsdSramBaseAddressSet(_OSD_A, 0, g_usFontSelectStart, g_usFontTableStart);
 
