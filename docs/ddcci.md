@@ -30,7 +30,7 @@
   an out-of-tree DKMS build); GNOME Shell / mutter 51.1. Open question in #67.
 
 ## Host time (#157)
-- Purpose: monitor logs (sync ring, console) in host time. Sender `scripts/host_time.py` (unit 2 only), every 60 s via
+- Purpose: monitor logs (sync ring, console) in host time. Sender `scripts/host_time.py` (`--unit 3` in the service; refuses non-test units), every 60 s via
   `systemd/host-time.service` (not enabled by default; same install steps as ddc-idle in [ddc-control.md](ddc-control.md)).
 - Request: MCCS table write to VCP 0xE9, offset 0000, 7 data bytes; no reply.
   - `51 8B E7 E9 00 00 t3 t2 t1 t0 mH mL ofs chk`: unix s BE, ms within the second BE (0..999), UTC offset in 15 min (signed).

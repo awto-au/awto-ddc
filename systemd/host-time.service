@@ -6,7 +6,7 @@ PartOf=graphical-session.target
 [Service]
 Type=simple
 Environment=AWTO_DDC_REPO=/mnt/2tb/git/awto-ddc
-ExecStart=/usr/bin/python3 /mnt/2tb/git/awto-ddc/scripts/host_time.py --loop 60
+ExecStart=/usr/bin/python3 /mnt/2tb/git/awto-ddc/scripts/host_time.py --unit 3 --loop 60
 Restart=on-failure
 RestartSec=60
 
