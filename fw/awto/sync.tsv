@@ -52,7 +52,7 @@ D1	03	-	boot:MCU set up (M2PLL clock, flash clock, code banks, Timer2 tick)	boot
 D1	04	-	boot:pin functions set	boot
 D1	06	-	boot:first main-loop pass	boot
 D2	01	n	MCU init:crystal clock, watchdog N = %	boot
-D2	02	-	Timer2 1ms tick running	boot
+D2	02	ms	Timer2 1ms tick running, % after the reset	boot
 D2	03	wdt	watchdog run-time:%	timing
 D4	01	ms	NVRAM save start (since the last poke %)	flash
 D4	02	ms	NVRAM save end (since the last poke %)	flash

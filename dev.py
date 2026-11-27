@@ -893,6 +893,7 @@ def _flash_direct(extra: list[str]) -> int:
         flash_registry.restore(u["serial"], before)
     if rc:
         _log_unit_state(u, bus, img, rc)
+        _host_time_now(_n)                  # #358: a failed / partial flash also reset the unit (old or held image: one try, WARN only)
     if rc == 0:
         rec = flash_registry.record(u["serial"], img)
         log(f"flash: recorded {rec['tag']} ({rec['sha256'][:12]}) in the shared flash record")
@@ -991,6 +992,7 @@ def cmd_deploy(extra: list[str]) -> int:
     log(f"deploy: shared image verified; programming {u['serial']} EDID in sector 0x{sector_addr:x}")
     rc = _py("rtd_flash_sector.py", bus, hex(sector_addr), patched,
              "--expect-current", expected, "--write", shield=True)
+    _host_time_now(n)                       # the sector write ends with an ISP reset (#358)
     if rc:
         log("deploy: FIRMWARE IS PRESENT BUT PER-MONITOR EDID FAILED; retry deploy on this same bus", "FATAL")
         return rc
@@ -1020,6 +1022,7 @@ def cmd_edid(extra: list[str]) -> int:
         log(f"edid: using caller-proven physical bus {bus} for unit {n}", "WARN")
     rc = _py("rtd_flash_sector.py", bus, hex(sector_addr), patched,
              "--expect-current", expected, "--write", shield=True)
+    _host_time_now(n)                       # the sector write ends with an ISP reset (#358)
     if rc == 0:
         _record_unit_edid(u, img, sector_addr, patched)
         log(f"EDID complete: unit {n}, {u['serial']}", "ALERT")
@@ -1040,7 +1043,10 @@ def cmd_power_cycle(extra: list[str]) -> int:
     if not u["relay"]:
         log(f"unit {n} has no relay (scripts/devices.json)", "ERROR")
         return 1
-    return _py("power_cycle.py", "--relay", u["relay"], *extra)
+    rc = _py("power_cycle.py", "--relay", u["relay"], *extra)
+    if rc == 0 and "--off" not in extra:
+        _host_time_now(n)                   # mains on: the fw clock restarted (#358)
+    return rc
 
 
 @command("which monitor input the cable is in, from the EDID port tag (scripts/edid_port.py, read-only; #28)",

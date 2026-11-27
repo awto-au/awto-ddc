@@ -1244,6 +1244,7 @@ extern __xdata StAwtoSyncEv g_stAwtoSyncPin;  // #150: this boot's reason line, 
 extern unsigned char __xdata *AwtoSyncAt(unsigned char ucSeq);
 extern __xdata unsigned long g_ulAwtoBootAbs;       // absolute index of this boot's boot line (fw/log/sync.c)
 extern __xdata unsigned long g_ulAwtoEpAbs;         // absolute index of the current episode's start row (fw/log/sync.c)
+extern __xdata unsigned int g_usAwtoBootBase;       // ms from the MCU reset to the Timer2 start (fw/log/sync.c)
 extern __xdata unsigned char g_ucAwtoAtLaps;        // AwtoSyncAt: AWTO_SYNC_WRAP laps further back (console start row only, fw/log/hostnote.c)
 #define AWTO_DLOG_AT_B                                          10          // AwtoSyncAt entry: 8 B + ms bits 31..16 (offsets 8, 9) for tail and DDR lines alike
 // DDR ring: 2^15 slots of one 16 B burst (entry), header burst just below, the note store (AWTO_DDRN_*) just above (docs/dram-log-design.md)

@@ -5,12 +5,13 @@ usage: host_time.py --unit N --once [--wait SEC]   one send; --wait: retry until
        host_time.py --unit N --loop 300           one send per 300 s (Dan 2026-11-27), aligned to the host clock (systemd/host-time.service)
        host_time.py --units 1,2,3|test --loop 300 every listed test unit, one send per unit per period (explicit only: not the service)
 - Period 300 s; the firmware marks HOST stale after AWTO_HT_STALE_MS = 1.25 x the period (RL6449_Project.h, docs/delays.md).
-- After every `./dev.py flash` / `./dev.py reset`: one `--once --wait 5` send to that unit (dev.py, fw clock restarted at the reset).
+- After every dev.py reset path (flash ok or failed, reset, deploy / edid, power-cycle, recover): one `--once --wait 5` send to that unit.
+- `--loop`: every BOOT_CHECK_S a get VCP E9; 0 syncs since boot = the unit restarted unseen (watchdog, mains): sent at once.
 - Carrier: MCCS table write (op 0xE7) to manufacturer VCP 0xE9, offset 0000, 7 data bytes: unix s BE x4, ms BE x2, UTC offset
   in 15 min units (signed). 51 8B E7 E9 00 00 t3 t2 t1 t0 mH mL ofs chk. No reply (MCCS table write). docs/ddcci.md.
 - Read back: get VCP 0xE9 -> max = syncs since boot, cur = drift of this sync (host - fw tick, ms, int16).
 - Debug link on (0x37 silent): the same 7 bytes go over 0x35 into g_stAwtoHt.aucPend, then test cmd 0x0E applies
-  them (AwtoHtSync); a few ms older than over DDC/CI. Needs the running image's map (tmp/fw/<serial>-flash-state.json).
+  them (AwtoHtSync); a few ms older than over DDC/CI. The running image's map comes from the shared flash record (flash_registry).
 - Unit guard: devices.json test units only (another unit is refused); bus = the one with the unit's EDID serial that ACKs DDC/CI 0x37
   (kvm.find_bus, cached per unit), EDID serial checked before every send. Unreachable unit: one line, skipped until the next period.
 - No unit lock: a RAM write; the firmware's NVRAM flush gate sees it as DDC/CI (500 ms busy) once per period.
@@ -20,6 +21,7 @@ from __future__ import annotations
 
 import argparse
 import datetime as dt
+import errno
 import json
 import sys
 import time
@@ -114,8 +116,11 @@ def send_dbg(u: dict, bus: int) -> bool:
     import dbg_xdata as X
     import rtd_i2c_bridge as B
     from sync_log import sym
-    st = json.loads((ROOT / f"tmp/fw/{u['serial']}-flash-state.json").read_text())
-    ht = sym(ROOT / f"tmp/fw/{st['image']}.map", "g_stAwtoHt")
+    import flash_registry
+    rec = flash_registry.current(u["serial"])                 # the shared flash record: the running image's map, any tree (#358)
+    if not rec.get("map"):
+        raise OSError(f"no map in the flash record of {u['serial']} (dev.py flash-record show)")
+    ht = sym(Path(rec["map"]), "g_stAwtoHt")
     i2cbus.require_unit(bus, u["serial"])
     io = B.Real(bus, allow_write=True, regread=True)
     try:
@@ -141,6 +146,21 @@ def send_dbg(u: dict, bus: int) -> bool:
     return True
 
 
+BOOT_CHECK_S = 30   # --loop: get VCP E9 (syncs since boot) this often; 0 = the unit booted (watchdog, power, a reset dev.py did not see): send at once
+
+
+def booted(u: dict, bus: int | None) -> bool:
+    """True when the unit answers get VCP E9 with 0 syncs since boot; any error: False (the period send logs it)"""
+    if bus is None:
+        return False
+    try:
+        i2cbus.require_unit(bus, u["serial"])
+        with i2cbus.Bus(bus) as b:
+            return get_e9(b)[0] == 0
+    except (OSError, SystemExit):
+        return False
+
+
 WAIT_GAP_S = 0.5    # --wait: between tries (each try = a bus scan, ~0.7 s); the unit answers DDC/CI ~1.5 s after a reset
 
 
@@ -152,7 +172,8 @@ def one(n: str, u: dict, bus: int | None) -> tuple[bool, int | None]:
             try:
                 send(u, bus)
             except OSError as e:                 # 0x37 gone mid-session: the debug link took the port
-                log(f"unit {n} bus {bus}: DDC/CI failed ({e}); trying the debug link 0x35")
+                nak = getattr(e, "errno", None) == errno.ENXIO
+                log(f"unit {n} bus {bus}: DDC/CI " + ("0x37 NAK (debug link 0x35 on the port?)" if nak else f"failed ({e})") + "; trying the debug link 0x35")
                 send_dbg(u, bus)
         else:                                    # no DDC/CI: the debug link is on (or the cable is out)
             db = dbg_bus(u)
@@ -197,7 +218,13 @@ def main() -> int:
             oks.append(ok)
         if a.once:
             return 0 if all(oks) else 1
-        time.sleep(a.loop - (time.time() % a.loop))  # next multiple of SEC on the host clock: the send period itself
+        t_next = time.time() + a.loop - (time.time() % a.loop)    # next multiple of SEC on the host clock: the send period itself
+        while time.time() < t_next:
+            time.sleep(min(BOOT_CHECK_S, max(0.0, t_next - time.time())))   # boot check period, bounded by the send time
+            for n, u in units.items():
+                if booted(u, buses[n]):                             # syncs since boot 0: the unit restarted (any reset path)
+                    log(f"unit {n} {u['serial']}: no host sync since its boot: sending now")
+                    _ok, buses[n] = one(n, u, buses[n])
 
 
 if __name__ == "__main__":

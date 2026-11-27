@@ -92,3 +92,79 @@ def test_ring_v4_keeps_32bit_ms():
     assert SL.decode(bytes(raw), rows, whole=True, ms32=raw.ms32)[0]["ms32"] == ms     # main() passes it over the bytes() copy
     out = [ln for ln, _ in SL.ring_rows(h, lines, HT, 0)]
     assert sum("+ 285 s" in x for x in out) == 2 and not any(SL.WRAP_TEXT in x for x in out)
+
+
+def _gui_funcs():
+    """tools/osd_editor/monitor.py sync_rows / delta_ms / ROW_RE without Qt: their source, run alone"""
+    import ast
+    import re
+    src = (Path(__file__).resolve().parent.parent / "tools/osd_editor/monitor.py").read_text()
+    tree = ast.parse(src)
+    ns = {"re": re, "SLOW_MS": 100}
+    for node in tree.body:
+        if (isinstance(node, ast.Assign) and any(getattr(t, "id", "") == "ROW_RE" for t in node.targets)) or \
+           (isinstance(node, ast.FunctionDef) and node.name in ("delta_ms", "sync_rows", "sync_summary")):
+            exec(compile(ast.Module([node], []), "monitor.py", "exec"), ns)
+    return ns
+
+
+def test_gui_sync_rows_use_the_decoders_delta():
+    """the GUI Sync table shows the decoder's own delta (32-bit), not a 16-bit step of its own (#358 item 7)"""
+    ms = full_ms()
+    evs = evs_of(ms)
+    ts = SL.unwrap(evs, None, ms)
+    out = "\n".join("2026-11-27T15:20:33+11:00   " + x for x in SL.row_lines(SL.con_rows(evs, texts(evs), ts, HT), ts, evs))
+    g = _gui_funcs()
+    rows = g["sync_rows"](out)
+    assert [d for d, _, _ in rows] == ["", "+ 285 s", "+ 285 s", "+ 280 s", "+ 289 s"]
+    assert all(slow for _, _, slow in rows[1:]) and g["delta_ms"]("+ 285 s") == 285000 and g["delta_ms"]("+12.3 s") == 12300
+    assert "slowest step 289000 ms" in g["sync_summary"](rows)
+
+
+def _v4_image(entries, gen=7, boot=1):
+    """a DRAM log image (sync_log V4 header + 32-entry tail) and a DDR reader for entries [(id, arg, ms32, val)], oldest first"""
+    n_all = len(entries)
+    hdr = bytearray(SL.V4_HDR)
+    seq = n_all % 176
+    hdr[0:2], hdr[2], hdr[3], hdr[4], hdr[12], hdr[13], hdr[14], hdr[16], hdr[18] = b"SY", 4, seq, 0, 88, 176, gen, 0, n_all & 0xFF
+    hdr[19:23] = n_all.to_bytes(4, "big")
+    tail = bytearray(SL.V4_TAIL * SL.V4_TL)
+    for a in range(max(0, n_all - SL.V4_TAIL), n_all):
+        i, g, m, v = entries[a]
+        o = SL.V4_TL * (a & (SL.V4_TAIL - 1))
+        tail[o:o + SL.V4_TL] = bytes([i, g, (m >> 8) & 0xFF, m & 0xFF]) + v.to_bytes(4, "big") + ((m >> 16) & 0xFFFF).to_bytes(2, "big")
+    ddr = {}
+    for a, (i, g, m, v) in enumerate(entries):
+        e = bytes([i, g]) + (m & 0xFFFFFFFF).to_bytes(4, "big") + v.to_bytes(4, "big") + a.to_bytes(3, "big") + bytes([gen, boot])
+        ddr[D.C["AWTO_DLOG_UNITS0"] + (a % D.C["AWTO_DLOG_SLOTS"]) * D.C["AWTO_DLOG_ENTRY_UNITS"]] = e + bytes([D._sum(e + b"\0")])
+    img = bytes(hdr) + bytes(tail)
+    return img, (lambda u: ddr.get(u))
+
+
+def test_boot_over_88_lines_uptime_over_1000s_wall_clock(monkeypatch):
+    """#358 item 2: a boot of 130 lines (> the 88-line window), gaps > 65 s, host sync at fw 1155255 ms: every line at its true host time"""
+    rows = SL.load_rows(Path(__file__).resolve().parent.parent / "fw/awto/sync.tsv")
+    ents = [(0xD0, 1, 0xFFFFFFFC, 0), (0xD2, 2, 0, 31), (0xC0, 1, 1, 0xFF)]
+    t = 10
+    for k in range(126):
+        t += 9000 if k % 10 else 70_000                       # every tenth gap over the 16-bit wrap
+        ents.append((0xE7, 3, t, 0))
+    ents.append((0xD8, 1, 1155255, 1155255))
+    img, rd = _v4_image(ents)
+    monkeypatch.setattr(SL, "DDR_UNIT", rd)
+    raw = SL.read_ring(lambda a, k: img[a:a + k], 0, False)
+    h, lines = SL.decode(bytes(raw), rows, False, None, raw.ms32)
+    assert len(lines) == len(ents) and h["lost"] == 0 and lines[0].split(":", 1)[1].startswith("boot:")
+    out = [ln for ln, _ in SL.ring_rows(h, lines, HT, 0, join=False)]
+    assert out[0].startswith(" " + dt_wall(-4)) and dt_wall(-4).startswith("14:58:59") and "-- boot:" in out[0]   # 1155 s before the sync
+    want = dt_wall(ents[-2][2])
+    assert out[-2].startswith(" " + want)
+    assert not any(SL.WRAP_TEXT in x for x in out) and sum("+70.0 s" in x for x in out) == 13
+    assert "+ 27 ms:-- boot:" in out[0]                                     # boot row zero = the MCU reset: -4 + 31 ms
+    assert SL.con_rows(h["events"], [x.split(":", 1)[1] for x in lines], SL.unwrap(h["events"], None, h["ms32"]))[0]["delta"] == 27   # since reset: -4 + 31
+
+
+def dt_wall(fw: int) -> str:
+    import datetime as dt
+    t = HT["epoch"] + (HT["frac"] + fw - HT["fw"]) / 1000
+    return dt.datetime.fromtimestamp(t, dt.timezone(dt.timedelta(minutes=15 * HT["ofs"]))).strftime("%H:%M:%S.%f")[:12]

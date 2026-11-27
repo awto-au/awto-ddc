@@ -403,10 +403,28 @@ def joins(a: tuple, b: tuple) -> bool:
     return (a[0], b[0]) in JOIN_PAIRS and (b[2] - a[2]) & 0xFFFF <= JOIN_MS
 
 
-def real_col(t: int | None, ht: dict | None, wall: bool) -> str:
-    """console AwtoPutReal: ' ' + host clock HH:MM:SS.mmm (wall: the line's boot has the host sync), else 'u' + uptime of its boot"""
+INIT_EV, INIT_T2 = 0xD2, 2                               # AWTO_SYNC_EV_INIT arg 2: Timer2 start, value = ms from the MCU reset (fw ms 0)
+
+
+def boot_bases(evs: list) -> list:
+    """per event: its boot's ms from the MCU reset to fw ms 0 (the Timer2 start line after the boot line), None if not in the ring"""
+    out, cur = [], None
+    for k, e in enumerate(evs):
+        if e[0] == BOOT_EV:
+            cur = next((x[3] for x in evs[k + 1:] if x[0] == INIT_EV and x[1] == INIT_T2 and isinstance(x[3], int)), None)
+            nb = next((j for j in range(k + 1, len(evs)) if evs[j][0] == BOOT_EV), len(evs))
+            cur = cur if any(evs[j][0] == INIT_EV and evs[j][1] == INIT_T2 for j in range(k + 1, nb)) else None
+        out.append(cur)
+    return out
+
+
+def real_col(t: int | None, ht: dict | None, wall: bool, base: int = 0) -> str:
+    """console AwtoPutReal: ' ' + host clock HH:MM:SS.mmm (wall: the line's boot has the host sync), else 'u' + uptime of its boot
+    (since the MCU reset: fw ms + base)"""
     if t is None:
         return " " * REAL_W
+    if not (wall and ht and ht["syncs"]):
+        t += base
     if wall and ht and ht["syncs"]:
         ms = t - ht["fw"] + ht["frac"]
         sec, r = divmod(ms, 1000)
@@ -424,25 +442,27 @@ def con_rows(evs: list, texts: list[str], ts: list, ht: dict | None = None, boot
     """console rows: {i: entry indexes, real, delta, start, wrap (a wrap row goes before), text}. ts = [(fw ms or None, sure)].
     Host clock only for the current boot (boots: per entry boot, cur_boot; else the lines after the newest boot line)."""
     last_boot = max((k for k, e in enumerate(evs) if e[0] == BOOT_EV), default=0)
+    base = boot_bases(evs)
     out, k = [], 0
     while k < len(evs):
         g = [k]
         while join and g[-1] + 1 < len(evs) and joins(evs[g[-1]], evs[g[-1] + 1]):
             g.append(g[-1] + 1)
         ev, (t, sure) = evs[k], ts[k]
+        cur = (boots[k] == cur_boot) if boots is not None else (k >= last_boot)
+        b0 = (base[k] or 0) if cur else 0                # as the console: the base is kept for this boot only (g_usAwtoBootBase)
         st, wrap, d = is_start(ev), False, None
         same_boot = boots is None or (k > 0 and boots[k - 1] == boots[k])
         if st:
-            d = (t if t is not None else ev[2] - (0x10000 if ev[2] >= 0x8000 else 0)) if ev[0] == BOOT_EV else 0
+            d = ((t if t is not None else ev[2] - (0x10000 if ev[2] >= 0x8000 else 0)) + b0) if ev[0] == BOOT_EV else 0   # boot: since the MCU reset
         elif k > 0 and same_boot:
             tp, sp = ts[k - 1]
             if t is not None and tp is not None and sure and sp:
                 d = t - tp
             else:
                 wrap = True
-        cur = (boots[k] == cur_boot) if boots is not None else (k >= last_boot)
         txt = texts[k] + "".join(" | " + (texts[j].split("monitor: ", 1)[-1] if evs[j][0] == MON_EV else texts[j]) for j in g[1:])
-        out.append({"i": g, "real": real_col(t if sure else None, ht, cur), "delta": d, "start": st, "wrap": wrap, "text": txt})
+        out.append({"i": g, "real": real_col(t if sure else None, ht, cur, b0), "delta": d, "start": st, "wrap": wrap, "text": txt})
         k = g[-1] + 1
     return out
 
@@ -574,14 +594,15 @@ V4_HDR, V4_TAIL, V4_TL = 24, 32, 10     # version 4 header (14 B + gen, boot, pe
 
 
 class Ring(bytes):
-    """ring bytes (version 3 layout) + ms32: ring seq -> the entry's 32-bit fw ms (DRAM log images; bytes() drops it)"""
-    def __new__(cls, b, ms32: dict | None = None):
+    """ring bytes (version 3 layout) + ms32: ring seq -> the entry's 32-bit fw ms (DRAM log images; bytes() drops it);
+    entries: [(seq, 8 B entry, ms32)] oldest first when the episode is longer than a seq lap (decode uses them instead of the slots)"""
+    def __new__(cls, b, ms32: dict | None = None, entries: list | None = None):
         o = super().__new__(cls, b)
-        o.ms32 = ms32
+        o.ms32, o.entries = ms32, entries
         return o
 
 
-def _ring_v4(rd, addr: int, whole: bool = True):
+def _ring_v4(rd, addr: int, whole: bool = True, ep_abs: int | None = None):
     """DRAM log image (version 4) as the old version 3 ring bytes: the newest N lines from the XDATA tail and the DDR, entry of seq s at slot s % N.
     Lines the DDR cannot give (no reader, stalled, overwritten) stay all 0 = never written; `read_ring.dram_missing` counts them."""
     import dram_log as D
@@ -595,8 +616,10 @@ def _ring_v4(rd, addr: int, whole: bool = True):
     ring = bytearray(HDR + n * EV)
     ring[:HDR] = b[:HDR]
     ring[2], ring[12] = 3, n
-    missing, ms32 = 0, {}
+    missing, ms32, ents = 0, {}, []
     want = n if whole else min(wrap - 1, (seq - b[4]) % wrap)    # the current episode only: no DDR reads for older lines
+    if not whole and ep_abs is not None and 0 < nxt - ep_abs <= D.C["AWTO_DLOG_SLOTS"]:
+        want = nxt - ep_abs                                  # g_ulAwtoEpAbs: the episode from its start row, any length (#358)
     for d in range(1, min(want, nxt) + 1):
         a = nxt - d
         if d <= V4_TAIL:
@@ -611,10 +634,12 @@ def _ring_v4(rd, addr: int, whole: bool = True):
             e = bytes([ent["id"], ent["arg"], (ent["ms"] >> 8) & 0xFF, ent["ms"] & 0xFF]) + ent["val"].to_bytes(4, "big")
             m32 = ent["ms"]
         s = (seq - d) % wrap
-        ring[HDR + EV * (s % n):HDR + EV * (s % n) + EV] = e
-        ms32[s] = m32
+        ents.append((s, bytes(e), m32))
+        if d < wrap:
+            ring[HDR + EV * (s % n):HDR + EV * (s % n) + EV] = e
+            ms32[s] = m32
     read_ring.dram_missing = missing
-    return Ring(ring, ms32)
+    return Ring(ring, ms32, ents[::-1] if want >= wrap else None)
 
 
 def inject_lines(rd, wr, addr: int, evs, ms2: bytes, hi: int = 0) -> None:
@@ -641,7 +666,7 @@ def inject_lines(rd, wr, addr: int, evs, ms2: bytes, hi: int = 0) -> None:
     wr(addr + 3, bytes([seq]))
 
 
-def read_ring(rd, addr: int, whole: bool = True):
+def read_ring(rd, addr: int, whole: bool = True, ep_abs: int | None = None):
     """the whole ring at addr: header first, then HDR + N x EV (N from the header). rd(addr, n) -> bytes or None.
     Version 4 (DRAM log): the same bytes, older lines from the DDR through DDR_UNIT"""
     h = rd(addr, HDR)
@@ -651,7 +676,7 @@ def read_ring(rd, addr: int, whole: bool = True):
     if h[:2] != b"SY":
         return h
     if h[2] == 4:
-        return _ring_v4(rd, addr, whole)
+        return _ring_v4(rd, addr, whole, ep_abs)
     return rd(addr, HDR + h[12] * EV)
 
 
@@ -669,9 +694,12 @@ def decode(raw: bytes, rows: list[dict], whole: bool = False, note: bytes | None
     n = n_ if whole else (h["seq"] - h["ep_seq"]) % wrap
     lost = max(0, n - n_)
     evs, seqs, raws = [], [], []
+    big = getattr(raw, "entries", None) if not whole else None     # an episode longer than a seq lap, from the DDR
+    if big:
+        lost, n, n_ = 0, len(big), len(big)                         # seqs repeat past a lap: h["ms32"] by position
     for k in range(min(n, n_)):
         s = (h["seq"] - min(n, n_) + k) % wrap
-        e = raw[HDR + EV * (s % n_):HDR + EV * (s % n_) + EV]
+        e = raw[HDR + EV * (s % n_):HDR + EV * (s % n_) + EV] if not big else big[k][1]
         if whole and e[0] == 0:
             continue                                     # never written (a young ring)
         seqs.append(s)                                   # ring seq + raw bytes per decoded line: the unit log saver (unit_log.py) dedupes on them
@@ -679,10 +707,10 @@ def decode(raw: bytes, rows: list[dict], whole: bool = False, note: bytes | None
         v = int.from_bytes(e[4:8], "big")
         evs.append((e[0], e[1], e[2] << 8 | e[3], note_text(note, e[1], v) if e[0] == NOTE_EV else v))   # #273: text via the slot
     h["lost"] = lost
-    h["n"], h["wrap"] = n_, wrap
+    h["n"], h["wrap"] = raw[12], wrap
     h["events"], h["seqs"], h["raws"] = evs, seqs, raws
     m = ms32 if ms32 is not None else getattr(raw, "ms32", None)
-    h["ms32"] = [m.get(s) for s in seqs] if m is not None else None
+    h["ms32"] = [x[2] for x in big] if big else ([m.get(s) for s in seqs] if m is not None else None)
     return h, [line(rows, ev, h["t0"]) for ev in evs]
 
 
@@ -835,7 +863,11 @@ def main() -> int:
         for ln in D.con_lines(rows, snap["entries"], snap["boot"], ht):
             log(ln)
         return 0
-    raw = read_ring(lambda ad, n: X.read_blocks(io, ad, n), sym(a.map, "g_stAwtoSync"), a.whole)
+    ep_abs = None
+    if dram_img and " _g_ulAwtoEpAbs " in a.map.read_text(errors="replace"):          # the episode's start row index (#358): read it whole
+        b = X.read_blocks(io, sym(a.map, "g_ulAwtoEpAbs"), 4)
+        ep_abs = int.from_bytes(bytes(b), "big") if b is not None else None
+    raw = read_ring(lambda ad, n: X.read_blocks(io, ad, n), sym(a.map, "g_stAwtoSync"), a.whole, ep_abs)
     ht, t2 = read_ht(io, a.map) if raw is not None else (None, None)
     note = read_note(io, a.map) if raw is not None else None
     if raw is not None and " _AwtoDdrNoteWrite " in a.map.read_text(errors="replace"):
@@ -859,7 +891,8 @@ def main() -> int:
         print("SYNCJSON " + json.dumps(snapshot(h, lines, ht, t2, a.serial)), flush=True)
         return 0
     log(ht_line(ht, t2))
-    log(f"sync episode: {KINDS.get(h['kind'], h['kind'])}, {len(lines)} lines" + (f", {h['lost']} older lines overwritten" if h.get("lost") else ""))
+    log(f"sync episode: {KINDS.get(h['kind'], h['kind'])}, {len(lines)} lines" + (f", {h['lost']} older lines overwritten" if h.get("lost") else "")
+        + ("; the boot and earlier episodes: --whole / --dram" if h["kind"] != K_POWER_ON and not a.whole else ""))
     for ln, pl in ring_rows(h, lines, ht, t2, rows=rows):
         log("  " + ln, "  " + pl)                         # as the console: real time, +delta, text; raw times last
     return 0

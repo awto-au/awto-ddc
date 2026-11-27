@@ -1644,9 +1644,13 @@ static void AwtoPutReal(void)                   // 13 cells: ' ' + host clock "H
         return;
     }
     AwtoPutChar('u');
+    if(s_ucLnBoot != 0)
+    {
+        s_ulLnMs += g_usAwtoBootBase;           // uptime = since the MCU reset (fw ms count from the Timer2 start)
+    }
     if((long)s_ulLnMs < 0)
     {
-        AwtoPutStr("-0:00:00.");                // a boot line re-based below the Timer2 start: a few ms before 0
+        AwtoPutStr("-0:00:00.");                // another boot's line made before its Timer2 start: its base is not kept
         AwtoPutNum((WORD)(0 - s_ulLnMs), 3);
         return;
     }
@@ -1690,7 +1694,11 @@ static void AwtoLnDelta(BYTE ucSeq)             // s_lLnD / s_ucLnStart / s_ucLn
                   ((puc[0] == AWTO_SYNC_EV_BEGIN) && (puc[1] != AWTO_SYNC_K_POWER_ON) && (puc[4] != AWTO_SYNC_BEGIN_IN));
     if(s_ucLnStart != 0)
     {
-        s_lLnD = (puc[0] == AWTO_SYNC_EV_BOOT) ? (long)AWTO_LN_MS(puc) : 0;       // boot: since the MCU reset (fw ms 0)
+#if(_AWTO_DRAM_LOG == _ON)
+        s_lLnD = (puc[0] == AWTO_SYNC_EV_BOOT) ? ((long)AWTO_LN_MS(puc) + ((s_ucLnBoot != 0) ? g_usAwtoBootBase : 0)) : 0;    // boot: since the MCU reset
+#else
+        s_lLnD = (puc[0] == AWTO_SYNC_EV_BOOT) ? ((long)(short)AWTO_LN_MS(puc) + g_usAwtoBootBase) : 0;      // boot: since the MCU reset (fw ms + base)
+#endif
         s_ucLnPrevOk = 1;
         return;
     }
@@ -3290,17 +3298,22 @@ void AwtoConLogInit(void)
     }
     AwtoTxt(AWTO_TXT_LOGHDR);
     AwtoTextLine(0, AWTO_T_STYLE_ACCENT);
-    // The console is a view of the ring (never a clear): the newest lines that fit the map, older episodes included.
-    // One-row lines fill the map (AWTO_LOG_FILL_N); a map-full redraw takes AWTO_LOG_REDRAW_N (fits even if every line wraps).
+    // The console is a view of the current episode (Dan 2026-11-27, #358): its start row first, then its lines; an episode longer than
+    // the view: the start row, "(N lines not shown)", the newest lines (view rows on an open, half the map on a redraw: 2 rows each).
     s_ucConSyncSeq = AWTO_SYNC_BACK(g_stAwtoSync.ucSeq, (s_ucConRedraw != 0) ? AWTO_LOG_REDRAW_N : AWTO_LOG_FILL_N);
 #if(_AWTO_DRAM_LOG == _ON)
-    s_ulLnT = g_stAwtoSync.ulWr + g_stAwtoSync.ucPend - g_ulAwtoEpAbs;     // lines back to the episode's start row (Dan: always the first row)
-    if((s_ulLnT > AWTO_SYNC_BACK(g_stAwtoSync.ucSeq, s_ucConSyncSeq)) && (s_ulLnT <= AWTO_DLOG_SLOTS))
+    s_ulLnT = g_stAwtoSync.ulWr + g_stAwtoSync.ucPend - g_ulAwtoEpAbs;     // lines back to the episode's start row (1 = the newest line)
+    s_ucLnW = (s_ucConRedraw != 0) ? AWTO_LOG_REDRAW_N : AWTO_LOG_VIEW_N;   // lines that fit with the start row
+    if((s_ulLnT != 0) && (s_ulLnT <= s_ucLnW + 1))
     {
-        s_ucConSyncSeq = AWTO_SYNC_BACK(g_stAwtoSync.ucSeq, (s_ucConRedraw != 0) ? (AWTO_LOG_REDRAW_N - 1) : AWTO_LOG_VIEW_N);   // start row + backfill fit (redraw: the map, else the view)
-        s_usLnHid = (WORD)(s_ulLnT - 1 - AWTO_SYNC_BACK(g_stAwtoSync.ucSeq, s_ucConSyncSeq));   // between it and the backfill: "(N lines not shown)"
+        s_ucConSyncSeq = AWTO_SYNC_BACK(g_stAwtoSync.ucSeq, (BYTE)s_ulLnT);     // the whole episode: no older episode above its start row
+    }
+    else if((s_ulLnT != 0) && (s_ulLnT <= AWTO_DLOG_SLOTS))
+    {
+        s_ucConSyncSeq = AWTO_SYNC_BACK(g_stAwtoSync.ucSeq, s_ucLnW - 1);
+        s_usLnHid = (WORD)(s_ulLnT - s_ucLnW);                                 // between the start row and the backfill: "(N lines not shown)"
         s_ucLnJumpSeq = s_ucConSyncSeq;
-        s_ucLnLaps = (BYTE)(s_ulLnT / AWTO_SYNC_WRAP);                    // past a seq wrap: AwtoSyncAt reads it by laps (from the DDR)
+        s_ucLnLaps = (BYTE)(s_ulLnT / AWTO_SYNC_WRAP);                         // past a seq wrap: AwtoSyncAt reads it by laps (from the DDR)
         s_ucConSyncSeq = AWTO_SYNC_BACK(g_stAwtoSync.ucSeq, (BYTE)(s_ulLnT % AWTO_SYNC_WRAP));
     }
 #endif

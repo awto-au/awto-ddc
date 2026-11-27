@@ -853,7 +853,7 @@ fn	_AwtoSwMode	2	0x9bf5	40
 fn	_AwtoSwPoll	0	0x8c71	36
 fn	_AwtoSwRec	2	0x9c1d	176
 fn	_AwtoSyncAt	5	0xac24	662
-fn	_AwtoSyncBegin	5	0xa965	703
+fn	_AwtoSyncBegin	5	0xaeba	812
 fn	_AwtoSyncClsOf	7	0x2470	23
 fn	_AwtoSyncConPoll	5	0x4a84	274
 fn	_AwtoSyncDetect	5	0x878f	1036

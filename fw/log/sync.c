@@ -225,13 +225,15 @@ void AwtoSyncT2Start(void)                          // every Timer2 reload (Awto
 #endif
     g_stAwtoSync.ucT0Hi = (BYTE)((0 - usBase) >> 8);
     g_stAwtoSync.ucT0Lo = (BYTE)(0 - usBase);
-    AwtoSyncPush(AWTO_SYNC_EV_INIT, 2, 0);
+    g_usAwtoBootBase = usBase;
+    AwtoSyncPush(AWTO_SYNC_EV_INIT, 2, usBase);     // value = ms from the MCU reset to the Timer2 start (host: boot row zero)
 }
 
 #if(_AWTO_DRAM_LOG == _ON)
 __xdata DWORD g_ulAwtoBootAbs;                      // absolute index of this boot's boot line: older lines are another boot's (console real time)
 __xdata DWORD g_ulAwtoEpAbs;                        // absolute index of the current episode's start row (boot line / start BEGIN)
 #endif
+__xdata WORD g_usAwtoBootBase;                      // ms from the MCU reset to the Timer2 start (fw ms 0): boot row zero / uptime since reset
 __xdata StAwtoSyncEv g_stAwtoSyncPin;               // #150: copy of this boot's reason line (the ring may lose it)
 
 // Entry n lines back = this event (time aside). A macro: no function, no common-bank stub (the common bank is full, #311).
@@ -581,7 +583,8 @@ static void AwtoSdArmHealth(void)
     g_ucAwtoSdFlags |= AWTO_SD_F_HEALTH;
 }
 
-// Mode ACTIVE: the DONE line (once until the picture is lost); NO SIGNAL / NO SUPPORT: FAILED (once per episode, LOST once after a DONE).
+// Mode ACTIVE: the DONE line (once until the picture is lost); NO SIGNAL / NO SUPPORT: FAILED (once per episode, LOST once after a DONE:
+// at NO SIGNAL, or at the K_LOST episode start, AwtoSyncBegin).
 static void AwtoSdMode(BYTE ucMode)
 {
     BYTE ucPort = SysSourceGetInputPort();
@@ -691,14 +694,14 @@ void AwtoSdTick(void)
 
 // New episode: time base, per-port detect state, console request. A switch inside a power-on / wake that has not settled
 // is one more line of that episode (the SDK switches to the stored port during boot), flagged AWTO_SYNC_BEGIN_IN.
-// K_LOST (picture lost): no console open, the sync-done state stays (its FAILED:signal lost line comes at NO SIGNAL).
+// K_LOST (picture lost): no console open; after a DONE its FAILED:signal lost line comes at once and the next ACTIVE writes a new DONE.
 void AwtoSyncBegin(BYTE ucKind, BYTE ucPort)
 {
     BYTE ucI;
     WORD usNow;
 
-    if((ucKind == AWTO_SYNC_K_SWITCH) && (g_stAwtoSync.ucKind != AWTO_SYNC_K_SWITCH) && (g_stAwtoSync.ucKind != AWTO_SYNC_K_LOST) &&
-       (g_stAwtoSync.ucDone == 0))
+    if((((ucKind == AWTO_SYNC_K_SWITCH) && (g_stAwtoSync.ucKind != AWTO_SYNC_K_SWITCH)) || (ucKind == AWTO_SYNC_K_LOST)) &&
+       (g_stAwtoSync.ucKind != 0) && (g_stAwtoSync.ucDone == 0))     // #358: one red row for a switch + judge reset, a lost picture inside an unsettled start
     {
         AwtoSyncPush(AWTO_SYNC_EV_BEGIN, ucKind, ((DWORD)AWTO_SYNC_BEGIN_IN << 24) | ((AwtoMs() >> 16) << 8) | ucPort);
         return;
@@ -751,6 +754,11 @@ void AwtoSyncBegin(BYTE ucKind, BYTE ucPort)
     }
 #endif
     AwtoSyncPush(AWTO_SYNC_EV_BEGIN, ucKind, ((AwtoMs() >> 16) << 8) | ucPort);   // #157 anchor: fw ms bits 31..16 above the port
+    if((ucKind == AWTO_SYNC_K_LOST) && ((g_ucAwtoSdFlags & AWTO_SD_F_DONE) != 0))
+    {
+        AwtoSyncPush(AWTO_SYNC_EV_SFAIL, AWTO_SD_WHY_LOST, ((DWORD)ucPort << 16) | (WORD)((WORD)AwtoMs() - s_usSdAct));
+        AwtoSdReset();                              // #358: a resync to ACTIVE without NO SIGNAL writes its own DONE
+    }
 }
 
 void AwtoSyncSettle(void)                           // fast wake / switch done: ACTIVE with no mode change, so no mode event ends the episode (#313)
