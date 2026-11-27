@@ -17,6 +17,11 @@ Not the on-device manifest (`docs/flash-registry.md`). Code: `scripts/flash_regi
 - Readers go through `flash_registry.current(serial)` / `map_for(serial, given)`: `dev._flashed` / `dev._fwmap` (every `--map` default), `msg_table.load_ids`, `cold_boot.py`, `selector_switch_unit.py`, `disk_guard.prune_fw` (pins), GUI via dev.py.
 - `map_for` unknown: exit listing the known images; never a guess.
 
+## Flash preflight (#358)
+- The image's build commit (`<stem>.build.json`) must be in the flashing tree's HEAD history (`dev.check_image_tree`; caller and app worker both check): scripts older than the image never flash it. No build commit: refused, `--any-image` flashes it with a WARN. A commit outside the history: always refused.
+- No image given = the caller's own last build. Gated record required (`check_gated`, [gates.md](gates.md)).
+- After the flash: host time sent to that unit ([ddcci.md](ddcci.md) "Host time"); settings restore keeps a changed registry default (d8b44c4e).
+
 ## Verification against the unit (reads only)
 
 - `dev.py health` / `settings` (no `--map`) run `fw_probe.py` first: diag magic `AD` at `_isr_g_stAwtoDiag`, mailbox magic `V` at `_vcp_box`, addresses from the record's map.

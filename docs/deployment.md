@@ -13,12 +13,14 @@ from the shared image.
 ## Command
 
 ```sh
-./dev.py deploy --unit 2 tmp/fw/AWT26110002-wb-p14ui28-be.bin
-./dev.py deploy --unit 1 --force tmp/fw/AWT26110002-wb-p14ui28-be.bin
-./dev.py deploy --unit 3 --force tmp/fw/AWT26110002-wb-p14ui28-be.bin
+./dev.py deploy --unit 3 tmp/fw/AWT26110003-<tag>-be.bin
+./dev.py deploy --unit 1 --force tmp/fw/AWT26110003-<tag>-be.bin
+./dev.py deploy --unit 2 --force tmp/fw/AWT26110003-<tag>-be.bin
 ```
 
-`--force` remains mandatory for working screens. The command resolves the
+Unit 3 is the only test unit (`scripts/devices.json` `test`, cc529a7a; Dan 2026-11-27).
+Units 1 and 2 are working screens: `--force` is mandatory, and they are written only when Dan asks,
+with a gated image already checked on unit 3. The command resolves the
 monitor from its current EDID before writing anything, then performs:
 
 1. Validate that the image contains exactly one DP and two HDMI EDID tables.
