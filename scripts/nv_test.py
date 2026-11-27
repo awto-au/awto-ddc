@@ -39,6 +39,8 @@ FORCE_S = 75.0          # AWTO_NV_FORCE_MS 60 s x 1.25
 POWER_S = 1.0           # flush inside UserInterfacePowerSwitch: same main pass; one pass <= 0.5 s x 2
 DDC_POLL_S = 0.2        # a host polling DDC/CI (ddcutil getvcp loop) well under the 10 s idle window
 WHY = {0: "-", 1: "gate", 2: "forced", 3: "power", 4: "close", 5: "test", 6: "second BriCon/CT item"}
+WHY_GATE, WHY_POWER, WHY_CLOSE, WHY_DDC = 1, 3, 4, 7    # RL6449_Project.h AWTO_NV_WHY_*
+FLUSH_ARG0 = 0x30                                       # AWTO_NV_LOG_FLUSH(why) = FLUSH_ARG0 + why (sync.tsv D4 31..37)
 MASK = ((0x01, "SYS"), (0x02, "OSD"), (0x04, "BRI"), (0x08, "CT"), (0x10, "SIX"), (0x20, "PANEL"), (0x40, "AUX"))
 
 
@@ -358,15 +360,14 @@ class Run:
 
 
     def flush_lines(self) -> list[tuple[int, int, str, int, int]]:
-        """(why arg, result value, "why | result" lines, ring ms, seq) of every D4 flush pair in the ring (all episodes), oldest first"""
+        """(why, result value, line, ring ms, seq) of every D4 flush line in the ring (all episodes), oldest first"""
         import sync_log as S
         rows = S.load_rows(S.tsv_for(self.t.mapp))
         h, _ = S.decode(self.t.ring(), rows, whole=True)
         out, evs = [], h.get("events", [])
-        for k, ev in enumerate(evs):                     # why line (11..17), then its result line (20, fmt nvw)
-            if ev[0] == 0xD4 and 0x11 <= ev[1] <= 0x17 and k + 1 < len(evs) and evs[k + 1][:2] == (0xD4, 0x20):
-                txt = " | ".join(S.line(rows, e, h["t0"]).split(":", 1)[1] for e in (ev, evs[k + 1]))
-                out.append((ev[1], evs[k + 1][3], txt, ev[2], k))
+        for k, ev in enumerate(evs):                     # one line per flush: arg FLUSH_ARG0 + why, fmt nvw (#359)
+            if ev[0] == 0xD4 and FLUSH_ARG0 + WHY_GATE <= ev[1] <= FLUSH_ARG0 + WHY_DDC:
+                out.append((ev[1] - FLUSH_ARG0, ev[3], S.line(rows, ev, h["t0"]).split(":", 1)[1], ev[2], k))
         return out
 
     def new_flush(self, before: list, s: float):
@@ -399,7 +400,7 @@ class Run:
             v = ln[1]
             want = (d["bytes"] - d0["bytes"], d["ops"] - d0["ops"] - (d["erase"] - d0["erase"]), d["erase"] - d0["erase"])
             got = ((v >> 9) & 0x3FF, (v >> 19) & 0x3F, (v >> 25) & 3)
-            ok = ln[0] == 0x14 and "wrote" in ln[2] and "OSD data" in ln[2] and got == want
+            ok = ln[0] == WHY_CLOSE and "wrote" in ln[2] and "OSD data" in ln[2] and got == want
             res.append(("change", ok, f"{ln[2]} [counters: {want[0]} B, {want[1]} programs, {want[2]} erases]"))
         else:
             res.append(("change", False, f"no flush line within {GATE_S} s"))
@@ -407,14 +408,14 @@ class Run:
         self.t.box.call(3, 2, 0)
         self.t.box.call(3, 6, 0)                         # close, nothing changed
         ln = self.new_flush(b1, 1.0)                     # logged by the next settings service (20 ms) x margin
-        ok = bool(ln) and ln[0] == 0x14 and "| NVRAM nothing changed, no flash write" in ln[2]
+        ok = bool(ln) and ln[0] == WHY_CLOSE and "): nothing changed, no flash write" in ln[2]
         res.append(("no change", ok, ln[2] if ln else "no flush line within 1 s"))
         b2 = self.flush_lines()
         e0 = self.t.nv()
         self.t.cmd(0x3E)                                 # POWER key: off
         ln = self.new_flush(b2, POWER_S + 1.0)
         e = self.t.nv()
-        ok = bool(ln) and ln[0] == 0x13 and (("nothing changed" in ln[2]) == (e["item_wr"] == e0["item_wr"]))
+        ok = bool(ln) and ln[0] == WHY_POWER and (("nothing changed" in ln[2]) == (e["item_wr"] == e0["item_wr"]))
         res.append(("power off", ok, ln[2] if ln else f"no flush line within {POWER_S + 1.0} s"))
         self.t.cmd(0x3E)                                 # on again
         self.t.wait(8.0 if self.t.name == "unit" else 3.0)

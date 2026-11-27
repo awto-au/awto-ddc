@@ -146,3 +146,8 @@ def test_refresh_pixel_clock_one_row():
     texts = [S.line(ROWS, e, 0).split(":", 1)[1] for e in evs]
     rs = S.con_rows(evs, texts, [(823, True), (823, True)])
     assert len(rs) == 1 and rs[0]["text"] == "D2 refresh 59.991Hz | D2 pixel clock 593.915MHz"
+
+
+def test_nvram_flush_one_line():
+    """#359 (Dan 2026-11-27): NVRAM flush why + result on one line"""
+    assert S.line(ROWS, (0xD4, 0x37, 5398, 0), 0).endswith(":NVRAM flush (DDC/CI save settings): nothing changed, no flash write (0ms)")

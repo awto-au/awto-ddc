@@ -41,7 +41,7 @@ SAMPLES = (
     (0x12, 0x02, 0),                                    # warning
     (0x10, 0x0C, 0x01),                                 # warning
     (0xD4, 0x11, 0),                                    # flash
-    (0xD4, 0x20, (1 << 27) | (2 << 19) | (32 << 9) | 4),  # flash (NVRAM flush result)
+    (0xD4, 0x31, (1 << 27) | (2 << 19) | (32 << 9) | 4),  # flash (NVRAM flush result)
     (0xD0, 0x02, 0x010BFFD0),                           # error (watchdog bite)
     (0x12, 0x01, 0),                                    # error (link training)
     (0xC4, 0x04, 0),                                    # error (signal lost)
