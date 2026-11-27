@@ -34,7 +34,7 @@ Every `./dev.py build` (and the variant builds that go through it: gates, test_i
 - This build vs the previous row of the same serial + variant + layout, and vs the newest clean build of origin/main's newest built first-parent commit: every number, delta in B and %.
 - Bank free changes per bank; the 3 smallest bank free values (no limit).
 - Top 5 functions grown / shrunk (map `CH_` chunk areas; maps before chunking: spacing of global symbols, statics fold into the preceding global).
-- Added build time: ~0.6 s (fw_stack 0.5 s, rest < 0.1 s), on a ~100 s build.
+- Added build time (844919cc, 2026-11-27): 0.4 s = fw_stack 0.36 s + map 0.03 s + git 0.01 s; builds take 60-120 s.
 
 ## Graph
 
