@@ -30,7 +30,7 @@
     },
     "3": {
       "serial": "AWT26110003",
-      "settings": {"disp_rotate": "180"},
+      "settings": {"disp_rotate": "180", "console_mode": "Always"},
       "input": "DP",
       "connector": "card1-HDMI-A-2",
       "gdctl": "HDMI-2",
