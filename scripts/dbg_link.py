@@ -5,7 +5,7 @@ usage: dbg_link.py on|off|state|expiry BUS [--minutes N]
 - state: does 0x35 answer (diag version byte) / does 0x37 ACK.
 - on: 0x35 answers already = nothing sent ("already"). Else DDC/CI setvcp E3 = A5 NN (NN minutes, FF = until told back)
   to 0x37, then 0x35 is re-probed after each MCCS wait. Exit 0 = linked ("swapped" / "already"), 1 = no link.
-- off: test cmd 0x3B over 0x35 (back to DDC/CI); then 0x37 must ACK.
+- off: test cmd 0x3B over 0x35 (back to DDC/CI); confirmed = 0x35 NAK + 0x37 ACK, else re-sent (OFF_ATTEMPTS); exit 1 = not confirmed.
 - expiry: test of the firmware timeout: 0x37 back within 1.25 x --minutes (checked once per second).
 - Firmware: fw/diag/dbgport.c + fw/ddcci/ddcci.c (wb-p14swap); sim check: scripts/swap_sim.py.
 - dev.py wraps every debug-slave command in on/off (`linked`), so it does not matter which side owns the DDC.
@@ -17,6 +17,7 @@ from __future__ import annotations
 
 import argparse
 import contextlib
+import math
 import sys
 import time
 from pathlib import Path
@@ -24,6 +25,7 @@ from pathlib import Path
 from _log import log_line as _log_line
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
+import ddcutil_run
 import i2cbus
 
 LOG = i2cbus.ROOT / "tmp/logs/dbg_link.log"
@@ -42,6 +44,11 @@ MCCS_WAIT_S = 0.050                     # MCCS 2.2: host waits 50 ms after a set
 # table). 1.25 x 375 ms / 50 ms -> 10 probes. Expiry: "no link" logged with the elapsed time, exit 1.
 PROBES = 10
 DEFAULT_MIN = 10                        # firmware falls back to DDC/CI by itself if `off` never comes
+# off (#351): the test byte runs once per main-loop pass and swaps in that pass (AwtoDiagTestCmd -> AwtoDbgLinkSet);
+# a pass > 585.9 ms is a watchdog reset (docs/main-loop-pacing.md §2): window 1.25 x 585.9 ms. Expiry: re-send.
+OFF_WINDOW_S = 1.25 * 0.5859
+# re-sends cover a lost staged write; budget = the next DDC/CI caller's own retry budget (ddcutil_run: 4 x 0.5 s = 2 s)
+OFF_ATTEMPTS = math.ceil(ddcutil_run.DDC_TRIES * ddcutil_run.DDC_RETRY_S / OFF_WINDOW_S)
 
 
 def log(s: str) -> None:
@@ -101,22 +108,41 @@ def on(bus: int, minutes: int = DEFAULT_MIN) -> str:
                      f"{(time.monotonic() - t0) * 1000:.0f} ms")
 
 
-def off(bus: int) -> bool:
-    t0 = time.monotonic()
+def _test_byte(bus: int) -> int | None:
+    """isr_g_stAwtoDiag.ucTestCmd over 0x35: 0 = consumed (or never landed), CMD_BACK = not run yet; None = 0x35 NAK"""
     try:
         with i2cbus.Bus(bus) as b:
-            b.write(DBG, 0x01, bytes([TESTCMD >> 8]))
-            b.write(DBG, 0x03, bytes([CMD_BACK]))
-            b.write(DBG, 0x3B, bytes([TESTCMD & 0xFF]))
-    except OSError as e:
-        log(f"bus {bus}: debug link OFF failed: 0x35 NAK ({e}); firmware times out to DDC/CI by itself")
-        return False
-    for k in range(PROBES):
-        time.sleep(MCCS_WAIT_S)
-        if ddcci_ok(bus):
-            log(f"bus {bus}: debug link OFF, DDC/CI 0x37 back after {(time.monotonic() - t0) * 1000:.0f} ms")
-            return True
-    log(f"bus {bus}: debug link OFF sent, 0x37 still NAK after {(time.monotonic() - t0) * 1000:.0f} ms")
+            return _rd(b, TESTCMD)
+    except OSError:
+        return None
+
+
+def off(bus: int) -> bool:
+    """test cmd 0x3B, confirmed by 0x35 NAK + 0x37 ACK; re-sent up to OFF_ATTEMPTS times (#351). One decoded line per attempt."""
+    t0 = time.monotonic()
+    for k in range(1, OFF_ATTEMPTS + 1):
+        ta = time.monotonic()
+        try:
+            with i2cbus.Bus(bus) as b:
+                _wr(b, TESTCMD, CMD_BACK)
+            sent = "sent"
+        except OSError as e:
+            sent = f"not sent (0x35 NAK: {e})"
+        while True:
+            if ddcci_ok(bus) and not dbg_ok(bus):
+                log(f"bus {bus}: debug link OFF attempt {k}/{OFF_ATTEMPTS}: {sent}; confirmed 0x35 NAK + 0x37 ACK after "
+                    f"{(time.monotonic() - ta) * 1000:.0f} ms ({(time.monotonic() - t0) * 1000:.0f} ms in all)")
+                return True
+            if time.monotonic() - ta >= OFF_WINDOW_S:
+                break
+            time.sleep(MCCS_WAIT_S)     # MCCS 2.2 wait between transactions, not a poll interval
+        tb = _test_byte(bus)
+        what = ("0x35 NAK" if tb is None else f"0x35 answers, test byte 0x{tb:02X} = "
+                + ("not run (main loop blocked)" if tb == CMD_BACK else "consumed or lost (no swap)" if tb == 0 else "another command pending"))
+        log(f"bus {bus}: debug link OFF attempt {k}/{OFF_ATTEMPTS}: {sent}; not confirmed in {(time.monotonic() - ta) * 1000:.0f} ms "
+            f"(window {OFF_WINDOW_S * 1000:.0f} ms): {what}, 0x37 {'ACK' if ddcci_ok(bus) else 'NAK'}")
+    log(f"bus {bus}: debug link OFF FAILED after {OFF_ATTEMPTS} attempts, {(time.monotonic() - t0) * 1000:.0f} ms "
+        f"(limit {OFF_ATTEMPTS * OFF_WINDOW_S * 1000:.0f} ms); DDC/CI stays off until the firmware link timer")
     return False
 
 
@@ -169,15 +195,17 @@ def linked(bus: int, minutes: int = DEFAULT_MIN, keep_console: bool = False):
     a debug session must leave the picture as it found it (visual tests run under it)."""
     how = on(bus, minutes)
     before = hold(bus)
+    failed = True
     try:
         yield how
+        failed = False
     finally:
         if not keep_console and before is not None and (before & HOLD_POPUP) == 0:
             now = hold(bus)
             if now is not None and (now & HOLD_POPUP) != 0:
                 close_console(bus)
-        if how == "swapped":
-            off(bus)
+        if how == "swapped" and not off(bus) and not failed:     # #351: fail loudly; the block's own error wins when it raised
+            raise SystemExit(f"dbg_link bus {bus}: debug link OFF not confirmed (0x35 still answers or 0x37 NAK); see {LOG}")
 
 
 def main() -> int:
