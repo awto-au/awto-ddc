@@ -101,6 +101,12 @@ def test_gap_rows_decode():
     assert S.line(ROWS, (0x95, 5, 900, 4025), 0).startswith("  900:D2 search dwell re-armed")
 
 
+
+def test_pins_row_decode():
+    """#359 HPD edges of one poll: one line listing each changed port"""
+    assert S.line(ROWS, (0xFA, 5, 55, (7 << 8) | 6), 0).endswith(":HPD: D1 low, D2 high, D3 high")
+    assert S.line(ROWS, (0xFA, 5, 548, (1 << 8) | 7), 0).endswith(":HPD: D1 high")
+
 def test_pass_rows_decode():
     """#311 main-loop stage timing: slow stage line (96) and boot passes line (97); names / words from RL6449_Project.h AWTO_PSTG_NAMES"""
     names = S.pass_names()[0]

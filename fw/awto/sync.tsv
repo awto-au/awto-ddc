@@ -14,6 +14,7 @@
 #   hz3   value in mHz -> "59.997 Hz"                 mhz3  value in kHz -> "594.000 MHz"       dp   value = rate << 8 | lanes -> "HBR2 x4"
 #   sdone sync DONE (EF): arg = port idx | kind << 2 | scan retries << 4 | PHY set-ups or DP trainings << 6, value = scan ok ms << 20 | timing ms << 8 | PHY / link ms; the line prints the ACTIVE ms itself (docs/sync-log-design.md)
 #   slink link health (FF): HDMI = SCDC ratio / scrambling + CED error counters, DP = rate / lanes / DPCD 202 203 (docs/sync-log-design.md)
+#   pins  value = changed mask << 8 | levels (bit n = D(n+1)) -> "D1 low, D2 high, D3 high" (#359: one line per poll)
 #   visit search visit (F3): arg bit 7 = reached (bit 0 predetect on, bit 1 cable), else left (bit 2 predetect seen, bit 1 port disabled, bit 3 dwell re-armed), value = predetect edges << 24 | port << 16 | ms on the port
 #   pass  main-loop stage timing (#311), the fmt prints the whole line (words + stage names: RL6449_Project.h AWTO_PSTG_NAMES): 96 slow: arg = stage id, value = state << 24 | count << 16 | ms -> "slow pass stage OSD handler took 268ms in INITIAL (#1)"; 97 boot passes: arg = stage, value = state << 24 | ms -> "boot passes:INITIAL longest 268ms in stage OSD handler"
 #   pms   value = port << 16 | ms -> "D2, 188ms"   psrc  value = port << 8 | source type -> "D2 HDMI"   rms  value = register << 16 | ms -> "71A4 40ms"
@@ -160,8 +161,7 @@ CA	*	-	console opened (sync log)	boot
 CB	*	port	cable plugged in:wake
 CC	*	port	EDID read while asleep:wake
 E7	*	port	EDID read
-FA	00	vport	% HPD low	timing
-FA	01	vport	% HPD high	timing
+FA	05	pins	HPD: %	timing
 FA	02	n	EDID channels on:HPD pin mask % (bit0 = D1)	timing
 FA	03	n	EDID load start:HPD mask %	timing
 FA	04	ms	EDID load end:took %	timing
