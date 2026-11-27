@@ -46,7 +46,8 @@ typedef struct {
     uint32_t t0_edge, t1_edge, t2_edge, t2ex_edge;
     uint64_t opcount[256];      /* instructions executed per opcode (test coverage) */
     uint64_t cycop[256];        /* dw8051: instruction cycles per opcode (tools: cycle split by opcode class) */
-    uint64_t cnt[8];            /* tools: MOVX XRAM rd / wr, MOVX outside the XRAM pool (registers, OSD port) rd / wr, writes to 0xFFFF (bank) */
+    uint64_t cnt[8];            /* tools: MOVX XRAM rd / wr, MOVX outside the XRAM pool (registers, OSD port) rd / wr, writes to 0xFFFF (bank),
+                                   DIV AB with B = 0, bank << 16 | pc of the last one */
     /* dw8051 timing model (tables: scripts/dw8051_model.json, loaded by fastmachine.py via core_set_dw) */
     int dw;
     uint8_t dwcyc[256];         /* instruction cycles per opcode (databook table 2-4) */
@@ -1004,7 +1005,7 @@ static int step(core_t *c)
     case 0x83: set_acc(c, c->cur[(uint16_t)(pc + ACC)]); cyc = 2; break;
     case 0x84:
         a = ACC; b = BR; d = PSW & 0x7F;
-        if (!b) d |= 0x04;
+        if (!b) { d |= 0x04; c->cnt[5]++; c->cnt[6] = (uint64_t)c->p.bank << 16 | c->p.pc; }   /* DIV AB by 0 (#214) */
         else { d &= ~0x04; BR = a % b; a = a / b; }
         PSW = d; set_acc(c, a); cyc = 4; break;
     case 0x85: a = FETCH(); b = FETCH(); dwrite(c, b, dread(c, a)); cyc = 2; break;

@@ -158,7 +158,7 @@ class Core:
         self.lacc = (ctypes.c_uint32 * FM_NLINES).from_address(L.core_lacc(self.h))      # cached fetches per physical 16 B line (bank << 12 | addr >> 4 above common_end)
         self.lmiss = (ctypes.c_uint32 * FM_NLINES).from_address(L.core_lmiss(self.h))     # line fills per physical line
         self.xacc = (ctypes.c_uint32 * 0x10000).from_address(L.core_xacc(self.h))      # MOVX accesses per XRAM address
-        self.cnt = (ctypes.c_uint64 * 8).from_address(L.core_cnt(self.h))      # MOVX xram rd / wr, MOVX outside 0xD000-0xF7FF rd / wr, bank writes
+        self.cnt = (ctypes.c_uint64 * 8).from_address(L.core_cnt(self.h))      # MOVX xram rd / wr, MOVX outside 0xD000-0xF7FF rd / wr, bank writes, DIV AB by 0, its bank << 16 | pc
 
     def set_dw(self, mdl: dict | None):
         """CPU timing mode: mdl = scripts/dw8051_model.json (DW8051, default) or None (8052: ucsim -t 52 classic cycles)."""
