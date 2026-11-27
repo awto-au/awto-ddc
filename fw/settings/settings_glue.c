@@ -292,7 +292,7 @@ void set_ap_aspect(BYTE ucId, int iV)
 }
 
 // #165 Rotate (disp_rotate 0 / 180) + Mirror (mirror Off / Horizontal / Vertical): one owner. Flip bits H = 1, V = 2 (= mirror
-// option index); effective = (Rotate 180 ? H | V : 0) XOR mirror -> SDK b3OsdDispRotate, read at the next display setting. One E4 line.
+// option index); effective = (Rotate 180 ? H | V : 0) XOR mirror -> SDK b3OsdDispRotate, read at the next display setting. One E4 line per change.
 void set_ap_rotate(BYTE ucId, int iV)
 {
     BYTE ucRot = (BYTE)((ucId == AWTO_SET_DISP_ROTATE) ? iV : set_get(AWTO_SET_DISP_ROTATE));
@@ -304,7 +304,7 @@ void set_ap_rotate(BYTE ucId, int iV)
 
     if(GET_OSD_DISP_ROTATE() == tFlipToSdk[ucFlip])
     {
-        ucWhat = AWTO_ROT_ALREADY;
+        return;                                 // already in effect: no line (#359, one compare)
     }
     else
     {
