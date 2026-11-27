@@ -1327,7 +1327,7 @@ extern void AwtoDlFlush(unsigned char ucOp);                    // main context 
 #define AWTO_MEM_LOG_REINIT                                     0x20    // #353 memory power cycle (DDR PLL, DC SYS / PHY, DRAM init): value = failed set-ups before it
 #define AWTO_MEM_LOG_REINIT_OK                                  0x21    // #353 display setting passed after the power cycle: value = set-up try of the episode
 #define AWTO_MEM_LOG_KEPT                                       0x22    // #365 power saving / off entered, memory + PLLs + clocks kept: value = power action
-#define AWTO_MEM_LOG_KEPT_OK                                    0x23    // #365 wake: DC registers intact, no re-init: value = DC_PHY_TMCTRL3 tmfaw A << 8 | B
+#define AWTO_MEM_LOG_KEPT_OK                                    0x23    // #365 wake: DC registers intact, no re-init: value = DC_PHY_TMCTRL3 tmfaw A << 16 | B
 #define AWTO_MEM_LOG_KEPT_RESET                                 0x24    // #365 wake: DC registers reset (or memory never up), full init: same value
 // #353: failed frame-buffer M-domain set-ups in one display setting before the memory power cycle (once per episode).
 // 2 leaves ~7 of the ~10 tries the 2.5 s judge timer allows to retry after it; Dan's call (#353).

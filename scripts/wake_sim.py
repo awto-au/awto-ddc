@@ -46,7 +46,18 @@ D2_PIN, D3_PIN, DDC_D2, AUX_RX1, DPCD_600 = 0xFE32, 0xFE2C, 0xFE69, 0xBADC, 0x00
 D1_PINS = (0xFE33,)    # FE33..FE35: D1 cable-status cells (deadport_sim.py NOCABLE_D1)
 SET_ID_CONSOLE_MODE, CON_ALWAYS = 110, 2     # registry console_mode Always: Until signal draws the console only after a picture (#216), the host is asleep here
 PS_POLL_MS = 5          # RL6449_Project.h AWTO_PS_POLL_MS
-IOSC_KHZ = 28_000       # freq-detect reference in power saving (_INTERNAL_OSC_XTAL)
+IOSC_KHZ = 28_000       # IOSC (_INTERNAL_OSC_XTAL): freq-detect reference when the GDI clock is the crystal path on IOSC
+XTAL_KHZ = 14_318.18    # board crystal (AWTO_XTAL_HZ)
+
+
+def gdi_ref_khz(m):
+    """Freq-detect reference = the GDI clock as the registers set it (SDK _GDI_CLK_KHZ): P80_06 bit 4 = M2PLL / P80_06[3:0]
+    (M2PLL = crystal x M / (N x O), P1_E0 / P1_E1), else the crystal path, IOSC when P0_09 bit 3 (#365: no clock switch at PS)."""
+    g = m.rd(0x8006)[0]
+    if g & 0x10:
+        e0, e1 = m.rd(0x01E0)[0], m.rd(0x01E1)[0]
+        return XTAL_KHZ * (e0 + 2) / (((e1 & 0x0F) + 2) * (2 if e1 & 0x10 else 1)) / max(g & 0x0F, 1)
+    return IOSC_KHZ if m.rd(0x0009)[0] & 0x08 else XTAL_KHZ
 # Event -> wake line (firmware ms). PS pass 16 ms: sim 13.2..15.9 (dw8051 model, #162), unit 2 15.6 (2026-11-12, ps_probe).
 # Cable: detection every AWTO_SLOW_MS 10 ms + SDK 10 ms debounce re-read + 1 PS pass = 36 ms, x1.25 -> 45 ms.
 # Latches / DPCD: 1 PS pass 16 ms + this test's sample step 2 ms + 1 ms tick = 19 ms, x1.25 -> 24 ms. Over = FAIL.
@@ -105,7 +116,7 @@ class FreqDet(S.Dev):
                 ef &= ~0x20
                 if not e6 & 0x04:
                     ef |= 0x40
-                n = int(khz * 1000 / IOSC_KHZ)           # F6[1:0] 0 (1000 reference cycles), E7[6] 0 (no divider)
+                n = int(khz * 1000 / gdi_ref_khz(m))     # F6[1:0] 0 (1000 reference cycles), E7[6] 0 (no divider)
                 m.put(f"set memory xram 0x{b | 0xED:x} 0x{(n >> 8) & 0xFF:x}")
                 m.put(f"set memory xram 0x{b | 0xEE:x} 0x{n & 0xFF:x}")
         m.put(f"set memory xram 0x{b | 0xE6:x} 0x{e6 & 0xFF:x}")

@@ -693,18 +693,19 @@ void ScalerMemoryKeepEnter(BYTE ucSwitch)
 //--------------------------------------------------
 void ScalerMemoryKeepWake(void)
 {
-    WORD usFaw = ((WORD)ScalerGetByte(DDR2_GET_REG(PA0_0C_DC_PHY_TMCTRL3_0, _DDR2_A)) << 8) |
-                 ScalerGetByte(DDR2_GET_REG(PA0_0C_DC_PHY_TMCTRL3_0, _DDR2_B));
+    BYTE ucFawA = ScalerGetByte(DDR2_GET_REG(PA0_0C_DC_PHY_TMCTRL3_0, _DDR2_A));
+    BYTE ucFawB = ScalerGetByte(DDR2_GET_REG(PA0_0C_DC_PHY_TMCTRL3_0, _DDR2_B));
+    DWORD ulFaw = ((DWORD)ucFawA << 16) | ucFawB;      // sync.tsv fmt res: "A x B"
 
     g_ucAwtoDdrKept = 0;
-    if((g_ucAwtoDdrUp != 0) && (HIBYTE(usFaw) != 0) && (LOBYTE(usFaw) != 0))
+    if((g_ucAwtoDdrUp != 0) && (ucFawA != 0) && (ucFawB != 0))
     {
-        AwtoSyncPush(AWTO_SYNC_EV_MEM, AWTO_MEM_LOG_KEPT_OK, usFaw);
+        AwtoSyncPush(AWTO_SYNC_EV_MEM, AWTO_MEM_LOG_KEPT_OK, ulFaw);
         ScalerMemoryUpTail();
     }
     else
     {
-        AwtoSyncPush(AWTO_SYNC_EV_MEM, AWTO_MEM_LOG_KEPT_RESET, usFaw);
+        AwtoSyncPush(AWTO_SYNC_EV_MEM, AWTO_MEM_LOG_KEPT_RESET, ulFaw);
         ScalerMemoryPowerControl(_ON);
     }
 }

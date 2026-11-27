@@ -95,7 +95,7 @@
 2d7e	Rx0	Kernel/Scaler/ScalerFunction/Code/ScalerDP_SeptPhy.c:952	7. DP HDCP Long HPD	0
 2dc9	Rx1	Kernel/Scaler/ScalerCommonFunction/Code/ScalerCommonDPRx1.c:1895	VSC change: Color Space, _COLOR_SPACE_YCBCR422	0
 2de2	FRC	Kernel/Scaler/RL6449_Series_Scaler/Code/RL6449_Series_Rotation.c:68	R-OH	1
-2df4	FRC	Kernel/Scaler/ScalerFunction/Code/ScalerMemory.c:803	FrameTrack-DVT-Error	1
+2df4	FRC	Kernel/Scaler/ScalerFunction/Code/ScalerMemory.c:804	FrameTrack-DVT-Error	1
 2df5	Rx1	Kernel/Scaler/ScalerCommonFunction/Code/ScalerCommonDPRx1.c:241	VBIOS_Link_Rate_MST	0
 2e31	Scaler	User/RTD Series/RTD2014Function/Code/RTD2014UserInterface.c:2201	MBR: bLightCtrl	0
 2e7c	Rx2	Kernel/Scaler/ScalerCommonFunction/Code/ScalerCommonSync.c:5877	Get Colorimetry YCC_SMPTE_170M	0
@@ -264,7 +264,7 @@
 775a	Scaler	Kernel/User Common Function/Code/UserCommonInterface.c:4444	MBR: Strobe to Constant	0
 7774	Rx2	Kernel/Scaler/ScalerCommonFunction/Code/ScalerCommonSync.c:5932	Get Colorimetry RGB_SRGB	0
 7892	System	Kernel/System/Code/SysSource.c:4422	0. Cable Status Changed D4	1
-7a39	FRC	Kernel/Scaler/ScalerFunction/Code/ScalerMemory.c:1001	3Block-addr3	1
+7a39	FRC	Kernel/Scaler/ScalerFunction/Code/ScalerMemory.c:1002	3Block-addr3	1
 7a65	FRC	Kernel/Scaler/ScalerFunction/Code/ScalerFRC.c:665	-I_addr1 FRC	1
 7a7e	Rx1	Kernel/Scaler/RL6449_Series_Scaler/Code/RL6449_Series_DPRx1.c:4194	CDR No Reset	0
 7abf	System	Kernel/System/Code/SysSource.c:3832	0. Cable Status Chanaged A0	1
@@ -525,7 +525,7 @@ e0d8	System	Kernel/System/Code/SysSource.c:2549	7. Bingo Priority!!!!!!!	1
 e0d8	System	Kernel/System/Code/SysSource.c:3008	7. Bingo Priority!!!!!!!	1
 e0f0	System	Kernel/System/Code/SysJudge.c:819	Input Timing V Polarity is Positive	1
 e0fc	CEC	Kernel/Scaler/ScalerFunction/Code/ScalerCec.c:783	<= Cec Rx Read: HB	0
-e151	FRC	Kernel/Scaler/ScalerFunction/Code/ScalerMemory.c:999	3Block-addr1	1
+e151	FRC	Kernel/Scaler/ScalerFunction/Code/ScalerMemory.c:1000	3Block-addr1	1
 e302	Rx1	Kernel/Scaler/ScalerCommonFunction/Code/ScalerCommonDPRx1.c:1381	_COLOR_SPACE_RAW	0
 e337	System	Kernel/System/Code/SysSource.c:2797	7. Switch Port with Signal	1
 e385	Rx1	Kernel/Scaler/RL6449_Series_Scaler/Code/RL6449_Series_DPRx1.c:2429	1st PE Max Record	0
