@@ -16,5 +16,8 @@ def vlc_encode(data: bytes) -> bytes:
     return _enc.encode(data)
 
 
+unpack_planes = _enc.unpack_planes             # hardware glyph layout: bit planes, plane k = bit k (#234)
+
+
 def vlc_decode(blob: bytes) -> bytes:
     return _enc.decode(blob, need_end=False)   # also reads OsdEdit 2523V blobs (no END)

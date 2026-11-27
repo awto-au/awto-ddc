@@ -221,7 +221,7 @@ def screens_2bpp_test(app, win):
     import osd_model as OM
     import osd_vlc
     lv = [[(x // 3 + y) % 4 for x in range(12)] for y in range(18)]
-    data = b"".join(osd_vlc.pack_unit([[(v >> (1 - p)) & 1 for v in row] for row in lv], 1) for p in range(2))
+    data = osd_vlc.pack_planes(lv, 2)
     regs = bytearray(256)
     regs[0x02], regs[0x0A] = 1, 0
     regs[0x0C], regs[0x0D], regs[0x0E] = 2, 0x00, 0x10

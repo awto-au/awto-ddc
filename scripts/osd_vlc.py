@@ -133,6 +133,23 @@ def unpack_unit(data, w, h, bpp):
     return [v[r * w:(r + 1) * w] for r in range(h)]
 
 
+def pack_planes(levels, bpp):
+    """Glyph as the hardware stores it: bpp bit planes, plane k = bit k (2-bit [hw] T9; 4-bit the same, OT-1), each plane
+    packed like a 1 bpp glyph (pack_unit, bpp 1). 1 bpp = pack_unit. #234."""
+    return b"".join(pack_unit([[int(v) >> k & 1 for v in row] for row in levels], 1) for k in range(bpp))
+
+
+def unpack_planes(data, w, h, bpp):
+    """inverse of pack_planes -> list of h rows of w levels."""
+    n = w * h // 8
+    out = [[0] * w for _ in range(h)]
+    for k in range(bpp):
+        for y, row in enumerate(unpack_unit(data[k * n:(k + 1) * n], w, h, 1)):
+            for x, b in enumerate(row):
+                out[y][x] |= b << k
+    return out
+
+
 def log(s):
     root = Path(os.environ.get("AWTO_DDC_REPO") or Path(__file__).resolve().parent.parent)
     p = root / "tmp/logs/osd_vlc.log"
@@ -153,6 +170,7 @@ def selftest(sdk=False):
                 continue
             lv = [[rnd.randrange(1 << bpp) for _ in range(w)] for _ in range(h)]
             assert unpack_unit(pack_unit(lv, bpp), w, h, bpp) == lv
+            assert unpack_planes(pack_planes(lv, bpp), w, h, bpp) == lv
     big = bytes(rnd.randrange(256) for _ in range(90000))
     ch = encode_chunks(big, 54)
     assert len(ch) > 1 and b"".join(decode(b) for _, _, b in ch) == big[:len(big) // 54 * 54]
