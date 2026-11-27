@@ -15,7 +15,7 @@ Three separate numbers, never added together (Dan 2026-11-19):
 - Merge to main: `./dev.py merge-check IMAGE.bin` passes only for a complete, FAIL-free record with `tier: extensive` for that exact .bin.
 - `--only a,b` writes a partial record (flash refuses it).
 - Normal gate wall time 22 s (24 gates in parallel, load ~15, 2026-11-19; longest bootsim / panel 12 s wall, ~6 s CPU). Budget (Dan): a normal gate ~1 s, a few s at most.
-- Moved to extensive for cost (quick variants, 9-20 s CPU each, stay runnable with `--only`): keys, monitor, wake, crash, conwrap, conmode, sysm, sync. Normal `delays` = delay audit only (`delay_audit.py --check`); the panel-scenario sim is `delays_sim` (extensive).
+- Moved to extensive for cost (quick variants, 9-20 s CPU each, stay runnable with `--only`): keys, monitor, wake, crash, conwrap, condelta, conmode, sysm, sync. Normal `delays` = delay audit only (`delay_audit.py --check`); the panel-scenario sim is `delays_sim` (extensive).
 - Extensive runs a `_full` twin instead of its quick variant.
 - Next cut: a test-timing scale so the same logic runs with shorter OSD timeouts / holds / sample periods (not built yet); then these gates can return to normal.
 

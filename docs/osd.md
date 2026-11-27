@@ -65,7 +65,7 @@ Never write bare "vendor": say which one.
   - Pages (#157; `AwtoDiagConsole(AWTO_CON_MAIN / AWTO_CON_GPIO)`, a page change redraws the map):
     - Main (power-on, auto-open, UP+DOWN): title row + sync / power event log, cols 1..118, 47 lines, live at each sync push. Host time + its fw ms on one row.
     - GPIO: input table (left) + the input-change list (right, backfilled from the 32-entry change ring). Input changes never go into the event log.
-  - Title row on both: `AWTO DIAGNOSTICS  FW <tag>` + `CPU 350.8 PLL 350.8 SPI 116.9  3840x2160 59.940Hz HOST 08:45:10` (`HOST` -> `STALE`), 1 s refresh, only changed 2-cell groups written (`AwtoConTitle`).
+  - Title row on both: `AWTO DIAGNOSTICS  FW <tag>` + `CPU 350.8 PLL 350.8 SPI 116.9 3840x2160 59.940Hz HOST 08:45:10` (`HOST` -> `STALE`; one space after the clocks: osd_fit), 1 s refresh, only changed 2-cell groups written (`AwtoConTitle`).
     - Clocks (MHz) read live from registers, not build constants: PLL = crystal x M / (N x O) (`01E0` `01E1` `01E7`); CPU = PLL / `FFED[5:2]` / `FFEE[5:2]`; SPI = PLL / `FFED[5:2]` / `FFE9[3:0]` (`docs/clock-sweep.md` clock tree). Crystal clock: `CPU 14.3 PLL off`.
     - Input = active input's `GET_INPUT_TIMING_*` width x height + exact refresh counter (`g_stAwtoFreq`), the source of `./dev.py health` "input timing"; `NO INPUT` when mode is not ACTIVE.
     - Panel hours / minutes are not in the title: menu System > Service `panel_hours` / `panel_min` (`docs/settings.md`). Fw uptime left the title for width: monitor row `uptime ...` (`docs/monitoring.md`).

@@ -3,10 +3,11 @@
 
 usage: AWTO_SIM_CORE=fast mon_sim_test.py BIN MAP [--mode 1080p60] [--no-beat]
 - LSADC result cells FF09..FF0C are set by the test; the sync ring rows are decoded by scripts/sync_log.py (the host copy of the console text).
-- First sample AWTO_MON_MS after boot: g_stAwtoMon filled, four rows (ADC, IOSC trim, loop + watchdog gap, uptime + stack) = a heartbeat.
-- Nothing changed: no row. A2 moved one code (8): no row. A2 moved 2 codes (AWTO_MON_ADC_STEP): one ADC row, no other.
-- Registry monitor off (set_get stub): no sample, no row; on again: the first sample is a heartbeat (all four).
-- Heartbeat: AWTO_MON_BEAT_K samples after a heartbeat all four rows again (never dropped: the uptime row differs every time).
+- First sample AWTO_MON_MS after boot: g_stAwtoMon filled, heartbeat rows (IOSC trim, loop + watchdog gap, uptime + stack; headroom
+  on a paced image); no ADC row: the first sample is the ADC reference level (Dan 2026-11-27: ADC only when a channel moves).
+- Nothing changed: no row. A2 moved one code (8): no row. A2 moved 2 codes (AWTO_MON_ADC_STEP): one ADC row "A2 ... old -> new", no other.
+- Registry monitor off (set_get stub): no sample, no row; on again: the first sample is a heartbeat (a new ADC reference).
+- Heartbeat: AWTO_MON_BEAT_K samples after a heartbeat the rows again (never dropped: the uptime row differs every time).
 - Sample count: AwtoMonSample is called once per AWTO_MON_MS (call watch), not per pass.
 Log: tmp/logs/mon_sim_test.log
 """
@@ -79,7 +80,13 @@ class Rig:
 
 
 def kinds(ln):
-    return sorted(re.search(r"monitor: (ADC|IOSC|main loop|headroom|uptime)", x).group(1) for x in ln)
+    """row kind per monitor line (texts: sync_log.mon_text)"""
+    out = []
+    for x in ln:
+        t = x.split("monitor: ", 1)[1]
+        out.append("ADC" if t.startswith("ADC") else "IOSC" if t.startswith("IOSC") else "headroom" if t.startswith("free")
+                   else "uptime" if t.startswith("up ") else "main loop")
+    return sorted(out)
 
 
 def main():
@@ -99,7 +106,7 @@ def main():
         a.bin.parent.mkdir(parents=True, exist_ok=True)
         a.bin.write_bytes(img)
         pad = 0.3
-    beat_rows = sorted(["ADC", "IOSC", "main loop", "uptime"] + (["headroom"] if "_g_stAwtoHead" in a.map.read_text(errors="replace") else []))   # a paced image adds the headroom row
+    beat_rows = sorted(["IOSC", "main loop", "uptime"] + (["headroom"] if "_g_stAwtoHead" in a.map.read_text(errors="replace") else []))   # a paced image adds the headroom row
     say(f"mon_sim_test {a.bin.name}: period {ms} ms, heartbeat every {k} samples")
     r = Rig(a)
     try:
@@ -112,10 +119,10 @@ def main():
         say("  first sample rows:\n" + "\n".join("    " + x for x in first))
         r.check("first sample: g_stAwtoMon 'MN', on, A0..A3 = the cells", magic == b"MN" and r.m.rd(r.mon + 3)[0] == 1
                 and bytes(r.m.rd(r.mon + 5, 4)) == bytes([0xF8, 0xF8, 0x58, 0x20]), f"{magic!r} {bytes(r.m.rd(r.mon + 5, 4)).hex()}")
-        r.check("first sample: the four rows (+ headroom on a paced image) on the heartbeat, ADC row decoded", kinds(first) == beat_rows
-                and any("ADC A0 F8 A1 F8 A2 58 A3 20" in x for x in first), str(kinds(first)))
+        r.check("first sample: the heartbeat rows (+ headroom on a paced image), no ADC row (the reference level, Dan 2026-11-27)",
+                kinds(first) == beat_rows, str(kinds(first)))
         r.check("first sample: loop rate > 0 and a watchdog gap are in the row",
-                any(re.search(r"main loop [1-9]\d* passes/s, longest watchdog gap \d+\.\dms", x) for x in first))
+                any(re.search(r"monitor: [1-9]\d*/s gap \d+\.\dms", x) for x in first))
         c0 = r.calls
         r.wait(ms / 1000.0 + pad)
         r.check("one sample period, nothing changed: no new row", r.new() == [] or kinds(r.new()) == [], f"{r.new()}")
@@ -126,7 +133,7 @@ def main():
         r.adc(0xF8, 0xF8, 0x78, 0x20)
         r.wait(ms / 1000.0 + pad)
         n = r.new()
-        r.check("A2 moved two codes from the last row: exactly the ADC row, with the new value", kinds(n) == ["ADC"] and "A2 78" in n[0], str(n))
+        r.check("A2 moved two codes from the last row: exactly the ADC row, channel named, old -> new", kinds(n) == ["ADC"] and "ADC A2 pin 96 (unused) 58 -> 78" in n[0], str(n))
         r.check(f"sample calls: one per {ms} ms (not per pass)", 3 <= r.calls - c0 <= 5, f"{r.calls - c0} in ~{3 * (ms / 1000 + pad):.0f} s")
         r.on[SET_ID_MONITOR] = 0
         b = r.beat()
@@ -136,11 +143,11 @@ def main():
         r.on[SET_ID_MONITOR] = 1
         r.wait(ms / 1000.0 + pad)
         n = r.new()
-        r.check("monitor on again: the first sample is a heartbeat (four rows)", kinds(n) == beat_rows, str(n))
+        r.check("monitor on again: the first sample is a heartbeat (no ADC row: a new reference)", kinds(n) == beat_rows, str(n))
         if not a.no_beat:
             r.wait(k * ms / 1000.0 - ms / 2000.0)          # the K-th sample after the heartbeat lands inside this window
             n = r.new()
-            r.check(f"heartbeat {k} samples after the last one: the four rows again", kinds(n) == beat_rows, str(n))
+            r.check(f"heartbeat {k} samples after the last one: the heartbeat rows again", kinds(n) == beat_rows, str(n))
     finally:
         r.s.bus.close()
     say(f"{'PASS' if r.fails == 0 else 'FAIL'} mon_sim_test {a.bin.name}: {r.fails} failed")

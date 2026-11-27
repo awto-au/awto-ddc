@@ -296,6 +296,7 @@ static BYTE AwtoDlInit(void)                        // first drain whose header 
     {
         return 0;                                   // not answering: the next drain asks again; a failed read must not look like an empty DDR (that starts a new generation)
     }
+    g_ulAwtoBootAbs -= g_stAwtoSync.ulWr + g_stAwtoSync.ucPend;        // its distance from the ring end stays: re-added below
     ucOk = (s_aucDl[0] == AWTO_DLOG_HDR_ID) && (s_aucDl[1] == 'L') && (s_aucDl[2] == AWTO_DLOG_HDR_VER) && (AwtoDlSum() == s_aucDl[15]);
     ulHint = ((DWORD)s_aucDl[5] << 24) | ((DWORD)s_aucDl[6] << 16) | ((DWORD)s_aucDl[7] << 8) | s_aucDl[8];
     g_usAwtoNoteN = ((WORD)s_aucDl[9] << 8) | s_aucDl[10];
@@ -322,6 +323,7 @@ static BYTE AwtoDlInit(void)                        // first drain whose header 
     }
     g_stAwtoSync.ucBoot++;
     g_stAwtoSync.ucLost = 0;
+    g_ulAwtoBootAbs += g_stAwtoSync.ulWr + g_stAwtoSync.ucPend;
     AwtoDlHdr(g_stAwtoSync.ulWr);
     return 1;
 }

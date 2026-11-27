@@ -3,7 +3,7 @@
 
 usage: AWTO_SIM_CORE=fast host_time_sim.py BIN [--map MAP]
 - Boot 1080p60 with the console auto-open (firmware default); the ring header must be the firmware's own ('SY', #158).
-- Title row (map row 0): "AWTO DIAGNOSTICS  FW <tag>" + "CPU nnn.n PLL nnn.n SPI nnn.n  WxH nn.nnnHz  HOST --:--:--" before a sync (clocks from the live registers).
+- Title row (map row 0): "AWTO DIAGNOSTICS  FW <tag>" + "CPU nnn.n PLL nnn.n SPI nnn.n WxH nn.nnnHz HOST --:--:--" before a sync (clocks from the live registers).
 - Sync 1 (2026-11-12T08:45:10.250+11:00): HOST ticks from it; ring D7 "host time ..." + D8 "(fw +N ms, first ...)"; the
   console log pane shows the line; get VCP E9 = syncs 1, drift 0; sync_log.stamp puts the host time on the lines.
 - Sync 2 on time: no ring line, syncs 2, |drift| small. Sync 3 5 s ahead: D7 + D8 (drift) + D9 "drift +5xxx ms".
@@ -40,7 +40,7 @@ OFS = 44                                                    # +11:00 in 15 min u
 T0 = dt.datetime(2026, 11, 12, 8, 45, 10, 250000, dt.timezone(dt.timedelta(hours=11)))
 CMD_S = 1.0         # test cmd -> console page drawn: one full draw (~0.3 s sim, boot_sim) x ~3
 CON_S = 4.0         # console auto-open after ACTIVE: settled + one pass (sync_sim sees it within 1 s) x4 for the boot console
-TITLE_RE = re.compile(r"CPU (\d+\.\d) PLL (\d+\.\d) SPI (\d+\.\d)  (\d+x\d+ \d+\.\d{3}Hz|NO INPUT) (?:HOST|STALE) (\S+)")
+TITLE_RE = re.compile(r"CPU (\d+\.\d) PLL (\d+\.\d) SPI (\d+\.\d) (\d+x\d+ \d+\.\d{3}Hz|NO INPUT) (?:HOST|STALE) (\S+)")
 VIEW_ROWS = int(re.search(r"^#define AWTO_VIEW_ROWS\s+(\d+)", (ROOT / "fw/osd/console.c").read_text(), re.MULTILINE).group(1))   # rows shown at a time
 CON_COLS = 136      # map columns per row (AWTO_CON_COLS, fw/osd/console.c)
 TICK_S = 1.25       # title refresh AWTO_TITLE_MS 1 s x1.25

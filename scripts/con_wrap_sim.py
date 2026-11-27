@@ -4,8 +4,8 @@
 usage: AWTO_SIM_CORE=fast con_wrap_sim.py BIN [--map MAP] [--out tmp/len/con_wrap]
 Scenario: cold boot 1080p60 (console auto-open), POWER off / on (test cmd 0x3E), power saving (VCP D6 = 4), SOURCE key (the\nwake poll may wake first: power NORMAL is the check).
 After each phase, with the main page open, the shown rows are read from the OSD model and grouped into lines (a row starting
-with the delta column ' +xxx ms:' and its continuation: AWTO_LOG_TXT0 spaces, then text; an episode start is '-- text ---').
-Delta column (Dan 2026-11-27): each line's delta is checked against the ring (sync_log.deltas). FAIL:
+with the time columns 'uHH:MM:SS.mmm +xxx ms:' and its continuation: AWTO_LOG_TXT0 spaces, then text; an episode start is '-- text ---').
+Rows are compared with sync_log.con_rows (joined groups, Dan 2026-11-27); each row's delta is checked against it. FAIL:
 - a group of more than two rows, or a group whose text (time column dropped, continuation joined) is not a ring line: a clipped
   row is a prefix only, so it fails;
 - a ring line of the phase that should be in view (the newest lines that fit the view) missing from the console.
@@ -33,8 +33,8 @@ from _repo import ROOT
 
 LOG = ROOT / "tmp/logs/con_wrap_sim.log"
 LOG_COL = 1            # fw/osd/console.c AWTO_LOG_COL (main page)
-TXT0 = 9               # text column (fw/osd/console.c AWTO_LOG_TXT0): continuation rows start here; checked against the tree below
 _CON = (ROOT / "fw/osd/console.c").read_text()
+TXT0 = 1 + int(re.search(r"^#define AWTO_LOG_TIME_W\s+(\d+)", _CON, re.MULTILINE).group(1))   # AWTO_LOG_TXT0: continuation rows start here
 ROW_W = int(re.search(r"^#define AWTO_CON_COLS\s+(\d+)", _CON, re.MULTILINE).group(1)) - 3   # AWTO_LOG_W_MAIN = COLS - 3 cells
 POWER_KEY, K_SOURCE = 0x3E, 0x05
 PWR_OFF, PWR_NORMAL, PWR_SAVING = 1, 2, 3
@@ -46,7 +46,8 @@ NV_IDLE_S = 4.2        # boot -> first NVRAM flush done: ACTIVE stable 3 s + flu
 # 24-bit ms; sysreq 13 by 0E, outcome 04; backlight off deferred, requester 07
 LONG = ((0x13, 0x4A, (0x8E << 24) | 0xFFFFFF), (0x14, 0x13, (0x0E << 8) | 0x04), (0x10, 0x0F, 0x07))
 PORT = re.compile(r"\b(DP-1|HDMI-\d+|Input D\d+|D\d)\b")
-HEAD = re.compile(r" ?([+-][ \d]{3} ms|[+-][ \d]\d\.\d s|[+-][ \d]{4} [sh]| {7}):")   # the console's delta column (sync_log.fmt_delta)
+REAL = r"(?P<real>[ u][ \d-]\d:\d\d:\d\d\.\d{3}|u[ \d]{4}:\d\d:\d\d\.\d| {13})"      # sync_log.real_col (console AwtoPutReal)
+HEAD = re.compile(r" ?" + REAL + r" ([+-][ \d]{3} ms|[+-][ \d]\d\.\d s|[+-][ \d]{4} [sh]| {7}):")   # + the delta column (sync_log.fmt_delta)
 RULE = re.compile(r"^-- (.*?) -+$")      # an episode start row: "-- text ---..." to the row end
 
 
@@ -101,17 +102,23 @@ class Sim:
             self.bus.wait(0.05)
         return cond()
 
+    def con_rows(self, ht: dict | None = None) -> list[dict]:
+        """the ring as console rows (sync_log.con_rows: 32-bit times of a DRAM log image, joined groups)"""
+        h, lines = SL.decode(SL.read_ring(self.m.rd, self.a_sync), self.rows, whole=True)
+        ts = SL.unwrap(h["events"], None, h.get("ms32"))
+        return SL.con_rows(h["events"], [x.split(":", 1)[1] for x in lines], ts, ht)
+
     def ring(self) -> list[str]:
-        _, lines = SL.decode(bytes(SL.read_ring(self.m.rd, self.a_sync)), self.rows, whole=True)
-        self.seen |= {norm(x.split(":", 1)[1]) for x in lines}
-        return lines
+        """console row texts (joined), each as a host line "text" """
+        rs = self.con_rows()
+        self.seen |= {norm(r["text"]) for r in rs}
+        return [":" + r["text"] for r in rs]
 
     def ring_deltas(self) -> dict[str, list[str]]:
-        """normalised ring text -> the delta columns the console should show for it (sync_log.deltas over the whole ring)"""
-        h, lines = SL.decode(bytes(SL.read_ring(self.m.rd, self.a_sync)), self.rows, whole=True)
+        """normalised row text -> the delta columns the console should show for it"""
         out: dict[str, list[str]] = {}
-        for ln, (d, _) in zip(lines, SL.deltas(h["events"])):
-            out.setdefault(norm(ln.split(":", 1)[1]), []).append(SL.fmt_delta(d))
+        for r in self.con_rows():
+            out.setdefault(norm(r["text"]), []).append(SL.fmt_delta(r["delta"]))
         return out
 
     def inject(self, evs):
@@ -156,7 +163,7 @@ class Sim:
         for g in groups:
             if RULE.match(g[0][HEAD.match(g[0]).end():].rstrip()):
                 rules += 1
-            col = HEAD.match(g[0]).group(1)
+            col = HEAD.match(g[0]).group(2)
             if norm(body0(g)) in dmap and col not in dmap[norm(body0(g))] and len(g) == 1:
                 bad.append(f"delta {col!r} not the ring's {dmap[norm(body0(g))]}: {body0(g)[:50]}")
             if len(g) > 2:

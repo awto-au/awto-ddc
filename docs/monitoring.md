@@ -12,12 +12,14 @@ Register facts: `re/regmap` (keys below). Request: Dan 2026-11-19, issue #245.
 
 | arg | row text | row written when |
 |---|---|---|
-| 1 | `monitor: ADC A0 F8 A1 F8 A2 F8 A3 F8` | a channel moved `AWTO_MON_ADC_STEP` (16 = two codes) since the last ADC row, or heartbeat |
-| 2 | `monitor: IOSC trim count 1999` | trim moved `AWTO_MON_TRIM_STEP` (4) counts since the last trim row, or heartbeat |
-| 3 | `monitor: main loop 245 passes/s, longest watchdog gap 18ms` | the longest gap (since boot) changed, or heartbeat |
-| 4 | `monitor: uptime 3600 s, stack high BC` | the stack high-water moved, or heartbeat |
+| 1 | `monitor: ADC A0 key ladder F8 -> 70` (A1 key ladder, A2 pin 96 (unused), A3 DP HPD out (pin 97)) | that channel moved `AWTO_MON_ADC_STEP` (16 = two codes) since its last row; never in the heartbeat (Dan 2026-11-27); the first sample after boot / registry On is the reference level, no row |
+| 2 | `monitor: IOSC 1999` (IOSC trim count) | trim moved `AWTO_MON_TRIM_STEP` (4) counts since the last trim row, or heartbeat |
+| 3 | `monitor: 245/s gap 18.0ms` (main-loop passes/s, longest watchdog gap) | the longest gap (since boot) changed, or heartbeat |
+| 5 | `monitor: free 301/s busy 39% worst 1.937ms` (headroom passes/s, busy %, worst pass; paced loop only) | heartbeat |
+| 4 | `monitor: up 3600s stk BC` (uptime, stack high-water) | the stack high-water moved, or heartbeat |
 
-- Heartbeat = every `AWTO_MON_BEAT_K` = 30 samples (5 min) and at the first sample after boot / after the registry row goes On: all four rows. 5 min x 4 rows keeps the boot episode in the 48-entry ring for hours; the uptime row differs every beat, so the repeat collapse of `AwtoSyncPush` never drops one.
+- Console and host decoders: the rows of one sample share a row (`monitor: IOSC 2001 | 300/s gap 12.6ms | free 301/s busy 39% worst 1.937ms | up 1150s stk D4`); an ADC row keeps its own (docs/sync-log-design.md, joined rows).
+- Heartbeat = every `AWTO_MON_BEAT_K` = 30 samples (5 min) and at the first sample after boot / after the registry row goes On: rows 2..5. The uptime row differs every beat, so the repeat collapse of `AwtoSyncPush` never drops one.
 - Never filtered: a changed row is written every sample it changes; an A B A B flicker is collapsed by the existing explicit "the N lines above repeated" row, not dropped.
 - Power saving with the console open: values are stored, no row (a row redraws the open console; no OSD drawing in power saving).
 - Read-only: no register is written, no NVRAM / flash write, no OSD draw (rows reach the OSD only through the console that is open anyway).
@@ -43,7 +45,7 @@ Register facts: `re/regmap` (keys below). Request: Dan 2026-11-19, issue #245.
 | 2 | main-loop passes per second | `isr_g_stAwtoDiag.usLoopRate` | none | 0 | implemented (row 3) |
 | 3 | uptime, last reset cause | `AwtoMs`, `AwtoBootReason` (canary based; no hardware reset-cause register: `docs/watchdog.md`) | none | 0 | implemented (row 4, `g_stAwtoMon.ucBoot`); boot lines `D0` already in the ring. `0003` STATUS1 / `000C` WATCH_DOG_CTRL0 are not reset causes (input-timing status, DVS watchdog flags) |
 | 4 | stack high-water | `g_ucAwtoStackHigh` | none | 0 | implemented (row 4) |
-| 5 | ADC A0..A3 raw | `FF09`..`FF0C` | none (result registers) | 4 reads | implemented (row 1). A0 / A1 = key ladders; A2 = pin 96, `a_adc2` in our `PINSHARE` (unused input); A3 = pin 97 = the DP HPD output (P4.2 push-pull): not an analog input here, always logged as the fourth byte |
+| 5 | ADC A0..A3 raw | `FF09`..`FF0C` | none (result registers) | 4 reads | implemented (row 1, a move only). A0 / A1 = key ladders; A2 = pin 96, `a_adc2` in our `PINSHARE` (unused input); A3 = pin 97 = the DP HPD output (P4.2 push-pull): not an analog input here. All four stay in `g_stAwtoMon` (`./dev.py health`) |
 | 6 | IOSC trim counter (temperature proxy) | `06A4` + `06A5[7:4]` (12 bit) | none; the SDK reads both in its own trim code | 2 reads | implemented (row 2). Per-unit constants (units 1 / 2 / 3: about 1992 / 1960 / 1995..2000), no drift in 30 min at 350.8 MHz: a proxy until a warm / cold run says otherwise (`C-IOSC`) |
 | 7 | cache miss rate (load metric) | `FDB3` control, `FDB9..FDC4` ref / miss / restart counters (32 bit) | counters free-run once `pm_mtr_en` is set; reading is free | 12 reads + a config write at boot | not implemented: needs `FDB3[0]` set (a register write) and a check that the meter costs no speed at 350.8 MHz. Decision D2 |
 | 8 | DDR PHY BIST flags | `A7E0..A7E3`, `AFE0..AFE3` (state dependent, not per-unit constants: `docs/register-audit.md`) | unknown (BIST block) | 8 reads once at boot | not implemented: the meaning is not decoded (`C-BIST`, #228) |

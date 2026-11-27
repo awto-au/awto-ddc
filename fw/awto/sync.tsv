@@ -31,8 +31,9 @@
 #   wdt   value = warning ms << 16 | reset ms -> "warning 200 ms, reset 586 ms" (live from AWTO_WDT_THR / AWTO_WDT_N)
 #   htime value = unix s, arg = UTC offset (15 min, signed) -> "2026-11-12T08:45:10+11:00" (#157)   sms  signed ms -> "+1234 ms" (#157)
 #   note  host note (#273): text slot g_aucAwtoNote, arg = length, value = sequence; prints "text overwritten" when the slot holds a newer note
-#   mon   health monitor (#238 hook, fw/diag/monitor.c): arg 1 ADC A0..A3, 2 IOSC trim counter, 3 loop rate + longest watchdog gap, 4 uptime + stack;
-#         the text is printed whole by the fmt (docs/monitoring.md)
+#   mon   health monitor (#238 hook, fw/diag/monitor.c): arg 1 an ADC channel moved (channel << 16 | old << 8 | new, never in the heartbeat),
+#         2 IOSC trim counter, 3 loop rate + longest watchdog gap, 5 headroom, 4 uptime + stack; short texts printed by the fmt;
+#         a heartbeat's rows share one console row (docs/monitoring.md, docs/sync-log-design.md joined rows)
 #   nvw   NVRAM flush result (#151, RL6449_Project.h AWTO_NV_LOG_*): value = groups << 27 | erases << 25 | programs << 19 |
 #         bytes << 9 | ms -> "wrote 32 B (OSD data, panel time) in 2 programs, 0 erases, 4 ms" / "nothing changed, no flash write (3 ms)"
 # class (optional 5th column): colour class of the console line and the host line, one of fw/awto/sync_classes.tsv (error warning timing boot flash;

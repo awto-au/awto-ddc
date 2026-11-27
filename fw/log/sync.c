@@ -228,6 +228,9 @@ void AwtoSyncT2Start(void)                          // every Timer2 reload (Awto
     AwtoSyncPush(AWTO_SYNC_EV_INIT, 2, 0);
 }
 
+#if(_AWTO_DRAM_LOG == _ON)
+__xdata DWORD g_ulAwtoBootAbs;                      // absolute index of this boot's boot line: older lines are another boot's (console real time)
+#endif
 __xdata StAwtoSyncEv g_stAwtoSyncPin;               // #150: copy of this boot's reason line (the ring may lose it)
 
 // Entry n lines back = this event (time aside). A macro: no function, no common-bank stub (the common bank is full, #311).
@@ -344,7 +347,7 @@ void AwtoSyncPushL(BYTE ucId, BYTE ucArg, DWORD ulVal)
         ucR = g_stAwtoSync.ucLost;
 
         g_stAwtoSync.ucLost = 0;
-        AWTO_SYNC_PUT(AWTO_SYNC_EV_LOGLOST, 0, ucR);  // never silent: the lines dropped before this one
+        AWTO_SYNC_QUIET(AWTO_SYNC_EV_LOGLOST, 0, ucR);    // never silent: the lines dropped before this one (drawn with the line below)
     }
 #endif
     if(g_stAwtoSync.ucSpare != 0)
@@ -352,9 +355,9 @@ void AwtoSyncPushL(BYTE ucId, BYTE ucArg, DWORD ulVal)
         ucR = g_stAwtoSync.ucSpare;
 
         g_stAwtoSync.ucSpare = 0;
-        AWTO_SYNC_PUT(AWTO_SYNC_EV_REPEAT, 0, ucR);
+        AWTO_SYNC_QUIET(AWTO_SYNC_EV_REPEAT, 0, ucR);
     }
-    AWTO_SYNC_PUT(ucId, ucArg, ulVal);
+    AWTO_SYNC_PUT(ucId, ucArg, ulVal);              // one console draw per push (one line per call, the OSD poll catches up)
     if(ucId == AWTO_SYNC_EV_BOOT)
     {
         BYTE ucP;
@@ -733,6 +736,9 @@ void AwtoSyncBegin(BYTE ucKind, BYTE ucPort)
     }
     if(ucKind == AWTO_SYNC_K_POWER_ON)
     {
+#if(_AWTO_DRAM_LOG == _ON)
+        g_ulAwtoBootAbs = g_stAwtoSync.ulWr + g_stAwtoSync.ucPend;      // absolute index of this boot line (AwtoDlInit moves it with the ring)
+#endif
         AwtoSyncPush(AWTO_SYNC_EV_BOOT, AwtoBootReason(), AwtoBootValue());     // first line: why it is running (#29)
         AwtoSyncPush(AWTO_SYNC_EV_STAGE, 1, 0);
     }

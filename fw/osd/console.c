@@ -70,7 +70,7 @@ static __xdata BYTE s_ucLogI;                   // GPIO page backfill: change-ri
 #define AWTO_LOG_COL        ((d_s_ucConOpen == AWTO_CON_GPIO) ? 62 : 1)    // log pane: main page full width, GPIO page right of the table
 #define AWTO_LOG_W_MAIN     (AWTO_T_MAXCOLS - 1)                     // main-page log row (cells, incl. the leading space)
 #define AWTO_LOG_W          ((d_s_ucConOpen == AWTO_CON_GPIO) ? 57 : AWTO_LOG_W_MAIN)
-#define AWTO_LOG_TIME_W     8                   // AwtoSyncLine time column on the main console: "+xxx ms:" since the line above (AwtoPutDelta)
+#define AWTO_LOG_TIME_W     22                  // AwtoSyncLine time columns on the main console: "uHH:MM:SS.mmm +xxx ms:" (AwtoPutReal, AwtoPutDelta)
 #define AWTO_LOG_TXT0       (1 + AWTO_LOG_TIME_W)                   // text column: a wrapped line continues here (gen_awto_sync.py)
 #define AWTO_LOG_HDR        2                   // heading row, then lines to the bottom of the view
 #define AWTO_LOG_ROW0       (AWTO_LOG_HDR + 1)
@@ -636,7 +636,7 @@ static void AwtoConTitle(BYTE ucAll)            // compose; draw the runs of 2-c
     s_ucAwtoCols = AWTO_TITLE_N;
     AwtoFieldBegin();
     AwtoPutClocks();
-    AwtoPutStr("  ");
+    AwtoPutChar(' ');                           // one space: a 2560x1440 144 Hz input with STALE fills AWTO_TITLE_N (fw/osd/osd_fit.tsv)
     AwtoPutInput();
     AwtoPutStr(((g_stAwtoHt.ucSyncs != 0) && ((ulUp - g_stAwtoHt.ulFwMs) > AWTO_HT_STALE_MS)) ? " STALE " : " HOST ");
     if(g_stAwtoHt.ucSyncs == 0)
@@ -1522,14 +1522,25 @@ static void AwtoPutCec(void);                  // fmt cec (docs/cec.md): CEC fra
 static void AwtoPutMon(BYTE ucArg);            // fmt mon: health monitor rows (last in this file)
 #define ulV s_ulAwtoLnV
 #define usMs s_usAwtoLnMs
-// Main console time column (Dan 2026-11-27): ms since the ring line above, 7 cells + ':' (AwtoPutDelta). An episode start (boot
-// line, a new BEGIN) is a red row counting from its zero: MCU reset for the boot line, else the BEGIN itself (docs/sync-log-design.md).
+// Main console time columns (Dan 2026-11-27): real time (AwtoPutReal) + ms since the ring line above (AwtoPutDelta), from 32-bit fw ms.
+// An episode start is a red row counting from its zero; monitor / memory groups of one pass share a row (docs/sync-log-design.md).
 // Statics in XDATA: this sits on the deepest DATA overlay path (see AwtoPutIso).
 #if(_AWTO_DRAM_LOG == _ON)
 #define AWTO_LN_MS(p)       ((((DWORD)(((WORD)(p)[8] << 8) | (p)[9])) << 16) | (((WORD)(p)[2] << 8) | (p)[3]))   // fw ms, 32 bit (tail / DDR copy)
 #else
 #define AWTO_LN_MS(p)       ((DWORD)(((WORD)(p)[2] << 8) | (p)[3]))     // 16 bit: a gap of 65.5 s or more wraps
 #endif
+#define AWTO_LN_MS16(p)     ((((WORD)(p)[2]) << 8) | (p)[3])
+#define AWTO_LN_S_PER_DAY   86400L              // host clock: seconds of the day
+#define AWTO_LN_OFS_S       900L                // host UTC offset unit (15 min)
+#define AWTO_LN_UP_H_W      100UL               // uptime hours from here: "hhhh:mm:ss.t" (12 cells, a 32-bit ms count is 1193 h)
+// Joined rows: the next line shares the row when the pair is listed and came within AWTO_LN_JOIN_MS: pushes of one call, a console
+// line drawn per push between them (2 ms seen, sim boot, awto-ddc#354) x1.25. The live draw skips one call for the rest (AwtoConLogSync).
+#define AWTO_LN_JOIN_MS     3
+#define AWTO_LN_MON(a, x)   (((a) == AWTO_SYNC_EV_MON) && ((x) != AWTO_MON_EV_ADC))      // heartbeat rows (an ADC move keeps its own row)
+#define AWTO_LN_PAIR(a, x, b, y)    ((AWTO_LN_MON(a, x) && AWTO_LN_MON(b, y)) || (((a) == AWTO_SYNC_EV_FBUF) && ((b) == AWTO_SYNC_EV_MCFG)) || \
+                                     (((a) == AWTO_SYNC_EV_DVF) && ((b) == AWTO_SYNC_EV_SCALE)) || (((a) == AWTO_SYNC_EV_SCALE) && ((b) == AWTO_SYNC_EV_LIMIT)))
+#define AWTO_LN_LEADS(a, x) (AWTO_LN_MON(a, x) || ((a) == AWTO_SYNC_EV_FBUF) || ((a) == AWTO_SYNC_EV_DVF) || ((a) == AWTO_SYNC_EV_SCALE))
 #define AWTO_LN_PER_S       1000UL              // ms per s
 #define AWTO_LN_PER_H       3600000UL           // ms per h
 #define AWTO_LN_MILLI_MAX   999UL               // "+999 ms", then "+xx.x s" up to AWTO_LN_TENTHS_MAX
@@ -1595,7 +1606,67 @@ static void AwtoPutDelta(void)                  // s_lLnD -> 7 cells: "+xxx ms" 
     AwtoPutStr((s_lLnD > (long)AWTO_LN_S_MAX) || (s_lLnD < -(long)AWTO_LN_S_MAX) ? " h" : " s");
 }
 
-static void AwtoLnDelta(BYTE ucSeq)             // s_lLnD / s_ucLnStart / s_ucLnPrevOk of ring line ucSeq (wide console)
+#if(_AWTO_DRAM_LOG == _ON)
+static __xdata DWORD s_ulLnMs;                  // fw ms of the line composed
+static __xdata long s_lLnW;                     // AwtoPutReal scratch (s_lLnD holds the delta by then)
+static __xdata long s_lLnS;
+static __xdata BYTE s_ucLnBoot;                 // 1 = the line is of this boot (g_ulAwtoBootAbs): the host sync applies
+#endif
+static __xdata BYTE s_ucLnJoinOk;               // 1 while AwtoConLogSync draws: listed pairs share a row (AWTO_LN_PAIR)
+static __xdata BYTE s_ucLnJoinN;                // lines AwtoSyncLine joined to the row after the first
+static __xdata BYTE s_ucLnJ;                    // seq of the last line on the row
+static BYTE __xdata *__xdata s_pucLnW;          // AwtoConLogSync: entry of the row's last line (the wait for the rest of a group)
+static __xdata BYTE s_ucLnWaitSeq;              // newest line the live draw waited on once (no time wait: no pacing change)
+
+static void AwtoPutReal(void)                   // 13 cells: ' ' + host clock "HH:MM:SS.mmm", or 'u' + uptime of the line's boot
+{
+#if(_AWTO_DRAM_LOG == _ON)
+    if((s_ucLnBoot != 0) && (g_stAwtoHt.ucSyncs != 0))
+    {
+        AwtoPutChar(' ');
+        s_lLnW = (long)(s_ulLnMs - g_stAwtoHt.ulFwMs) + (long)g_stAwtoHt.usFrac;     // ms after the sync's host second
+        s_lLnS = s_lLnW / (long)AWTO_LN_PER_S;
+        s_lLnW %= (long)AWTO_LN_PER_S;
+        if(s_lLnW < 0)
+        {
+            s_lLnW += AWTO_LN_PER_S;
+            s_lLnS--;
+        }
+        s_lLnS = (s_lLnS + (long)g_stAwtoHt.ulEpoch + (long)g_stAwtoHt.cOfs * AWTO_LN_OFS_S) % AWTO_LN_S_PER_DAY;
+        s_ulAwtoT = (s_lLnS < 0) ? (DWORD)(s_lLnS + AWTO_LN_S_PER_DAY) : (DWORD)s_lLnS;
+        AwtoPutClock();
+        AwtoPutChar('.');
+        AwtoPutNum((WORD)s_lLnW, 3);
+        return;
+    }
+    AwtoPutChar('u');
+    if((long)s_ulLnMs < 0)
+    {
+        AwtoPutStr("-0:00:00.");                // a boot line re-based below the Timer2 start: a few ms before 0
+        AwtoPutNum((WORD)(0 - s_ulLnMs), 3);
+        return;
+    }
+    s_ulAwtoT = s_ulLnMs / AWTO_LN_PER_S;
+    if((s_ulAwtoT / (AWTO_LN_PER_H / AWTO_LN_PER_S)) < AWTO_LN_UP_H_W)
+    {
+        AwtoPutClock();
+        AwtoPutChar('.');
+        AwtoPutNum((WORD)(s_ulLnMs % AWTO_LN_PER_S), 3);
+        return;
+    }
+    AwtoPutNum(s_ulAwtoT / (AWTO_LN_PER_H / AWTO_LN_PER_S), 4);
+    AwtoPutChar(':');
+    AwtoPutNum((s_ulAwtoT / 60) % 60, 2);
+    AwtoPutChar(':');
+    AwtoPutNum(s_ulAwtoT % 60, 2);
+    AwtoPutChar('.');
+    AwtoPutNum((BYTE)((s_ulLnMs / (AWTO_LN_PER_S / 10)) % 10), 1);
+#else
+    AwtoPutStr("             ");                // 16-bit ring times: no full time (docs/sync-log-design.md)
+#endif
+}
+
+static void AwtoLnDelta(BYTE ucSeq)             // s_lLnD / s_ucLnStart / s_ucLnPrevOk (+ s_ulLnMs / s_ucLnBoot) of ring line ucSeq (wide console)
 {
     BYTE __xdata *puc;
 
@@ -1607,6 +1678,10 @@ static void AwtoLnDelta(BYTE ucSeq)             // s_lLnD / s_ucLnStart / s_ucLn
         s_ucLnPrevOk = (puc[0] != 0);
     }
     puc = AwtoSyncAt(ucSeq);
+#if(_AWTO_DRAM_LOG == _ON)
+    s_ulLnMs = AWTO_LN_MS(puc);
+    s_ucLnBoot = ((g_stAwtoSync.ulWr + g_stAwtoSync.ucPend - AWTO_SYNC_BACK(g_stAwtoSync.ucSeq, ucSeq)) >= g_ulAwtoBootAbs);
+#endif
     s_ucLnStart = (puc[0] == AWTO_SYNC_EV_BOOT) ||
                   ((puc[0] == AWTO_SYNC_EV_BEGIN) && (puc[1] != AWTO_SYNC_K_POWER_ON) && (puc[4] != AWTO_SYNC_BEGIN_IN));
     if(s_ucLnStart != 0)
@@ -1624,6 +1699,20 @@ static void AwtoLnDelta(BYTE ucSeq)             // s_lLnD / s_ucLnStart / s_ucLn
         s_lLnD -= AWTO_LN_W16;
     }
 #endif
+}
+
+// 1 = ring line ucSeq + 1 joins the row of ucSeq (puc = its entry, read before): drawn by AwtoConLogSync, made, a listed pair, same call
+static BYTE AwtoLnJoins(BYTE __xdata *puc, BYTE ucSeq)
+{
+    BYTE __xdata *pucN;
+
+    if((s_ucLnJoinOk == 0) || (s_ucLnWide == 0) || (AWTO_SYNC_NEXT(ucSeq) == g_stAwtoSync.ucSeq) || (AWTO_LN_LEADS(puc[0], puc[1]) == 0))
+    {
+        return 0;
+    }
+    s_ulLnT = ((DWORD)puc[0] << 24) | ((DWORD)puc[1] << 16) | AWTO_LN_MS16(puc);     // puc may be the DDR cache slot the next read reuses
+    pucN = AwtoSyncAt(AWTO_SYNC_NEXT(ucSeq));
+    return AWTO_LN_PAIR((BYTE)(s_ulLnT >> 24), (BYTE)(s_ulLnT >> 16), pucN[0], pucN[1]) && ((WORD)(AWTO_LN_MS16(pucN) - (WORD)s_ulLnT) <= AWTO_LN_JOIN_MS);
 }
 
 
@@ -1691,6 +1780,8 @@ static void AwtoSyncLine(BYTE ucSeq)
     }
     if(s_ucLnWide != 0)
     {
+        AwtoPutReal();
+        AwtoPutChar(' ');
         if(s_ucLnPrevOk != 0)
         {
             AwtoPutDelta();
@@ -1714,15 +1805,26 @@ static void AwtoSyncLine(BYTE ucSeq)
         AwtoPutNum(usMs, 1);
         AwtoPutChar(':');
     }
+    s_ucLnJoinN = 0;
+    s_ucLnJ = ucSeq;
+    if(usRow != 0)
+    {
+        s_ucLnStyle = (s_ucLnStart != 0) ? AWTO_T_STYLE_EPOCH : AwtoSyncClsOf(usRow - 1);
+    }
+AwtoLnPart:                                     // a joined line goes on here after " | " (AwtoLnJoins)
     if(usRow == 0)
     {
         AwtoPutStr("event ");
         AwtoPutHex2(puc[0]);
         AwtoPutChar(' ');
         AwtoPutHex2(puc[1]);
-        return;
+        goto AwtoLnNext;
     }
-    s_ucLnStyle = (s_ucLnStart != 0) ? AWTO_T_STYLE_EPOCH : AwtoSyncClsOf(usRow - 1);
+    if((s_ucLnJoinN != 0) && (puc[0] == AWTO_SYNC_EV_MON))
+    {
+        AwtoPutMon(puc[1]);                     // a joined monitor line: its values only (no second "monitor: ")
+        goto AwtoLnNext;
+    }
     ucFmt = AwtoSyncTxt(usRow - 1, 0xFF);        // 0xFF = nothing printed, the fmt only
     if((ucFmt & 0x80) != 0)
     {
@@ -1786,7 +1888,7 @@ static void AwtoSyncLine(BYTE ucSeq)
         case 19:                                                                                   // ms2: low word ms % ... high word ms % (#162 s3b)
             AwtoPutNum(ulV & 0xFFFF, 1); AwtoPutStr("ms"); AwtoSyncTxt(usRow - 1, 1);
             AwtoPutNum(ulV >> 16, 1); AwtoPutStr("ms"); AwtoSyncTxt(usRow - 1, 2);
-            return;                                 // its own tail: no fmt kept over the calls (DATA overlay path, #162 s3b)
+            goto AwtoLnNext;                        // its own tail: no fmt kept over the calls (DATA overlay path, #162 s3b)
         case 20: AwtoSyncName(AWTO_SYNC_EV_PNL_BY, puc[7]); break;                                 // pby: panel requester (#162 s3b)
         case 21: AwtoSyncName(AWTO_SYNC_EV_SYS_STATE, puc[7]); break;                              // sname: system state (#95 LED)
         case 22: AwtoPutNvFlush(); break;                                                          // nvw: NVRAM flush result (#151)
@@ -1810,6 +1912,17 @@ static void AwtoSyncLine(BYTE ucSeq)
         default: break;
     }
     AwtoSyncTxt(usRow - 1, 1);
+AwtoLnNext:
+    if(AwtoLnJoins(puc, s_ucLnJ) != 0)
+    {
+        AwtoPutStr(" | ");
+        s_ucLnJ = AWTO_SYNC_NEXT(s_ucLnJ);
+        s_ucLnJoinN++;
+        puc = AwtoSyncAt(s_ucLnJ);
+        usRow = AwtoSyncRow(puc[0], puc[1]);
+        ulV = ((DWORD)puc[4] << 24) | ((DWORD)puc[5] << 16) | ((WORD)puc[6] << 8) | puc[7];
+        goto AwtoLnPart;
+    }
     if(s_ucLnStart != 0)
     {
         AwtoPutChar(' ');
@@ -3320,6 +3433,17 @@ void AwtoConLogSync(void)                       // #139: new sync ring lines, on
         {
             return;                             // the redraw backfills it
         }
+        s_ucLnJoinOk = 1;
+        for(s_ucLnJ = s_ucConSyncSeq; AwtoLnJoins(AwtoSyncAt(s_ucLnJ), s_ucLnJ) != 0; s_ucLnJ = AWTO_SYNC_NEXT(s_ucLnJ))
+        {
+        }
+        s_pucLnW = AwtoSyncAt(s_ucLnJ);         // once: the macro below reads it twice
+        if((AWTO_SYNC_NEXT(s_ucLnJ) == g_stAwtoSync.ucSeq) && (AWTO_LN_LEADS(s_pucLnW[0], s_pucLnW[1]) != 0) && (s_ucLnJ != s_ucLnWaitSeq))
+        {
+            s_ucLnWaitSeq = s_ucLnJ;            // the rest of its group comes in this call: drawn at the next call (push or OSD poll), one row
+            s_ucLnJoinOk = 0;
+            return;
+        }
         AWTO_WDT_FEED(AWTO_WDT_S_CONLINE);      // bounded: <= AWTO_SYNC_N lines (a map-full redraw backfills AWTO_LOG_REDRAW_N in one pass)
         AwtoConLogStart();
         AwtoSyncLine(s_ucConSyncSeq);
@@ -3327,7 +3451,8 @@ void AwtoConLogSync(void)                       // #139: new sync ring lines, on
         {
             AwtoConWrapLine();
         }
-        s_ucConSyncSeq = AWTO_SYNC_NEXT(s_ucConSyncSeq);
+        s_ucLnJoinOk = 0;
+        s_ucConSyncSeq = AWTO_SYNC_NEXT(s_ucLnJ);   // past the lines joined to the row
         if((s_ucConSyncSeq != g_stAwtoSync.ucSeq) && (AWTO_LOG_EV(s_ucConSyncSeq) == AWTO_SYNC_EV_HOSTFW) &&
            (AWTO_LOG_EV(AWTO_SYNC_BACK(s_ucConSyncSeq, 1)) == AWTO_SYNC_EV_HOST))
         {
@@ -3618,34 +3743,33 @@ static void AwtoPutCec(void)
     }
 }
 
-static void AwtoPutMon(BYTE ucArg)              // fmt mon (fw/diag/monitor.c; host copy scripts/sync_log.py mon_text)
+static void AwtoPutMon(BYTE ucArg)              // fmt mon (fw/diag/monitor.c; host copy scripts/sync_log.py mon_text): short, a group shares one row
 {
-    if(ucArg == AWTO_MON_EV_ADC)
+    if(ucArg == AWTO_MON_EV_ADC)                // a channel moved: channel << 16 | old << 8 | new
     {
-        AwtoPutStr("ADC A0 "); AwtoPutHex2((BYTE)(s_ulAwtoLnV >> 24));
-        AwtoPutStr(" A1 "); AwtoPutHex2((BYTE)(s_ulAwtoLnV >> 16));
-        AwtoPutStr(" A2 "); AwtoPutHex2((BYTE)(s_ulAwtoLnV >> 8));
-        AwtoPutStr(" A3 "); AwtoPutHex2((BYTE)s_ulAwtoLnV);
+        AwtoPutStr("ADC A"); AwtoPutNum((BYTE)(s_ulAwtoLnV >> 16), 1);
+        AwtoPutStr(((BYTE)(s_ulAwtoLnV >> 16) < 2) ? " key ladder " : ((BYTE)(s_ulAwtoLnV >> 16) == 2) ? " pin 96 (unused) " : " DP HPD out (pin 97) ");
+        AwtoPutHex2((BYTE)(s_ulAwtoLnV >> 8)); AwtoPutStr(" -> "); AwtoPutHex2((BYTE)s_ulAwtoLnV);
     }
     else if(ucArg == AWTO_MON_EV_TRIM)
     {
-        AwtoPutStr("IOSC trim count "); AwtoPutNum(s_ulAwtoLnV, 1);
+        AwtoPutStr("IOSC "); AwtoPutNum(s_ulAwtoLnV, 1);
     }
     else if(ucArg == AWTO_MON_EV_LOOP)
     {
-        AwtoPutStr("main loop "); AwtoPutNum(s_ulAwtoLnV >> 16, 1);
-        AwtoPutStr(" passes/s, longest watchdog gap "); AwtoPutTenths(s_ulAwtoLnV & 0xFFFF); AwtoPutStr("ms");
+        AwtoPutNum(s_ulAwtoLnV >> 16, 1);
+        AwtoPutStr("/s gap "); AwtoPutTenths(s_ulAwtoLnV & 0xFFFF); AwtoPutStr("ms");
     }
     else if(ucArg == AWTO_MON_EV_HEAD)
     {
-        AwtoPutStr("headroom "); AwtoPutNum(s_ulAwtoLnV & 0xFFF, 1);
-        AwtoPutStr(" passes/s, busy "); AwtoPutNum(s_ulAwtoLnV >> 24, 1);
-        AwtoPutStr(" %, worst pass "); AwtoPutMilli(((s_ulAwtoLnV >> 12) & 0xFFF) * 1000 / 16); AwtoPutStr("ms");
+        AwtoPutStr("free "); AwtoPutNum(s_ulAwtoLnV & 0xFFF, 1);
+        AwtoPutStr("/s busy "); AwtoPutNum(s_ulAwtoLnV >> 24, 1);
+        AwtoPutStr("% worst "); AwtoPutMilli(((s_ulAwtoLnV >> 12) & 0xFFF) * 1000 / 16); AwtoPutStr("ms");
     }
     else
     {
-        AwtoPutStr("uptime "); AwtoPutNum(s_ulAwtoLnV >> 8, 1);
-        AwtoPutStr(" s, stack high "); AwtoPutHex2((BYTE)s_ulAwtoLnV);
+        AwtoPutStr("up "); AwtoPutNum(s_ulAwtoLnV >> 8, 1);
+        AwtoPutStr("s stk "); AwtoPutHex2((BYTE)s_ulAwtoLnV);
     }
 }
 

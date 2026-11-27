@@ -69,7 +69,7 @@ def main():
     say(f"  png {a.out / 'info_card_boot.png'} (OSD {'on' if M.summary(snap)['en'] else 'OFF'})")
     s.bus.wait(want_ms / 1000.0 + 1.0)
     evs = S.read_ring(m.rd, ring)
-    h, lines = S.decode(evs, rows)
+    _h, lines = S.decode(evs, rows)
     say(f"  {len(lines)} lines, last: {lines[-1] if lines else ''}")
     for ln in lines:
         if "pop-up" in ln or "input taken" in ln:

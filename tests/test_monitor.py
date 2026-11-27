@@ -26,14 +26,26 @@ def test_decode_no_sample():
 
 
 def test_sync_row_text():
-    assert SL.mon_text(1, 0xF8F85820) == "ADC A0 F8 A1 F8 A2 58 A3 20"
-    assert SL.mon_text(2, 1999) == "IOSC trim count 1999"
-    assert SL.mon_text(3, 700 << 16 | 18) == "main loop 700 passes/s, longest watchdog gap 1.8ms"
-    assert SL.mon_text(5, 15 << 24 | 11 << 12 | 300) == "headroom 300 passes/s, busy 15 %, worst pass 0.687ms"
-    assert SL.mon_text(4, 3600 << 8 | 0xBC) == "uptime 3600 s, stack high BC"
+    assert SL.mon_text(1, 0 << 16 | 0xF8 << 8 | 0x70) == "ADC A0 key ladder F8 -> 70"        # an ADC row = one channel that moved
+    assert SL.mon_text(1, 3 << 16 | 0xF8 << 8 | 0x00) == "ADC A3 DP HPD out (pin 97) F8 -> 00"
+    assert SL.mon_text(2, 1999) == "IOSC 1999"
+    assert SL.mon_text(3, 700 << 16 | 18) == "700/s gap 1.8ms"
+    assert SL.mon_text(5, 15 << 24 | 11 << 12 | 300) == "free 300/s busy 15% worst 0.687ms"
+    assert SL.mon_text(4, 3600 << 8 | 0xBC) == "up 3600s stk BC"
     rows = SL.load_rows(ROOT / "fw/awto/sync.tsv")
     ev = (0xEA, 2, 0, 1999)
-    assert SL.line(rows, ev, 0).endswith("monitor: IOSC trim count 1999")
+    assert SL.line(rows, ev, 0).endswith("monitor: IOSC 1999")
+
+
+def test_heartbeat_one_row():
+    """a heartbeat (pushed in one call) is one console row, every value kept (Dan 2026-11-27)"""
+    rows = SL.load_rows(ROOT / "fw/awto/sync.tsv")
+    evs = [(0xEA, 2, 100, 2001), (0xEA, 3, 100, 300 << 16 | 126), (0xEA, 5, 101, 39 << 24 | 31 << 12 | 301), (0xEA, 4, 101, 1150 << 8 | 0xD4)]
+    texts = [SL.line(rows, e, 0).split(":", 1)[1] for e in evs]
+    rs = SL.con_rows(evs, texts, [(100, True), (100, True), (101, True), (101, True)])
+    assert len(rs) == 1 and rs[0]["text"] == "monitor: IOSC 2001 | 300/s gap 12.6ms | free 301/s busy 39% worst 1.937ms | up 1150s stk D4"
+    late = evs[:2] + [(0xEA, 5, 105, evs[2][3])]                 # 5 ms later (> JOIN_MS): another call, its own row
+    assert len(SL.con_rows(late, texts[:3], [(100, True), (100, True), (105, True)])) == 2
 
 
 def test_constants_and_registry():

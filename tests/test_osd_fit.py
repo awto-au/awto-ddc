@@ -6,7 +6,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "scripts"))
-import osd_fit as F  # noqa: E402
+import osd_fit as F
 
 SRC = (ROOT / F.CONSOLE).read_text()
 D = F.defines([SRC, (ROOT / F.HEADER).read_text()])

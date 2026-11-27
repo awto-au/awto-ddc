@@ -59,9 +59,11 @@ def test_decode_prints_the_note_line():
     assert SL.decode(bytes(ring), rows, whole=True)[1][1].endswith("text not read (4 chars)")
 
 
-def test_note_fits_one_console_row():
+def test_note_fits_two_console_rows():
+    """a full note slot wraps once at most (the console wraps a line to two rows; time columns 22 cells since awto-ddc#354)"""
     h = G.HEADER
-    assert G.c_int("AWTO_NOTE_CHARS", h) + G.c_int("AWTO_LOG_TXT0", G.DBGPOP) <= G.c_int("AWTO_LOG_W_MAIN", G.DBGPOP)
+    w, t0 = G.c_int("AWTO_LOG_W_MAIN", G.DBGPOP), G.c_int("AWTO_LOG_TXT0", G.DBGPOP)
+    assert G.c_int("AWTO_NOTE_CHARS", h) + t0 <= w + (w - t0)
 
 
 def test_generator_counts_the_note_text_at_its_cap(tmp_path):

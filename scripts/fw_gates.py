@@ -9,6 +9,7 @@ usage: fw_gates.py IMAGE_STEM [--tier normal|extensive] [--build-inputs] [--tree
   conmode: console_mode_sim (#218: console Off / Until signal closes 3 s after ACTIVE or on a key / Always).
   conkeep: con_keep_sim (awto-ddc log-keep: console close / reopen / new episode / flood keep the ring lines on screen; a watchdog reset keeps the previous boot's lines).
   conwrap: con_wrap_sim (#162: console lines whole, a wide line on two rows; widest lines + map end, no watchdog bite).
+  condelta (extensive): con_delta_sim (console real time + delta from 32-bit ms, red episode starts, joined rows; a 131 s gap after a host sync).
   nvlog: nv_test --sim flushlog (#151: NVRAM flush line per close / power off, "wrote N B ..." vs "nothing changed").
   sync: sync_sim (#139). bootsim: boot_sim (#144, #29, #216: Until signal = console after the picture; bootsim_always: console at power-on; `boot` is the fw_sim --boot-check). wake: wake_sim (#144 task 4). pokes: poke_loops TREE (static, #138).
   panel: panel_sim (#162 step 2): panel VDD / backlight pin / PWM / DPTx link only from the panel machine; no blink; backlight
@@ -91,6 +92,7 @@ EXTENSIVE = {
     "wake": "quick variant, ~9 s CPU",
     "crash": "stall variant, ~10 s CPU",
     "conwrap": "inject variant, ~9 s CPU (boot + NVRAM flush wait + console redraws)",
+    "condelta": "~6 s CPU (boot, wake, host sync + 131 s clock jump: console real time / delta / joined rows vs sync_log.con_rows)",
     "conmode": "~9 s CPU (3 s console timers x 3 modes)",
     "conkeep": "~6 s CPU (marks in the ring: console close / reopen keeps them, flood, watchdog reset keeps the previous boot)",
     "sysm": "~10 s CPU (power / mode machine chain)",
@@ -112,6 +114,7 @@ SKIP_IF_MISSING = {      # gate -> map symbols the image must define, else SKIP 
     "htime": ("_g_stAwtoHt",),
     "conmode": ("_g_ucAwtoConAuto",),
     "conwrap": ("_AwtoConWrapLine",),
+    "condelta": ("_g_stAwtoHt", "_AwtoConWrapLine"),
     "conkeep": ("_g_stAwtoSync", "_AwtoConWrapLine"),
     "deadport": ("_AwtoDeadPortPoll",),
     "portcfg": ("_isr_g_ucAwtoPortOff",),
@@ -261,6 +264,7 @@ def gates(b: Path, m: Path, ref, tree):
         g["conhost"] = [*PY, f"{s}/con_wrap_host.py"]                                 # NORMAL: the real wrap decision (fw/osd/conwrap.c) compiled on the host, ~0.1 s
     g["conwrap_full"] = [*PY, f"{s}/con_wrap_sim.py", b, "--map", m, "--out", out / "conwrap_full", *(["--tree", tree] if tree else [])]   # no line clipped, real events
     g["conwrap"] = [*PY, f"{s}/con_wrap_sim.py", b, "--map", m, "--out", out / "conwrap", "--scope", "inject", *(["--tree", tree] if tree else [])]    # NORMAL: injected widest lines
+    g["condelta"] = [*PY, f"{s}/con_delta_sim.py", b, "--map", m, "--out", out / "condelta"]   # console time columns + joined rows (awto-ddc#354)
     if header(tree):
         g["crash_full"] = [*PY, f"{s}/crash_sim_test.py", "--header", header(tree), "--out", out / "wdt", b, m]
         g["crash"] = [*g["crash_full"], "--tests", "stall"]                            # NORMAL: the 0x4C stall -> bite -> record

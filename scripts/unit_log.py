@@ -88,13 +88,18 @@ class Store:
         if last is not None and ents and ents[0]["abs"] > last + 1:
             out.append(f"# {read} ---- gap: {ents[0]['abs'] - last - 1} entries between two polls are not in this read ----")
         noted = self._noted()
+        pe = None
         for e in ents:
             if last is not None and e["abs"] <= last:
                 continue
             if e["id"] == NOTE_EV and e["val"] in noted:
                 continue                                   # host_note.py logged its text at write time
-            when = e["poll_wall"] or f"boot {e['boot']}"
-            out.append(f"{when}~ {e['abs']:6d} {e['text']}")
+            if pe is not None and out and joins(pe, e, e["ms"] & 0xFFFF, pe["ms"] & 0xFFFF):
+                out[-1] += join_text(e)
+            else:
+                when = e["poll_wall"] or f"boot {e['boot']}"
+                out.append(f"{when}~ {e['abs']:6d} {e['text']}")
+            pe = e
         if ents:
             self._append(out)
             self.dir.mkdir(parents=True, exist_ok=True)
@@ -119,18 +124,36 @@ class Store:
             else:
                 out.append(f"# {read} ---- gap: unit ring restarted (cold power-up or a ring that was not kept) ----")
         noted = self._noted()
+        pe = None
         for e in new:
             when = e["wall"] or e.get("poll_wall") or read
             mark = " " if e["wall"] and e["sure"] else "~"
             if e["id"] == NOTE_EV and e["val"] in noted:
                 continue                                   # host_note.py logged its text at write time
-            out.append(f"{when}{mark} {e['seq']:3d} {e['text']}")
+            if pe is not None and out and joins(pe, e, int(e["raw"][4:8], 16), int(pe["raw"][4:8], 16)):
+                out[-1] += join_text(e)
+            else:
+                out.append(f"{when}{mark} {e['seq']:3d} {e['text']}")
+            pe = e
         if ents:
             last = ents[-1]
             self._append(out)
             self.dir.mkdir(parents=True, exist_ok=True)
             self.state.write_text(json.dumps({"seq": seq, "raw": last["raw"], "read": read}))
         return out
+
+
+def joins(pe: dict, e: dict, ms: int, pms: int) -> bool:
+    """e shares the saved line of pe, as on the console (sync_log.joins: listed pair, within JOIN_MS)"""
+    import sync_log as S
+    arg = lambda x: x["arg"] if "arg" in x else int(x["raw"][2:4], 16) if "raw" in x else 0     # DRAM entries carry arg, ring entries the raw bytes
+    return S.joins((pe["id"], arg(pe), pms), (e["id"], arg(e), ms))
+
+
+def join_text(e: dict) -> str:
+    import sync_log as S
+    t = e["text"].split(":", 1)[1]                          # after the "nnnnn:" / "  1.234s:" time
+    return " | " + (t.split("monitor: ", 1)[-1] if e["id"] == S.MON_EV else t)
 
 
 def note_written(serial: str, seq: int, text: str, d: Path | None = None) -> None:

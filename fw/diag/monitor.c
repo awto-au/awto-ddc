@@ -8,6 +8,7 @@
 __xdata StAwtoMon g_stAwtoMon;
 static __xdata BYTE s_ucMonBeat;                // samples since the last heartbeat (0 = this one is a heartbeat)
 static __xdata BYTE s_pucMonAdc[4];             // last logged
+static __xdata BYTE s_ucMonAdcOk;               // 0 = no reference level yet (boot, monitor switched on)
 static __xdata WORD s_usMonTrim;
 static __xdata BYTE s_ucMonPoke;
 static __xdata BYTE s_ucMonGap;                // longest gap logged, 1 ms (saturates at 255)
@@ -22,7 +23,6 @@ void AwtoMonSample(void)
 {
     BYTE ucI;
     BYTE ucBeat;
-    BYTE ucAdc = 0;
     WORD usTrim;
     WORD usLoop;
     WORD usGap = 0;
@@ -43,6 +43,7 @@ void AwtoMonSample(void)
     if(g_stAwtoMon.ucOn == 0)
     {
         s_ucMonBeat = 0;                        // switched on again: the first sample is a heartbeat
+        s_ucMonAdcOk = 0;
         return;
     }
     g_stAwtoMon.pucAdc[0] = PCB_ADKEY1();
@@ -76,21 +77,21 @@ void AwtoMonSample(void)
     {
         return;                                 // a sync row redraws the open console: no OSD drawing in power saving
     }
-    for(ucI = 0; ucI < 4; ucI++)
-    {
-        ucAdc |= AwtoMonMoved(g_stAwtoMon.pucAdc[ucI], s_pucMonAdc[ucI], AWTO_MON_ADC_STEP);
-    }
     ucLog = 0;
-    if((ucBeat != 0) || (ucAdc != 0))
+    for(ucI = 0; ucI < 4; ucI++)                // ADC: a row per channel that moved, never in the heartbeat (Dan 2026-11-27)
     {
-        for(ucI = 0; ucI < 4; ucI++)
+        if(s_ucMonAdcOk == 0)
         {
-            s_pucMonAdc[ucI] = g_stAwtoMon.pucAdc[ucI];
+            s_pucMonAdc[ucI] = g_stAwtoMon.pucAdc[ucI];     // first sample: the reference level, no row
         }
-        AwtoSyncPush(AWTO_SYNC_EV_MON, AWTO_MON_EV_ADC, ((DWORD)g_stAwtoMon.pucAdc[0] << 24) | ((DWORD)g_stAwtoMon.pucAdc[1] << 16) |
-                     ((WORD)g_stAwtoMon.pucAdc[2] << 8) | g_stAwtoMon.pucAdc[3]);
-        ucLog++;
+        else if(AwtoMonMoved(g_stAwtoMon.pucAdc[ucI], s_pucMonAdc[ucI], AWTO_MON_ADC_STEP) != 0)
+        {
+            AwtoSyncPush(AWTO_SYNC_EV_MON, AWTO_MON_EV_ADC, ((DWORD)ucI << 16) | ((WORD)s_pucMonAdc[ucI] << 8) | g_stAwtoMon.pucAdc[ucI]);
+            s_pucMonAdc[ucI] = g_stAwtoMon.pucAdc[ucI];
+            ucLog++;
+        }
     }
+    s_ucMonAdcOk = 1;
     if((ucBeat != 0) || ((usTrim > s_usMonTrim) ? ((usTrim - s_usMonTrim) >= AWTO_MON_TRIM_STEP) : ((s_usMonTrim - usTrim) >= AWTO_MON_TRIM_STEP)))
     {
         s_usMonTrim = usTrim;

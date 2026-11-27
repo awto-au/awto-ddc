@@ -169,8 +169,10 @@ def profile(binp: Path, mapp: Path, passes: int, be: bool, log, search_index: in
             if call_sw <= pc < call_sw + 8:
                 if passes_done >= 0:
                     calls[where(bank, npc)] += 1
-                if stackf:
+                if len(stackf) > 1:
                     stackf[-1] = where(bank, npc)           # trampoline jumps to the target: top frame becomes the target
+                else:
+                    stackf.append(where(bank, npc))         # its LCALL came before the window: the base frame (_main) stays the root
             elif rtab[0] <= npc < rtab[1]:
                 pass                                         # callee returns into the restore entry
             elif len(stackf) > 1:                            # the base frame (_main) is never popped: the window starts in a callee

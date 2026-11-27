@@ -1242,6 +1242,7 @@ extern __xdata StAwtoSyncEv g_stAwtoSyncPin;  // #150: this boot's reason line, 
 #if(_AWTO_DRAM_LOG == _ON)
 #define AWTO_SYNC_ENT(n)                                        ((unsigned char __xdata *)&g_stAwtoSync.stTl[(unsigned char)(g_stAwtoSync.ucHead - (n)) & (AWTO_SYNC_TAIL - 1)])
 extern unsigned char __xdata *AwtoSyncAt(unsigned char ucSeq);
+extern __xdata unsigned long g_ulAwtoBootAbs;       // absolute index of this boot's boot line (fw/log/sync.c)
 #define AWTO_DLOG_AT_B                                          10          // AwtoSyncAt entry: 8 B + ms bits 31..16 (offsets 8, 9) for tail and DDR lines alike
 // DDR ring: 2^15 slots of one 16 B burst (entry), header burst just below, the note store (AWTO_DDRN_*) just above (docs/dram-log-design.md)
 #define AWTO_DLOG_SLOTS                                         32768UL
@@ -1337,7 +1338,7 @@ extern __xdata unsigned char g_ucAwtoMemForce;  // 1 = ScalerMDomainMemoryConfig
 #define AWTO_TC_OSD_DEMO                                        0xA0    // test cmd: + 0..4 = demo group, + 5 = close
 // Health monitor (fw/diag/monitor.c, docs/monitoring.md): a few slow values sampled every AWTO_MON_MS, sync rows + g_stAwtoMon, registry row monitor.
 #define AWTO_SYNC_EV_MON                                        0xEA    // arg AWTO_MON_EV_*, value per arg (fmt mon)
-#define AWTO_MON_EV_ADC                                         1       // value = A0 << 24 | A1 << 16 | A2 << 8 | A3 (raw LSADC results, 5-bit in [7:3])
+#define AWTO_MON_EV_ADC                                         1       // a channel moved: value = channel << 16 | old << 8 | new (raw LSADC results, 5-bit in [7:3])
 #define AWTO_MON_EV_TRIM                                        2       // value = IOSC trim counter (12 bit, temperature proxy)
 #define AWTO_MON_EV_LOOP                                        3       // value = passes/s << 16 | longest watchdog poke gap, ms
 #define AWTO_MON_EV_HEAD                                        5       // paced loop only (AWTO_LOOP_PACING > 0), on the beat: value = busy % << 24 | worst busy pass (1/16 ms) << 12 | passes/s (12 bit each, clamped)
@@ -1435,7 +1436,7 @@ extern void osd_tc_bar(unsigned char ucWin, unsigned int usX0, unsigned int usY0
 #define AWTO_SYNC_EV_HOSTFW                                     0xD8    // #157 arg 1 first sync / 2 drift, value = fw ms (AwtoMs) at the sync
 #define AWTO_SYNC_EV_DRIFT                                      0xD9    // #157 value = host - local tick, ms (signed)
 #define AWTO_SYNC_EV_NOTE                                       0xEE    // #273 host note: arg = length, value = note sequence (text in g_aucAwtoNote while the sequence matches its tag)
-#define AWTO_NOTE_CHARS                                         119     // one text slot = the console log row text (AWTO_LOG_W_MAIN 133 - leading space and time column 14)
+#define AWTO_NOTE_CHARS                                         119     // one text slot (128 B DDR line); a full note wraps to a second console row (time columns 22 cells)
 #define AWTO_NOTE_TAG                                           0       // slot bytes 0..1 (BE): sequence of the note the text belongs to
 #define AWTO_NOTE_LEN                                           2       // slot byte 2: length
 #define AWTO_NOTE_TXT                                           3       // slot byte 3..: text

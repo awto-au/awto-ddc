@@ -3,7 +3,7 @@
 
 usage: dram_log.py --unit N --bus B --map MAP [--last K | --boot N | --all] [--json]
   Reads the DDR header burst and the entries (16 B burst each, MCU_DC port A, as fw/log/hostnote.c) and prints the decoded lines
-  per boot: time = ms since that boot's reset (32 bit stamps, no wrap logic).
+  per boot as the console: real time (uptime of that boot; host clock for the current boot when synced), +delta (32 bit, no wrap logic).
 library: ddr_reader(dbg) -> read_burst(units) -> 16 B memory order; entry(read, abs, gen) -> dict | None;
          header(read) -> dict | None; newest(read, hdr) -> next absolute index; entries(read, hdr, nxt, count) -> [dict]
 Log: ./tmp/logs/dram_log.log
@@ -185,14 +185,25 @@ def main() -> int:
         ents = [e for e in ents if e["boot"] == a.boot]
     log(f"dram log: gen {h['gen']} boot {h['boot']} next index {nxt} (wraps {nxt // C['AWTO_DLOG_SLOTS']}), {len(ents)} entries read, "
         f"{stats.get('bursts', 0)} bursts in {stats.get('s', 0):.1f} s")
-    boot = None
+    for ln in con_lines(rows, ents, h["boot"]):
+        log(ln)
+    return 0
+
+
+def con_lines(rows: list[dict], ents: list[dict], cur_boot: int, ht: dict | None = None) -> list[str]:
+    """entries as the console shows them (sync_log.con_rows: real time, +delta, joined groups), "--- boot N" per boot, abs index first"""
     import sync_log as S
-    for e, ln in zip(ents, S.with_delta(decode(rows, ents), S.dram_deltas(ents))):
+    evs = [(e["id"], e["arg"], e["ms"] & 0xFFFF, e["val"]) for e in ents]
+    ts = [(S.signed32(e["ms"]), True) for e in ents]
+    rs = S.con_rows(evs, [x.split(":", 1)[1] for x in decode(rows, ents)], ts, ht, [e["boot"] for e in ents], cur_boot)
+    out, boot = [], None
+    for r, ln in zip(rs, S.row_lines(rs, ts, evs)):        # 32-bit times: no wrap row, one line per row
+        e = ents[r["i"][0]]
         if e["boot"] != boot:
             boot = e["boot"]
-            log(f"--- boot {boot}")
-        log(f"  {e['abs']:6d} {ln}")
-    return 0
+            out.append(f"--- boot {boot}")
+        out.append(f"  {e['abs']:6d} {ln}")
+    return out
 
 
 if __name__ == "__main__":

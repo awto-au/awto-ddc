@@ -76,6 +76,9 @@ def width(text: str, d: dict, ct: list) -> tuple:
         if kind == "lit":
             total += len(arg)
             shown.append(arg)
+        elif kind == "sp":                              # spaces (a lit token is stripped)
+            total += int(arg)
+            shown.append(" " * int(arg))
         elif kind == "ct":
             lo, _, hi = arg.partition("..")
             a = evaluate(lo, d)
@@ -86,7 +89,7 @@ def width(text: str, d: dict, ct: list) -> tuple:
             total += len(w)
             shown.append(w)
         else:
-            raise ValueError(f"token {tok!r}: lit: or ct:")
+            raise ValueError(f"token {tok!r}: lit:, sp: or ct:")
     return total, "".join(shown)
 
 
