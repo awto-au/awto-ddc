@@ -1630,7 +1630,7 @@ bit ScalerDisplayDPTx1AuxRead(BYTE ucCommandAddrH, BYTE ucAddrM, BYTE ucAddrL, B
     BYTE ucReadRetryNum = 0;
     BYTE ucCheckLength = 0;
     BYTE ucOffsetLength = 0;
-    BYTE ucTotal = ((ucLength == 0) ? 1 : ucLength);    // ucLength below is the rest of this request
+    BYTE ucTotal = ((ucLength == 0) ? 1 : ucLength);    // awto: each pass requests min(total - offset, 16) (#248)
 
     // Enable AUX FW Handle Mode
     ScalerSetBit(P9D_A3_AUXTX_TRAN_CTRL, ~(_BIT7 | _BIT5), _BIT5);
