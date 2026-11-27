@@ -29,9 +29,10 @@ from live_writer import LiveWriter  # noqa: E402
 
 PYTHON = "python3"
 LOG = ROOT / "tmp" / "logs" / "osd_editor.log"
-# Per-call limits = 3x the slowest unit-3 call measured 2026-11-18 (docs/osd-editor-spec.md section 7).
+# Per-call limits = 3x the slowest unit-3 call measured 2026-11-18 (docs/osd-editor-spec.md section 7); synclog: one episode / --dram
+# read from the DDR (awto-ddc#358).
 # Expiry: TERM (dev.py's finally switches the debug link off), kill after TERM_GRACE_S, log line + banner.
-LIMIT_S = {"list": 20, "one": 4, "health": 13, "synclog": 4, "host_time": 5, "kvm": 10, "ddc": 5, "ddcmany": 10, "i2c": 5}
+LIMIT_S = {"list": 20, "one": 4, "health": 13, "synclog": 9, "host_time": 5, "kvm": 10, "ddc": 5, "ddcmany": 10, "i2c": 5}
 REFRESH_S = 15                                           # live refresh and status probe pace: one "list" takes ~6.4 s
 STALE_S = 60                                             # a unit view older than this is re-read when selected (Dan 2026-11-20)
 NO_ANSWER_RE = re.compile(r"no bus with (?:that )?EDID serial|DDC communication failed|no monitors detected")
@@ -51,7 +52,7 @@ VCP_ROW = {"volume": VCP_VOLUME, "mute": VCP_MUTE}       # quick rows written th
 QUICK_VCP = ("volume", "mute", "brightness", "input", "screensaver_now")   # registry rows read by DDC/CI VCP code
 VALUE_RE = re.compile(r"(?:^|\s)(\w+) = .* \(raw (-?\d+)\)\s*$")
 VCP_GET_RE = re.compile(r"VCP\s+([0-9A-Fa-f]{2})\s+(C|SNC|CNC)\s+((?:x?[0-9A-Fa-f]+\s*){1,4})")   # dev.py ddc get (ddcutil --brief)
-STEP_RE = re.compile(r"(?:^|\s)(\d{1,5}):(?!\d)")        # sync_log line: "<ms since episode start>:text"
+ROW_RE = re.compile(r"([ u][ \d-]\d:\d\d:\d\d\.\d{3}|u[ \d]{4}:\d\d:\d\d\.\d| {13}) ([+-][ \d]{3} ms|[+-][ \d]\d\.\d s|[+-][ \d]{4} [sh]| {7}):(.*)$")   # sync_log row: real time, delta (sync_log.fmt_delta), text
 DOT = {"ok": "#3fb950", "busy": "#d29922", "down": "#ff5050", "unknown": "#808080", "flash": "#a371f7"}
 PAGE_ROLE = Qt.UserRole
 ROW_ROLE = Qt.UserRole + 1
@@ -97,29 +98,34 @@ def flash_state(serial: str) -> str:
     return f"{cur.get('owner')} {cur.get('tool')}"
 
 
+def delta_ms(d: str) -> int | None:
+    """sync_log.fmt_delta text -> ms (None = blank)"""
+    if not d.strip():
+        return None
+    v, unit = d[1:].split()
+    ms = round(float(v) * {"ms": 1, "s": 1000, "h": 3_600_000}[unit])
+    return -ms if d[0] == "-" else ms
+
+
 def sync_rows(text: str) -> list[tuple[str, str, bool]]:
-    """(+ms, line, slow) per sync_log line that carries a '<ms>:' field; +ms = step since the previous line"""
-    rows, prev = [], None
+    """(delta, row, slow) per sync_log row: the decoder's own delta (32-bit fw ms; sync_log.con_rows), never recomputed here"""
+    rows = []
     for ln in text.splitlines():
-        m = STEP_RE.search(ln)
+        m = ROW_RE.search(ln)
         if not m:
             continue
-        t = int(m.group(1))
-        d = None if prev is None or t < prev else t - prev      # t < prev: new episode in a --whole dump
-        prev = t
-        rows.append(("" if d is None else f"+{d}", ln.rstrip(), d is not None and d > SLOW_MS))
+        d = delta_ms(m.group(2))
+        rows.append((m.group(2).strip(), ln[m.start():].rstrip(), d is not None and d > SLOW_MS))
     return rows
 
 
 def sync_summary(rows: list[tuple[str, str, bool]]) -> str:
-    """boot timing line: lines, last episode length (last '<ms>:' field), slowest step"""
+    """timing line: rows, the slowest step, rows over SLOW_MS"""
     if not rows:
         return "no lines"
-    steps = [(int(d[1:]), ln) for d, ln, _ in rows if d]
-    last = STEP_RE.search(rows[-1][1])
-    slow = max(steps, default=None)
-    return (f"{len(rows)} lines, last episode {last.group(1) if last else '?'} ms, " +
-            (f"slowest step +{slow[0]} ms" if slow else "no steps") + f", {sum(s for *_, s in rows)} over {SLOW_MS} ms")
+    steps = [(delta_ms(d), ln) for d, ln, _ in rows if d]
+    slow = max((x for x in steps if x[0] is not None), default=None)
+    return (f"{len(rows)} rows, " + (f"slowest step {slow[0]} ms" if slow else "no steps") + f", {sum(s for *_, s in rows)} over {SLOW_MS} ms")
 
 
 REASON_RE = re.compile(r"missing|not found|no bus|failed|expired|refus|not booted")
