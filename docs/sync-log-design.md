@@ -1,6 +1,6 @@
 # Sync log: DONE / FAILED / link health lines
 
-Related: #257, #253, #139, #144. Log texts: `fw/awto/sync.tsv`; ring: `fw/log/sync.c`; decoders: `scripts/sync_log.py`, `fw/osd/console.c`.
+Issue: #291. Related: #257, #253, #139, #144. Log texts: `fw/awto/sync.tsv`; ring: `fw/log/sync.c`; decoders: `scripts/sync_log.py`, `fw/osd/console.c`.
 Existing sync lines stay (C1 / C6 / C2 / F0..F4 / FC / system machine); the new lines summarise them and are not repeated by them.
 
 ## Goal
