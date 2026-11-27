@@ -2378,7 +2378,7 @@ fn	_UserCommonNVRamSetSystemData	3	0x859c	640
 fn	_UserDdcciHandler	0	0x2b4c	9
 fn	_UserInterfaceAdjustActiveByPassColorProc	14	0x44f8	9
 fn	_UserInterfaceAdjustAspectRatio	0	0x2b55	9
-fn	_UserInterfaceAdjustAudioAmpMuteProc	14	0x4501	15
+fn	_UserInterfaceAdjustAudioAmpMuteProc	14	0x976e	85
 fn	_UserInterfaceAdjustAudioPowerProc	2	0x403d	9
 fn	_UserInterfaceAdjustAudioResetProc	14	0x4510	41
 fn	_UserInterfaceAdjustColorProc	14	0x4539	174

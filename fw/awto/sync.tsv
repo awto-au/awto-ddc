@@ -252,8 +252,6 @@ E1	0A	vport	enable % requested:already enabled
 E1	0B	vport	fixed search on disabled %:auto search
 E5	01	-	audio on:amp P7.4 = 1, then AMP_MUTE P7.3 = 0
 E5	02	-	audio off:AMP_MUTE P7.3 = 1, then amp P7.4 = 0
-E5	05	-	audio on:already on, no change (SDK unmute again)
-E5	06	-	audio off:already off, no change (SDK mute again)
 E5	07	-	audio tone:DVC ramp to 0 not done in time, gate closed anyway	error
 E5	04	n	unmute while audio test step % is held:P7.4 / AMP_MUTE P7.3 as that step sets them
 E5	11	-	audio test 1/6:aout, P7.4 on, P7.3 low, -6dB

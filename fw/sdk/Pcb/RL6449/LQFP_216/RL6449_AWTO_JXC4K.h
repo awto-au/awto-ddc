@@ -413,7 +413,9 @@
 #define bAMP_EN                                 (MCU_FE1C_PORT74_PIN_REG) // Pin_161, P7.4
 #define bAMP_MUTE                               (MCU_FE1B_PORT73_PIN_REG) // Pin_160, P7.3
 #if(_AUDIO_SUPPORT == _ON)
-#define PCB_AMP_MUTE(x)                         { AwtoAudioAmp(x); }
+// #359 / #360: the banked call only when the pins change or an ear-test step is held (a repeat writes no line)
+#define PCB_AMP_MUTE(x)                         { if((((x) == _OFF) && (g_ucAwtoAudioTestN != 0)) || (bAMP_EN != (((x) == _ON) ? 0 : 1)) || \
+                                                     (bAMP_MUTE != (((x) == _ON) ? 1 : 0))) { AwtoAudioAmp(x); } }
 #else
 #define PCB_AMP_MUTE(x)                         {}
 #endif
