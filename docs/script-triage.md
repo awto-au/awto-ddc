@@ -3,6 +3,37 @@
 Scan 2026-11-22 on 2949ca69: module-name word match over tracked text files (excl. `fw/sdk`, `fw/sdk-parked`, `regdb`, `debris/`, the file itself).
 - `none` = referenced nowhere; `docs` = only from docs/*.md; `code` = from dev.py, tests, scripts, tools, fw or systemd (not listed, all kept).
 - Last commit = last non-refactor commit date; author = first commit.
+- Re-run: `./dev.py orphans` (table in tmp/tmp_audit/orphans.tsv).
+
+## Scan 2026-11-27: 20 new orphans (scripts added 2026-11-23 .. 11-25) + 4 orphaned by the deletes
+
+| script | purpose | issues | decision |
+|---|---|---|---|
+| dfe_check_equiv | host proof: DpRx1 DFECheck lane-helper merge == originals | #300 (closed) | deleted (last 7ef8410b) |
+| dptx_lane_equiv | host proof: merged eDP lane Adjust == 8 per-lane originals | #295 (closed) | deleted (last 60272f9f) |
+| pdata_exint_equiv | proof: pData_EXINT -> locals rewrite changed nothing else | #328 (closed) | deleted (last 1ca13b6d) |
+| freeze_trials | freeze a failed 4K60 pass, try SDK-value register candidates | #26 (closed) | deleted (last 85672132) |
+| branch_status | branches with commits outside wb-p14ui (retired line) and main | - | deleted (last 49b518e1) |
+| tp_check_equiv | host proof: Tp1/Tp2Check_EXINT0 lane-loop merge == originals (orphaned by dfe_check_equiv) | #299 (closed) | deleted (last 261cb255) |
+| dpll_hold | DPLL fine-offset sweep on a frozen 4K60 pass (orphaned by freeze_trials) | #26 (closed) | deleted (last 7f550a14) |
+| freeze_dump | dump every scaler page of a frozen failed pass over 0x35 (orphaned by freeze_trials) | #26 | keep (generic) |
+| regs_diff4k | diff two tmp/regs dumps register by register with regdb names | #26 | keep (generic) |
+| aux_traffic | read-only DP AUX EDID reads for the TMDS PHY event-loss test | #256* | keep |
+| aux_window_sim | DPTx AuxRead / AuxWrite poll window per image in the sim | #295 | keep |
+| ctemp_regs | colour-temperature presets -> CTS coefficients read back from a unit | #278* | keep |
+| ctemp_sim | colour-temperature presets in fw_sim | #278* | keep |
+| dptx_lt_sim | eDP link training in the sim with a DPCD sink model | #295 | keep |
+| drm_conn_prop | read-only DRM connector properties (Broadcast RGB, max bpc) | - | keep |
+| gen_flash_wren | ScalerFlashWREN per-chip table generator + host proof | #296 | keep (generator) |
+| hot_data | rank small XSEG objects by `mov dptr` loads: `__data` candidates | #335* | keep |
+| kc_asmdiff | per-function diff of two compiler asm trees (tmp/runs/<tag>) | awto-sdcc#25 | keep |
+| mem_map | flash memory map of an image as one HTML page | - | keep |
+| port_status | per-port status word of a running unit over the debug link | #323* | keep |
+| review_list | one page of issues waiting for Dan (needs-dan / needs-test / ready-to-close) | - | keep |
+| sdcc_mem_report | RAM allocation report of an SDCC -S tree | #8 | keep |
+| sdk_park_funcs | park whole-feature `#if` function blocks to fw/sdk-parked | #305 | keep |
+| sim_pcprofile | PC sampling over a sim time window | #216 | keep |
+| warn_shift | re-key fw/warn_policy.tsv rows after SDK lines moved | - | keep |
 
 ## Referenced nowhere (70)
 
@@ -75,7 +106,7 @@ Scan 2026-11-22 on 2949ca69: module-name word match over tracked text files (exc
 | trace_diff | 2026-11-20 | bot | Diff two fw_sim_trace.py TSVs (vendor vs ours) over DISPLAY_SETTING -> | #26 | delete |
 | unifdef_opt | 2026-11-20 | bot | Make build options unconditional: resolve `#if` on fixed option values | #165* | keep |
 | warn_policy_renum | 2026-11-20 | bot | Renumber fw/warn_policy.tsv rows whose file:line moved after code was  | - | delete |
-| worktree_review | 2026-11-20 | Dan | Review every git worktree of a repo (read only): merged into main? ahe | - | keep |
+| worktree_review | 2026-11-20 | Dan | Review every git worktree of a repo (read only): merged into main? ahe | - | deleted 2026-11-27 (superseded by `./dev.py worktree-sweep`; last 49b518e1) |
 
 `*` = issue still open. keep = open issue, reusable tool, or offline test of a kept tool (a kept test script nobody runs is a follow-up: wire into `tests/`).
 
@@ -139,5 +170,5 @@ Scan 2026-11-22 on 2949ca69: module-name word match over tracked text files (exc
 | stack_high | docs/history.md |
 | startup_clear_cost | docs/flash-sector-churn.md |
 | vlc_probe | README.md, docs/osd.md |
-| worktree_prune | docs/history.md |
+| worktree_prune | docs/history.md (deleted 2026-11-27, superseded by `./dev.py worktree-sweep`; last 49b518e1) |
 | xdata_churn_probe | docs/flash-sector-churn.md |

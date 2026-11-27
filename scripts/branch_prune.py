@@ -10,7 +10,7 @@ usage: branch_prune.py [--apply] [--contained-only] [--worktrees] [--keep NAME .
   --worktrees: a contained branch's worktree no longer makes it active; the folder is moved to the wastebasket
     /mnt/2tb/wastebasket/awto-ddc-worktrees-<stamp>/ (its tmp/ holds images, logs) and the branch pruned. --keep wins.
   Branches only on origin are handled the same. Nothing is lost: contained commits live on, dead ends keep a tag.
-  Without --apply: report only. Writes via gh_claudia (agent identity). Report of commits outside the base: branch_status.py.
+  Without --apply: report only. Writes via gh_claudia (agent identity). Worktrees: ./dev.py worktree-sweep.
 Log: ./tmp/logs/branch_prune.log
 """
 import argparse
