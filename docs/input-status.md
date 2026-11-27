@@ -1,6 +1,6 @@
 # Input selector status, sync / power-on log (#139)
 
-Firmware: branch `wb-p14ui-sync` (`/mnt/2tb/git/awto-ddc-sync`); rtdfw branch `ui-sync` (`/mnt/2tb/git/awto-rtdfw-sync`, registry row 110).
+Firmware: `fw/osd/console.c` (selector, console), `fw/log/sync.c` (log); registry row 110 `console_mode` in `fw/rtdfw/settings/registry.tsv`.
 Sim test: `scripts/sync_sim.py`; selector checks in `scripts/key_sim_test.py`; host decoder `scripts/sync_log.py`, `rtd_diag.py --sync`.
 
 ## Selector (fw/osd/console.c)

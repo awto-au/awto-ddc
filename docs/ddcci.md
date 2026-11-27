@@ -3,7 +3,7 @@
 - Transport: DDC/CI 0x37 on the spare IIC engine IIC_1, polled from the main loop (`fw/ddcci/ddcci.c`, #60);
   the debug slave 0x35 stays on the main engine. kvm2e config: `-D _AWTO_DDCCI_FIXCH=2 -D _AWTO_DBG_FOLLOW=_OFF`.
 - DDC/CI and the debug slave sit on the DDC channel of the selected port (D1 = DDC1 = DP AUX I2C, D2 = DDC2, D3 = DDC3); the channel moves at the input select (VCP 0x60, test cmds, selector), and again at ACTIVE. DP AUX I2C reaches 0x37 / 0x35 the same as an HDMI DDC bus (unit 2, Intel DP-1).
-- Content: the settings registry (#67). `AwtoDdcRegistry` hands get / set / save / capabilities to awto-rtdfw `vcp.c`.
+- Content: the settings registry (#67). `AwtoDdcRegistry` hands get / set / save / capabilities to `fw/rtdfw/awto/settings/vcp.c`.
   Codes, values and the capabilities string: [settings.md](settings.md) (generated, column VCP).
 - Requests answered in the main-loop pass that sees them; set has no reply (MCCS). Save (0x0C) writes the NVRAM record.
 
@@ -18,7 +18,7 @@
 | D6 | power mode: get = firmware power state (01 on, 04 off); set 01 on, 02..05 power saving | row power_mode |
 | E0 / E1 | registry id select / value of the selected row (every row) | vcp.c |
 | E2 / E3 | schema (read) / 1 confirm risky, 2 save, 3 all defaults | vcp.c |
-| E4 / E5 | menu command (op << 8 \| arg, awto-rtdfw menu.h) / cursor item (read) | vcp.c |
+| E4 / E5 | menu command (op << 8 \| arg, `fw/rtdfw/awto/include/menu.h`) / cursor item (read) | vcp.c |
 | E6..FF | direct manufacturer codes of our rows (fast switch, panel T3, ...); free: E8, F5 (retired rows) | rows |
 | E9 | host time (#157): table write (0xE7) = set; get: max = syncs since boot, cur = drift ms (int16) | fw/ddcci/ddcci.c |
 
