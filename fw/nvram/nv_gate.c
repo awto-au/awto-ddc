@@ -55,8 +55,7 @@ bit AwtoNvDefer(BYTE ucId, BYTE *pucData)
         if(((g_stAwtoNv.ucMask & AWTO_NV_BRI) != 0) && (s_ucNvBriId != ucId))
         {
             g_stAwtoNv.ucWhy = AWTO_NV_WHY_SNAP;    // another source's values wait: this one is written now (no nesting)
-            AwtoSyncPush(AWTO_SYNC_EV_NV, AWTO_NV_LOG_ARG(AWTO_NV_WHY_SNAP), 0);
-            AwtoSyncPush(AWTO_SYNC_EV_NV, AWTO_NV_LOG_SNAP2, 0);       // its second line
+            AwtoSyncPush(AWTO_SYNC_EV_NV, AWTO_NV_LOG_ARG(AWTO_NV_WHY_SNAP), 0);   // one line (Dan 2026-11-27, #359)
             return _FALSE;
         }
         s_ucNvBriId = ucId;
@@ -68,8 +67,7 @@ bit AwtoNvDefer(BYTE ucId, BYTE *pucData)
         if(((g_stAwtoNv.ucMask & AWTO_NV_CT) != 0) && (s_ucNvCtId != ucId))
         {
             g_stAwtoNv.ucWhy = AWTO_NV_WHY_SNAP;
-            AwtoSyncPush(AWTO_SYNC_EV_NV, AWTO_NV_LOG_ARG(AWTO_NV_WHY_SNAP), 0);
-            AwtoSyncPush(AWTO_SYNC_EV_NV, AWTO_NV_LOG_SNAP2, 0);       // its second line
+            AwtoSyncPush(AWTO_SYNC_EV_NV, AWTO_NV_LOG_ARG(AWTO_NV_WHY_SNAP), 0);   // one line (Dan 2026-11-27, #359)
             return _FALSE;
         }
         s_ucNvCtId = ucId;
@@ -120,15 +118,14 @@ static void AwtoNvGroup(BYTE ucG)                   // after a group's saves: di
 
 #define AWTO_NV_SAT(v, m)               (((v) > (m)) ? (m) : (v))
 
-// Two sync lines per flush, after it: why, then (fmt nvw) what was written, or "nothing changed"
+// One sync line per flush, after it: why + (fmt nvw) what was written, or "nothing changed" (Dan 2026-11-27, #359: was two lines)
 static void AwtoNvLog(BYTE ucWhy)
 {
     s_usNvT0 = (WORD)AwtoMs() - s_usNvT0;
     s_usNvEr0 = g_stAwtoNv.usErase - s_usNvEr0;
     s_usNvOps0 = g_stAwtoNv.usOps - s_usNvOps0 - s_usNvEr0;    // programs
     s_usNvBy0 = g_stAwtoNv.usBytes - s_usNvBy0;
-    AwtoSyncPush(AWTO_SYNC_EV_NV, AWTO_NV_LOG_ARG(ucWhy), 0);                  // line 1: why (Dan: two lines)
-    AwtoSyncPush(AWTO_SYNC_EV_NV, AWTO_NV_LOG_RESULT, ((DWORD)s_ucNvDone << 27) |
+    AwtoSyncPush(AWTO_SYNC_EV_NV, AWTO_NV_LOG_FLUSH(ucWhy), ((DWORD)s_ucNvDone << 27) |
                  ((DWORD)AWTO_NV_SAT(s_usNvEr0, AWTO_NV_LOG_ER_MAX) << 25) | ((DWORD)AWTO_NV_SAT(s_usNvOps0, AWTO_NV_LOG_PR_MAX) << 19) |
                  ((DWORD)AWTO_NV_SAT(s_usNvBy0, AWTO_NV_LOG_B_MAX) << 9) | AWTO_NV_SAT(s_usNvT0, AWTO_NV_LOG_MS_MAX));
 }

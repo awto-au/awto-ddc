@@ -62,15 +62,14 @@ D4	02	ms	NVRAM save end (since the last poke %)	flash
 D4	03	ms	flash erase start (since the last poke %)	flash
 D4	04	ms	flash erase done (since the last poke %)	flash
 D4	05	ms	NVRAM page move (since the last poke %)	flash
-D4	11	-	NVRAM flush (gate open)	flash
-D4	12	-	NVRAM write forced at max wait ({AWTO_NV_FORCE_MS/1000}s)	flash
-D4	13	-	NVRAM flush (power off / saving entry)	flash
-D4	14	-	NVRAM flush (menu / selector close)	flash
-D4	15	-	NVRAM flush (test cmd 0x3D)	flash
-D4	16	-	NVRAM write outside the gate	warning
-D4	21	-	NVRAM:a second BriCon / ColorProc item while one waits, written at once by the SDK save	flash
-D4	17	-	NVRAM flush (DDC/CI save settings)	flash
-D4	20	nvw	NVRAM %	flash
+D4	16	-	NVRAM write outside the gate:a second BriCon / ColorProc item while one waits, written at once by the SDK save	warning
+D4	31	nvw	NVRAM flush (gate open): %	flash
+D4	32	nvw	NVRAM write forced at max wait ({AWTO_NV_FORCE_MS/1000}s): %	flash
+D4	33	nvw	NVRAM flush (power off / saving entry): %	flash
+D4	34	nvw	NVRAM flush (menu / selector close): %	flash
+D4	35	nvw	NVRAM flush (test cmd 0x3D): %	flash
+D4	36	nvw	NVRAM write outside the gate: %	warning
+D4	37	nvw	NVRAM flush (DDC/CI save settings): %	flash
 D4	0C	n	flash:type % found by the SDK (tFlashInformation index:24 = MX25L8006E, 254 = none)	flash
 D5	*	n	(the {AWTO_SYNC_REPEAT_LINES} lines above repeated % more times)
 D6	*	portx	wake by the SDK source detect, not our poll (poll state %)
