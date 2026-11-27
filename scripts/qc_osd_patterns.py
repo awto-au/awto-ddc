@@ -43,16 +43,16 @@ def tables(src: str) -> dict:
 
 
 def glyphs(data: bytes, w: int, h: int, bpp: int) -> list:
-    """Multi-bit glyph = bpp bit planes, each stored like a 1-bit glyph (w * h / 24 words, 24-bit words low byte first, MSB plane
-    first). Pixel value = planes read MSB-first. Evidence: Realtek's own 2 / 4 bpp icons decode to clean pictures this way and
-    to noise with row-major packed pixels (pack_unit / unpack_unit, which is only 'derived')."""
+    """Multi-bit glyph = bpp bit planes, each stored like a 1-bit glyph (w * h / 24 words, 24-bit words low byte first).
+    Plane k = bit k: 2-bit [hw] T9, 4-bit the same by default (OT-1 open, #263). Planes vs row-major: Realtek's icons decode
+    clean as planes, to noise as packed pixels (#227); the bit order only recolours, so the icons cannot tell it."""
     plane = w * h // 8
     unit = plane * bpp
     out = []
     for i in range(0, len(data) - unit + 1, unit):
         v = np.zeros((h, w), np.uint8)
         for p in range(bpp):
-            v = (v << 1) | np.array(V.unpack_unit(data[i + p * plane:i + (p + 1) * plane], w, h, 1), np.uint8)
+            v |= np.array(V.unpack_unit(data[i + p * plane:i + (p + 1) * plane], w, h, 1), np.uint8) << p
         out.append(v)
     return out
 

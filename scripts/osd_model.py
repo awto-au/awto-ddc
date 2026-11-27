@@ -117,7 +117,7 @@ class Opt:
     win_rotate: bool = False         # windows with ADR9[0] follow the auto rotation of the font block
     pg_toggle: str = "delta"         # pattern generator toggle: alternate between init and init + delta
     fontmask_unit: str = "cell"      # 3A45..4C row / column unit: map row index / character cell index
-    plane4_lsb: bool = False         # 4-bit glyph plane order: False = first plane is the MSB (QC icons), True = LSB as measured for 2-bit (OT-1)
+    plane4_lsb: bool = True          # 4-bit glyph plane order: True = first plane is bit 0 as the 2-bit hw result (T9); False = MSB first (OT-1, #263)
     round_circle: bool = True        # round-corner pattern tables all zero: quarter circle of the pattern size
 
 
@@ -482,7 +482,7 @@ def decode_char(w: list[int]) -> dict:
     1-bit: B0[7:6]=01, B0[5] = id bit 8 (font 256..511), B0[4:0] = width px; B2 = fg<<4|bg [SDK].
     2-bit: B0[7:6]=10, no width field (12 px); the 4 colours are spread over B0 and B2 (SDK OsdFontPut2Bit packing):
            B0 = 1 c0[3] c1[3] c3[2:0] c0[2];  B2 = c0[1:0] c2[2:0] c1[2:0];  pixel value v selects colour c<v> [SDK, derived]
-    4-bit: B0[7:6]=11, layout not known: decoded as kind 4bit, drawn as nothing."""
+    4-bit: B0[7:6]=11, B0[5:0] = background colour, B2 = palette-set flags [SDK]; pixel value v = palette index v (glyph_levels4)."""
     b0, b1, b2 = w
     kind = {0: "blank", 1: "1bit", 2: "2bit", 3: "4bit"}[b0 >> 6]
     if kind == "2bit":
@@ -524,8 +524,8 @@ def glyph_bits(st: OsdState, g: dict, gid: int) -> np.ndarray:
 
 
 def _planes(st: OsdState, base: int, n: int, lsb_first: bool = False) -> np.ndarray:
-    """n bit planes, each stored like a 1 bpp glyph (9 words). lsb_first: plane k = bit k (2-bit, unit 3 ladder, docs/osd-hw-tests.md T9);
-    else MSB plane first (4-bit: from Realtek's QC icons only, awto-ddc#227, not seen on a unit)."""
+    """n bit planes, each stored like a 1 bpp glyph (9 words). lsb_first: plane k = bit k (2-bit: unit 3 ladder, docs/osd-hw-tests.md T9;
+    4-bit by default the same, OT-1 open, #263); else the first plane is the MSB."""
     v = np.zeros((GH, GW), np.uint8)
     for k in range(n):
         by = bytes(b for w in range(9) for b in st.font.get(base + 9 * k + w, [0, 0, 0]))
@@ -540,7 +540,7 @@ def glyph_levels2(st: OsdState, g: dict, gid: int) -> np.ndarray:
     return _planes(st, g["font_base"] + 18 * (off2 + gid), 2, lsb_first=True)
 
 
-def glyph_levels4(st: OsdState, g: dict, gid: int, lsb_first: bool = False) -> np.ndarray:
+def glyph_levels4(st: OsdState, g: dict, gid: int, lsb_first: bool = True) -> np.ndarray:
     """4-bit glyph: 36 words at font_base + 36 * (char_sel_4bit_offset + id) [QC: offset 0, ICON_4BIT(0) = 38]."""
     off4 = (st.reg(FRAME + 0x21) & 1) << 8 | st.reg(FRAME + 0x23)
     return _planes(st, g["font_base"] + 36 * (off4 + gid), 4, lsb_first)

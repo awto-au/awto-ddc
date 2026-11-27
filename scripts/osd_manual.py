@@ -234,12 +234,12 @@ def f_text_2bit():
 
 
 def f_text_4bit():
-    s = Scene("4-bit chars", "[sdk-hyp: planes MSB first]")
+    s = Scene("4-bit chars", "[derived: plane k = bit k, OT-1]")
     cells = [[0xC0 | 10, g, 0] for g in range(3)]
     s.map([cells, cells], load_text=False)
     for g in range(3):
-        for p in range(4):                                    # plane p = bit 3 - p of the value; value = column position + g
-            rows = [sum((((x + 1 + g * 4) % 16 >> (3 - p)) & 1) << (11 - x) for x in range(12)) for y in range(GH)]
+        for p in range(4):                                    # plane p = bit p of the value (as 2-bit, T9); value = column position + g
+            rows = [sum((((x + 1 + g * 4) % 16 >> p) & 1) << (11 - x) for x in range(12)) for y in range(GH)]
             for k, wd in enumerate(words_of(rows)):
                 s.st.font[s.gbase + 36 * g + 9 * p + k] = wd
     s.r(0x24, 0).r(0x25, 10).r(0x26, 10)
@@ -500,7 +500,7 @@ FEATURES: list[tuple] = [
     ("zone_1", "display zone left", "3A02[2:1]=01", "spec-model", f_zone_1),
     ("zone_2", "display zone right", "3A02[2:1]=10", "spec-model", f_zone_2),
     ("text_2bit", "2-bit characters", "char B0[7:6]=10, 3A21..22", "hw", f_text_2bit),
-    ("text_4bit", "4-bit characters", "char B0[7:6]=11, 3A21, 3A23", "sdk-hyp", f_text_4bit),
+    ("text_4bit", "4-bit characters", "char B0[7:6]=11, 3A21, 3A23", "derived", f_text_4bit),
     ("blank_cells", "blank cells", "char B0[7:6]=00", "sdk-hyp", f_blank_cells),
     ("palette", "palette", "0x6E/0x6F", "spec", f_palette),
     ("win_solid", "window solid", "WINn_ADR1..3", "hw", f_win_solid),

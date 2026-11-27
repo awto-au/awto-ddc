@@ -36,7 +36,7 @@ hlw_video_highlight	0x0060, 0x0061, 0x006C[6]	no	spec		unmodelled	OT-18		RGB rec
 font_1bit	char B0[7:6]=01	yes	hw	test_font_1bit,test_render_pixels	modelled		font_1bit	bg index 0 = transparent
 font_width_zone	char B0[4:0], FRAME_CTRL_02[2:1]	yes	databook	test_font_width_and_zone	modelled	C-NARROW	font_width	minimum width < 4 px unknown
 font_2bit	char B0[7:6]=10, FRAME_CTRL_21..22	yes	hw	test_font_2bit_plane_order,test_font_2bit_offset,test_char_2bit_colours_roundtrip	modelled		font_2bit	plane A = low bit
-font_4bit	char B0[7:6]=11, FRAME_CTRL_21[0], FRAME_CTRL_23	option	sdk-hypothesis	test_font_4bit_planes	spec-model	OT-1		option plane4_lsb for the plane order
+font_4bit	char B0[7:6]=11, FRAME_CTRL_21[0], FRAME_CTRL_23	option	unknown	test_font_4bit_planes	spec-model	OT-1		plane k = bit k as the 2-bit hw result (T9); option plane4_lsb=False = MSB first
 font_4bit_bg_select	FRAME_CTRL_07[2]	no	unknown		unmodelled	C-F4B		regdb default byte2[1:0] contradicts the SDK byte0 + photo; model uses byte0
 font_blank	char B0[7:6]=00, FRAME_CTRL_33[5]	yes	databook	test_font_blank_and_blank_color_enable	modelled	OT-7	font_blank	blank_color_en clears colour bits 5:4
 font_24x36	FRAME_CTRL_43[6]	option	unknown	test_font_24x36_mode	spec-model	OT-8;C-24X36		layout guessed, decodes jumbled on the QC data
