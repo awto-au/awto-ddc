@@ -1432,7 +1432,7 @@ extern void osd_tc_show(unsigned char ucOn);
 extern void osd_tc_close(void);
 extern void osd_tc_bar(unsigned char ucWin, unsigned int usX0, unsigned int usY0, unsigned int usX1, unsigned int usY1, unsigned char ucColour);
 #define AWTO_SYNC_EV_EDID                                       0xE7    // arg = port: the source read the EDID (awake; the power saving reads are the wake lines)
-#define AWTO_SYNC_EV_HPD                                        0xFA    // arg AWTO_HPD_LINE = HPD pins changed (fmt pins); arg 2 = EDID channel enabled (value = HPD pin mask, bit n = D(n+1)); 3 / 4 = EDID SRAM load start (value = HPD pin mask) / end (value = ms it took)
+#define AWTO_SYNC_EV_HPD                                        0xFA    // arg AWTO_HPD_LINE = HPD pins changed (fmt pins); arg 2 = EDID channel enabled (value = HPD pin mask, bit n = D(n+1)); 3 = EDID SRAM load, one line at its end (value = HPD pin mask at the start << 16 | ms it took)
 #define AWTO_HPD_LINE                                           0x05    // FA arg: HPD edges of one poll, value = changed mask << 8 | levels (bit n = D(n+1))
 #define AWTO_SYNC_EV_PS_DDC                                     0xDD    // arg = port: SDK DDC handshake in power saving, gated (once per sleep)
 #define AWTO_SYNC_EV_PS_AUX                                     0xDA    // arg = port: SDK DP AUX toggle in power saving, gated (once per sleep)

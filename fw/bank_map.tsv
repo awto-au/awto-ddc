@@ -863,7 +863,7 @@ fn	_AwtoSyncConPoll	5	0x4a84	274
 fn	_AwtoSyncDetect	5	0x878f	1036
 fn	_AwtoSyncDisplay	5	0x1af2	483
 fn	_AwtoSyncDwell	0	0x9a4b	78
-fn	_AwtoSyncEdidLoad	5	0x8b9b	113
+fn	_AwtoSyncEdidLoad	5	0x0a67	138
 fn	_AwtoSyncEdidOn	0	0x9a99	49
 fn	_AwtoSyncFormat	0	0x486e	55
 fn	_AwtoSyncFreq	5	0x8c0c	132
