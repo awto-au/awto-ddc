@@ -1,7 +1,8 @@
 """Exact fast-forward of the delay routines (fastmachine.install_delay_ffwd): the machine state with the hook equals the interpreted one.
 
 Per count 0..255 of AwtoDelayLoops and AwtoDelayXus (several timer phases, Timer2 IRQs inside the window) and a boot + 3 s run: clk, cycles,
-instructions, IRAM, SFR, the XDATA pool, wall_ms, Timer2 count must match exactly. Offline, --slow. Image: fixture fw_image (scripts/test_image.py).
+instructions, IRAM, SFR, the XDATA pool, wall_ms, Timer2 count must match exactly (--slow). Hook shape vs the image's code: every run (#342).
+Image: fixture fw_image (scripts/test_image.py).
 """
 from __future__ import annotations
 
@@ -26,7 +27,6 @@ def _use_image(fw_image):
     IMG = fw_image.stem
 
 
-pytestmark = [pytest.mark.slow, pytest.mark.xfail(reason="awto-ddc#342: install_delay_ffwd does not match the current AwtoDelayLoops code")]
 PAD = 0x0006       # code address never executed here: a stub on it stops the run (as delay_sim.replay)
 
 
@@ -74,12 +74,31 @@ def call(bus, entry, setup, off):
     return saved
 
 
+def test_hook_follows_the_image_code(fw_image):
+    """the tree image's delay routines decode (drift in fw/timer/delay.c fails here, not as a silently unaccelerated sim); a changed loop refuses"""
+    import fastmachine as FM
+    import fw_sim as S
+    img = fw_image.bin.read_bytes()
+    syms, _ = S.parse_map(fw_image.map.read_text(errors="replace"), img)
+    sites = {s["kind"]: s for s in FM.delay_ffwd_sites(img, syms)}
+    assert set(sites) == {"loops", "xus"}, sites
+    for s in sites.values():
+        assert img[s["pc"]] == 0xD8 | s["rn"] and img[s["pc"] + 1] == 0xFE, s
+    bad = bytearray(img)
+    bad[sites["xus"]["pc"] + 2] = 0x00                  # outer djnz gone
+    with pytest.raises(ValueError, match="AwtoDelayXus"):
+        FM.delay_ffwd_sites(bytes(bad), syms)
+
+
+@pytest.mark.slow
 def test_every_count_of_both_routines_state_identical():
+    import fastmachine as FM
     bus = machine()
     m, c = bus.m, bus.m.core
     loops, xus = sym(bus, "AwtoDelayLoops"), sym(bus, "AwtoDelayXus")
-    callv = c.code[loops + 2]            # mov I,Call: 85 <Call> <I>
-    cnt = c.code[xus + 7]                # djnz Counter,rel at xus + 6
+    sites = {s["kind"]: s for s in FM.delay_ffwd_sites(c.code, m.sym)}
+    callv = c.code[sites["loops"]["pc"] - 1]            # mov Rn,Call: A8+n <Call>
+    cnt = sites["xus"]["counter"]                       # djnz Counter,rel
     snap = bus.snapshot()
     m.install_delay_ffwd()
     for n in range(256):
@@ -96,6 +115,7 @@ def test_every_count_of_both_routines_state_identical():
     m._ff_on = True
 
 
+@pytest.mark.slow
 def test_scenario_stays_within_the_stop_granularity_noise():
     """Whole-run equality is not asserted: the sim's Python models see time at run-chunk stops, so ANY extra stop (the hook's own, with the
     skip switched off) moves the timeline by ~1-2 ms over a boot (measured 2026-11-19: plain vs hook installed but off 1.6 ms, off vs on 1.2 ms).
