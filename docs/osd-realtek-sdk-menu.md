@@ -2,7 +2,7 @@
 
 - **Not** Dahua's original menu: this is Realtek's demo UI from the SDK. Naming: [osd.md](osd.md#naming).
 - **Built out of the default image since 2026-11-11** (#120). Nothing opens the 9-icon menu; System > Realtek menu and
-  "Menu key opens" retired (registry ids 93 / 64, `awto-rtdfw` 9604103).
+  "Menu key opens" retired (registry ids 93 / 64, 9604103 in the imported `fw/rtdfw` history).
 - Re-enable: `-D _AWTO_REALTEK_MENU=_ON` (`RL6449_Project.h`, default `_OFF`; works at 6bd79ce, #129 removes the path).
 - Every setting in the table below that has an effect exists in the awto menu (coverage check in #120, 2026-11-11).
   Information rows (H freq, pixel clock, HDCP) added in 73e48c4.
@@ -24,14 +24,14 @@ compiled source tree (tmp/sdcc-port/src of the p14sc3 line). Every row here is a
 
 | Page | Item | Range (shown) | Real range | Default | Effect on this build |
 |---|---|---|---|---|---|
-| Picture | Backlight | 0-100 % | 30-255 PWM | 128 | PWM4 duty |
+| Picture | Backlight | 0-100 % | 30-255 PWM | registry `brightness` (`AWTO_SET_DEF_BRIGHTNESS`, [settings.md](settings.md); #355) | PWM4 duty |
 | Picture | Brightness | 0-100 % | 312-712 | 512 | colour offset |
 | Picture | Contrast | 0-100 % | 1248-2848 | 2048 | contrast x colour-temp gain |
 | Picture | Sharpness | 0-4 | | 2 | greyed, compiled out |
 | Display | Auto, H/V pos, clock, phase, rotate, latency, freeze | | | | VGA-only or compiled out: page unreachable |
 | Color | Panel uniformity | on/off | | on | none; blocks Gamma/PCM while on |
 | Color | Gamma | off/1.8/2.0/2.2/2.4 | | off | output gamma LUT |
-| Color | Color temp | 9300/7500/6500/5800/sRGB/User | | 6500 | preset gains from fw/colour_temp.tsv (#278); presets load from the table, User from the stored value |
+| Color | Color temp | 9300/7500/6500/5800/sRGB/User | | registry `colour_temp` (`AWTO_SET_DEF_COLOUR_TEMP`, [settings.md](settings.md); #355) | preset gains from fw/colour_temp.tsv (#278); presets load from the table, User from the stored value |
 | Color | User R/G/B | 0-255 | x16 in 12 bit | 128 | gains (User only) |
 | Color | Color effect (+ six-axis hue 0-100 / sat 0-200 per R Y G C B M) | 6 options | | Standard | stored only |
 | Color | Color demo | off/type 1-5 | | off | stored only |
