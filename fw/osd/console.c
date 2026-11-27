@@ -869,6 +869,7 @@ void AwtoConStepRun(void)
     else
     {
         AwtoTextShow();
+        osd_tc_b_keep(0);                       // a kept map B card on again (#357)
         g_ucAwtoConStep = 0;
         AwtoSyncPush(AWTO_SYNC_EV_CONSOLE, 1, (WORD)AwtoMs() - s_usConStepMs);
         AWTO_PSTG(AWTO_PSTG_CON_SHOW);
@@ -2547,6 +2548,7 @@ static void AwtoSyncConPoll(void)
         d_s_ucConOpen = 0;
         if(ucP == AWTO_CON_MAIN)
         {
+            osd_tc_b_keep(g_ucAwtoMapB);        // the map B card stays through this redraw (#357); the last step ends the keep
             AWTO_CON_STEP_BEGIN();              // stepped as at power-on (#311)
         }
         else
