@@ -894,7 +894,17 @@ def _flash_direct(extra: list[str]) -> int:
         if keep and rec_now.get("map"):
             _settings_restore(u, bus, keep, rec_now["map"], rec_now.get("settings_table_py"))
         _unit_settings(u, bus, rec_now["map"])
+        _host_time_now(_n)
     return rc
+
+
+HOST_TIME_WAIT_S = 5    # unit answers DDC/CI ~1.5 s after its reset; 5 s = the repo's monitor-wait limit; expiry: one log line
+
+
+def _host_time_now(n: str) -> None:
+    """after a flash / reset: the fw clock restarted, so one host-time send to that unit only (#157); failure never fails the caller"""
+    if _py("host_time.py", "--unit", n, "--once", "--wait", HOST_TIME_WAIT_S):
+        log(f"host time: unit {n} not synced after the reset (tmp/logs/host_time.log); the service sends next period", "WARN")
 
 
 def _flash_warn(bus: int) -> None:
@@ -1067,7 +1077,10 @@ def cmd_reset(extra: list[str]) -> int:
     _layout_watch()
     _n, u = _unit(extra)
     _done(extra, "reset")
-    return _py("rtd_reset.py", _bus(u), "--serial", u["serial"])
+    rc = _py("rtd_reset.py", _bus(u), "--serial", u["serial"])
+    if rc == 0:
+        _host_time_now(_n)
+    return rc
 
 
 def _dbg_py(bus: int, script: str, *args, keep_console: bool = False, **kw) -> int:
@@ -1228,7 +1241,7 @@ def cmd_alert(extra: list[str]) -> int:
 
 
 @command("boot / sync log ring of a running unit, decoded (scripts/sync_log.py, #139) through the GUI app's control port (#276); --whole = all episodes; --json = machine form; --dram = the DRAM log image's DDR history (all boots; --last K default 64, --boot B, --all; ~25 entries/s over the debug link); --follow [--save] [--interval S] = poll and append to tmp/logs/units/<serial>-sync.log (scripts/unit_log.py)",
-         args="[--unit N] [--map F] [--whole] [--delta] [--json] [--dram [--last K | --boot B | --since ABS | --all]] [--follow --save --interval S --once] [--direct]", kind="action")
+         args="[--unit N] [--map F] [--whole] [--json] [--dram [--last K | --boot B | --since ABS | --all]] [--follow --save --interval S --once] [--direct]", kind="action")
 def cmd_synclog(extra: list[str]) -> int:
     if _flag(extra, "--follow"):                  # log-keep: poll the ring, append to tmp/logs/units/<serial>-sync.log (scripts/unit_log.py)
         _flag(extra, "--save")                    # saving is what follow does

@@ -4,7 +4,8 @@
 usage: AWTO_SIM_CORE=fast con_wrap_sim.py BIN [--map MAP] [--out tmp/len/con_wrap]
 Scenario: cold boot 1080p60 (console auto-open), POWER off / on (test cmd 0x3E), power saving (VCP D6 = 4), SOURCE key (the\nwake poll may wake first: power NORMAL is the check).
 After each phase, with the main page open, the shown rows are read from the OSD model and grouped into lines (a row starting
-' +' and its continuation: AWTO_LOG_TXT0 spaces, then text). FAIL:
+with the delta column ' +xxx ms:' and its continuation: AWTO_LOG_TXT0 spaces, then text; an episode start is '-- text ---').
+Delta column (Dan 2026-11-27): each line's delta is checked against the ring (sync_log.deltas). FAIL:
 - a group of more than two rows, or a group whose text (time column dropped, continuation joined) is not a ring line: a clipped
   row is a prefix only, so it fails;
 - a ring line of the phase that should be in view (the newest lines that fit the view) missing from the console.
@@ -32,7 +33,7 @@ from _repo import ROOT
 
 LOG = ROOT / "tmp/logs/con_wrap_sim.log"
 LOG_COL = 1            # fw/osd/console.c AWTO_LOG_COL (main page)
-TXT0 = 11              # text column (fw/osd/console.c AWTO_LOG_TXT0): continuation rows start here; checked against the tree below
+TXT0 = 9               # text column (fw/osd/console.c AWTO_LOG_TXT0): continuation rows start here; checked against the tree below
 _CON = (ROOT / "fw/osd/console.c").read_text()
 ROW_W = int(re.search(r"^#define AWTO_CON_COLS\s+(\d+)", _CON, re.MULTILINE).group(1)) - 3   # AWTO_LOG_W_MAIN = COLS - 3 cells
 POWER_KEY, K_SOURCE = 0x3E, 0x05
@@ -45,6 +46,8 @@ NV_IDLE_S = 4.2        # boot -> first NVRAM flush done: ACTIVE stable 3 s + flu
 # 24-bit ms; sysreq 13 by 0E, outcome 04; backlight off deferred, requester 07
 LONG = ((0x13, 0x4A, (0x8E << 24) | 0xFFFFFF), (0x14, 0x13, (0x0E << 8) | 0x04), (0x10, 0x0F, 0x07))
 PORT = re.compile(r"\b(DP-1|HDMI-\d+|Input D\d+|D\d)\b")
+HEAD = re.compile(r" ?([+-][ \d]{3} ms|[+-][ \d]\d\.\d s|[+-][ \d]{4} [sh]| {7}):")   # the console's delta column (sync_log.fmt_delta)
+RULE = re.compile(r"^-- (.*?) -+$")      # an episode start row: "-- text ---..." to the row end
 
 
 def say(s: str):
@@ -103,6 +106,14 @@ class Sim:
         self.seen |= {norm(x.split(":", 1)[1]) for x in lines}
         return lines
 
+    def ring_deltas(self) -> dict[str, list[str]]:
+        """normalised ring text -> the delta columns the console should show for it (sync_log.deltas over the whole ring)"""
+        h, lines = SL.decode(bytes(SL.read_ring(self.m.rd, self.a_sync)), self.rows, whole=True)
+        out: dict[str, list[str]] = {}
+        for ln, (d, _) in zip(lines, SL.deltas(h["events"])):
+            out.setdefault(norm(ln.split(":", 1)[1]), []).append(SL.fmt_delta(d))
+        return out
+
     def inject(self, evs):
         """ring entries as AwtoSyncPush writes them (sync_log.inject_lines: version 3 slots, version 4 tail + sim DDR)"""
         ms = self.m.rd(0xF6D0 + SL.DIAG_T2, 2)             # ring ms = usT2Isr (diag block)
@@ -112,7 +123,7 @@ class Sim:
     def long_wraps(self) -> int:
         """LONG lines wider than a log row (" nnnnn:" + text > ROW_W): only those must wrap at this console width"""
         txt = [x.split(":", 1)[1] for x in self.ring()[-len(LONG):]]
-        n = sum(1 for x in txt if 7 + len(x.rstrip()) > ROW_W)
+        n = sum(1 for x in txt if TXT0 + len(x.rstrip()) > ROW_W)
         say(f"  long lines: {[len(x.rstrip()) for x in txt]} chars, row {ROW_W} cells: {n} must wrap")
         return n
 
@@ -130,7 +141,7 @@ class Sim:
         groups, cur = [], None
         for r in t[1:]:
             r = r[LOG_COL:]                                   # the log pane starts at map column AWTO_LOG_COL
-            if re.match(r" *\d+:", r):
+            if HEAD.match(r):
                 cur = [r]
                 groups.append(cur)
             elif cur is not None and r.startswith(" " * TXT0) and r.strip():
@@ -139,12 +150,19 @@ class Sim:
                 cur = None
         ring = [norm(x.split(":", 1)[1]) for x in self.ring()]   # host line: "nnnnn:" then the text
         known = set(ring) | self.seen
-        bad, wraps = [], 0
+        bad, wraps, rules = [], 0, 0
+        dmap = self.ring_deltas()
+        body0 = lambda g: RULE.sub(r"\1", g[0][HEAD.match(g[0]).end():].rstrip())    # after the delta column, a rule unwrapped
         for g in groups:
+            if RULE.match(g[0][HEAD.match(g[0]).end():].rstrip()):
+                rules += 1
+            col = HEAD.match(g[0]).group(1)
+            if norm(body0(g)) in dmap and col not in dmap[norm(body0(g))] and len(g) == 1:
+                bad.append(f"delta {col!r} not the ring's {dmap[norm(body0(g))]}: {body0(g)[:50]}")
             if len(g) > 2:
                 bad.append(f"{len(g)} rows: {g[0].strip()[:60]}")
                 continue
-            body = g[0].split(":", 1)[1].rstrip()                 # after the "nnnnn:" time column
+            body = body0(g)
             if len(g) == 2:
                 wraps += 1
                 cont = g[1][TXT0:].rstrip()
@@ -153,11 +171,11 @@ class Sim:
                 cands = (body,)
             if not any(norm(c) in known for c in cands):
                 bad.append(f"not a ring line (clipped?): {' | '.join(x.rstrip() for x in g)}")
-        say(f"  {name}: {len(groups)} console lines ({wraps} on two rows), {len(t) - 1} rows shown")
+        say(f"  {name}: {len(groups)} console lines ({wraps} on two rows, {rules} episode-start rules), {len(t) - 1} rows shown")
         for g in groups:
             say("    " + " / ".join(x.rstrip() for x in g))
         self.check(not bad, f"{name}: every console line whole (one or two rows, the ring's text)", "; ".join(bad[:3]))
-        head = lambda g: g[0].split(":", 1)[1].rstrip()              # first row after its "nnnnn:" time column
+        head = body0                                                 # first row after its delta column
         shown = {norm(head(g) + (" " + g[1][TXT0:].rstrip() if len(g) == 2 else "")) for g in groups}
         shown |= {norm(head(g) + g[1][TXT0:].rstrip()) for g in groups if len(g) == 2}
         newest = ring[-min(len(groups), 20):] if groups else []

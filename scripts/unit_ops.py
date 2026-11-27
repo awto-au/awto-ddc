@@ -261,7 +261,7 @@ def settings(d, extra: list[str]) -> int:
 
 
 def synclog(d, extra: list[str]) -> int:
-    flags = [f for f in ("--whole", "--delta", "--json", "--dram", "--all") if d._flag(extra, f)]
+    flags = [f for f in ("--whole", "--json", "--dram", "--all") if d._flag(extra, f)]
     for opt in ("--last", "--boot", "--since"):                      # DRAM log (docs/dram-log-design.md): newest K entries / one boot counter value
         v = d._opt(extra, opt)
         if v not in (None, True):

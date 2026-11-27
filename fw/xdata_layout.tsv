@@ -128,12 +128,12 @@ __ovl	0xe380	184	1
 flash_screen	0xe380	185	1
 RL6449_Series_GDIPhy	0xe380	252	3
 RL6449_Series_DPRx1	0xe580	0	99
-ScalerMDomain	0xe580	99	134
 sync	0xe780	37	733
+hostnote	0xe780	770	192
+ScalerMDomain	0xe780	962	135
 ScalerCommonDebug	0xe780	1285	363
 awto_settings_settings	0xe780	1648	335
 console	0xe780	1983	322
 swlog	0xe780	2305	278
 inputs	0xe780	2583	232
-hostnote	0xe780	3044	188
 OsdChange4BitColor	0xe780	3420	3

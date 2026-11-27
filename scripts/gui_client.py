@@ -281,7 +281,7 @@ def translate(name: str, extra: list[str], unit: str) -> list[tuple[str, dict]]:
             return [("save", p)]
         return [("passthrough", {**p, "name": "settings", "args": x})]
     if name == "synclog":
-        if _take(x, "--map") or "--delta" in x or any(f in x for f in ("--dram", "--last", "--boot", "--all", "--since")):     # DRAM log reads: the port has no fields for them
+        if _take(x, "--map") or any(f in x for f in ("--dram", "--last", "--boot", "--all", "--since")):     # DRAM log reads: the port has no fields for them
             return [("passthrough", {**p, "name": "synclog", "args": extra_without(extra, "--unit", "--dp", "--force")})]
         return [("synclog", {**p, "whole": _flag(x, "--whole"), "json": _flag(x, "--json")})]
     if name == "note":

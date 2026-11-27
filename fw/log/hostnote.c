@@ -164,7 +164,7 @@ __xdata DWORD g_ulAwtoDlMs;                         // ms the entry writes took,
 __xdata BYTE g_ucAwtoDlBusy;                        // DDR port busy beyond the spin: ops left pending / unread since boot (255 max; host reads it at the map symbol)
 static __xdata WORD s_usDlT;
 static __xdata BYTE s_aucDl[16];                    // burst image (entry / header), memory order
-static __xdata BYTE s_aucAtC[2][8];                 // AwtoSyncAt cache: DDR lines as 8 B ring entries
+static __xdata BYTE s_aucAtC[2][AWTO_DLOG_AT_B];    // AwtoSyncAt cache: DDR lines as tail entries (8 B ring entry + ms bits 31..16)
 static __xdata DWORD s_pulAtAbs[2];                 // their absolute index (0xFFFFFFFF = empty)
 static __xdata BYTE s_ucAtNext;
 
@@ -419,6 +419,8 @@ static BYTE AwtoDlRead(DWORD ulA, BYTE __xdata *pucOut)
     pucOut[5] = s_aucDl[7];
     pucOut[6] = s_aucDl[8];
     pucOut[7] = s_aucDl[9];
+    pucOut[8] = s_aucDl[2];                        // ms bits 31..16 at the tail entry's place (StAwtoSyncTl): the console delta
+    pucOut[9] = s_aucDl[3];
     return 1;
 }
 
@@ -427,7 +429,7 @@ static __xdata BYTE s_ucAtD;
 static __xdata BYTE s_ucAtS;
 
 #pragma place bank(5)
-BYTE __xdata *AwtoSyncAt(BYTE ucSeq)                // the ring line ucSeq (AWTO_SYNC_N back at most) as an 8 B entry; an unwritten / lost one is all 0
+BYTE __xdata *AwtoSyncAt(BYTE ucSeq)                // the ring line ucSeq (AWTO_SYNC_N back at most) as a 10 B entry (AWTO_DLOG_AT_B); an unwritten / lost one is all 0
 {
     s_ucAtD = AWTO_SYNC_BACK(g_stAwtoSync.ucSeq, ucSeq);
     if((s_ucAtD != 0) && (s_ucAtD <= AWTO_SYNC_TAIL))
@@ -451,7 +453,7 @@ BYTE __xdata *AwtoSyncAt(BYTE ucSeq)                // the ring line ucSeq (AWTO
     }
     else
     {
-        for(s_ucAtD = 0; s_ucAtD < 8; s_ucAtD++)
+        for(s_ucAtD = 0; s_ucAtD < AWTO_DLOG_AT_B; s_ucAtD++)
         {
             s_aucAtC[s_ucAtS][s_ucAtD] = 0;
         }

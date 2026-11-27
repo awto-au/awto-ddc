@@ -78,6 +78,7 @@ C0	01	-	power on	boot
 C0	02	vport	switch to %
 C0	03	vport	wake on %
 C0	04	vport	power key on, %
+C0	05	vport	picture lost on %:new search
 10	04	pby	panel on by % (accepted)
 10	05	pby	panel on by % (already on)
 10	06	pby	panel off by % (accepted)
@@ -278,6 +279,9 @@ E2	09	-	M-domain set-up:IVS wait 1
 E2	0B	n	M-domain set-up:memory check (WD ctrl0 x 256 + status0 = %)
 E2	0D	n	M-domain set-up:memory + timing gen check OK (WD ctrl0 x 256 + status0 = %)
 E2	20	n	DCLK fine tune:final offset %
+E2	21	x	M-domain set-up FAILED:memory check (P0_0C << 8 | P0_02 = %)	error
+E2	22	x	M-domain set-up FAILED:input active region changed (P0_0C << 8 | P0_02 = %)	error
+E2	23	x	M-domain set-up FAILED:display timing gen check (P0_0C << 8 | P0_02 = %)	error
 E2	FF	n	M-domain set-up:step lines stop after % this boot
 E2	FE	-	M-domain set-up:the first set-up did not finish; later passes not logged	error
 E3	01	-	frame buffer forced (test cmd 0x0C):display setting re-run

@@ -37,7 +37,7 @@ Existing sync lines stay (C1 / C6 / C2 / F0..F4 / FC / system machine); the new 
 - ACTIVE and no DONE since the last ACTIVE: write DONE, arm the health read, clear FAIL.
 - NO SIGNAL / NO SUPPORT with DONE set: write `FAILED:signal lost` (ms since ACTIVE), clear all stamps and flags: the next ACTIVE writes a new DONE (re-sync inside one episode).
 - NO SIGNAL / NO SUPPORT without DONE: FAILED once per episode (reason = last scan outcome code, `0x00` nothing detected, `0x40` no support). Search cycles in NO SIGNAL do not repeat it.
-- A new episode (switch, wake, power key) clears everything.
+- A new episode (switch, wake, power key) clears everything; picture lost (`K_LOST`) keeps it.
 
 ## Ring layout (8 B entry: id, arg, ms16, value32)
 - `EF` sdone: arg = port idx (0 = D1) | kind << 2 (0 DVI, 1 HDMI 1.4, 2 HDMI 2.0, 3 DP) | scan retries << 4 | set-ups / trainings << 6 (each 0..3). Value = scan ok ms << 20 | timing ms << 8 | PHY / link ms (0xFF none); stamps 12-bit, 0xFFF = unseen.
@@ -64,6 +64,19 @@ Existing sync lines stay (C1 / C6 / C2 / F0..F4 / FC / system machine); the new 
 - `PHY` time and `scan ok` belong to the port the search visited last before ACTIVE.
 - DP trainings count TP1 starts: a source that retrains with a new TP1 write counts each; one counted by the EXINT even before the main loop saw it.
 - A wake search that ends in POWER SAVING writes no FAILED line: the system line `wake search found no source` states it (a FAILED line there splits the system transition from its LED line: panel_sim LED gate).
+
+## Console time column and episode starts (Dan 2026-11-27)
+- Column = ms since the ring line above, 7 cells + `:` (`fw/osd/console.c` `AwtoPutDelta`, host `sync_log.fmt_delta`):
+  - up to 999 ms `+xxx ms`; up to 99.9 s `+xx.x s`; up to 9999 s `+xxxx s`; then hours `+xxxx h`; `-` = a step back (Timer2 re-base).
+  - Blank = no line above in the ring.
+  - DRAM log images: 32-bit fw ms per line (tail entry / DDR copy), gaps of any length. `_AWTO_DRAM_LOG` off: 16-bit ring times, a gap of 65.5 s or more wraps.
+- Episode start = a red row `-- text ---` to the row end (`AWTO_T_STYLE_EPOCH` = the alert style, palette `AWTO_PAL_DIAG_ALERT`). Coloured text row: the font is ASCII (no box-drawing glyph), and an OSD window per row is not available.
+- Starts and their zero (the delta on the red row):
+  - boot line (`D0`, first of the power-on episode): MCU reset = fw ms 0; lines logged before Timer2 starts are re-based and can be a few ms below 0.
+  - `C0` BEGIN switch / wake / power key / picture lost: the BEGIN itself (0). Each is pushed where the trigger is seen: VCP 0x60 / key / selector (switch), the wake poll's trigger pass or the SDK power-status change (wake), the judge pass (picture lost).
+  - Not a start: the power-on BEGIN (inside the boot episode), a switch inside an unsettled power-on / wake (value bits 31..24 = `AWTO_SYNC_BEGIN_IN`).
+- Picture lost (`AWTO_SYNC_K_LOST`, `C0 05`): `SysJudge.c` when the judge check resets ACTIVE (any cause) or DISPLAY SETTING (source unstable) to SEARCH. No console auto-open; the sync-done state stays (its `FAILED:signal lost` line comes at NO SIGNAL). The L1 hold path is unchanged (signal back = a wake episode).
+- Host: `sync_log.py` / `dram_log.py` print the same column first, then host time and `nnnnn:` (ms since the episode start); a start is printed `-- line --`.
 
 ## Gap lines (#284: where the time goes; no behaviour change)
 - `INITIAL:first exit check at Nms` / `longest gap between checks Nms` / `SDK <source|mode|OSD|other> flag set until Nms` (id 93, ms since INITIAL began, 4 ms steps): INITIAL ends when no SDK change flag is set at a judge pass; a flag line is written only for a flag seen set; a long gap = the main loop was blocked between passes (see the slow-wait / long-block lines).
