@@ -149,7 +149,7 @@ const	___str_222	7	0x08d0	58
 const	___str_223	7	0x0ee7	45
 const	___str_224	7	0x3df9	45
 const	___str_225	7	0x41cf	58
-const	___str_226	7	0x5429	30
+const	___str_226	7	0x3e7c	45
 const	___str_227	7	0x5447	58
 const	___str_228	7	0x5481	27
 const	___str_229	7	0x0e22	58
@@ -157,8 +157,10 @@ const	___str_23	7	0x0952	11
 const	___str_230	7	0x0f14	58
 const	___str_231	7	0x3e26	58
 const	___str_232	7	0x54b7	26
-const	___str_233	7	0x0f4e	26
+const	___str_233	7	0x3ea9	58
 const	___str_234	7	0x0249	26
+const	___str_235	7	0x04ae	19
+const	___str_236	7	0x0f4e	26
 const	___str_24	7	0x095d	15
 const	___str_25	7	0x096c	10
 const	___str_26	7	0x0976	13
@@ -773,6 +775,7 @@ fn	_AwtoPutNvG	7	0x79c9	100
 fn	_AwtoPutPad	7	0x5516	176
 fn	_AwtoPutPass	7	0x7a2d	231
 fn	_AwtoPutPassName	6	0x8d0b	72
+fn	_AwtoPutPins	7	0x3ee3	192
 fn	_AwtoPutReal	10	0x6c53	843
 fn	_AwtoPutSat	7	0x7b14	56
 fn	_AwtoPutSdHead	7	0x7b4c	99

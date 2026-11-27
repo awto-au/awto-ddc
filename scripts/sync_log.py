@@ -156,6 +156,8 @@ def value(fmt: str, arg: int, v: int) -> str:
         return SRC.get(v, str(v))
     if fmt == "visit":
         return sync_visit(arg, v)
+    if fmt == "pins":                                    # #359 value = changed mask << 8 | levels: "D1 low, D2 high" (console AwtoPutPins)
+        return ", ".join(f"D{i + 1} {'high' if (v >> i) & 1 else 'low'}" for i in range(3) if (v >> (8 + i)) & 1)
     if fmt == "pms":                                     # #139 value = port << 16 | ms: "D2, 188ms"
         return f"D{((v >> 16) & 0xFF) - D0}, {v & 0xFFFF}ms"
     if fmt == "psrc":                                    # value = port << 8 | source type: "D2 HDMI"
