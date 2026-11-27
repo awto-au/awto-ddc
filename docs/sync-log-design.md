@@ -80,7 +80,7 @@ Existing sync lines stay (C1 / C6 / C2 / F0..F4 / FC / system machine); the new 
 - 16-bit deltas: a version 3 delta is used only between full times it lands on exactly (C0 / D8 anchors, now); otherwise the wrap row (Dan 2026-11-27). Every version 4 (DRAM log) line has its 32-bit ms.
 - Joined rows (`AWTO_LN_PAIR`, host `JOIN_PAIRS`): a listed next line within `AWTO_LN_JOIN_MS` (3 ms: pushes of one call) shares the row after ` | `; the live draw leaves a newest group leader for one call (the next push or the OSD poll), no time wait.
   - monitor heartbeat rows (not an ADC move): `monitor: IOSC 2001 | 300/s gap 12.6ms | free 301/s busy 39% worst 1.937ms | up 1150s stk D4`;
-  - `frame buffers` + `memory`; `display frame rate` + `scaling` + `FRC width`.
+  - `frame buffers` + `memory`; `display frame rate` + `scaling` + `FRC width`; `Dn refresh` + `Dn pixel clock` (#359).
   - Delta / real time of a joined row = its first line; the next row's delta counts from the last joined line.
   - Not joined: the backlight on / pin / PWM lines (joined they still take two rows), an ADC move.
 - Console open / reopen / settle redraw = the current episode (#358): its start row first, never an older episode above it (also after a warm reset). `g_ulAwtoEpAbs` = absolute index of the start row (boot line / start BEGIN). Longer than the view: the start row from the DDR (`g_ucAwtoAtLaps` past a seq wrap) with `(N lines not shown)`, then the newest `AWTO_LOG_VIEW_N` - 1 lines (map-full redraw: `AWTO_LOG_REDRAW_N` - 1). Older episodes: `synclog --whole` / `--dram`. Cost: XDATA 9 B (EpAbs 4, laps 2, hidden count 2, jump 1), no pass cost when the console is closed.

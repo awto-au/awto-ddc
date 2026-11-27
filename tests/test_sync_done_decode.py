@@ -130,3 +130,19 @@ def test_pass_stage_ids_match_names():
     assert len(stages) == len(set(stages.values())) and max(stages.values()) < w0
     assert all(names[v] for v in stages.values()), "a stage id without a name"
     assert len(names) == w0 + 7
+
+
+def test_host_time_one_row():
+    """host time + its fw ms line: one row, joined by a space as the console draws it (#358 / #359)"""
+    evs = [(0xD7, 44, 6753, 1795757671), (0xD8, 1, 6753, 6753)]
+    texts = [S.line(ROWS, e, 0).split(":", 1)[1] for e in evs]
+    rs = S.con_rows(evs, texts, [(6753, True), (6753, True)])
+    assert len(rs) == 1 and rs[0]["text"] == texts[0] + " (fw +6753 ms, first host sync since boot)"
+
+
+def test_refresh_pixel_clock_one_row():
+    """#359 refresh + pixel clock of one display setting (same ms): one row"""
+    evs = [(0xC7, 5, 823, 59991), (0xC8, 5, 823, 593915)]
+    texts = [S.line(ROWS, e, 0).split(":", 1)[1] for e in evs]
+    rs = S.con_rows(evs, texts, [(823, True), (823, True)])
+    assert len(rs) == 1 and rs[0]["text"] == "D2 refresh 59.991Hz | D2 pixel clock 593.915MHz"
