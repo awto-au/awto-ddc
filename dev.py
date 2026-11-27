@@ -945,7 +945,7 @@ def _flash_direct(extra: list[str]) -> int:
     if rc == 5 and before is not None:      # nothing erased: the flash still holds the old image
         flash_registry.restore(u["serial"], before)
     if rc and not _log_unit_state(u, bus, img, rc):
-        _host_time_now(_n)                  # #358: a failed flash that reset the unit (not one held in ISP on a mixed image)
+        _host_time_now(_n, own_flash=True)  # #358: a failed flash that reset the unit (not one held in ISP on a mixed image)
     if rc == 0:
         rec = flash_registry.record(u["serial"], img)
         log(f"flash: recorded {rec['tag']} ({rec['sha256'][:12]}) in the shared flash record")
@@ -955,16 +955,17 @@ def _flash_direct(extra: list[str]) -> int:
         if keep and rec_now.get("map"):
             _settings_restore(u, bus, keep, rec_now["map"], rec_now.get("settings_table_py"))
         _unit_settings(u, bus, rec_now["map"])
-        _host_time_now(_n)
+        _host_time_now(_n, own_flash=True)
     return rc
 
 
 HOST_TIME_WAIT_S = 5    # unit answers DDC/CI ~1.5 s after its reset; 5 s = the repo's monitor-wait limit; expiry: one log line
 
 
-def _host_time_now(n: str) -> None:
-    """after a flash / reset: the fw clock restarted, so one host-time send to that unit only (#157); failure never fails the caller"""
-    if _py("host_time.py", "--unit", n, "--once", "--wait", HOST_TIME_WAIT_S):
+def _host_time_now(n: str, own_flash: bool = False) -> None:
+    """after a flash / reset: the fw clock restarted, so one host-time send to that unit only (#157); failure never fails the caller.
+    own_flash: called by the flash itself (an app job still holds the unit's flash lock)"""
+    if _py("host_time.py", "--unit", n, "--once", "--wait", HOST_TIME_WAIT_S, *(["--own-flash"] if own_flash else [])):
         log(f"host time: unit {n} not synced after the reset (tmp/logs/host_time.log); the service sends next period", "WARN")
 
 
@@ -1047,7 +1048,7 @@ def cmd_deploy(extra: list[str]) -> int:
     log(f"deploy: shared image verified; programming {u['serial']} EDID in sector 0x{sector_addr:x}")
     rc = _py("rtd_flash_sector.py", bus, hex(sector_addr), patched,
              "--expect-current", expected, "--write", shield=True)
-    _host_time_now(n)                       # the sector write ends with an ISP reset (#358)
+    _host_time_now(n, own_flash=True)       # the sector write ends with an ISP reset (#358)
     if rc:
         log("deploy: FIRMWARE IS PRESENT BUT PER-MONITOR EDID FAILED; retry deploy on this same bus", "FATAL")
         return rc
@@ -1077,7 +1078,7 @@ def cmd_edid(extra: list[str]) -> int:
         log(f"edid: using caller-proven physical bus {bus} for unit {n}", "WARN")
     rc = _py("rtd_flash_sector.py", bus, hex(sector_addr), patched,
              "--expect-current", expected, "--write", shield=True)
-    _host_time_now(n)                       # the sector write ends with an ISP reset (#358)
+    _host_time_now(n, own_flash=True)       # the sector write ends with an ISP reset (#358)
     if rc == 0:
         _record_unit_edid(u, img, sector_addr, patched)
         log(f"EDID complete: unit {n}, {u['serial']}", "ALERT")

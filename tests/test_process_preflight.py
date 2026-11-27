@@ -143,3 +143,16 @@ def test_host_time_nak_line(monkeypatch):
     monkeypatch.setattr(HT, "send_dbg", lambda u, b: True)
     assert HT.one("3", {"serial": "AWT26110003"}, 11) == (True, 11)
     assert any("DDC/CI 0x37 NAK" in x for x in lines)
+
+
+def test_host_time_own_flash_sends_under_its_own_lock(monkeypatch):
+    """#358: an app flash job keeps its unit lock until it ends; its own post-flash send (--own-flash) is not refused by it"""
+    import host_time as HT
+    import unit_lock
+    monkeypatch.setattr(unit_lock, "read", lambda s: {"owner": "gui-flash-1", "tool": "flash", "pid": "1"})
+    monkeypatch.setattr(unit_lock, "alive", lambda pid: True)
+    monkeypatch.setattr(HT, "send", lambda u, b: True)
+    monkeypatch.setattr(HT, "OWN_FLASH", True)
+    assert HT.one("3", {"serial": "AWT26110003"}, 11) == (True, 11)
+    monkeypatch.setattr(HT, "OWN_FLASH", False)
+    assert HT.one("3", {"serial": "AWT26110003"}, 11) == (False, 11)

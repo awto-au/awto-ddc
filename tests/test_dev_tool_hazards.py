@@ -277,7 +277,7 @@ def test_edid_recovery_uses_caller_proven_bus_without_reflashing(dev, tmp_path, 
     assert dev.cmd_edid(["--unit", "3", "--force", "--bus", "21", str(img)]) == 0
     assert calls == [("rtd_flash_sector.py",
                       [21, "0x5000", patched, "--expect-current", expected, "--write"], True),
-                     ("host_time.py", ["--unit", "3", "--once", "--wait", dev.HOST_TIME_WAIT_S], False)]   # the ISP reset restarted the fw clock (#358)
+                     ("host_time.py", ["--unit", "3", "--once", "--wait", dev.HOST_TIME_WAIT_S, "--own-flash"], False)]   # the ISP reset restarted the fw clock (#358)
 
 
 def test_dev_flash_bus_passes_identity(dev, tmp_path, monkeypatch):

@@ -170,12 +170,13 @@ def booted(u: dict, bus: int | None) -> bool:
         return False
 
 
+OWN_FLASH = False   # --own-flash: dev.py's flash sends after its own reset; its app job still holds the flash lock (#358)
 WAIT_GAP_S = 0.5    # --wait: between tries (each try = a bus scan, ~0.7 s); the unit answers DDC/CI ~1.5 s after a reset
 
 
 def one(n: str, u: dict, bus: int | None) -> tuple[bool, int | None]:
     """one send to unit n: DDC/CI, else the debug link; (ok, bus to reuse next period)"""
-    if f := flashing(u):
+    if (f := flashing(u)) and not OWN_FLASH:
         log(f"unit {n} {u['serial']}: not sent: a flash holds the unit ({f}); dev.py flash sends one after its reset")
         return False, bus
     try:
@@ -208,7 +209,10 @@ def main() -> int:
     g.add_argument("--loop", type=float, metavar="SEC", help="send every SEC seconds (Dan 2026-11-27: 300)")
     ap.add_argument("--wait", type=float, default=0.0, metavar="SEC",
                     help="--once: retry until sent or SEC elapsed (after a flash / reset; repo monitor-wait limit 5 s)")
+    ap.add_argument("--own-flash", action="store_true", help="--once from dev.py flash after its reset: its own flash lock is not a flash in progress")
     a = ap.parse_args()
+    global OWN_FLASH
+    OWN_FLASH = a.own_flash and a.once
     us = json.loads((ROOT / "scripts/devices.json").read_text())["units"]
     test = [n for n, d in us.items() if d.get("test")]
     want = [a.unit] if a.unit else (test if a.units == "test" else [x.strip() for x in a.units.split(",") if x.strip()])

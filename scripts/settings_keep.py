@@ -5,7 +5,8 @@ usage: settings_keep.py snapshot --bus B --serial S --map MAP [--table T] --out 
        settings_keep.py restore  --bus B --serial S --map MAP [--table T] --snapshot FILE
   snapshot: every stored row (flag nv, not ro) of the running image, read over the debug link: {name: raw}.
   restore:  waits for the new image to answer, then per snapshot row that still exists: a value that differs from the
-            snapshot (a registry change reset it) is written back, saved once. Rows that are gone / out of the new range /
+            snapshot (a registry change reset it) is written back, saved once; a row that held the OLD default keeps a changed new
+            default (#358: backlight_on_delay 100 -> 120 was restored to 100). Rows that are gone / out of the new range /
             new are logged, never guessed. --table = the image's own host table (tmp/fw/<tag>.settings_table.py).
   dev.py flash runs both around every flash; a failure here only warns, it never fails the flash.
 Log: ./tmp/logs/settings_keep.log (one line per row that changed)
@@ -55,13 +56,16 @@ def read_values(C, B, a):
         return None
 
 
-def plan(old: dict, now: dict, rows: dict):
-    """(rows to write back [(row, old, now)], log notes, number kept): what a flash changed in the stored settings."""
+def plan(old: dict, now: dict, rows: dict, old_defs: dict | None = None):
+    """(rows to write back [(row, old, now)], log notes, number kept): what a flash changed in the stored settings.
+    old_defs: the old image's defaults. A unit on the old default follows a changed default (Dan's choice), never the old one."""
     todo, notes, kept = [], [], 0
     for name, v in old.items():
         r = rows.get(name)
         if r is None:
             notes.append(f"{name}: no longer a stored row (was {v}); dropped")
+        elif old_defs and old_defs.get(name) == v and r.get("default", v) != v and now[name] == r.get("default"):
+            notes.append(f"{name}: was the old default {v}; the new default {r['default']} stays (registry default changed)")
         elif not r["min"] <= v <= r["max"]:
             notes.append(f"{name}: was {v}, outside the new range {r['min']}..{r['max']}; default {now[name]} stays")
         elif now[name] != v:
@@ -95,7 +99,8 @@ def main() -> int:
             say(f"snapshot {a.serial}: the unit does not answer over the debug link; nothing saved")
             return 1
         a.out.parent.mkdir(parents=True, exist_ok=True)
-        a.out.write_text(json.dumps({"serial": a.serial, "map": Path(a.map).name, "time": isostamp.now(), "values": vals}, indent=1))
+        defs = {r["name"]: r["default"] for r in stored_rows(C)}                   # the old image's defaults (its own table)
+        a.out.write_text(json.dumps({"serial": a.serial, "map": Path(a.map).name, "time": isostamp.now(), "values": vals, "defaults": defs}, indent=1))
         say(f"snapshot {a.serial}: {len(vals)} stored rows of {Path(a.map).name} -> {a.out}")
         return 0
 
@@ -112,7 +117,7 @@ def main() -> int:
         say(f"restore {a.serial}: the unit did not answer within {BOOT_WAIT_S:.0f} s; snapshot {a.snapshot} kept")
         return 1
     i2cbus.require_unit(a.bus, a.serial)            # EDID serial: never write another unit's values
-    todo, notes, kept = plan(snap["values"], now, {r["name"]: r for r in stored_rows(C)})
+    todo, notes, kept = plan(snap["values"], now, {r["name"]: r for r in stored_rows(C)}, snap.get("defaults"))
     for n in notes:
         say("  " + n)
     if not todo:
