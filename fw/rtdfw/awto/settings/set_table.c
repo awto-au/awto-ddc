@@ -6,12 +6,12 @@
 
 static const struct setting __code tab[SET_COUNT] = {
     /* id type unit group flags min max step def vcp apply label opts */
-    {  1, 2, 1,  0, 0x83, 0, 100, 1, 50, 0x10, 2, 0u, 0xFFFFu},  /* brightness */
+    {  1, 2, 1,  0, 0x83, 0, 100, 1, 100, 0x10, 2, 0u, 0xFFFFu},  /* brightness */
     {  5, 2, 1,  0, 0x83, 0, 100, 1, 50, 0xF3, 3, 10u, 0xFFFFu},  /* black_level */
     {  2, 2, 1,  0, 0x83, 0, 100, 1, 50, 0x12, 6, 21u, 0xFFFFu},  /* contrast */
     {  6, 2, 4,  0, 0xA1, 0, 4, 1, 2, 0x87, 0, 30u, 0xFFFFu},  /* sharpness */
     {  7, 1, 0,  1, 0x83, 0, 4, 1, 0, 0xF2, 13, 40u, 0x002Eu},  /* gamma */
-    {  8, 1, 0,  1, 0x83, 0, 5, 1, 2, 0x14, 5, 66u, 0x004Eu},  /* colour_temp */
+    {  8, 1, 0,  1, 0x83, 0, 5, 1, 4, 0x14, 5, 66u, 0x004Eu},  /* colour_temp */
     {  9, 2, 4,  1, 0x83, 0, 255, 1, 128, 0x16, 33, 112u, 0xFFFFu},  /* user_red */
     { 10, 2, 4,  1, 0x83, 0, 255, 1, 128, 0x18, 33, 121u, 0xFFFFu},  /* user_green */
     { 11, 2, 4,  1, 0x83, 0, 255, 1, 128, 0x1A, 33, 132u, 0xFFFFu},  /* user_blue */

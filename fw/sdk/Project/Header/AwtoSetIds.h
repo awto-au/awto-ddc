@@ -128,12 +128,12 @@
 #define AWTO_SET_HDMI_RATIO_D2        135
 #define AWTO_SET_HDMI_RATIO_D3        136
 #define AWTO_PCT_TO_255(p)           ((BYTE)(((WORD)(p) * 255) / 100))   // SDK store field of a percent row: 0..255
-#define AWTO_SET_DEF_BRIGHTNESS       50
+#define AWTO_SET_DEF_BRIGHTNESS       100
 #define AWTO_SET_DEF_BLACK_LEVEL      50
 #define AWTO_SET_DEF_CONTRAST         50
 #define AWTO_SET_DEF_SHARPNESS        2
 #define AWTO_SET_DEF_GAMMA            0
-#define AWTO_SET_DEF_COLOUR_TEMP      2
+#define AWTO_SET_DEF_COLOUR_TEMP      4
 #define AWTO_SET_DEF_USER_RED         128
 #define AWTO_SET_DEF_USER_GREEN       128
 #define AWTO_SET_DEF_USER_BLUE        128

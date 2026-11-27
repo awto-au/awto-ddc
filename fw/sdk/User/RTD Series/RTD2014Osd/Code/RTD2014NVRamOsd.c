@@ -101,7 +101,7 @@
 __code StructOsdUserDataType g_stOSDDefaultData =
 {
 #if(_PWM_DUT_RESOLUTION == _PWM_8BIT)
-    _BACKLIGHT_CENTER,        // usBackLight; 127 = 50 % (Dan 2026-11-15)
+    AWTO_PCT_TO_255(AWTO_SET_DEF_BRIGHTNESS),  // usBackLight; registry default (100 %, Dan 2026-11-27)
 #else
     0x0800,                   // usBackLight;
 #endif
@@ -114,7 +114,7 @@ __code StructOsdUserDataType g_stOSDDefaultData =
     _ENGLISH,                 // b4Language;
     _COLOREFFECT_STANDARD,    // b4ColorEffect;
 //--------------------------------------------------------
-    _CT_6500,                 // b4ColorTempType;
+    AWTO_SET_DEF_COLOUR_TEMP,  // b4ColorTempType; registry default = EnumColortemptureDef order (sRGB, Dan 2026-11-27, #355)
     _COLOR_SPACE_RGB,         // b3VGARGBYUV;
     _COLOR_SPACE_RGB,         // b3DVIRGBYUV;
 //--------------------------------------------------------
