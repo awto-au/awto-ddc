@@ -1,6 +1,6 @@
 # Power levels, sleep requests, wake and EDID log (awto-ddc#78, #216)
 
-Status 2026-11-16. Code: `fw/sdk/Kernel/System/Code/SysJudge.c` (system machine), `fw/input/fastsw.c` (hold), `fw/settings/settings_glue.c`, `fw/log/sync.c`.
+Code: `fw/sdk/Kernel/System/Code/SysJudge.c` (system machine), `fw/input/fastsw.c` (hold), `fw/settings/settings_glue.c`, `fw/log/sync.c`.
 
 ## Settings (registry power group)
 
@@ -26,7 +26,7 @@ Status 2026-11-16. Code: `fw/sdk/Kernel/System/Code/SysJudge.c` (system machine)
 
 ## What power saving does (SDK `SysPowerSwitch(_POWER_ACTION_NORMAL_TO_PS)`, `SysPower.c` 300-360)
 
-- Frame buffer memory power off (`ScalerMemoryPowerControl`), mode state reset, interface power saving, MCU PWM + pin-share to saving, system clock to crystal / IOSC (`_SYS_PS_CLOCK_SOURCE`), power isolation, `ScalerLDOPowerControl(SAVING)` (empty in this build).
+- Frame buffer memory power off (`ScalerMemoryPowerControl`; DDR content is lost over power saving and POWER off [HW #348]; keeping the DDR on is in progress, #365; the DRAM log writes nothing while the memory is off, #358), mode state reset, interface power saving, MCU PWM + pin-share to saving, system clock to crystal / IOSC (`_SYS_PS_CLOCK_SOURCE`), power isolation, `ScalerLDOPowerControl(SAVING)` (empty in this build).
 - `ScalerPowerIsolation` (`RL6449_Series_Power.c`): groups A, B, ADI, D0-D3 isolated; ADI, D0-D3 and A power-cut. Wake (`PS_TO_NORMAL`): `ScalerPowerAllGroupPowerCutReset` then the cuts are released.
 - `ScalerGlobalWholeChipReset` runs only at MCU boot (`SysPowerInitial`), never on a sleep wake. It clears OSD SRAM and registers on a warm boot (watchdog / host ISP reset).
 - Open: whether OSD registers / SRAM of the isolated, not cut groups (B, C, E) survive a sleep (a 2026-11-15 page-00 dump compare was inconclusive; the dump tool skips the OSD ports).
@@ -35,12 +35,12 @@ Status 2026-11-16. Code: `fw/sdk/Kernel/System/Code/SysJudge.c` (system machine)
 
 - Wake triggers in power saving (sync.tsv `CB` cable, `CC` EDID read, `CD` AUX, `CE` DPCD 600h, `D3` unplug, `DC` TMDS clock) and their suppressed repeats (`CF`) are unchanged.
 - `E7` (new): `<port> EDID read` - an EDID read by the source in any state but power saving. `AwtoEdidPoll` (per main-loop pass, `swlog.c`): logs on the 0 -> 1 edge of the DDCn_EDID_IRQ bit 0 flag and clears it (W1C).
-- `E5` audio: text is "audio on / off"; a mute / unmute that changes nothing logs `E5 05 / 06` "already on / already off" (never dropped).
+- `E5` audio: text is "audio on / off"; a mute / unmute that changes nothing logs `E5 05 / 06` "already on / already off" on main; dropped as a cheap no-op on branch `log-merge` (#359, [sync-log-design.md](sync-log-design.md) "Line rules").
 - Request outcomes `18`: 00 accepted, 01 already, 02 replaces, 03 refused, 04 kept, 05 dropped, 06 **ignored**.
 
 ## Reading the log on a unit
 
-- Sync log: `dbg_link.py on <bus>`, then `sync_log.py <bus> --map M --serial S --tsv T [--whole]` (delta column always, as the console), then `dbg_link.py off <bus>`. Without the link on, `sync_log.py` prints "read over 0x35 failed" (`wait_log.py` turns the link on itself).
+- Sync log: `./dev.py synclog --unit 3 [--whole | --dram]` (link on / off and map from the flash record). Direct: `dbg_link.py on <bus>`, then `sync_log.py <bus> --map M --serial S --tsv T [--whole]` (real time + delta columns, as the console), then `dbg_link.py off <bus>`. Without the link on, `sync_log.py` prints "read over 0x35 failed" (`wait_log.py` turns the link on itself).
 - Blocking waits: `wait_log.py <bus> --serial S --map M` (waits under 2 ms are only counted).
 
 ## Drop one host output (video loss on one unit)
@@ -53,4 +53,6 @@ Status 2026-11-16. Code: `fw/sdk/Kernel/System/Code/SysJudge.c` (system machine)
 - Ring lines (`sync.tsv` 99): `fast wake hold start, tries N` (counter the last hold left; the counter is reset at every hold start, no carry-over) and `fast wake failed, reason+try 0xRRTT` per timed-out try (RR = A1 reason bits: 1 measure busy, 2 watchdog, 4 M-domain memory check; TT = try number).
 - Unit 3 (HDMI D2), n = 10 before: 7 fell back to the full path, each with 4 timeouts of ~137 ms, all reason 4 (memory check); 3 took the fast path (picture ~50 ms). No retry after a first failure succeeded (0 of 21).
 - Change: a memory check timeout counts 2 tries (`AWTO_HOLD_TRIES_MEM`) instead of 4; other reasons keep 4. n = 10 after: 10 fell back, 2 timeouts each (the fast path did not succeed in this batch: the first-try result varies between batches); saving per fallback 2 x 137 ms.
-- Unit 1 (HDMI D2, NVIDIA), n = 10 (also the pre-change image, n = 3): the fast wake shows the picture at ~55 ms, 121 ms later `judge:memory / timing gen` sends the mode to SEARCH, ACTIVE at ~855 ms. Cause open.
+- Unit 1 (HDMI D2, NVIDIA), n = 10 (also the pre-change image, n = 3): the fast wake shows the picture at ~55 ms, 121 ms later `judge:memory / timing gen` sends the mode to SEARCH, ACTIVE at ~855 ms.
+- Root cause (both units): status 0x80 = P0_0C bit 0 display vsync timeout; the fast path restored the IVS-to-DVS registers but never re-locked the display timing to the returned IVS. Fix 2949ca69: `AwtoFastScalerApply` (`fw/input/fastsw_scaler.c`) re-locks in frame-sync modes at 1 IVF. DPMS x10 after: unit 3 10/10 fast (picture 67..84 ms), unit 1 10/10 (67..100 ms). Not measured: fast input switch, 2 / 3 IVF modes, DP.
+- Pacing held off after a fast wake: fixed by `AwtoSyncSettle()` at the end of the fast path (gate `pacewake`, #313).

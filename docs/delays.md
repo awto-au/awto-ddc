@@ -10,26 +10,12 @@
 
 # Part 1: inventory
 
-## How I decided what is compiled, and what the snapshot is
-
-- **Build chain.** `dev.py build` calls `scripts/fw_build.py`, which calls `scripts/fw_compile.py`.
-  - `fw_compile.py` compiles the C files listed in `fw/sdk/STD_FW_1P.Uv2` (target `RL6449_Project`) plus the Lib Uv2.
-  - `fw_compile.py awto` compiles every `awto-rtdfw/awto/*/**.c` module (arith, dataport, gamma, nvram, reg, settings) plus the shim `fw/awto/awto_shim/sdk_boundary.c`, with `-D_AWTO_NEW_<MOD>`.
-  - `fw/sdcc/*.inc` are our code, pulled into the SDK translation units.
-- **How "linked" was decided.** I re-ran `scripts/delay_inventory.py` against the worktree `/mnt/2tb/git/awto-ddc-audio3` (722e32d) and the map `tmp/fw/AWT26110003-wb-p14ui-amp2-be.map`.
-  - 722e32d is the code of main. main HEAD c83d618 differs only in docs.
-  - A site counts as linked only if the final SDCC listing contains code for that file:line.
-- **Where the run output is.** The re-run wrote to `/tmp/claude-1000/-mnt-2tb-git-awto-ddc/f7982fc5-907c-4500-a6ef-8f90f4ceaa15/scratchpad/root/out/delays.tsv`: 1014 rows, 547 linked.
-  - Its `value` column says "variable" because sdcccall 3 broke the argument decode. I resolved the values from the statement text instead.
-- **The committed inventory is stale.** `re/delays.tsv` and `docs/delays.md` come from an older image (wb-stepB, 1100f24). They still list blocking T1..T5 waits that #162 removed, and they cite a BOE panel datasheet. Do not use them.
-- **The working tree is moving.** While I worked, uncommitted edits appeared in main:
-  - `AWTO_M280DCA_E3B.h` T6 1100 -> 900.
-  - `UserCommonInterfacePanelBoot()` changed.
-  - `RL6449_Series_Mcu.c` now turns panel VDD on at GPIO init.
-  - `docs/monitors/panel-innolux-m280dca-e3b.md` and `docs/settings.md` were edited.
-  - awto-rtdfw commit 50d9c65 (20:06 today) set the registry `panel_t6` default to 900.
-  - Treat the T6 row as "HEAD says 1100, working tree and registry say 900".
-- **Rules I measured ratios against.** From `~/.claude/CLAUDE.md` and the memory file `delays-datasheet-minus-10.md`:
+## Snapshot and method
+- Code = main 722e32d, image `wb-p14ui-amp2` (2026-11-13). Panel T6 is 900 ms since b70095c (registry `panel_t6` 900).
+- Build chain: `./dev.py build` -> `scripts/fwimage.py` -> `scripts/fw_build.py` -> `scripts/fw_compile.py`: the C files of `fw/sdk/STD_FW_1P.Uv2` (target `RL6449_Project`) + the Lib Uv2, every `fw/rtdfw/awto/*/**.c` module with `-D_AWTO_NEW_<MOD>`, the shim `fw/awto/awto_shim/sdk_boundary.c`; `fw/sdcc/*.inc` are pulled into SDK TUs.
+- Linked = the final SDCC listing has code for that file:line (`scripts/delay_inventory.py`; sdcccall 3 broke its value decode, values read from the statement text).
+- `re/delays.tsv` (wb-stepB, 1100f24) is superseded: it lists the T1..T5 waits #162 removed and cites a BOE panel datasheet.
+- **Rules the ratios are measured against.** From `~/.claude/CLAUDE.md` and the memory file `delays-datasheet-minus-10.md`:
   - Delay = datasheet value minus 10 % (expected ratio 0.90, never padded).
   - Timeout = 1.25x the expected worst case.
 - **Tick granularity.** `ScalerTimerDelayXms(n)` counts n Timer2 tick events from a random phase, so the real wait is between n-1 and n ms.
@@ -50,14 +36,13 @@ Abbreviations in the table:
 | **PANEL STATE MACHINE (ours, #162)** | | | | | | | |
 | User Common Function/Code/UserCommonInterface.c:874 | T1: VDD on -> eDP PHY / AUX. Also waits, with no time bound, for power status NORMAL. | 10 ms | `fw/sdk/Panel/AWTO_M280DCA_E3B.h:47`. With `_AWTO_NEW_SETTINGS`, `AWTO_SET(PANEL_T1)` at :61; registry row 67 default 10, range 0..100. | Datasheet Innolux M280DCA-E3B v0.0 sec 4.8 T1, VDD rise 0.5..10 ms (panel doc, power-sequence table). The registry note says "vendor example value, no datasheet" and `docs/settings.md` says [sdk-value], so the notes disagree with the panel doc. | max 10 ms | 1.00 | PHY on, HPD read |
 | UserCommonInterface.c:892 | T2: eDP HPD high, read once per tick | 250 ms | header :48, registry row 68 | Panel doc: bound = 1.25 x datasheet T3 (VDD->HPD 15..200 ms). Measured 115 ms (unit 3, #78), 78 ms (unit 2). | 200 ms max | 1.25 | logs sync 12 00, trains anyway |
-| UserCommonInterface.c:952 and :806 | T3: stream valid -> backlight pin on, used when there is no own frame | 550 ms | header :49 (comment cites datasheet T8 >= 200), registry row 69 (range 300..2000) | Registry note: ">= 500 ms per 27-inch 4K eDP datasheets" (those datasheets are not cited). The panel doc maps it to datasheet T8 (valid video -> LED on, >= 200 ms). | 200 ms (panel datasheet), 500 ms (registry note) | 2.75 vs datasheet, 1.10 vs the registry note | backlight pin on |
-| UserCommonInterface.c:775 (T3 use at :952) | T3 with own black frame | 20 ms | `RL6449_Project.h:1276` -> registry row 70 (default 20, min 17); :1278 fallback 20 | Comment: "one 60 Hz frame (16.7 ms) + margin". Panel doc marks it below datasheet T8 min 200; deliberately not followed (Dan, 2026-11-13). Measured stream->backlight pin 37 ms on unit 2. | 16.7 ms (frame), 200 ms (datasheet) | 1.20 vs frame, 0.10 vs datasheet | backlight pin on |
+| UserCommonInterface.c:583-613 | backlight pin on: at eDP stream on (link VIDEO), `backlight_on_delay` after power-up as a minimum (`AWTO_BL_ON_DELAY_MS`) | registry 127, default 120 ms | `RL6449_Project.h` `AWTO_BL_ON_DELAY_MS` = `AWTO_SET(BACKLIGHT_ON_DELAY)` | Dan 2026-11-27 (#357): stream on, min 120 ms (camera edge 91 ms, docs/camera-lcd-timing.md); datasheet T8 >= 200 ms not followed (Dan) | 200 ms (T8) | n/a | log 11 E6 / E7 |
 | UserCommonInterface.c:971 | backlight pin on -> PWM duty (`_PANEL_POWER_ON_BL_TO_PWM`) | 50 ms | `Kernel/Common/Panel_Default.h:330` (the panel header does not override it) | SDK default. The panel doc says it is not in the datasheet. | n/a | n/a | user duty applied |
 | UserCommonInterface.c:992 | PWM dark -> backlight pin off (`_PANEL_POWER_OFF_PWM_TO_BL`) | 50 ms | `Panel_Default.h:334` | SDK default, not in the datasheet | n/a | n/a | pin off |
 | UserCommonInterface.c:1011 | T4: backlight off -> stream idle | 250 ms (effective >= 251 ms, `<=` compare) | header :51, registry row 71 | Panel doc maps it to datasheet T9 (LED off -> video idle, >= 200 ms). Registry note [vendor-value]. | 200 ms min | 1.25 | stream to idle pattern |
 | UserCommonInterface.c:1028 | T5: stream idle -> SSC / PHY / VDD off | 20 ms (+1 tick) | header :52, registry row 72 | Panel doc maps it to datasheet T10 (video end -> VDD off, 0..500 ms max) | 500 ms max | 0.04 | SSC, PHY and VDD off |
 | UserCommonInterface.c:1038 | T6: VDD off -> VDD on, minimum | 900 ms in working tree and registry (HEAD header: 1100) (+1 tick) | header :53 (working tree), registry row 73 (rtdfw 50d9c65) | Datasheet T11 (VDD off at 10 % -> on, >= 1000 ms), minus 10 % per the delay rule (Dan, 2026-11-13). VDD decay is not measured. | 1000 ms min | 0.90 working tree / registry; 1.10 for the 1100 in HEAD's header | state OFF, VDD may come on |
-| registry row 74 `bl_pwm_ms` (awto-rtdfw `settings/registry.tsv`) | planned enable-pin -> PWM wait | 0 ms, inert | registry | no reader in firmware | n/a | n/a | n/a |
+| registry row 74 `bl_pwm_ms` (`fw/rtdfw/settings/registry.tsv`) | planned enable-pin -> PWM wait | 0 ms, inert | registry | no reader in firmware | n/a | n/a | n/a |
 | **BOOT / POWER (SDK, our board header)** | | | | | | | |
 | RL6449_Series_Mcu.c:1762 | VCCK_OFF flag poll at GPIO init: up to 20 x `DelayXms(1)`, then always +10 ms (`ScalerPowerInclude.h:23-32`) | bound 20 ms (+10 ms fixed) | `Kernel/Common/RL6449_Pcb_Default.h:1004` (the AWTO_JXC4K PCB header does not define it) | SDK default; SDK comment "Wait for VCCK_OFF Power On Stable"; the pin is a no-op on our board (`RL6449_AWTO_JXC4K.h:279-285`) | n/a | n/a | continues |
 | RL6449_Series_Power.c:267 | same macro, group A isolation off | 20 + 10 ms | same | same | n/a | n/a | continues |
@@ -189,7 +174,7 @@ Abbreviations in the table:
 | `fw/diag/diag.c:12,49`; `fw/meas/meas4k.c:70,85`; `fw/diag/wdt.c:224` | spin to the next 1 ms tick | up to 1 ms | code | tick alignment | 1 tick | 1.00 | continues |
 | `fw/diag/delaycal.c:68,70` | calibration: align 1 tick, then `DelayXms(10)` | about 11 ms once per boot, after the first stream start | code | measurement method | n/a | n/a | continues |
 | `fw/timer/t0ev.c:238-269` | Timer0 event test commands | `DelayXms(2)`, `ucMs/6`, `ucMs/3`, `ucMs*1.25`, 2..3 ms spin | code | test-only, host-triggered | n/a | n/a | test ends |
-| `fw/settings/settings_glue.c` `set_wait_ms`; `awto-rtdfw settings.c:271-273` | boot recovery hold | `DelayXms(10)` loop for up to 1000 ms | `settings.h:74` `SET_RECOVERY_MS` | derived: "longer than a key bounce, short enough to hold at power-on" | n/a | n/a | defaults restored if held |
+| `fw/settings/settings_glue.c` `set_wait_ms`; `fw/rtdfw/awto/settings/settings.c` `SET_RECOVERY_MS` loop | boot recovery hold | `DelayXms(10)` loop for up to 1000 ms | `settings.h:74` `SET_RECOVERY_MS` | derived: "longer than a key bounce, short enough to hold at power-on" | n/a | n/a | defaults restored if held |
 | **NVRAM GATE (`RL6449_Project.h:146-150`; `fw/nvram/nv_gate.c` `AwtoNvService`)** | | | | | | | |
 | `AWTO_NV_STABLE_MS` | ACTIVE with no switch / sync / training (source link events) | 10000 ms | project header | Dan 2026-11-20 (#151): flash halt 80-600 ms blocks DDC/CI, AUX, TMDS ISR, tick | n/a | n/a | write allowed |
 | `AWTO_NV_DDC_IDLE_MS` | since the last DDC/CI request (host polling windows) | 10000 ms | project header | Dan 2026-11-20 | n/a | n/a | write allowed |
@@ -197,23 +182,21 @@ Abbreviations in the table:
 | `AWTO_NV_FORCE_MS` | first dirty -> written at the latest | 60000 ms | project header | Dan 2026-11-20 | n/a | n/a | forced write, sync row D4 12 |
 | `AWTO_NV_FORCE_STABLE_MS` | ACTIVE before a forced write may fire | 3000 ms | project header | past link training / sync (the pre-2026-11-20 stable window) | n/a | n/a | forced write waits |
 | `AWTO_SAVE_CARD_MS` (`fw/osd/console.c`) | "Saving to memory" card | 1000 ms | project header | derived: "one glance" | n/a | n/a | card off |
-| **AWTO-RTDFW (settings / menu)** | | | | | | | |
+| **fw/rtdfw (settings / menu)** | | | | | | | |
 | `awto/include/settings.h:49` `SET_CONFIRM_MS`; `settings.c:259` | risky row auto-revert | 15000 ms | settings.h | derived: our UI choice | n/a | n/a | value reverts |
 | `settings.h:50` `SET_SAVE_MS`; `settings.c:261` | settings save debounce | 2000 ms | settings.h | derived: one save per slider drag | n/a | n/a | save |
 | `awto/settings/menu.c:610-616` | menu timeout, counted per second | registry `osd_timeout` (row 57) default 30 s, 0 = never | registry | vendor menu 10..60 s [vendor-ui]; default 30 is ours (no reason cited) | n/a | n/a | menu closes |
 | `menu.c:487` `key_hold` | host key hold | arg x 50 ms | menu.c | protocol unit | n/a | n/a | key released |
-| registry rows 40-43 (`awto-rtdfw settings/registry.tsv`) | source search windows | HDMI 2000 / DP 3000 ms (min 500 / 1000, max 10000) | registry | [vendor-value] = SDK defaults | 2000 / 3000 ms | 1.00 | search ends |
+| registry rows 40-43 (`fw/rtdfw/settings/registry.tsv`) | source search windows | HDMI 2000 / DP 3000 ms (min 500 / 1000, max 10000) | registry | [vendor-value] = SDK defaults | 2000 / 3000 ms | 1.00 | search ends |
 | registry rows 76, 78 | L1 delay 0 ms, L2 60 s | as listed | registry | inert, stored only. The firmware uses `AWTO_L2_SEC` 60. | n/a | n/a | n/a |
 | registry row 66 `logo_ms` | boot logo time | 3000 ms | registry | no reader in the firmware (`RL6449_Project.h:1028` calls the VCP code retired) | n/a | n/a | none |
 
 ## (a) Added margin: the code value exceeds its source
 
-- **Backlight on delay** (registry 127 `backlight_on_delay`, default 120 ms after power-up, Dan 2026-11-27; a minimum: the pin waits for eDP stream on): measured, not datasheet. Camera 2026-11-20 (docs/camera-lcd-timing.md): pin at MCU boot + 15 ms -> white flash 200-240 ms; +91 ms or later -> none. 100 ms is +9 ms over the 91 ms edge (Dan's pick).
+- **Backlight on delay** (registry 127 `backlight_on_delay`, default 120 ms after power-up, a minimum; the pin waits for eDP stream on; Dan 2026-11-27, #357): measured, not datasheet. Camera 2026-11-20 (docs/camera-lcd-timing.md): pin at MCU boot + 15 ms -> white flash 200-240 ms; +91 ms or later -> none.
 
-- **Panel T3**: 550 ms against the datasheet T8 min 200 ms (2.75x). Against the registry note "500 ms per 27-inch 4K eDP datasheets" it is +10 %.
 - **Panel T4**: 250 ms against datasheet T9 min 200 ms (1.25x, plus 1 tick).
 - **Panel T2**: 250 ms against datasheet T3 max 200 ms (1.25x). This one is a timeout, so the 1.25 rule applies.
-- **Panel T6 in HEAD's header**: 1100 against 1000 (+10 %). The working tree and registry now say 900.
 - **`AWTO_TMDS_HPD_LOW_MS`**: 110 ms against the HDMI 1.4b 100 ms (+10 %).
 - **`AWTO_DELAY_TARGET_PCT`**: all the `DELAY_*US` loops are calibrated to 105 % of nominal.
 - **Audio PLL waits**: six sites coded 2 ms for a "Delay 1000us" comment (2.0x). The two audio-detect waits are 3 ms for "2 ms" (1.5x).
@@ -282,7 +265,7 @@ All of these are `ScalerTimerDelayXms` or a poll, which spin and poke the watchd
   - `ScalerMeasureGetOfflineMeasureResult` poll of 650 ms at the xtal clock.
 - **Rare or maintenance**
   - Audio PLL 2 / 3 ms, DVC mute poll up to 400 ms.
-  - Settings boot-recovery hold up to 1000 ms (`awto-rtdfw settings.c:271`).
+  - Settings boot-recovery hold up to 1000 ms (`fw/rtdfw/awto/settings/settings.c` `SET_RECOVERY_MS`).
   - Watchdog probe spin 1500 ms (test command only, `fw/diag/wdt.c:222-229`).
   - `fw/timer/t0ev.c:238-269` test delays.
 - **Main-context blind spin, EX0 masked (since #256)**: `ScalerTMDSRx{2,3}SetPhy_EXINT0` via `PhySetDeferred`, up to 2.6 ms blind steps (sim 3.1 ms at 4K60, #331).
@@ -295,7 +278,7 @@ All of these are `ScalerTimerDelayXms` or a poll, which spin and poke the watchd
 # Part 2: added-margin review (firmware and host)
 
 
-Scope note: awto-ddc has uncommitted changes (docs/nvram-settings.md, docs/speed-bench.tsv); values below are from the working tree. awto-rtdfw/settings/registry.tsv generates awto-rtdfw/awto/settings/set_table.c. Margin % = (code value / source value - 1) x 100. "Source" is the spec, the measured worst case, or the stated derivation, whichever the code or comment names.
+Review of 2026-11-13; rows superseded since then are deleted. `fw/rtdfw/settings/registry.tsv` generates `fw/rtdfw/awto/settings/set_table.c`. Margin % = (code value / source value - 1) x 100. "Source" is the spec, the measured worst case, or the stated derivation, whichever the code or comment names.
 
 ## A. Firmware, registry defaults and firmware-facing docs (owner policy 2026-11-13: no added margin)
 
@@ -309,17 +292,11 @@ Scope note: awto-ddc has uncommitted changes (docs/nvram-settings.md, docs/speed
 | RL6449_Project.h:1175 | AWTO_TMDS_HPD_LOW_MS 110 | HDMI 1.4b >= 100 ms HPD low = unplug | +10 | "HDMI 1.4b: a source reads HPD low >= 100 ms as unplug" | firmware |
 | RL6449_Project.h:1096-1097 | AWTO_SRC_DDC_POLLS 12 (= 3 s at 250 ms) | HDCP 1.4 Ri check every 2 s (the slowest regular DDC traffic) | +50 (3 s vs 2 s; the comment's own step is 2 s x 1.25 = 2.5 s, rounded up to 3 s) | "HDCP 1.4 Ri checks run every 2 s (the slowest regular DDC traffic) x 1.25 = 2.5 s -> 3 s = 12 polls" | firmware |
 | RL6449_Project.h:1462 | AWTO_HT_STALE_MS 375000 | host sync period 300 s (Dan 2026-11-27) | +25 (1.25x) | "HOST marked stale: host sends every 300 s (Dan 2026-11-27), x1.25" | firmware |
-| RL6449_Project.h:1278 (fallback when no registry; registry at 1276) | AWTO_T3_OWN_PATTERN_MS 20 | one 60 Hz frame = 16.7 ms | +20 | "one 60 Hz frame (16.7 ms) + margin before backlight on" | firmware |
-| /mnt/2tb/git/awto-rtdfw/settings/registry.tsv:92 and /mnt/2tb/git/awto-rtdfw/awto/settings/set_table.c:85 | panel_t3_own default 20 (range min 17) | one 60 Hz frame, 16.7 ms (min 17 is the rounded frame) | +20 (+18 vs the 17 minimum) | "logo / background frame: one 60 Hz frame minimum" (no margin text; the margin wording is only in RL6449_Project.h:1278) | firmware (registry default) |
 | /mnt/2tb/git/awto-ddc/fw/dp/dpframe.c:8, 11, 13 | two-frame wait = 2 x (floor(frame ms) + 1) + 1 ms, capped at SDK _DP_TWO_FRAME_TIME_MAX (2 x 45 ms) | 2 x measured frame period (VBs2Bs) | +5.0 at 60 Hz (35 ms vs 33.3 ms); +2.3 at 23 Hz (89 ms vs 87.0 ms, cap 90) | "2 frames + 1 ms tick margin, never above the SDK's 23 Hz worst case"; line 4 "ms per frame (rounded up)"; line 2 "The SDK waits _DP_TWO_FRAME_TIME_MAX (2 x 45 ms, sized for 23 Hz)" | firmware |
 | /mnt/2tb/git/awto-ddc/fw/timer/t0ev.c:250 | ScalerTimerDelayXms(ucMs + (ucMs >> 2)) | requested event time ucMs | +25 | "the event fires inside (x1.25), still at the PS reload" (test hook, ucHow 6/7) | firmware (test code) |
 | RL6449_Project.h:568 | AWTO_MSTEP_MAX 7 (a count of log lines, not time) | 5 lines for the first set-up | +40 (count) | "first set-up 5 lines x1.25" | firmware |
-| RL6449_Project.h:994 | AWTO_SYNC_N 48 (ring slots, not time) | 38 lines x 1.25 = 47.5 (boot_sim) | +0.5 | ">= cold boot 38 lines x1.25 (boot_sim, #165); divides WRAP (#233)" | firmware |
 | RL6449_Project.h | _AWTO_INFO_POPUP_SEC 11 (base 6 + extra 5) | SDK value 3 s | UI display time (Dan 2026-11-27), not a margin | "input-info pop-up on-screen time (SDK: 3)"; "+5 s after boot" | firmware |
-| /mnt/2tb/git/awto-ddc/fw/sdk/Panel/AWTO_M280DCA_E3B.h:49 (overridden by AWTO_SET at :61-66 when the registry is used) | _PANEL_POWER_ON_T3 550 | datasheet T8 >= 200 ms (header's own citation, docs/monitors/panel-innolux-m280dca-e3b.md) | +175 | "video valid -> backlight on; datasheet T8 >= 200 ms (panel-innolux-m280dca-e3b.md)" | firmware |
 | /mnt/2tb/git/awto-ddc/fw/sdk/Panel/AWTO_M280DCA_E3B.h:48 | _PANEL_POWER_ON_T2 250 | HPD bound: datasheet T2 max 200 ms (docs/monitors/panel-edid.md:47) | +25 | no comment in header; docs/monitors/panel-innolux-m280dca-e3b.md:41 "ok: bound = 1.25 x 200"; re/delays_reasons.tsv:65 "datasheet T2 max 200 ms, value 250" | firmware |
-| /mnt/2tb/git/awto-rtdfw/settings/registry.tsv:95 and set_table.c:88 (docs/nvram-settings.md:223) | panel_t6 default 1100 (range 500..5000) | BOE MV270QUM-N50 spec T8 >= 1000 ms (docs/monitors/panel-edid.md:47; re/delays.tsv:1025) | +10 | registry "minimum VDD off time [vendor-value]"; re/delays_reasons.tsv "datasheet T8 >= 1000 ms, value 1100" | firmware (registry default) |
-| registry.tsv:91 and set_table.c:84 (docs/nvram-settings.md:219) | panel_t3 default 550 (range 300..2000) | ">= 500 ms per 27-inch 4K eDP datasheets" (registry) = BOE T4 >= 500 ms (panel-edid.md:47). Conflicts with M280DCA header's T8 >= 200 (+175) | +10 | "host video; >= 500 ms per 27-inch 4K eDP datasheets" | firmware (registry default) |
 | registry.tsv:93 and set_table.c:86 (docs/nvram-settings.md:221) | panel_t4 default 250 (labelled "T4 BL to link off") | BOE T5 >= 100 ms (panel-edid.md:47) | +150 | registry "[vendor-value]"; re/delays_reasons.tsv:21 "datasheet T5 needs >= 100 ms, so ~150 ms is margin"; re/delays.tsv:1022 "value 250 (150 ms margin)". Label mismatch: registry calls it T4, datasheet number is T5 | firmware (registry default) |
 | registry.tsv:94 and set_table.c:87 (docs/nvram-settings.md:222) | panel_t5 default 20 (labelled "T5 link to VDD off") | BOE T6 0..50 ms, "recommend 0" (panel-edid.md:47) | +20 ms over the recommended 0 (no %) | registry "[vendor-value]"; re/delays_reasons.tsv:68 "datasheet T6 0-50 ms (recommend 0), value 20" | firmware (registry default) |
 | registry.tsv:89 and set_table.c:82 (docs/nvram-settings.md:217) | panel_t1 default 10 | BOE T1 0.5..10 ms, so 10 = the max | 0 | registry "vendor example value, no datasheet [vendor-value]"; re/delays_reasons.tsv:19 cites the BOE spec. The two sources conflict | firmware (registry default) |

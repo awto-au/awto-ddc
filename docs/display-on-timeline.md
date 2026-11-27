@@ -95,6 +95,6 @@ No timeout expired in either stage (0 `EXPIRED` lines in 10 boots); the 100 ms b
 - FRC waits on unit 3 (3 IVS before FRC enable, 2 IVS single-frame-buffer, DVS waits, rotation reset 2 IVS, fine tune 2 DVS): no status bit proven, only the SDK count; measurement plan in #314.
 - Colour set-up 2 DEN_STOP (31 ms) and the interlace check 2 IVS: #314.
 - Auto-function pops (3 pairs of IVS): a done-bit poll would save ~half a frame each; regdb name + bound needed (#314).
-- ACTIVE tail 100 ms SDK timer: closed (the picture is already on screen in the same ms); panel video ready 115 ms, backlight delay 100 ms (registry 127), panel T1..T6: not touched (spec / by design).
+- ACTIVE tail 100 ms SDK timer: closed (the picture is already on screen in the same ms); panel video ready 115 ms, backlight at eDP stream on with `backlight_on_delay` 120 ms minimum (registry 127, Dan 2026-11-27), panel T1..T6: not touched (spec / by design).
 - TMDS scan waits (DelayXms 6 / 2, video detect 45 + 20 ms polls, format detect 130 ms poll exits at 30..33 ms): scan, outside this task; the 46 + 21 ms EXPIRED video-detect polls are the first scan failing right after reset.
 - Unit 1 DDC/CI sleep trigger does not work (ddcutil sees no monitor on bus 18), so unit 1 was measured with ISP resets only.
