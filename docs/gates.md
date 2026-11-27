@@ -15,7 +15,7 @@ Three separate numbers, never added together (Dan 2026-11-19):
 - Merge to main: `./dev.py merge-check IMAGE.bin` passes only for a complete, FAIL-free record with `tier: extensive` for that exact .bin.
 - `--only a,b` writes a partial record (flash refuses it).
 - Normal gate wall time 22 s (24 gates in parallel, load ~15, 2026-11-19; longest bootsim / panel 12 s wall, ~6 s CPU). Budget (Dan): a normal gate ~1 s, a few s at most.
-- Moved to extensive for cost (quick variants, 9-20 s CPU each, stay runnable with `--only`): keys, monitor, wake, crash, conwrap, condelta, conmode, sysm, sync. Normal `delays` = delay audit only (`delay_audit.py --check`); the panel-scenario sim is `delays_sim` (extensive).
+- Moved to extensive for cost (quick variants, 9-20 s CPU each, stay runnable with `--only`): keys, wake, crash, conwrap, condelta, conmode, conkeep, sysm, sync, dramlog (`fw_gates.EXTENSIVE`). Normal `delays` = delay audit only (`delay_audit.py --check`); the panel-scenario sim is `delays_sim` (extensive).
 - Extensive runs a `_full` twin instead of its quick variant.
 - Next cut: a test-timing scale so the same logic runs with shorter OSD timeouts / holds / sample periods (not built yet); then these gates can return to normal.
 
@@ -28,7 +28,7 @@ Three separate numbers, never added together (Dan 2026-11-19):
 | crash | `--tests stall` | `crash_full`: workload, stall, hw, probe |
 | conwrap | `--scope inject`: boot, injected widest lines, map end, demo burst | `conwrap_full`: + real power off / on / saving / wake |
 | delays | own clock + delay audit | `delays_full`: + the sibling `-clk87` image |
-| menu, deadport, inputrate, canary, bootsim_always | - | extensive only |
+| menu_full, deadport, inputrate, canary, bootsim_always, monitor_real, delays_sim | - | extensive only |
 | osdfit (static, also a `./dev.py build` step) / infocard | normal | osdfitsim: every OSD shot at 1080p60 + 2160p60, firmware fit guard (ED 7E) |
 
 Opt-in switches (each is easy to undo, Dan decides): inputrate `--info` (two informational sweeps), the minimal variants above.
