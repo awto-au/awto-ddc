@@ -1,13 +1,14 @@
 [Unit]
-Description=Host time to the test monitor (scripts/devices.json) over DDC/CI every 60 s (awto-ddc#157)
+Description=Host time to the test monitor (scripts/devices.json) over DDC/CI every 300 s (awto-ddc#157; unit 3 only, Dan 2026-11-27)
 After=graphical-session.target
 PartOf=graphical-session.target
 
 [Service]
 Type=simple
 Environment=AWTO_DDC_REPO=/mnt/2tb/git/awto-ddc
-ExecStart=/usr/bin/python3 /mnt/2tb/git/awto-ddc/scripts/host_time.py --unit 3 --loop 60
+ExecStart=/usr/bin/python3 /mnt/2tb/git/awto-ddc/scripts/host_time.py --unit 3 --loop 300
 Restart=on-failure
+# crash -> restart in 60 s: the next send is still before the 375 s stale mark (300 s period + 60 s); no restart storm
 RestartSec=60
 
 [Install]

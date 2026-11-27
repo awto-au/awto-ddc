@@ -1,16 +1,19 @@
 #!/usr/bin/env python3
 """Send the host time to a monitor over DDC/CI (awto-ddc#157) so its logs can be matched to host logs.
 
-usage: host_time.py [--unit N] --once
-       host_time.py [--unit N] --loop 60          one send per 60 s, aligned to the host clock (systemd/host-time.service)
+usage: host_time.py --unit N --once [--wait SEC]   one send; --wait: retry until the unit answers (after a flash / reset)
+       host_time.py --unit N --loop 300           one send per 300 s (Dan 2026-11-27), aligned to the host clock (systemd/host-time.service)
+       host_time.py --units 1,2,3|test --loop 300 every listed test unit, one send per unit per period (explicit only: not the service)
+- Period 300 s; the firmware marks HOST stale after AWTO_HT_STALE_MS = 1.25 x the period (RL6449_Project.h, docs/delays.md).
+- After every `./dev.py flash` / `./dev.py reset`: one `--once --wait 5` send to that unit (dev.py, fw clock restarted at the reset).
 - Carrier: MCCS table write (op 0xE7) to manufacturer VCP 0xE9, offset 0000, 7 data bytes: unix s BE x4, ms BE x2, UTC offset
   in 15 min units (signed). 51 8B E7 E9 00 00 t3 t2 t1 t0 mH mL ofs chk. No reply (MCCS table write). docs/ddcci.md.
 - Read back: get VCP 0xE9 -> max = syncs since boot, cur = drift of this sync (host - fw tick, ms, int16).
 - Debug link on (0x37 silent): the same 7 bytes go over 0x35 into g_stAwtoHt.aucPend, then test cmd 0x0E applies
   them (AwtoHtSync); a few ms older than over DDC/CI. Needs the running image's map (tmp/fw/<serial>-flash-state.json).
-- Unit guard: the devices.json test unit only (default; another --unit is refused); bus = the one with the unit's EDID serial that ACKs DDC/CI 0x37
-  (kvm.find_bus), EDID serial checked before every send. Debug link on (0x35 on the port) = no DDC/CI: logged, next round.
-- No unit lock: a RAM write; the firmware's NVRAM flush gate sees it as DDC/CI (500 ms busy) once a minute.
+- Unit guard: devices.json test units only (another unit is refused); bus = the one with the unit's EDID serial that ACKs DDC/CI 0x37
+  (kvm.find_bus, cached per unit), EDID serial checked before every send. Unreachable unit: one line, skipped until the next period.
+- No unit lock: a RAM write; the firmware's NVRAM flush gate sees it as DDC/CI (500 ms busy) once per period.
 Log: tmp/logs/host_time.log (one decoded line per send), tmp/logs/host_time.raw.log (bytes)
 """
 from __future__ import annotations
@@ -138,40 +141,62 @@ def send_dbg(u: dict, bus: int) -> bool:
     return True
 
 
+WAIT_GAP_S = 0.5    # --wait: between tries (each try = a bus scan, ~0.7 s); the unit answers DDC/CI ~1.5 s after a reset
+
+
+def one(n: str, u: dict, bus: int | None) -> tuple[bool, int | None]:
+    """one send to unit n: DDC/CI, else the debug link; (ok, bus to reuse next period)"""
+    try:
+        bus = bus if bus is not None else kvm.find_bus(u)
+        if bus is not None:
+            try:
+                send(u, bus)
+            except OSError as e:                 # 0x37 gone mid-session: the debug link took the port
+                log(f"unit {n} bus {bus}: DDC/CI failed ({e}); trying the debug link 0x35")
+                send_dbg(u, bus)
+        else:                                    # no DDC/CI: the debug link is on (or the cable is out)
+            db = dbg_bus(u)
+            if db is None:
+                raise OSError(f"no bus with EDID serial {u['serial']}")
+            send_dbg(u, db)
+        return True, bus
+    except (OSError, SystemExit) as e:
+        log(f"unit {n} {u['serial']} bus {bus}: not sent / not confirmed: {e} (debug link on? cable? image without #157?)")
+        return False, None                       # rescan next time: bus numbers change on re-enumeration
+
+
 def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    ap.add_argument("--unit", help="default: the devices.json test unit")
+    w = ap.add_mutually_exclusive_group(required=True)
+    w.add_argument("--unit", help="one devices.json test unit")
+    w.add_argument("--units", help="comma list of test units, or 'test' = every devices.json test unit")
     g = ap.add_mutually_exclusive_group(required=True)
     g.add_argument("--once", action="store_true")
-    g.add_argument("--loop", type=float, metavar="SEC", help="send every SEC seconds (Dan: 60)")
+    g.add_argument("--loop", type=float, metavar="SEC", help="send every SEC seconds (Dan 2026-11-27: 300)")
+    ap.add_argument("--wait", type=float, default=0.0, metavar="SEC",
+                    help="--once: retry until sent or SEC elapsed (after a flash / reset; repo monitor-wait limit 5 s)")
     a = ap.parse_args()
     us = json.loads((ROOT / "scripts/devices.json").read_text())["units"]
     test = [n for n, d in us.items() if d.get("test")]
-    a.unit = a.unit or (test[0] if len(test) == 1 else None)
-    if a.unit not in test:
-        raise SystemExit(f"unit {a.unit}: refused (host time goes to the devices.json test unit only: {test})")
-    u = dict(us[a.unit], _n=a.unit)
-    bus = None
+    want = [a.unit] if a.unit else (test if a.units == "test" else [x.strip() for x in a.units.split(",") if x.strip()])
+    bad = [n for n in want if n not in test]
+    if bad or not want:
+        raise SystemExit(f"unit(s) {bad or want}: refused (host time goes to devices.json test units only: {test})")
+    units = {n: dict(us[n], _n=n) for n in want}
+    buses: dict[str, int | None] = dict.fromkeys(units)
     while True:
-        try:
-            bus = bus if bus is not None else kvm.find_bus(u)
-            if bus is not None:
-                try:
-                    send(u, bus)
-                except OSError as e:                 # 0x37 gone mid-session: the debug link took the port
-                    log(f"unit {a.unit} bus {bus}: DDC/CI failed ({e}); trying the debug link 0x35")
-                    send_dbg(u, bus)
-            else:                                    # no DDC/CI: the debug link is on (or the cable is out)
-                db = dbg_bus(u)
-                if db is None:
-                    raise OSError(f"no bus with EDID serial {u['serial']}")
-                send_dbg(u, db)
-            ok = True
-        except (OSError, SystemExit) as e:
-            log(f"unit {a.unit} {u['serial']} bus {bus}: not sent / not confirmed: {e} (debug link on? cable? image without #157?)")
-            bus, ok = None, False                    # rescan next round: bus numbers change on re-enumeration
+        oks = []
+        for n, u in units.items():
+            t_end = time.monotonic() + (a.wait if a.once else 0.0)
+            ok, buses[n] = one(n, u, buses[n])
+            while not ok and time.monotonic() < t_end:
+                time.sleep(WAIT_GAP_S)           # retry gap, not a poll of a fixed duration: bounded by --wait
+                ok, buses[n] = one(n, u, buses[n])
+            if not ok and a.once and a.wait:
+                log(f"unit {n}: no confirmed send within --wait {a.wait:g} s")
+            oks.append(ok)
         if a.once:
-            return 0 if ok else 1
+            return 0 if all(oks) else 1
         time.sleep(a.loop - (time.time() % a.loop))  # next multiple of SEC on the host clock: the send period itself
 
 

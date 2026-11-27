@@ -151,7 +151,7 @@ def snapshot(read, rows: list[dict], last: int | None, boot: int | None, serial:
         poll = None
         if fw_now is not None and e["boot"] == h["boot"]:
             poll = (read_at - dt.timedelta(milliseconds=fw_now - e["ms"])).isoformat(timespec="milliseconds")
-        out.append({"abs": e["abs"], "boot": e["boot"], "ms": e["ms"], "id": e["id"], "val": e["val"], "text": ln, "poll_wall": poll})
+        out.append({"abs": e["abs"], "boot": e["boot"], "ms": e["ms"], "id": e["id"], "arg": e["arg"], "val": e["val"], "text": ln, "poll_wall": poll})
     return {"serial": serial, "read": read_at.isoformat(timespec="milliseconds"), "gen": h["gen"], "boot": h["boot"], "next": nxt, "fw_now": fw_now,
             "slots": C["AWTO_DLOG_SLOTS"], "entries": out}
 
@@ -186,7 +186,8 @@ def main() -> int:
     log(f"dram log: gen {h['gen']} boot {h['boot']} next index {nxt} (wraps {nxt // C['AWTO_DLOG_SLOTS']}), {len(ents)} entries read, "
         f"{stats.get('bursts', 0)} bursts in {stats.get('s', 0):.1f} s")
     boot = None
-    for e, ln in zip(ents, decode(rows, ents)):
+    import sync_log as S
+    for e, ln in zip(ents, S.with_delta(decode(rows, ents), S.dram_deltas(ents))):
         if e["boot"] != boot:
             boot = e["boot"]
             log(f"--- boot {boot}")

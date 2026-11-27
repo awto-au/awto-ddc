@@ -102,8 +102,8 @@
 # Reviewed 2026-11-05 (#26): FRC-off build sites (-D _AWTO_FRC=_OFF since FRC is the default, 2026-11-13)
 # Reviewed 2026-11-13 (#165): FRC sites (default build, ScalerFRC.c unparked)
 ^conditional flow changed by optimizer	Kernel/Scaler/ScalerFunction/Code/ScalerFRC.c	192	ok	OK-HARMLESS: switch(GET_MEMORY_SELECT()) in ScalerFRCIVS2DVSDelay: `default:` shares the _MN_FRAME_SYNC_MEMORY body, jump table reshaped
-^conditional flow changed by optimizer	Kernel/Scaler/ScalerFunction/Code/ScalerMDomain.c	1682	ok	OK-CONFIG: GET_OD_STIRCT_CONDITION() is _FALSE with _OD_SUPPORT off: the OD read-width branch folds
-^unreachable code$	Kernel/Scaler/ScalerFunction/Code/ScalerMDomain.c	1684	ok	OK-CONFIG: same OD branch (usHWidth = DHtotal), dead with OD off
+^conditional flow changed by optimizer	Kernel/Scaler/ScalerFunction/Code/ScalerMDomain.c	1684	ok	OK-CONFIG: GET_OD_STIRCT_CONDITION() is _FALSE with _OD_SUPPORT off: the OD read-width branch folds
+^unreachable code$	Kernel/Scaler/ScalerFunction/Code/ScalerMDomain.c	1686	ok	OK-CONFIG: same OD branch (usHWidth = DHtotal), dead with OD off
 # Reviewed 2026-11-13 (#165): rotation sites (default build)
 ^conditional flow changed by optimizer	Kernel/Scaler/RL6449_Series_Scaler/Code/RL6449_Series_Memory.c	67	ok	OK-HARMLESS: ScalerMemorySetFifoCapture: both rotation branches are commented-out register writes, the if folds to nothing
 # Reviewed 2026-11-05 (#26): SDK Lib sources (RL6449_Series_Lib.Uv2) - no bugs
@@ -123,8 +123,8 @@
 ^unreachable code$	Kernel/System/Code/SysSource.c	3329	ok	OK-CONFIG: _AWTO_HDMI_HPD_TOGGLE _OFF (#60 step 3): the HDMI hot-plug toggle set-up is dead by design
 ^unreachable code$	Kernel/User Common Function/Code/UserCommonNVRamSystem.c	512	ok	OK-CONFIG: _AWTO_HDMI_HPD_TOGGLE _OFF (#60 step 3): the HDMI hot-plug toggle set-up is dead by design
 ^unreachable code$	Kernel/User Common Function/Code/UserCommonNVRamSystem.c	514	ok	OK-CONFIG: _AWTO_HDMI_HPD_TOGGLE _OFF (#60 step 3): the HDMI hot-plug toggle set-up is dead by design
-^conditional flow changed by optimizer	Kernel/Scaler/ScalerFunction/Code/ScalerMDomain.c	744	ok	OK-CONFIG: FRC off -> switch(ucMemorySel) has only the line-buffer case, merges with default	_AWTO_FRC=_OFF
-^conditional flow changed by optimizer	Kernel/Scaler/ScalerFunction/Code/ScalerMDomain.c	926	ok	OK-CONFIG: same switch(ucMemorySel), FRC off	_AWTO_FRC=_OFF
+^conditional flow changed by optimizer	Kernel/Scaler/ScalerFunction/Code/ScalerMDomain.c	746	ok	OK-CONFIG: FRC off -> switch(ucMemorySel) has only the line-buffer case, merges with default	_AWTO_FRC=_OFF
+^conditional flow changed by optimizer	Kernel/Scaler/ScalerFunction/Code/ScalerMDomain.c	928	ok	OK-CONFIG: same switch(ucMemorySel), FRC off	_AWTO_FRC=_OFF
 ^#warning "_FRC_SUPPORT Should Be _ON!!!"$	Kernel/Common/Project_Config_Check.h	98	ok	TEMP KNOWN WRONG: _ASPECT_ORIGINAL_MODE_SUPPORT needs FRC; FRC ON wedged unit 3, fix pending (#26)	_AWTO_FRC=_OFF
 ^conditional flow changed by optimizer	*/fw/osd/text_layer.c	50	ok	OK-CONFIG: rotation off -> ucWant is always upright, the 180 / upright ternary is constant	_AWTO_FRC=_OFF
 ^unreachable code$	*/fw/osd/text_layer.c	50	ok	OK-CONFIG: same line, the 180 branch of the constant ternary	_AWTO_FRC=_OFF

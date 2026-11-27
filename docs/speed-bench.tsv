@@ -107,3 +107,5 @@ date	commit	image	label	passes	cycles_pass	work	stub_entries	stub_cyc	instr_pass
 2026-11-21T17:59:33+11:00	959ca24a	AWT26110003-r1-be	r1	12	163340	126775	49.5	2236	105204	174.9			757431		
 2026-11-21T23:24:24+11:00	754badde	AWT26110003-754badde+-be	stats	12	163247	127173	53.1	2369	105193	174.1			760361		
 2026-11-21T23:24:26+11:00	754badde	AWT26110003-754badde+-be	stats													0	300	18.3	0.75
+2026-11-27T13:48:58+11:00	1bff7870	AWT26110003-dd-base-be	diag-delta before/after (#353 log, delta column)	12	182039	155696	40.9	2042	121648	403.3			577876		
+2026-11-27T13:49:57+11:00	1bff7870	AWT26110003-dd-5-be	diag-delta before/after (#353 log, delta column)	12	182124	155588	45.8	2191	121564	407.2			577421		

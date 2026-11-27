@@ -229,6 +229,7 @@ void ScalerMDomainMemorySettings(StructSDRAMDataInfo *pstFIFOSize)
 // Input Value  : None
 // Output Value : M domain check pass or fail
 //--------------------------------------------------
+static __xdata BYTE s_ucAwtoMdFail;              // #353: the final check that failed (AWTO_MSTEP_FAIL_*), 0 = passed; XDATA: no DATA overlay cost
 bit ScalerMDomainControl(void)
 {
     StructSDRAMDataInfo stFIFOScaling;
@@ -425,12 +426,13 @@ bit ScalerMDomainControl(void)
     ScalerTimerWaitForEvent(_EVENT_IVS);
 
     AWTO_MSTEP(11, 0, AWTO_MEAS_P0_02_0C());
-    if((ScalerMDomainMemoryCheck() == _FALSE) ||
-       (ScalerMeasureInputActiveRegionChange() == _TRUE) ||
-       (ScalerMDomainDisplayTimingGenCheck() == _FALSE))
+    s_ucAwtoMdFail = (ScalerMDomainMemoryCheck() == _FALSE) ? AWTO_MSTEP_FAIL_MEM :
+                 (ScalerMeasureInputActiveRegionChange() == _TRUE) ? AWTO_MSTEP_FAIL_REGION :
+                 (ScalerMDomainDisplayTimingGenCheck() == _FALSE) ? AWTO_MSTEP_FAIL_TGEN : 0;    // the SDK's || order
+    if(s_ucAwtoMdFail != 0)
     {
         DebugMessageScaler("MemoryCheck Fail in Display Setting", GET_MEMORY_SELECT());
-
+        AwtoSyncPush(AWTO_SYNC_EV_MSTEP, s_ucAwtoMdFail, AWTO_MEAS_P0_02_0C());      // #353: every failed set-up, not only the first
         return _FALSE;
     }
 

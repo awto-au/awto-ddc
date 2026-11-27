@@ -40,7 +40,7 @@ Status 2026-11-16. Code: `fw/sdk/Kernel/System/Code/SysJudge.c` (system machine)
 
 ## Reading the log on a unit
 
-- Sync log: `dbg_link.py on <bus>`, then `sync_log.py <bus> --map M --serial S --tsv T [--delta] [--whole]`, then `dbg_link.py off <bus>`. Without the link on, `sync_log.py` prints "read over 0x35 failed" (`wait_log.py` turns the link on itself).
+- Sync log: `dbg_link.py on <bus>`, then `sync_log.py <bus> --map M --serial S --tsv T [--whole]` (delta column always, as the console), then `dbg_link.py off <bus>`. Without the link on, `sync_log.py` prints "read over 0x35 failed" (`wait_log.py` turns the link on itself).
 - Blocking waits: `wait_log.py <bus> --serial S --map M` (waits under 2 ms are only counted).
 
 ## Drop one host output (video loss on one unit)

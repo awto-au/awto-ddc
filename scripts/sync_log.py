@@ -33,7 +33,7 @@ HDR, EV = 14, 8                           # header bytes, bytes per entry; N = h
 D0 = 3                                                   # _D0_INPUT_PORT
 SRC = {2: "DVI", 3: "HDMI", 4: "DP"}
 DP_RATE = {0x06: "RBR", 0x0A: "HBR", 0x14: "HBR2", 0x1E: "HBR3"}
-KINDS = {1: "power on", 2: "switch", 3: "wake", 4: "power key on"}
+KINDS = {1: "power on", 2: "switch", 3: "wake", 4: "power key on", 5: "picture lost"}
 SYMBOLIZE = None                                         # set_map(): (bank, pc) -> "fn+0x.." for the pc fmt
 
 
@@ -312,6 +312,60 @@ def unwrap(evs: list, now32: int | None) -> list:
             if evs[k][0] in (0xC0, 0xD8):
                 break
     return [tuple(x) for x in out]
+
+
+BOOT_EV, BEGIN_EV, K_POWER_ON, BEGIN_IN = 0xD0, 0xC0, 1, 0x01    # RL6449_Project.h AWTO_SYNC_EV_BOOT / _BEGIN, AWTO_SYNC_K_POWER_ON, AWTO_SYNC_BEGIN_IN
+
+
+def is_start(ev: tuple) -> bool:
+    """an episode start (console red row): the boot line, or a BEGIN that is not power-on / a switch inside an unsettled episode"""
+    i, a, _, v = ev
+    return i == BOOT_EV or (i == BEGIN_EV and a != K_POWER_ON and isinstance(v, int) and v >> 24 != BEGIN_IN)
+
+
+def fmt_delta(d: int | None) -> str:
+    """console time column (fw/osd/console.c AwtoPutDelta): 7 cells, "+xxx ms" / "+xx.x s" / "+xxxx s" / "+xxxx h"; None = blank"""
+    if d is None:
+        return " " * 7
+    sg, u = ("-" if d < 0 else "+"), abs(d)
+    if u <= 999:
+        return f"{sg}{u:3d} ms"
+    if u <= 99_999:
+        return f"{sg}{u // 1000:2d}.{u // 100 % 10} s"
+    return f"{sg}{u // 1000:4d} s" if u <= 9_999_999 else f"{sg}{u // 3_600_000:4d} h"
+
+
+def deltas(evs: list, ts: list | None = None) -> list[tuple[int | None, bool]]:
+    """per event (delta ms, start): since the line above (32 bit from ts = unwrap() when both known, else the 16-bit step);
+    a start counts from its zero: the boot line from the MCU reset (its own time), a BEGIN from itself (0)"""
+    out = []
+    for k, ev in enumerate(evs):
+        if is_start(ev):
+            t = ts[k][0] if ts and ts[k][0] is not None else ev[2] - (0x10000 if ev[2] >= 0x8000 else 0)
+            out.append((t if ev[0] == BOOT_EV else 0, True))
+        elif k == 0:
+            out.append((None, False))
+        elif ts and ts[k][0] is not None and ts[k - 1][0] is not None:
+            out.append((ts[k][0] - ts[k - 1][0], False))
+        else:
+            out.append((step(evs[k - 1][2], ev[2]), False))
+    return out
+
+
+def dram_deltas(ents: list[dict]) -> list[tuple[int | None, bool]]:
+    """deltas() for DRAM log entries (dram_log.snapshot: 32-bit fw ms per boot); a new boot counter has no line above"""
+    out, prev = [], None
+    for e in ents:
+        ms = e["ms"] - (1 << 32 if e["ms"] >= 1 << 31 else 0)
+        st = is_start((e["id"], e["arg"], ms & 0xFFFF, e["val"]))
+        out.append(((ms if e["id"] == BOOT_EV else 0) if st else (ms - prev[1] if prev and prev[0] == e["boot"] else None), st))
+        prev = (e["boot"], ms)
+    return out
+
+
+def with_delta(lines: list[str], ds: list) -> list[str]:
+    """lines prefixed with the console's delta column; an episode start as the console's rule: "-- line --" """
+    return [f"{fmt_delta(d)}:" + (f"-- {ln} --" if st else ln) for (d, st), ln in zip(ds, lines)]
 
 
 SYS_STATE, SYS_WHY, SYS_REQ, SYS_OUT = 0x15, 0x16, 0x17, 0x18    # #162 step 3 name tables (sync.tsv), read by the sys / sysreq fmts
@@ -605,7 +659,6 @@ def main() -> int:
     ap.add_argument("--serial", help="EDID serial the bus must belong to (i2cbus.require_unit)")
     ap.add_argument("--whole", action="store_true", help="every entry still in the ring (all episodes), times vs the current episode")
     ap.add_argument("--json", action="store_true", help="one 'SYNCJSON {...}' line with every entry (ring seq, raw bytes, text, host time) for scripts/unit_log.py")
-    ap.add_argument("--delta", action="store_true", help="add a +ms column: time since the previous line (#216 boot timing)")
     ap.add_argument("--dram", action="store_true", help="DRAM log image: the history from the DDR ring (all boots), per boot ms since reset (scripts/dram_log.py)")
     g = ap.add_mutually_exclusive_group()
     g.add_argument("--last", type=int, help="with --dram: the newest K entries (default 64)")
@@ -656,11 +709,11 @@ def main() -> int:
         log(f"dram log: gen {snap['gen']} boot {snap['boot']} next index {snap['next']} (wraps {snap['next'] // snap['slots']}), {len(snap['entries'])} entries, "
             f"{stats.get('bursts', 0)} DDR bursts in {stats.get('s', 0):.1f} s")
         boot = None
-        for e in snap["entries"]:
+        for e, dl in zip(snap["entries"], with_delta([e["text"] for e in snap["entries"]], dram_deltas(snap["entries"]))):
             if e["boot"] != boot:
                 boot = e["boot"]
                 log(f"--- boot {boot}")
-            log(f"  {e['abs']:6d} {e['text']}")
+            log(f"  {e['abs']:6d} {dl}")
         return 0
     raw = read_ring(lambda ad, n: X.read_blocks(io, ad, n), sym(a.map, "g_stAwtoSync"), a.whole)
     ht, t2 = read_ht(io, a.map) if raw is not None else (None, None)
@@ -686,18 +739,12 @@ def main() -> int:
         print("SYNCJSON " + json.dumps(snapshot(h, lines, ht, t2, a.serial)), flush=True)
         return 0
     log(ht_line(ht, t2))
+    ds = deltas(h["events"], unwrap(h["events"], fw_now(ht, t2) if ht and t2 is not None else None))
     lines = stamp(h, lines, ht, t2)
     log(f"sync episode: {KINDS.get(h['kind'], h['kind'])}, {len(lines)} lines" + (f", {h['lost']} older lines overwritten" if h.get("lost") else ""))
-    prev = None
     painted = paint_lines(h, lines, rows, sync_classes.use_colour())
-    for ln, pl in zip(lines, painted):
-        m = re.match(r"^\s*(\d+):", ln) if a.delta else None
-        pre = ""
-        if m:
-            ms = int(m.group(1))
-            pre = f"{'+' + str(ms - prev) if prev is not None else '':>6} "
-            prev = ms
-        log("  " + pre + ln, "  " + pre + pl)
+    for ln, pl, dl, dp in zip(lines, painted, with_delta(lines, ds), with_delta(painted, ds)):
+        log("  " + dl, "  " + dp)                         # delta column first (as the console), then host time + "nnnnn:" since the episode start
     return 0
 
 

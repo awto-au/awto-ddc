@@ -676,6 +676,10 @@ static void SysMachineJudge(void)
         return;
     }
 #endif
+    if((s_ucSysState == AWTO_SYS_ACTIVE) || ((s_ucSysState == AWTO_SYS_DISPLAY) && (ucWhy == AWTO_SYS_WHY_UNSTABLE)))
+    {
+        AwtoSyncBegin(AWTO_SYNC_K_LOST, SysSourceGetInputPort());     // picture / signal lost -> new search: an episode start (Dan 2026-11-27)
+    }
     // Force Reset (SDK): the change flags are cleared, the reset target dropped
     CLR_MODE_STATE_CHANGE_SOURCE();
     CLR_MODE_STATE_CHANGE_MODE();

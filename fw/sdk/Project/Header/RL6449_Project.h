@@ -701,6 +701,9 @@ extern void AwtoDbgSelectChannel(unsigned char ucInputPort);   // ScalerMcuDdcci
 #define AWTO_MEAS_P0_02_0C()                                    (((unsigned int)AWTO_MEAS_RD(AWTO_R_WATCH_DOG_CTRL0) << 8) | AWTO_MEAS_RD(AWTO_R_STATUS0))
 #define AWTO_MSTEP_LAST                                         13      // step id of the last line of a set-up (memory + timing gen check OK)
 #define AWTO_MSTEP_MAX                                          7       // first set-up 5 lines x1.25: a set-up that never reaches LAST stops here, said in the log
+#define AWTO_MSTEP_FAIL_MEM                                     0x21    // #353 every failed set-up, its final check: memory check (status P0_0C << 8 | P0_02)
+#define AWTO_MSTEP_FAIL_REGION                                  0x22    // input active region changed
+#define AWTO_MSTEP_FAIL_TGEN                                    0x23    // display timing gen check
 #define AWTO_MSTEP(id, arg, val)                                { AwtoMstep((id), (arg), (val)); AwtoMeasEvent((id), (arg), (val)); }
 extern void AwtoMstep(unsigned char ucId, unsigned char ucArg, unsigned int usVal);
 extern __xdata unsigned char g_ucAwtoMstepN;   // step lines logged this boot; AWTO_MSTEP_MAX = done (write 0 over the debug slave to log the next set-up)
@@ -1239,6 +1242,7 @@ extern __xdata StAwtoSyncEv g_stAwtoSyncPin;  // #150: this boot's reason line, 
 #if(_AWTO_DRAM_LOG == _ON)
 #define AWTO_SYNC_ENT(n)                                        ((unsigned char __xdata *)&g_stAwtoSync.stTl[(unsigned char)(g_stAwtoSync.ucHead - (n)) & (AWTO_SYNC_TAIL - 1)])
 extern unsigned char __xdata *AwtoSyncAt(unsigned char ucSeq);
+#define AWTO_DLOG_AT_B                                          10          // AwtoSyncAt entry: 8 B + ms bits 31..16 (offsets 8, 9) for tail and DDR lines alike
 // DDR ring: 2^15 slots of one 16 B burst (entry), header burst just below, the note store (AWTO_DDRN_*) just above (docs/dram-log-design.md)
 #define AWTO_DLOG_SLOTS                                         32768UL
 #define AWTO_DLOG_UNITS0                                        0x3EC000UL  // first entry; ring ends at AWTO_DDRN_UNITS0
@@ -1258,6 +1262,8 @@ extern void AwtoDlFlush(unsigned char ucOp);                    // main context 
 #define AWTO_SYNC_K_SWITCH                                      2
 #define AWTO_SYNC_K_WAKE                                        3
 #define AWTO_SYNC_K_POWER_KEY                                   4
+#define AWTO_SYNC_K_LOST                                        5       // picture lost: ACTIVE / DISPLAY SETTING -> SEARCH (zero = the judge pass that saw it)
+#define AWTO_SYNC_BEGIN_IN                                      0x01    // BEGIN value bits 31..24: a switch inside an unsettled episode (no new start)
 #define AWTO_SYNC_EV_BEGIN                                      0xC0    // arg kind, value port
 #define AWTO_SYNC_EV_TMDS                                       0xC1    // predetect on, HDMI (clock not measured yet)
 #define AWTO_SYNC_EV_TMDS_CLK                                   0xC6    // HDMI freq detector stable: value = measured TMDS clock, 0.1 MHz
@@ -1453,7 +1459,7 @@ extern __xdata unsigned char g_aucAwtoNote[AWTO_NOTE_SIZE];
 extern void AwtoHostNote(void);
 // #157 host time: DDC/CI table write (0xE7) to this VCP, offset 0: unix s BE x4, ms BE x2, UTC offset (15 min, signed)
 #define AWTO_HT_VCP                                             0xE9    // host time VCP (#157); get: max = syncs, cur = drift ms
-#define AWTO_HT_STALE_MS                                        180000  // Dan: HOST marked stale after 3 min without a sync (host sends every 60 s)
+#define AWTO_HT_STALE_MS                                        375000  // HOST marked stale: host sends every 300 s (Dan 2026-11-27), x1.25
 #define AWTO_HT_DRIFT_MS                                        1000    // Dan: a ring line when the local tick and the host differ by more
 #define AWTO_HT_GAP_S                                           2000000 // syncs further apart (23 days): drift not computed (ms must fit a long)
 #define AWTO_TITLE_MS                                           1000    // Dan: title row live fields about 1/s; expiry = redraw changed cells

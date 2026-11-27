@@ -44,6 +44,8 @@ TITLE_RE = re.compile(r"CPU (\d+\.\d) PLL (\d+\.\d) SPI (\d+\.\d)  (\d+x\d+ \d+\
 VIEW_ROWS = int(re.search(r"^#define AWTO_VIEW_ROWS\s+(\d+)", (ROOT / "fw/osd/console.c").read_text(), re.MULTILINE).group(1))   # rows shown at a time
 CON_COLS = 136      # map columns per row (AWTO_CON_COLS, fw/osd/console.c)
 TICK_S = 1.25       # title refresh AWTO_TITLE_MS 1 s x1.25
+TICK_MS = int(TICK_S * 1000)
+STALE_MS = int(re.search(r"^#define AWTO_HT_STALE_MS\s+(\d+)", (ROOT / "fw/sdk/Project/Header/RL6449_Project.h").read_text(), re.MULTILINE).group(1))
 
 
 def say(s: str):
@@ -221,11 +223,8 @@ def main() -> int:
     g = s.get()
     s.check(g is not None and 4950 <= g["cur"] <= 5050, "get E9: drift ~ +5000 ms", str(g))
     row = next((r for r in s.text() if "drift +" in r), "")
-    mt = re.search(r"\b(\d\d):(\d\d):(\d\d)\.(\d{3})([:~])", row)                 # #157: main console time column = host wall time
-    got = (int(mt.group(1)) * 3600 + int(mt.group(2)) * 60 + int(mt.group(3))) + int(mt.group(4)) / 1000 if mt else None
-    want = sent3.hour * 3600 + sent3.minute * 60 + sent3.second + sent3.microsecond / 1e6
-    s.check(got is not None and abs(got - want) < 0.5 and mt.group(5) == ":", "console line time column = host wall time HH:MM:SS.mmm (chained from the anchor)",
-            f"{row.strip()[:40]!r} vs sent {sent3.time().isoformat('milliseconds')}")
+    mt = re.search(r"([+-][ \d]{3} ms|[+-][ \d]\d\.\d s|[+-][ \d]{4} [sh]):drift", row)    # Dan 2026-11-27: delta column, not wall time
+    s.check(mt is not None, "console line time column = delta since the line above (+xxx ms:)", repr(row.strip()[:40]))
 
     # changed cells only: OSD writes in one idle tick vs the whole title
     s.bus.wait(TICK_S)
@@ -245,17 +244,17 @@ def main() -> int:
 
     # STALE: the last sync 200 s ago
     fw = s.fw32()
-    s.m.wr(s.a_ht + 8, ((fw - 200_000) & 0xFFFFFFFF).to_bytes(4, "big"))
+    s.m.wr(s.a_ht + 8, ((fw - STALE_MS - TICK_MS) & 0xFFFFFFFF).to_bytes(4, "big"))
     s.bus.wait(TICK_S)
     ti = s.title()
-    s.check("STALE" in ti, "HOST marked STALE after 3 min without a sync", ti[60:])
+    s.check("STALE" in ti, f"HOST marked STALE after AWTO_HT_STALE_MS ({STALE_MS} ms) without a sync", ti[60:])
 
     say(f"title: {ti!r}")
 
     if pages:                                           # both pages: text + PNG; the GPIO page has no sync lines
         main_t = s.dump(a.out, f"{a.bin.stem}.main")
         full = len([r for r in main_t if r.strip()]) >= VIEW_ROWS          # a log that fills the view scrolls the heading out (one more ring line is enough)
-        s.check(any("EVENT LOG" in r for r in main_t[:4]) or (full and re.match(r"\s*\d+:", main_t[1] if len(main_t) > 1 else "") is not None),
+        s.check(any("EVENT LOG" in r for r in main_t[:4]) or (full and re.match(r"\s*[+-]", main_t[1] if len(main_t) > 1 else "") is not None),
                 "main page: event log heading (or the view full of log lines, heading scrolled out)")
         s.cmd(0x43)
         g = s.dump(a.out, f"{a.bin.stem}.gpio")
