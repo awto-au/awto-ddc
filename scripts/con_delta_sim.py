@@ -175,7 +175,7 @@ def seq_deltas(s: W.Sim, name: str, a0: int):
     for col, body in reversed(rows[-20:]):
         rb = W.RULE.match(body)
         head = W.norm((rb.group(1) if rb else body).split(" | ")[0])[:20]
-        for k in range(body.count(" | ") + 1):            # a joined row: its first entry is k lines up (a text may hold " | " itself)
+        for k in range(body.count(" | ") + 2):            # a joined row (" | " per line; D8 sits on the D7 host time row): its first entry k up
             if a - k in by and same(txt(by[a - k]), head):
                 a -= k
                 break
