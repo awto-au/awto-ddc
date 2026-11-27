@@ -3706,10 +3706,36 @@ void ScalerTMDSRx2HdmiWatchDog(BYTE ucWDType, bit bEnable)
 // Input Value  : None
 // Output Value : None
 //--------------------------------------------------
+// awto: #365 the clock is not switched at power saving: freq-detect reference stays the GDI clock (normal bounds' reference),
+// PS tolerances kept; the MCU stays on M2PLL, so the DDC debounce keeps its normal count
+#if(_AWTO_DDR_KEEP == _ON)
+#define AWTO_TMDS_PS_REF_KHZ                            (_GDI_CLK_KHZ)
+#define AWTO_TMDS_DDC_DEBOUNCE_PS                       _TMDS_DDC_DEBOUNCE_NORMAL
+#else
+#define AWTO_TMDS_PS_REF_KHZ                            ((DWORD)_INTERNAL_OSC_XTAL)
+#define AWTO_TMDS_DDC_DEBOUNCE_PS                       _TMDS_DDC_DEBOUNCE_PS
+#endif
+#define AWTO_TMDS_PS_HS_UPPER                           (WORD)((DWORD)600 * 1040 * 10 / ((AWTO_TMDS_PS_REF_KHZ * _TMDS_MEASURE_CLOCK_DIVIDER) / _TMDS_MEASURE_CLOCK_COUNTER * 9))
+#define AWTO_TMDS_PS_LOWER                              (WORD)((DWORD)_TMDS_CLOCK_MEASURE_LOWER_BOUNDARY * 960 * 10 / ((AWTO_TMDS_PS_REF_KHZ * _TMDS_MEASURE_CLOCK_DIVIDER) / _TMDS_MEASURE_CLOCK_COUNTER * 11))
+
+#if(_AWTO_DDR_KEEP == _ON)
+//--------------------------------------------------
+// Description  : #365 freq-detect reference in power saving (kHz), for the wake poll's TMDS clock reading (fw/log/sync.c)
+// Input Value  : None
+// Output Value : reference clock in kHz
+//--------------------------------------------------
+DWORD ScalerTMDSRxPsRefKhz(void)
+{
+    return AWTO_TMDS_PS_REF_KHZ;
+}
+#endif
+
 void ScalerTMDSRxPowerSavingProc(void)
 {
+    WORD usBound;
+
     // Set Power Saving DDC Debounce Counter
-    isr_g_usDDCDebounceCnt = _TMDS_DDC_DEBOUNCE_PS;
+    isr_g_usDDCDebounceCnt = AWTO_TMDS_DDC_DEBOUNCE_PS;
     ScalerTMDSRxFreqDetectDisable();
 
     // Switch TMDS Input/Output to Auto
@@ -3733,13 +3759,15 @@ void ScalerTMDSRxPowerSavingProc(void)
 #endif
     {
         // Set Upper Bound
-        RxSetByte(P71_E8_HDMI_FREQDET_UPPER_M, HIBYTE(_TMDS_FREQ_PS_HIGH_SPEED_UPPER_BOUND));
-        RxSetByte(P71_E9_HDMI_FREQDET_UPPER_L, LOBYTE(_TMDS_FREQ_PS_HIGH_SPEED_UPPER_BOUND));
+        usBound = AWTO_TMDS_PS_HS_UPPER;
+        RxSetByte(P71_E8_HDMI_FREQDET_UPPER_M, HIBYTE(usBound));
+        RxSetByte(P71_E9_HDMI_FREQDET_UPPER_L, LOBYTE(usBound));
     }
 
     // Set Lower Bound
-    RxSetByte(P71_EA_HDMI_FREQDET_LOWER_M, HIBYTE(_TMDS_FREQ_PS_LOWER_BOUND));
-    RxSetByte(P71_EB_HDMI_FREQDET_LOWER_L, LOBYTE(_TMDS_FREQ_PS_LOWER_BOUND));
+    usBound = AWTO_TMDS_PS_LOWER;
+    RxSetByte(P71_EA_HDMI_FREQDET_LOWER_M, HIBYTE(usBound));
+    RxSetByte(P71_EB_HDMI_FREQDET_LOWER_L, LOBYTE(usBound));
 }
 void ScalerTMDSRx2PowerSavingProc(void)
 {

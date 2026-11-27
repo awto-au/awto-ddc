@@ -1243,6 +1243,13 @@ extern __xdata unsigned char g_ucAwtoAtLaps;        // AwtoSyncAt: AWTO_SYNC_WRA
 extern __xdata unsigned char g_ucAwtoDdrOff;        // 1 while the memory is powered off (ScalerMemoryPowerControl; fw/log/hostnote.c)
 extern __xdata unsigned char g_ucAwtoDdrUp;         // 1 after this boot's first memory power up (fw/log/hostnote.c)
 extern __xdata unsigned int g_usAwtoDdrFix;         // #392 CMD << 8 | LEN of a reserved MCU_DC port A command cleared, 0 = none (fw/log/hostnote.c)
+#ifndef _AWTO_DDR_KEEP
+#define _AWTO_DDR_KEEP                                          _ON     // #365 ON: memory, its PLLs, crystal and M2PLL stay up over power saving / power off; OFF = SDK power-down
+#endif
+extern __xdata unsigned char g_ucAwtoDdrKept;       // #365 1 = power saving / off entered with memory + clocks kept: the wake skips the clock select (ScalerMemory.c)
+#if(_AWTO_DDR_KEEP == _ON)
+extern unsigned long ScalerTMDSRxPsRefKhz(void);    // #365 power-saving freq-detect reference, kHz (RL6449_Series_TMDSRx2.c)
+#endif
 #if(_AWTO_DRAM_LOG == _ON)
 #define AWTO_SYNC_ENT(n)                                        ((unsigned char __xdata *)&g_stAwtoSync.stTl[(unsigned char)(g_stAwtoSync.ucHead - (n)) & (AWTO_SYNC_TAIL - 1)])
 extern unsigned char __xdata *AwtoSyncAt(unsigned char ucSeq);
@@ -1319,6 +1326,9 @@ extern void AwtoDlFlush(unsigned char ucOp);                    // main context 
 #define AWTO_MEM_LOG_SEL                                        0x10    // + _FRAME_SYNC_LINE_BUFFER.._FREE_RUN_NO_INPUT: memory select changed (display setting)
 #define AWTO_MEM_LOG_REINIT                                     0x20    // #353 memory power cycle (DDR PLL, DC SYS / PHY, DRAM init): value = failed set-ups before it
 #define AWTO_MEM_LOG_REINIT_OK                                  0x21    // #353 display setting passed after the power cycle: value = set-up try of the episode
+#define AWTO_MEM_LOG_KEPT                                       0x22    // #365 power saving / off entered, memory + PLLs + clocks kept: value = power action
+#define AWTO_MEM_LOG_KEPT_OK                                    0x23    // #365 wake: DC registers intact, no re-init: value = DC_PHY_TMCTRL3 tmfaw A << 8 | B
+#define AWTO_MEM_LOG_KEPT_RESET                                 0x24    // #365 wake: DC registers reset (or memory never up), full init: same value
 // #353: failed frame-buffer M-domain set-ups in one display setting before the memory power cycle (once per episode).
 // 2 leaves ~7 of the ~10 tries the 2.5 s judge timer allows to retry after it; Dan's call (#353).
 #define AWTO_MEM_REINIT_AFTER                                   2

@@ -36,3 +36,7 @@ extern void ScalerMemorySetScalingCoef(BYTE __code *pucAddress1, BYTE __code *pu
 #if(_MEMORY_TYPE_CONFIG != _NO_MEMORY)
 extern void ScalerMemoryPowerControl(bit bOnOff);
 #endif
+#if((_AWTO_DDR_KEEP == _ON) && (_MEMORY_TYPE_CONFIG == _MEMORY_DDR2))
+extern void ScalerMemoryKeepEnter(BYTE ucSwitch);      // awto: #365
+extern void ScalerMemoryKeepWake(void);
+#endif

@@ -85,7 +85,7 @@
 ^conditional flow changed by optimizer	Kernel/Scaler/ScalerFunction/Code/ScalerPLL.c	1018	ok	OK-CONFIG: bForceFreqDown only set under _IMD_DOMAIN_ULTRA_HIGH_SPEED_SUPPORT (off); local stays _FALSE
 ^unreachable code$	Kernel/Scaler/ScalerFunction/Code/ScalerPLL.c	1021	ok	OK-CONFIG: freq-down arm dead for same reason (bForceFreqDown always _FALSE)
 ^conditional flow changed by optimizer	Kernel/System/Code/SysColor.c	65	ok	OK-CONFIG: _COLOR_IP_DCC_HISTOGRAM/_DCR/seamless/MBR off: ACTIVE case empty equals default
-^unreachable code$	Kernel/System/Code/SysPower.c	751	ok	OK-HARMLESS: trailing return after a switch in which all cases return
+^unreachable code$	Kernel/System/Code/SysPower.c	786	ok	OK-HARMLESS: trailing return after a switch in which all cases return
 ^unreachable code$	Kernel/User Common Function/Code/UserCommonInterface.c	616	ok	OK-HARMLESS: PCB_BACKLIGHT_POWER(const) macro contains if((x)==_LIGHT_CONTROL_ON); the other arm is dead for a constant argument, correct arm still emitted
 ^unreachable code$	Kernel/User Common Function/Code/UserCommonInterface.c	655	ok	OK-HARMLESS: PCB_BACKLIGHT_POWER(const) macro contains if((x)==_LIGHT_CONTROL_ON); the other arm is dead for a constant argument, correct arm still emitted
 ^unreachable code$	User/RTD Factory/Code/RTDFactoryFunction.c	2815	ok	OK-HARMLESS: SDK bug: (bit)(ucPar&_BIT1)==(1<<1) is always false (bit is 0/1, compared to 2); Keil promotes the same way so also never true; factory-menu only

@@ -304,7 +304,9 @@ void SysPowerSwitch(EnumPowerAction enumSwitch)
             // Mode Power Saving Process
             SysModeResetState(_MODE_ACTION_RESET_TO_POWER_SAVING);
 
-#if(_MEMORY_TYPE_CONFIG != _NO_MEMORY)
+#if((_AWTO_DDR_KEEP == _ON) && (_MEMORY_TYPE_CONFIG == _MEMORY_DDR2))
+            ScalerMemoryKeepEnter(enumSwitch);      // awto: memory, its PLLs and the clocks stay up (#365)
+#elif(_MEMORY_TYPE_CONFIG != _NO_MEMORY)
             ScalerMemoryPowerControl(_OFF);
 #endif
 
@@ -340,7 +342,12 @@ void SysPowerSwitch(EnumPowerAction enumSwitch)
             SysPowerMHLPowerCutProc();
 #endif
             // Select Internal Oscillator or EXT Xtal as System Clock.
-            SysPowerSystemClockSelect(_SYS_PS_CLOCK_SOURCE);
+#if((_AWTO_DDR_KEEP == _ON) && (_MEMORY_TYPE_CONFIG == _MEMORY_DDR2))
+            if(g_ucAwtoDdrKept == 0)                // awto: kept: crystal / M2PLL feed the MPLL + DDR2 PLLs, MCU stays on M2PLL (#365)
+#endif
+            {
+                SysPowerSystemClockSelect(_SYS_PS_CLOCK_SOURCE);
+            }
 
 #if(_SYSTEM_LOW_POWER_GEN == _POWER_FLOW_GEN_2)
             // Interface Power Saving Process
@@ -390,8 +397,17 @@ void SysPowerSwitch(EnumPowerAction enumSwitch)
             // Mode Power Off Process
             SysModeResetState(_MODE_ACTION_RESET_TO_POWER_OFF);
 
+#if((_AWTO_DDR_KEEP == _ON) && (_MEMORY_TYPE_CONFIG == _MEMORY_DDR2))
+            if(enumSwitch == _POWER_ACTION_NORMAL_TO_OFF)
+            {
+                ScalerMemoryKeepEnter(enumSwitch);  // awto: POWER off keeps the memory as power saving does (#365); AC_ON_TO_OFF: never up
+            }
+            else
+#endif
 #if(_MEMORY_TYPE_CONFIG != _NO_MEMORY)
-            ScalerMemoryPowerControl(_OFF);
+            {
+                ScalerMemoryPowerControl(_OFF);
+            }
 #endif
 
 #if(_DP_TYPE_C_PORT_CTRL_SUPPORT == _ON)
@@ -415,7 +431,12 @@ void SysPowerSwitch(EnumPowerAction enumSwitch)
             ScalerPinshareConfig(_POWER_STATUS_OFF);
 
             // Select internal oscillator as system clock.
-            SysPowerSystemClockSelect(_IOSC_CLK);
+#if((_AWTO_DDR_KEEP == _ON) && (_MEMORY_TYPE_CONFIG == _MEMORY_DDR2))
+            if(g_ucAwtoDdrKept == 0)                // awto: #365, as at power saving
+#endif
+            {
+                SysPowerSystemClockSelect(_IOSC_CLK);
+            }
 
 #if(_SYSTEM_LOW_POWER_GEN == _POWER_FLOW_GEN_2)
             // Interface Power Off Process
@@ -504,7 +525,12 @@ void SysPowerSwitch(EnumPowerAction enumSwitch)
 #endif
 
             // Select M2PLL as system clock.
-            SysPowerSystemClockSelect(_M2PLL_CLK);
+#if((_AWTO_DDR_KEEP == _ON) && (_MEMORY_TYPE_CONFIG == _MEMORY_DDR2))
+            if(g_ucAwtoDdrKept == 0)                // awto: kept: the MCU runs on M2PLL, whose power-on would cycle it (#365)
+#endif
+            {
+                SysPowerSystemClockSelect(_M2PLL_CLK);
+            }
 
 #if(_AUDIO_SUPPORT == _ON)
 #if(_LINE_IN_SUPPORT == _ON)
@@ -555,8 +581,17 @@ void SysPowerSwitch(EnumPowerAction enumSwitch)
             }
 #endif
 
+#if((_AWTO_DDR_KEEP == _ON) && (_MEMORY_TYPE_CONFIG == _MEMORY_DDR2))
+            if(g_ucAwtoDdrKept != 0)
+            {
+                ScalerMemoryKeepWake();             // awto: no re-init when the DC kept its set-up (#365)
+            }
+            else
+#endif
 #if(_MEMORY_TYPE_CONFIG != _NO_MEMORY)
-            ScalerMemoryPowerControl(_ON);
+            {
+                ScalerMemoryPowerControl(_ON);
+            }
 #endif
             // Clear Source Ready Flag
             SysSourceInfoReset();

@@ -220,7 +220,7 @@ E9	FF	-	OSD demo closed
 CD	*	port	AUX command from source:wake
 CE	*	port	DPCD 600h = D0 (source powers the link):wake
 D3	*	port	cable unplugged:wake
-DC	*	portmhz1	wake by TMDS clock, about % (IOSC reference)	timing
+DC	*	portmhz1	wake by TMDS clock, about %	timing
 DD	*	port	DDC activity in power saving:no wake (SDK DDC handshake gated, counted)
 DA	*	port	DP AUX activity in power saving:no wake (SDK AUX toggle gated, counted)
 DB	*	port	AUX command from source in power saving:no wake (wake:DPCD 600h = D0 or link training)
@@ -292,6 +292,9 @@ E3	13	n	memory select:M/N frame-sync frame buffer (force %)
 E3	14	n	memory select:free run, no input (force %)
 E3	20	n	memory re-init:% frame-buffer M-domain set-ups failed; DDR power cycled (PLLs, DC SYS / PHY, DRAM init), retrying	warning
 E3	21	n	memory re-init:display setting passed after it (set-up try %)
+E3	22	x	memory kept on (DDR2 PLL, MPLL, crystal; MCU stays on M2PLL):power action %
+E3	23	x	memory kept:DC set-up intact (DC_PHY_TMCTRL3 tmfaw A << 8 | B = %), no re-init
+E3	24	x	memory kept:DC set-up reset at the wake (DC_PHY_TMCTRL3 tmfaw A << 8 | B = %), full init	warning
 E4	00	-	picture normal:display re-set
 E4	01	-	picture mirrored left-right:display re-set
 E4	02	-	picture mirrored top-bottom:display re-set

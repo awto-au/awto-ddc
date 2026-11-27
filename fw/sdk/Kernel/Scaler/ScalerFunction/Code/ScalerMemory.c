@@ -603,6 +603,30 @@ void ScalerMemoryReset(void)
 }
 
 //--------------------------------------------------
+// Description  : Memory up: FRC capture / display off (the display setting re-inits them), DRAM log / note DDR ops allowed
+// Input Value  : None
+// Output Value : None
+//--------------------------------------------------
+static void ScalerMemoryUpTail(void)
+{
+#if(_HW_FRC_TYPE != _FRC_GEN_NONE)
+    // FRC Disable capture and display
+    ScalerFRCEn(_FRC_CAP_DISP_ALL, _DISABLE);
+#endif
+
+#if(_FRC_SUPPORT == _ON)
+#if(_DISPLAY_ROTATION_SUPPORT == _ON)
+#if(_DISPLAY_ROTATION_TYPE == _DISPLAY_ROTATION_GEN_I)
+    // Disable FRC
+    ScalerRotationSetFRCEn(_FRC_ALL_ONOFF, _DISABLE);
+#endif
+#endif
+#endif
+    g_ucAwtoDdrOff = 0;                             // memory up: the pending DRAM log lines drain from the XDATA tail
+    g_ucAwtoDdrUp = 1;
+}
+
+//--------------------------------------------------
 // Description  : Memory Power Control
 // Input Value  :
 // Output Value :
@@ -637,23 +661,54 @@ void ScalerMemoryPowerControl(bit bOnOff)
 
     if(bOnOff == _ON)
     {
-#if(_HW_FRC_TYPE != _FRC_GEN_NONE)
-        // FRC Disable capture and display
-        ScalerFRCEn(_FRC_CAP_DISP_ALL, _DISABLE);
-#endif
-
-#if(_FRC_SUPPORT == _ON)
-#if(_DISPLAY_ROTATION_SUPPORT == _ON)
-#if(_DISPLAY_ROTATION_TYPE == _DISPLAY_ROTATION_GEN_I)
-        // Disable FRC
-        ScalerRotationSetFRCEn(_FRC_ALL_ONOFF, _DISABLE);
-#endif
-#endif
-#endif
-        g_ucAwtoDdrOff = 0;                         // memory up: the pending DRAM log lines drain from the XDATA tail
-        g_ucAwtoDdrUp = 1;
+        ScalerMemoryUpTail();
     }
 }
+
+#if((_AWTO_DDR_KEEP == _ON) && (_MEMORY_TYPE_CONFIG == _MEMORY_DDR2))
+// awto: #365 memory kept powered and clocked over power saving / power off (SysPower.c); no self refresh
+__xdata BYTE g_ucAwtoDdrKept;
+
+//--------------------------------------------------
+// Description  : #365 power saving / off entry: no memory power down; DRAM log / note DDR ops wait for the wake (port writes during
+//                the isolation were lost, #358), lines stay in the XDATA tail
+// Input Value  : ucSwitch --> power action (logged)
+// Output Value : None
+//--------------------------------------------------
+void ScalerMemoryKeepEnter(BYTE ucSwitch)
+{
+    AwtoSyncPush(AWTO_SYNC_EV_MEM, AWTO_MEM_LOG_KEPT, ucSwitch);
+    g_ucAwtoDdrKept = 1;
+    if(g_ucAwtoDdrUp != 0)
+    {
+        g_ucAwtoDdrOff = 1;
+    }
+}
+
+//--------------------------------------------------
+// Description  : #365 wake after a kept entry: DC_PHY_TMCTRL3 tmfaw (regdb reset 0x00, init writes non-zero) on both
+//                controllers still set -> no re-init; else (wake group reset cleared them, or no power up yet) -> full init
+// Input Value  : None
+// Output Value : None
+//--------------------------------------------------
+void ScalerMemoryKeepWake(void)
+{
+    WORD usFaw = ((WORD)ScalerGetByte(DDR2_GET_REG(PA0_0C_DC_PHY_TMCTRL3_0, _DDR2_A)) << 8) |
+                 ScalerGetByte(DDR2_GET_REG(PA0_0C_DC_PHY_TMCTRL3_0, _DDR2_B));
+
+    g_ucAwtoDdrKept = 0;
+    if((g_ucAwtoDdrUp != 0) && (HIBYTE(usFaw) != 0) && (LOBYTE(usFaw) != 0))
+    {
+        AwtoSyncPush(AWTO_SYNC_EV_MEM, AWTO_MEM_LOG_KEPT_OK, usFaw);
+        ScalerMemoryUpTail();
+    }
+    else
+    {
+        AwtoSyncPush(AWTO_SYNC_EV_MEM, AWTO_MEM_LOG_KEPT_RESET, usFaw);
+        ScalerMemoryPowerControl(_ON);
+    }
+}
+#endif
 #endif // End of #if(_MEMORY_TYPE_CONFIG != _NO_MEMORY)
 
 #if(_HW_FRC_TYPE != _FRC_GEN_NONE)
