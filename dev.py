@@ -757,10 +757,6 @@ def _flashed(u: dict) -> dict:
 def cmd_build(extra: list[str]) -> int:
     serial = _opt(extra, "--serial")
     n, u = (0, {"serial": serial}) if serial else _unit(extra)
-    disk_guard.prune_fw(FW)
-    disk_guard.require_free("build", disk_guard.BUILD_FREE_MB)
-    import build_guard
-    build_guard.acquire(Path(_opt(extra, "--tree") or REPO))     # one build at a time, memory check (#316)
     freeze, nofrc = _flag(extra, "--freeze"), _flag(extra, "--no-frc")   # FRC + rotation are the default (#165)
     if freeze and nofrc:
         raise SystemExit("build: --freeze needs the frame buffer, --no-frc removes it; nothing done")
@@ -779,6 +775,10 @@ def cmd_build(extra: list[str]) -> int:
     layout = _opt(extra, "--layout") or "dev"                          # dev = spread + slots (small edits), release = fewest banks (docs/flash-layout.md)
     if layout not in ("dev", "release"):
         raise SystemExit(f"build: --layout takes dev or release, got {layout!r}; nothing done")
+    disk_guard.prune_fw(FW)                                            # after the argument checks: a bad call never waits for the guard
+    disk_guard.require_free("build", disk_guard.BUILD_FREE_MB)
+    import build_guard
+    build_guard.acquire(tree)                                          # one build at a time, memory check (#316)
     opt += "-rel" if layout == "release" else ""
     tag = _opt(extra, "--tag") or f"{commit}{dirty}{opt}{'-audio-test' if audio_test else ''}"
     args = ["--tree", str(tree), "--serial", u["serial"], "--tag", tag, *[x for d in defs for x in ("-D", d)],
