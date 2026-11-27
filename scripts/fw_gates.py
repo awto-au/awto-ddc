@@ -131,6 +131,7 @@ SKIP_IF_MISSING = {      # gate -> map symbols the image must define, else SKIP 
     "osdfitsim": ("_g_ucAwtoCardUp",),
     "infocard": ("_g_ucAwtoCardUp", "_g_ucAwtoSelWhy"),
     "edgesweep": ("_vcp_box", "_menu_diag"),
+    "ctemp": ("_vcp_box", "_AwtoDdcciPoll", "_g_stColorProcData"),
 }
 
 
@@ -238,6 +239,7 @@ def gates(b: Path, m: Path, ref, tree):
     g["pacewake"] = [*PY, f"{s}/pacing_wake_sim.py", b, m, "--case", "fast", "--after", "13"]    # #313: the busy hook is off 12 s after a fast wake (~5 s CPU)
     g["edgesweep"] = [*PY, f"{s}/edge_sweep_sim.py", b, m, "--quick", "--rows", "brightness"]   # #214 NORMAL: the 1 % backlight line, PWM, divide by 0
     g["edgesweep_full"] = [*PY, f"{s}/edge_sweep_sim.py", b, m]                      # extensive: every registry row
+    g["ctemp"] = [*PY, f"{s}/ctemp_sim.py", b, m]                                     # #278: each colour-temperature preset writes its own CTS gains
     g["memreinit"] = [*PY, f"{s}/mem_reinit_sim.py", b, m]                           # #353: memory power cycle after 2 failed frame-buffer set-ups (~3 s CPU)
     fast = sibling(b, "clk87")                                        # `--build-inputs`: dev.py build --tag <tag>-clk87 -D AWTO_CLOCK_MHZ=87 (stock clock): measured too when present
     base = [*PY, f"{s}/delay_sim.py", b, m, *(["--tree", tree, "--audit", *(["--variant", "hwtest"] if V["hwtest"] else [])] if tree else [])]

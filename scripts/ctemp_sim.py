@@ -79,7 +79,8 @@ def main():
         say(f"  {'PASS' if ok else 'FAIL'} {what}{(': ' + detail) if detail else ''}")
         fails += 0 if ok else 1
 
-    for name in ("SRGB", "9300", "7500", "6500", "5800", "SRGB"):
+    # sRGB is the default (#355): a set to the current preset applies nothing, so 9300 first, then sRGB = the unity reference
+    for name in ("9300", "SRGB", "9300", "7500", "6500", "5800", "SRGB"):
         tr.seen.clear()
         mccs.set(VCP_COLOUR_TEMP, VCP_OF[name])
         s.bus.wait(0.4)
