@@ -4,7 +4,8 @@
 usage: osd_fit.py [--check] [--tree DIR]
 - Texts: tAwtoCardS (fw/osd/console.c, every #if part counted) by index, literals for formatted worst cases.
 - Constants: #define integers of fw/osd/console.c and fw/sdk/Project/Header/RL6449_Project.h (+ - only).
-- Also: every tAwtoCardS text fits a message card row (AWTO_CARD_COLS - 2 cells), unless the TSV checks it in a wider box.
+- Also: every tAwtoCardS text fits a message card row (AWTO_CARD_COLS - 2 cells), unless the TSV checks it in a wider box;
+  every card that opens in map B beside the console fits the room (AWTO_MAPB_COLS x AWTO_MAPB_ROWS, #357).
 - One line per row: box, text, cells used vs the limit; FAIL names the box, the text and the overflow in cells. Exit 1 on a FAIL.
 - The sim half (scripts/osd_fit_sim.py + the firmware's own fit guard) covers rows formatted at run time with real inputs.
 Log: tmp/logs/osd_fit.log
@@ -114,6 +115,21 @@ def check(rows, d, ct, card_cols=None):
     return out
 
 
+MAPB_BOXES = [("info card (DP, ACTIVE)", "AWTO_INFO_COLS", "AWTO_CARD_ROW0 + AWTO_INFO_ROWS_ACT + AWTO_INFO_ROWS_DP + 1"),
+              ("message card", "AWTO_CARD_COLS", "AWTO_MSG_ROWS")]
+
+
+def mapb_check(d):
+    """#357: every card that can open in map B (font B beside the console) fits the room the console map leaves"""
+    out = []
+    cols, rows = evaluate("AWTO_MAPB_COLS", d), evaluate("AWTO_MAPB_ROWS", d)
+    for box, c, r in MAPB_BOXES:
+        bc, br = evaluate(c, d), evaluate(r, d)
+        ok = bc <= cols and br <= rows
+        out.append((ok, f"{'PASS' if ok else 'FAIL'} map B {box}: {bc} x {br} cells in the {cols} x {rows} room"))
+    return out
+
+
 def load_rows(p: Path):
     rows = []
     for ln in p.read_text().splitlines():
@@ -134,7 +150,7 @@ def main():
     src = (a.tree / CONSOLE).read_text()
     d = defines([src, (a.tree / HEADER).read_text()])
     ct = card_texts(src)
-    res = check(load_rows(a.tree / TSV), d, ct, evaluate("AWTO_CARD_COLS", d))
+    res = check(load_rows(a.tree / TSV), d, ct, evaluate("AWTO_CARD_COLS", d)) + mapb_check(d)
     for ok, line in res:
         if not ok or not a.check:
             say(f"  {line}")

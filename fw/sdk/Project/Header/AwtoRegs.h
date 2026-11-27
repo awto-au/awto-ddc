@@ -87,6 +87,8 @@
 #define AWTO_F_FRAME_CTRL_17_DECODE_NOCOM_DATA          0x02
 #define AWTO_F_FRAME_CTRL_17_OSD_COMPRESSION_EN         0x01
 #define AWTO_R_FRAME_CTRL_18                            0x3A18
+#define AWTO_F_FRAME_CTRL_18_FONTX2_EN                  0x08
+#define AWTO_F_FRAME_CTRL_18_FONT_B_DELAY_SEL           0x02
 #define AWTO_F_FRAME_CTRL_18_OSD_SPECIAL_EN             0x80
 #define AWTO_F_FRAME_CTRL_18_POP_ON_EN                  0x40
 #define AWTO_R_FRAME_CTRL_19                            0x3A19
@@ -95,11 +97,18 @@
 #define AWTO_R_FRAME_CTRL_1C                            0x3A1C
 #define AWTO_R_FRAME_CTRL_1E                            0x3A1E
 #define AWTO_R_FRAME_CTRL_21                            0x3A21
+#define AWTO_R_FRAME_CTRL_24                            0x3A24
+#define AWTO_R_FRAME_CTRL_25                            0x3A25
+#define AWTO_R_FRAME_CTRL_26                            0x3A26
+#define AWTO_R_FRAME_CTRL_27                            0x3A27
+#define AWTO_R_FRAME_CTRL_28                            0x3A28
+#define AWTO_R_FRAME_CTRL_29                            0x3A29
 #define AWTO_R_FRAME_CTRL_33                            0x3A33
 #define AWTO_F_FRAME_CTRL_33_BIT_BLOCK_BYTE_SEL         0x06
 #define AWTO_F_FRAME_CTRL_33_BIT_BLOCK_EN               0x01
 #define AWTO_F_FRAME_CTRL_33_SRAM_READ_EN               0x10
 #define AWTO_R_FRAME_CTRL_34                            0x3A34
+#define AWTO_R_FRAME_CTRL_40                            0x3A40
 #define AWTO_R_FRAME_CTRL_41                            0x3A41
 #define AWTO_R_FRAME_CTRL_43                            0x3A43
 #define AWTO_R_OSD_SU_CRTL                              0x3AC0

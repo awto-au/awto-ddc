@@ -27,13 +27,13 @@ from PIL import Image, ImageDraw
 LOG = ROOT / "tmp/logs/card_shot.log"
 CLEAR, K_UP, K_DOWN, K_MENU, K_AUTO, K_SOURCE, CON_CLOSE = 0x27, 0x02, 0x03, 0x04, 0x01, 0x05, 0x44
 # name -> test command bytes; selector steps chain (no clear between them). 0x17 = OSD event 7, the no-signal way in: it also
-# arms the SDK power-saving card (3 s, then power saving), so it goes last.
+# arms the SDK power-saving card (3 s, then power saving), so it goes last. console_info: the info card in map B beside the console (#357).
 SHOTS = [
     ("selector_source", [K_SOURCE]), ("selector_up", [K_UP]), ("selector_up2", [K_UP]), ("selector_down", [K_DOWN]),
     ("selector_upkey", [K_UP]),
     ("nosignal", [0x50]), ("nocable", [0x51]), ("nosupport", [0x52]), ("failsafe", [0x53]), ("autoadjust", [0x54]),
     ("info", [0x55]), ("autocolour", [0x56]), ("ddcci_port", [0x57]), ("powersaving", [0x58]), ("panel", [0x59]),
-    ("info_down", [K_DOWN]), ("console", [0x20]), ("gpio", [0x43]), ("backlight", [CON_CLOSE, K_UP]), ("selector_key", [K_SOURCE]),
+    ("info_down", [K_DOWN]), ("console", [0x20]), ("console_info", [0x20, 0x55]), ("gpio", [0x43]), ("backlight", [CON_CLOSE, K_UP]), ("selector_key", [K_SOURCE]),
     ("awto_menu", [K_MENU, K_MENU]), ("menu", [K_AUTO]), ("selector", [0x17]),
 ]
 CHAIN = {"selector_up", "selector_up2", "selector_down", "backlight", "selector_key", "awto_menu"}   # after gpio: console closed, UP /

@@ -55,11 +55,12 @@ Never write bare "vendor": say which one.
     - Note text: one 119 B slot (#273, decision A): the console row shows the text when the note is pushed; a ring decode of an older note says `text overwritten`. The host keeps every text: `host_note.py` appends it to the unit log at write time.
     - Host saver `./dev.py synclog --follow --save [--interval S]` (`scripts/unit_log.py`, 30 s) and the GUI tab "Unit log": append to `tmp/logs/units/<serial>-sync.log`, dedupe by ring seq, gap marker on a cold restart or >= 80 lines between polls; no poll during a flash.
     - Tests: gate `conkeep` (`scripts/con_keep_sim.py`), `tests/test_unit_log.py`, `tools/osd_editor/test_monitor_gui.py` (unit_log_tab).
-  - Grid 136 columns x 58 map rows (136 * 58 + 59 < 8192, #157); 50 rows shown (2176 x 1836 px on the 3840 x 2160 panel); the other 8 rows are roll-up room (a new log line scrolls one row; a full redraw when they run out). UP / DOWN scroll on the GPIO page (`AwtoConScroll`).
+  - Grid 136 columns x 57 map rows + the map B room (57 + 1 + 361 + 136 * 57 < 8192, #157, #357); 50 rows shown (2176 x 1836 px on the 3840 x 2160 panel); the other 7 rows are roll-up room (8 before #357; a new log line scrolls one row; a full redraw when they run out). UP / DOWN scroll on the GPIO page (`AwtoConScroll`).
+  - Cards beside the open console (#357): [Map B card](#map-b-card-beside-the-console-357).
   - Registry `console_mode` (id 110, #218; was bool `sync_console`, stored 0 / 1 keep their meaning), menu OSD page:
     - Off: never opens by itself.
     - Until signal (default): opens once the episode has settled (power-on / switch / wake: after the picture, drawn from the sync ring; the early open at power-on cost 209 ms to the picture, #216); closes `AWTO_CON_HOLD_MS` (3 s) after the picture is on (mode ACTIVE; log line `closed 3s after the picture came`); any key closes it at once (SOURCE then opens the selector; every other key only dismisses it; log line `closed by a key`). No signal / no support / searching keeps it open.
-    - Always: opens at power-on / wake (INITIAL, `AwtoBootConsole`, #144) and stays open (SOURCE still closes it for the selector, #132).
+    - Always: opens at power-on / wake (INITIAL, `AwtoBootConsole`, #144) and stays open (SOURCE still closes it for the selector, #132). Cards show beside it in map B (#357).
     - A console opened on purpose (UP+DOWN, test cmd 0x20 / 0x26) never closes by itself. Test: `scripts/console_mode_sim.py` (gate `conmode`).
   - Pages (#157; `AwtoDiagConsole(AWTO_CON_MAIN / AWTO_CON_GPIO)`, a page change redraws the map):
     - Main (power-on, auto-open, UP+DOWN): title row + sync / power event log, cols 1..118, 47 lines, live at each sync push. Host time + its fw ms on one row.
@@ -156,3 +157,15 @@ Never write bare "vendor": say which one.
 - Still refused: VCP 0x60 / DDC menu row to a cable-less port (#84, `AwtoInputSelect`); test cmds go. A disabled port is enabled by the take (#81).
 - Sims: `deadport_sim.py --case sel` (D2 held, no picture) and `selhold` (held ~30 s, then ACTIVE on D3). Gate `deadport` limit 80 s.
 - An open diag console (`g_stAwtoGpio.ucOpen` != 0) swallows SOURCE (`AwtoKeyRouteDo`: only MENU closes it unless it opened by itself); clear with test cmd 0x27. Not changed.
+
+## Map B card beside the console (#357)
+- Dan 2026-11-27: the info card in its own OSD window while the console stays open. The chip has 2 text maps (font A, font B: `0x3A18[3]` fontx2_en), 2 delay sets, 26 window rectangles; a window holds no text, so the card's own window is font B.
+- With the console open (any page) every message card (`OsdDispOsdMessage`, info card, saving card) opens in font B on delay set 2, top right; the console keeps font A, its windows 0..2 and its roll-up. The selector, backlight bar and menus keep the font A path (they replace the console, as before).
+- SRAM (words, console open): A rows 0..56 + end 57, B rows 58..69 + end 70, B cells 71..418 (room `AWTO_MAPB_WORDS` = 29 x 12 + 13), A cells 419..8170, glyphs 8171..9025.
+- Shared by both maps: glyphs (one font base: the card uses the console font), palette (card colours 7 blue deep / 5 grey / 15 white: 1..4 are the console's green), global scale.
+- Card look: opaque cells (title row white on blue, body blue on white), no frame windows: windows on delay set 2 are untested (OT-6).
+- Roll-up: regdb `fs_base1` "not effective when ROLL-UP": while B shows, roll-up is off and font A scrolls by `row_base0` / `fs_base0` alone (`osd_tc_scroll` writes them at every step); B off puts roll-up back.
+- Close: the card's timer (`_AWTO_INFO_POPUP_SEC`, SDK `OSD_DISABLE`) turns font B off only; the console closing or another screen opening takes it too. A console redraw (map full, page change) keeps it (`osd_tc_b_keep`).
+- A card asked during the stepped console open (boot / wake) waits for the open, then shows in map B with a fresh timer.
+- Sync lines: ED 7D open, ED 7C timer close, ED 7B closed with the console / by another screen. Sim gate: `cardwin`, `cardwin_rot` (`scripts/card_window_sim.py`, golden `docs/osd/img/card_window*_card.png`).
+

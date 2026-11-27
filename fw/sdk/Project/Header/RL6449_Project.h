@@ -2010,6 +2010,25 @@ extern void AwtoPanelForeign(unsigned char ucWhat);
 // OSD character command byte 0 (docs/osd/tiles-fonts.md): [7:6] type 01 = 1-bit font, [4:0] cell width px
 #define AWTO_OSD_CHAR_1BIT                                      0x40
 #define AWTO_OSD_CHAR_1BIT_W(w)                                 ((unsigned char)(AWTO_OSD_CHAR_1BIT | (w)))
+#define AWTO_OSD_ROW_ON                                         0x80    // row command byte 0: row present (0 = end of the row list)
+#define AWTO_OSD_ROW_END                                        0x00
+#define AWTO_OSD_GLYPH_BLANK                                    0       // text-layer glyph id 0 = space
+#define AWTO_OSD_CELL_B2(fg, bg)                                ((unsigned char)(((fg) << 4) | (bg)))     // 1-bit char byte 2: fg / bg 4-bit palette index, bg 0 = transparent
+// Map B (#357): a card in font B (delay set 2) beside the open console (font A). SRAM, words: A rows + end, B rows + end, B cells, A cells, glyphs.
+#define AWTO_MAPB_ROWS                                          12      // tallest card: info card, DP, ACTIVE (console.c static_assert)
+#define AWTO_MAPB_COLS                                          29      // widest card: info card
+#define AWTO_MAPB_WORDS                                         (AWTO_MAPB_ROWS + 1 + AWTO_MAPB_COLS * AWTO_MAPB_ROWS)
+#define AWTO_PAL_CARDB_INK                                      7       // tAwtoPal blue deep: the console re-uses 1..4 (Realtek blue = its green)
+#define AWTO_PAL_CARDB_DIM                                      5       // tAwtoPal grey 6E
+#define AWTO_PAL_CARDB_SURF                                     AWTO_PAL_DIAG_BOOT  // white
+extern __xdata unsigned char g_ucAwtoMapB;
+extern __xdata unsigned char g_ucAwtoMapBAsk;
+extern __xdata unsigned char g_ucAwtoMapBHas;
+extern __xdata unsigned char g_ucAwtoMapBRow;
+extern void osd_tc_b_off(unsigned char ucWhy);
+extern void osd_tc_b_keep(unsigned char ucKeep);
+extern void osd_tc_b_open(unsigned char ucChars, unsigned char ucLines);
+extern void osd_tc_b_show(void);
 #define AWTO_OSD_SDK_CELL_W                                     12      // SDK menu font cell width (OsdFuncApplyMap's blanks)
 #define AWTO_OSD_SDK_CELL_W_ROT90                               18      // the same font turned 90 / 270
 extern void UserCommonInterfacePanelBoot(void);
@@ -2697,6 +2716,9 @@ extern bit SysMachineOffOrGoing(void);
 #define AWTO_CARD_SUP_CON                                       0x02    // the open console keeps the screen
 #define AWTO_CARD_CLOSE_TIMEOUT                                 0x7F    // ED arg: a card closed by its on-screen timer (value = ms up)
 #define AWTO_CARD_ROW_CUT                                       0x7E    // ED arg: an OSD text row wider than its box (value = cells over, incl. the frame cell)
+#define AWTO_CARD_MAPB_OPEN                                     0x7D    // ED arg: the card opened in map B beside the console (value = message)
+#define AWTO_CARD_MAPB_TIMEOUT                                  0x7C    // ED arg: the map B card's on-screen timer ran out (value = ms up)
+#define AWTO_CARD_MAPB_GONE                                     0x7B    // ED arg: the map B card went with the console / another screen (value = ms up)
 extern void AwtoCardTimeout(void);
 extern __xdata unsigned char g_ucAwtoCardUp;
 #define AWTO_SYNC_EV_FRZ                                        0xEC    // #255 picture freeze (_AWTO_FREEZE build): arg AWTO_FRZ_EV_*

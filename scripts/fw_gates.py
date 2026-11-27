@@ -19,7 +19,8 @@ usage: fw_gates.py IMAGE_STEM [--tier normal|extensive] [--build-inputs] [--tree
     osd_fit_sim.py, every card_shot shot at 1080p60 + 2160p60, no firmware fit-guard line (ED 7E).
   osdman: osd_manual.py --check (static, #263: every docs/osd/img feature picture re-rendered by osd_model equals the committed PNG).
     osdgold (extensive): osd_golden.py, card / selector / awto menu shots in fw_sim vs tests/golden/osd_cards, pixels exact (#263). infocard: info_card_sim.py
-    (the info card after boot stays _AWTO_INFO_POPUP_SEC, one open + one timeout close line).
+    (the info card after boot stays _AWTO_INFO_POPUP_SEC, one open + one timeout close line). cardwin / cardwin_rot (extensive):
+    card_window_sim.py, console Always: the info card in map B beside the console, upright / Rotate 180, golden card crop (#357).
   sysm: sysm_sim (#162 step 3): power status / mode state only from the system machine; transition chain + request lines; --tree lint.
   delays: delay_sim.py (docs/delay-audit.md): panel_sim scenario at the image's clock (+ the sibling `<stem>-clk87` image of `-D AWTO_CLOCK_MHZ=87` when built): class A waits vs
     wall ms, Timer2 / wall = 1, every executed DELAY_5US / DELAY_XUS loop >= nominal, loop counts = AWTO_DELAY_CNT, DDC debounce wall time equal at both clocks; --audit:
@@ -102,9 +103,11 @@ EXTENSIVE = {
     "sysm": "~10 s CPU (power / mode machine chain)",
     "sync": "~11 s CPU (sync-log sim boots)",
     "dramlog": "~40 s CPU (DRAM log image: boot, two 34000-line fills = wrap + stamps above 65 s, watchdog reset keeps the history)",
-    "osdfitsim": "~21 s CPU (23 OSD shots x 2 timings, fit guard watched; the static half osdfit is normal)",
+    "osdfitsim": "~21 s CPU (24 OSD shots x 2 timings, fit guard watched; the static half osdfit is normal)",
     "edgesweep_full": "every registry row at min / min+1 / mid / max-1 / max + out of range (#214) (normal: brightness + backlight card, --quick)",
     "osdgold": "~26 s CPU (21 OSD shots vs golden PNGs, 2026-11-27; the model-only half osdman is normal)",
+    "cardwin": "boot + the 11 s info card in map B beside the console (#357)",
+    "cardwin_rot": "the same at Rotate 180",
 }
 SIM_CPU = os.environ.get("AWTO_SIM_CPU", "dw8051")   # fast-core CPU model of the sims (#162 step 1); results are comparable only at the same model
 CPU_OF = {}      # per-gate CPU model override; wdt runs on dw8051 since the Timer0 cases use wall ms (the 8052 model has no clock: the 350.8 MHz boot never reaches stage 8 in wdt_test)
@@ -138,6 +141,8 @@ SKIP_IF_MISSING = {      # gate -> map symbols the image must define, else SKIP 
     "infocard": ("_g_ucAwtoCardUp", "_g_ucAwtoSelWhy"),
     "edgesweep": ("_vcp_box", "_menu_diag"),
     "ctemp": ("_vcp_box", "_AwtoDdcciPoll", "_g_stColorProcData"),
+    "cardwin": ("_g_ucAwtoMapB",),
+    "cardwin_rot": ("_g_ucAwtoMapB",),
 }
 
 
@@ -242,6 +247,9 @@ def gates(b: Path, m: Path, ref, tree):
     g["dptxaux"] = [*PY, f"{s}/dptx_aux_sim.py", b, m]                          # #247 / #248: AUX read vs partial / over-long replies, no write past the buffer
     g["osdfitsim"] = [*PY, f"{s}/osd_fit_sim.py", b, m]                       # every card / selector / menu shot: no cut row (firmware fit guard)
     g["infocard"] = [*PY, f"{s}/info_card_sim.py", b, m, "--out", out / "info_card"]   # info card after boot: on-screen time, Found by
+    gold = Path(tree or ROOT) / "docs/osd/img"
+    g["cardwin"] = [*PY, f"{s}/card_window_sim.py", b, m, "--out", out / "card_window", "--golden", gold / "card_window_card.png"]   # #357: info card in map B beside the console
+    g["cardwin_rot"] = [*g["cardwin"][:-2], "--rotate", "--golden", gold / "card_window_rot_card.png"]   # the same at Rotate 180 (unit 3)
     g["sysm"] = [*PY, f"{s}/sysm_sim.py", b, m, *(["--tree", tree] if tree else [])]
     g["pacewake"] = [*PY, f"{s}/pacing_wake_sim.py", b, m, "--case", "fast", "--after", "13"]    # #313: the busy hook is off 12 s after a fast wake (~5 s CPU)
     g["edgesweep"] = [*PY, f"{s}/edge_sweep_sim.py", b, m, "--quick", "--rows", "brightness"]   # #214 NORMAL: the 1 % backlight line, PWM, divide by 0
