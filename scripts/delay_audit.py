@@ -11,8 +11,8 @@ Classes: A timer wait (Timer2 ms) | B micro-delay (DELAY_5US / DELAY_XUS loop co
   D hardware-spec minimum (datasheet value - 10 %) | E our own timing constant.
 Verdicts: OK (wall time equal at 87.7 and 175.4 MHz by construction + sim gate) | NOCLOCK (hardware-bound, no timed bound) | SCALES-BENIGN (halves at 2x, harmless: stated why)
   | FIXED (was wrong at 2x, fixed: note) | FIX | UNKNOWN (both fail the gate).
---variant hwtest: the image's sites must be in docs/delay-audit.tsv or docs/delay-audit-hwtest.tsv (write: the second file holds only the sites the first lacks);
-  a default image still needs every site in the first file.
+--variant hwtest|freeze: the image's sites must be in docs/delay-audit.tsv or docs/delay-audit-<variant>.tsv (write: the second file holds only the sites the first lacks);
+  a default image still needs every site in the first file. hwtest skips the blocking budget + masked sections (test ops block on purpose); freeze runs them.
 Key = file | function | kind | normalised statement | ordinal (no line numbers: lines move). Log: ./tmp/logs/delay_audit.log
 """
 import argparse
@@ -29,7 +29,9 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 from _repo import ROOT
 
 TSV = ROOT / "docs/delay-audit.tsv"
-VARIANT_TSV = {"hwtest": ROOT / "docs/delay-audit-hwtest.tsv"}   # sites only in that variant's image (-D _AWTO_OSD_HWTEST test ops); same columns + verdict rule
+VARIANT_TSV = {"hwtest": ROOT / "docs/delay-audit-hwtest.tsv",     # sites only in that variant's image (-D _AWTO_OSD_HWTEST test ops); same columns + verdict rule
+               "freeze": ROOT / "docs/delay-audit-freeze.tsv"}     # -D _AWTO_FREEZE=_ON (#349: a --write on the default image dropped its row from the main file)
+BLOCKS_ON_PURPOSE = {"hwtest"}     # test ops: no blocking budget / masked-section check
 LOG = ROOT / "tmp/logs/delay_audit.log"
 COLS = ["key", "id", "class", "file", "line", "function", "kind", "value", "unit", "derivation", "scales_2x", "wall_87_7", "wall_350_8",
         "spec", "evidence", "verdict", "note", "stmt"]
@@ -376,10 +378,10 @@ def main():
         return write_budget(a.tree, mapp)
     if a.write:
         return write(a.tree, mapp, a.variant)
-    if a.variant:                                                    # test-op images (hwtest) block on purpose
+    if a.variant in BLOCKS_ON_PURPOSE:
         return check(a.tree, mapp, a.variant)
     import irq_masks
-    return check(a.tree, mapp) | check_budget(a.tree, mapp) | irq_masks.check(a.tree, mapp)      # masked sections: docs/irq-masks.tsv
+    return check(a.tree, mapp, a.variant) | check_budget(a.tree, mapp) | irq_masks.check(a.tree, mapp)      # masked sections: docs/irq-masks.tsv
 
 
 if __name__ == "__main__":

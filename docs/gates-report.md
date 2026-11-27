@@ -96,7 +96,7 @@ Clock matrix (350 / 175 / 87 MHz, timing gates, extensive): 0 FAIL cells, 176 s 
 - Variant = hwtest or clock != 350: the build never promotes the tracked bank / XDATA layouts (#268).
 - Expectation per variant:
   - `xlayout`: the map is checked against the image's own layout file, not the tracked `fw/xdata_layout.tsv`.
-  - `delays`: sites must be in `docs/delay-audit.tsv` or, for hwtest, `docs/delay-audit-hwtest.tsv`; a site in neither fails; FIX / UNKNOWN verdicts fail.
+  - `delays`: sites must be in `docs/delay-audit.tsv` or, for hwtest / freeze, `docs/delay-audit-hwtest.tsv` / `docs/delay-audit-freeze.tsv`; a site in neither fails; FIX / UNKNOWN verdicts fail.
   - Every other gate: same thresholds as the default image.
 - HWTEST XDATA is full (#268): `AWTO_MSG_RING` 32 (default 40) in HWTEST, OSD / Osw / flash-clk test ops share `g_stAwtoOsdHw.aucBuf`.
 - Tests: `tests/test_gate_variants.py`.

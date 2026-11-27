@@ -235,10 +235,10 @@ def gates(b: Path, m: Path, ref, tree):
     g["pacewake"] = [*PY, f"{s}/pacing_wake_sim.py", b, m, "--case", "fast", "--after", "13"]    # #313: the busy hook is off 12 s after a fast wake (~5 s CPU)
     g["memreinit"] = [*PY, f"{s}/mem_reinit_sim.py", b, m]                           # #353: memory power cycle after 2 failed frame-buffer set-ups (~3 s CPU)
     fast = sibling(b, "clk87")                                        # `--build-inputs`: dev.py build --tag <tag>-clk87 -D AWTO_CLOCK_MHZ=87 (stock clock): measured too when present
-    base = [*PY, f"{s}/delay_sim.py", b, m, *(["--tree", tree, "--audit", *(["--variant", "hwtest"] if V["hwtest"] else [])] if tree else [])]
+    dv = ["--variant", "hwtest"] if V["hwtest"] else ["--variant", "freeze"] if V.get("freeze") else []    # docs/delay-audit-<variant>.tsv
+    base = [*PY, f"{s}/delay_sim.py", b, m, *(["--tree", tree, "--audit", *dv] if tree else [])]
     if tree:
-        g["delays"] = [*PY, f"{s}/delay_audit.py", "--check", "--tree", tree, "--map", m,
-                       *(["--variant", "hwtest"] if V["hwtest"] else [])]      # NORMAL: every linked delay site is in docs/delay-audit.tsv (+ -hwtest.tsv for the test image) (~1 s)
+        g["delays"] = [*PY, f"{s}/delay_audit.py", "--check", "--tree", tree, "--map", m, *dv]   # NORMAL: every linked delay site is in docs/delay-audit.tsv (+ the variant's file) (~1 s)
     g["delays_sim"] = base                                                            # extensive: panel_sim scenario at the image's clock vs wall ms
     if fast.is_file() and fast != b:                                                  # extensive: + the sibling -clk87 image, DDC debounce equal at both clocks
         g["delays_full"] = [*base, "--other", fast, fast.with_suffix(".map")]
