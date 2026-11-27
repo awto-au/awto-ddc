@@ -31,7 +31,7 @@ Launch: `python3 tools/osd_editor/run.py --monitor` (opens on the monitor tab) o
 - Per-unit state in memory (values, touched-not-set values, last read, tree node, output, banner): a switch is a view swap, no read.
 - "Get all" runs only on the button, the live-refresh checkbox, or when a selected unit's view is older than 60 s (or never read).
 - QSettings (`awto/osd_editor`): last unit, tree node per unit.
-- Only `test=true` units are writable; other units grey out every control and `run()` refuses.
+- Only `test=true` units are writable; other units grey out every control and `run()` refuses. Since cc529a7a only unit 3 is `test=true` (Dan 2026-11-27: tests on unit 3 only).
 
 ## Jobs
 - One `QThreadPool` with one worker per unit (`unit_jobs.UnitQueues`): different units run in parallel, one unit's jobs one at a time (one bus).
@@ -134,6 +134,7 @@ Launch: `python3 tools/osd_editor/run.py --monitor` (opens on the monitor tab) o
   - Every dev.py call compares the app's root + code with its own tree. Same = served.
   - Differs (another tree, code changed on disk, tree gone, no handshake) and idle: `quit {idle_only}`, then one fresh app from the caller's tree. Line `gui: restarting the app from <tree> @<head>: <why> (was pid P, <tree> @<head>)`.
   - Differs and busy, or the app is a window (the user's GUI is never closed by a client): refused, nothing run. One line names both trees, their HEADs and the running jobs. Exception: queries that run no unit code (`gui ping / list / state / jobs / flash-status / events / quit`) are served by that app, with the same line.
+  - Window from another tree: Dan 2026-11-27 (pop-up, #358) "Let agents use my window": it should serve agent calls instead of refusing them; not built yet (`check_tree` still refuses). Headless-app rules (restart when idle, refuse when busy) stay.
   - Decisions also go to the caller's `tmp/logs/gui-client.log`. The app logs `tree <root> @<head>` in every job's started / verdict line; `gui state` has `tree` {root, head, code, pid}.
   - Two trees alternating calls restart the app each time (0.3-1.1 s start, see the start bound). Isolate a tree with `AWTO_GUI_SOCKET` to avoid it.
 - One app per socket (= per user): `flock` on `<socket>.lock` for the app's life, holder `pid root @head` written in it. A second headless app exits at once, rc 3, one line `headless app pid N exiting: control port unavailable: ... lock ... held by ...`. A window takes over from a headless app (quit, waits `TAKEOVER_WAIT_S` 3 s for the lock); a window that finds another window keeps its banner, no port.
