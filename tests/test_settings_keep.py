@@ -32,7 +32,7 @@ def test_changed_default_is_not_undone():
     """#358: unit 1 held backlight_on_delay 100 = the old default; the new image's default is 120: 120 stays.
     A value the user set (not the old default) is still restored."""
     rows = {"backlight_on_delay": {"name": "backlight_on_delay", "min": 0, "max": 255, "default": 120}}
-    todo, notes, kept = K.plan({"backlight_on_delay": 100}, {"backlight_on_delay": 120}, rows, {"backlight_on_delay": 100})
+    todo, notes, _kept = K.plan({"backlight_on_delay": 100}, {"backlight_on_delay": 120}, rows, {"backlight_on_delay": 100})
     assert todo == [] and any("old default 100" in n for n in notes)
     todo, _n, _k = K.plan({"backlight_on_delay": 140}, {"backlight_on_delay": 120}, rows, {"backlight_on_delay": 100})
     assert [(r["name"], v) for r, v, _ in todo] == [("backlight_on_delay", 140)]

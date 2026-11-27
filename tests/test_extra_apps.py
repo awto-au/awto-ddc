@@ -150,7 +150,8 @@ def test_fw_build_extra_fw_must_exist(monkeypatch, tmp_path):
 
 
 def test_variant_flag():
-    assert IV.parse_defines(["_AWTO_EXTRA_APPS=_ON"]) == {"hwtest": False, "t0ev": False, "extra": True, "clock": IV.DEFAULT_CLOCK_MHZ, "variant": True}
+    assert IV.parse_defines(["_AWTO_EXTRA_APPS=_ON"]) == {"hwtest": False, "t0ev": False, "extra": True, "nofrc": False, "freeze": False, "audio": False,
+                                                         "nodlog": False, "clock": IV.DEFAULT_CLOCK_MHZ, "variant": True}
     assert IV.parse_defines(["_AWTO_EXTRA_APPS=_OFF"])["variant"] is False
 
 

@@ -104,7 +104,7 @@ def _gui_funcs():
     for node in tree.body:
         if (isinstance(node, ast.Assign) and any(getattr(t, "id", "") == "ROW_RE" for t in node.targets)) or \
            (isinstance(node, ast.FunctionDef) and node.name in ("delta_ms", "sync_rows", "sync_summary")):
-            exec(compile(ast.Module([node], []), "monitor.py", "exec"), ns)
+            exec(compile(ast.Module([node], []), "monitor.py", "exec"), ns)   # noqa: S102 - our own monitor.py source, the GUI functions without Qt
     return ns
 
 
@@ -238,7 +238,7 @@ def test_dram_page_and_progress_and_poll_wall_sign():
     seen = []
     page = D.entries(rd, hdr, len(ents), 120, 100, lambda k, n: seen.append((k, n)))
     assert [e["abs"] for e in page] == list(range(100, 220)) and seen == [(100, 120)]
-    t = dt.datetime(2026, 11, 27, 17, 0, tzinfo=dt.timezone.utc)
+    t = dt.datetime(2026, 11, 27, 17, 0, tzinfo=dt.UTC)
     monkey = D.header
     try:
         D.header = lambda read: {"gen": 7, "boot": 1}
