@@ -39,7 +39,7 @@
 //****************************************************************************
 // VARIABLE DECLARATIONS
 //****************************************************************************
-StructModeInfoType isr_g_stModeInfo [[awto::isr_shared("main owns it; the watchdog ISR reads it once for the crash snapshot, reset follows")]];
+volatile StructModeInfoType isr_g_stModeInfo [[awto::isr_shared("main owns it; the watchdog ISR reads it once for the crash snapshot, reset follows")]];
 // ModeInfo bit[0:4] -- Mode State
 // ModeInfo bit[5] -- Display Ready
 // ModeInfo bit[6] -- Timing Confirm

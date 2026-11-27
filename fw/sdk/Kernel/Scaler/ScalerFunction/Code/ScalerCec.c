@@ -103,7 +103,7 @@ StructCecTxTransmitInfo g_stCecTxTransmitInfo;
 volatile StructCecGeneralCtrl isr_g_stCecGeneralCtrl;
 
 volatile BYTE isr_g_ucCecRxBackupFifoWaterLevel;
-BYTE isr_g_pucCecRxBackupFifo[_CEC_RX_BACKUP_FIFO_SIZE] [[awto::isr_shared("FIFO: EXINT0 appends at the water level, main drains; the volatile water level orders them")]];
+volatile BYTE isr_g_pucCecRxBackupFifo[_CEC_RX_BACKUP_FIFO_SIZE] [[awto::isr_shared("FIFO: EXINT0 appends at the water level, main drains; the volatile water level orders them")]];
 
 //****************************************************************************
 // FUNCTION DECLARATIONS
@@ -288,8 +288,8 @@ void ScalerCecRxReadOutFromBackupFifo(void)
 
         // Shift Cec Rx Backup buffer
         memset(pucBackupFifoTemp, 0, _CEC_RX_BACKUP_FIFO_SIZE);
-        memcpy(pucBackupFifoTemp, &isr_g_pucCecRxBackupFifo[isr_g_stCecRxReceivedInfo.ucDbLength + 2], (_CEC_RX_BACKUP_FIFO_SIZE - (isr_g_stCecRxReceivedInfo.ucDbLength + 2)));
-        memcpy(isr_g_pucCecRxBackupFifo, &pucBackupFifoTemp, _CEC_RX_BACKUP_FIFO_SIZE);
+        memcpy(pucBackupFifoTemp, (const BYTE *)&isr_g_pucCecRxBackupFifo[isr_g_stCecRxReceivedInfo.ucDbLength + 2], (_CEC_RX_BACKUP_FIFO_SIZE - (isr_g_stCecRxReceivedInfo.ucDbLength + 2)));
+        memcpy((BYTE *)isr_g_pucCecRxBackupFifo, &pucBackupFifoTemp, _CEC_RX_BACKUP_FIFO_SIZE);   // awto: volatile FIFO (#361), memcpy = one bulk read
 
         isr_g_ucCecRxBackupFifoWaterLevel -= (isr_g_stCecRxReceivedInfo.ucDbLength + 2);
 
@@ -816,7 +816,7 @@ void ScalerCecReset(void)
 
     // Cec Rx backup fifo reset
     isr_g_ucCecRxBackupFifoWaterLevel = 0x00;
-    memset(isr_g_pucCecRxBackupFifo, 0, _CEC_RX_BACKUP_FIFO_SIZE);
+    memset((BYTE *)isr_g_pucCecRxBackupFifo, 0, _CEC_RX_BACKUP_FIFO_SIZE);   // awto: volatile FIFO (#361)
 
     // CEC RX/ TX LA Reset
     ScalerSetBit(P18_A0_CEC1_CR0_1, ~(_BIT3 | _BIT2 | _BIT1 | _BIT0), _CEC_LA_TV);

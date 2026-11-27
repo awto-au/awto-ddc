@@ -1116,7 +1116,7 @@ typedef struct
     unsigned char ucHoldBlocks;                 // SDK OSD paths stopped by a held visual (#28), wraps
     StAwtoSwEv stEv[AWTO_SW_EVENTS];
 } StAwtoSw;
-extern __xdata StAwtoSw isr_g_stAwtoSw [[awto::isr_shared("main and ISRs append to the event log; the T2 ISR only reads the counters")]];
+extern volatile __xdata StAwtoSw isr_g_stAwtoSw [[awto::isr_shared("main and ISRs append to the event log; the T2 ISR only reads the counters")]];
 extern void AwtoSwEvent(unsigned char ucId, unsigned char ucArg);
 extern void AwtoSwArm(unsigned char ucPort);
 extern void AwtoSwPoll(void);

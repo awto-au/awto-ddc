@@ -1879,10 +1879,10 @@ typedef struct
 // VARIABLE EXTERN
 //****************************************************************************
 extern volatile WORD isr_g_usInputPixelClk;
-extern WORD isr_g_usTmdsOffLineMeasureClk [[awto::isr_shared("main writes it with EX0 masked (TMDS Rx2/Rx3 PhySetDeferred); EXINT0 only reads")]];
+extern volatile WORD isr_g_usTmdsOffLineMeasureClk [[awto::isr_shared("main writes it with EX0 masked (TMDS Rx2/Rx3 PhySetDeferred); EXINT0 only reads")]];
 
 #if(_DIGITAL_PORT_SUPPORT == _ON)
-extern BYTE isr_g_ucDigitalSwitch [[awto::isr_shared("main sets the switch bits at port change; EXINT1 only reads them")]];
+extern volatile BYTE isr_g_ucDigitalSwitch [[awto::isr_shared("main sets the switch bits at port change; EXINT1 only reads them")]];
 extern __xdata _Bool g_bDpDCOffHPDHigh;
 extern BYTE g_ucHDMIHotPlug;
 extern __xdata _Bool g_bDigitalColorInfoChangeReset;
@@ -2052,7 +2052,7 @@ extern StructHDR10PortSettingInfo g_stHDR10PortSettingInfo;
 #endif
 
 #if((_DVI_SUPPORT == _ON) || (_HDMI_SUPPORT == _ON))
-extern WORD isr_g_usDDCDebounceCnt [[awto::isr_shared("main writes it at power-saving and clock test; EXINT1 only uses it as a delay-loop count")]];
+extern volatile WORD isr_g_usDDCDebounceCnt [[awto::isr_shared("main writes it at power-saving and clock test; EXINT1 only uses it as a delay-loop count")]];
 
 #if(_TMDS_TOGGLE_HPD_Z0_FOR_ACER == _ON)
 extern StructTmdsZ0ToggleFlag g_stTmdsToggleZ0Flag;

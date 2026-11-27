@@ -37,7 +37,7 @@
 #if(_D1_DP_EXIST == _ON)
 BYTE g_ucDpRx1PhyCtsCtrl;
 EnumHDCPType g_enumDpRx1HdcpMode;
-StructDpLanesMapping isr_g_stDpRx1LanesMapping [[awto::isr_shared("main sets it at DP Rx1 init; EXINT0 and T0 only read the lane map")]];
+volatile StructDpLanesMapping isr_g_stDpRx1LanesMapping [[awto::isr_shared("main sets it at DP Rx1 init; EXINT0 and T0 only read the lane map")]];
 
 #if(_DP_MST_SUPPORT == _ON)
 StructDPRxMiscInfo g_stDpRx1MiscInfo;
