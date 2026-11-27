@@ -1753,7 +1753,7 @@ extern void AwtoEdidPoll(void);
 #define AWTO_PST_DDC                                            0x08
 #define AWTO_PST_AUX                                            0x10
 #define AWTO_PST_VALID                                          0x80    // the first poll has run
-#define AWTO_PST_LINE                                           0x10    // sync.tsv FA: + 2 * bit + level
+#define AWTO_PST_LINE                                           0x10    // sync.tsv FA: + 2 * bit + level; cable (bit 0) = one pins line per poll
 extern __xdata unsigned char g_pucAwtoPortSt[3];
 extern volatile __xdata unsigned char isr_g_pucAwtoClkEv[2] [[awto::isr_shared("EXINT0 counts clock-stable events, main reads the count")]];
 extern void AwtoPortMonDdc(unsigned char ucI);
