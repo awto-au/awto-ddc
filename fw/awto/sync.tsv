@@ -84,13 +84,9 @@ C0	03	vport	wake on %
 C0	04	vport	power key on, %
 C0	05	vport	picture lost on %
 10	04	pby	panel on by % (accepted)
-10	05	pby	panel on by % (already on)
 10	06	pby	panel off by % (accepted)
-10	07	pby	panel off by % (already off)
 10	08	pby	backlight on by % (accepted)
-10	09	pby	backlight on by % (already on)
 10	0A	pby	backlight off by % (accepted)
-10	0B	pby	backlight off by % (already off)
 10	0C	pby	panel on by % (deferred:power off / saving takes the panel down)	warning
 10	0E	pby	backlight on by % (deferred:power off / saving takes the panel down)	warning
 10	0F	pby	backlight off by % (deferred:power off / saving takes the panel down)	warning

@@ -6,7 +6,7 @@ Input: `docs/sdk-model-inventory.md` (state machines, hooks, collisions C1-C16, 
 - One code path per resource. Every other caller *requests*; only the owner drives the hardware.
 - State machines first: each owner is a machine with named states; transitions are the only place hardware changes.
 - No blocking waits in a transition (T1-T6, HPD, link, flash): a step arms a timer and returns; the main loop / Timer0 runs the next step.
-- Logging only grows: each transition logs itself (`<owner>: <old> -> <new> (<why>)`), each request logs its outcome (`... requested (already on)`).
+- Logging only grows: each transition logs itself (`<owner>: <old> -> <new> (<why>)`), each request logs its outcome; a panel request that leaves the target unchanged writes no line (#359: cheap no-op, Dan 2026-11-27).
 
 ## Owners (recommended option in bold; letters = inventory §8)
 
