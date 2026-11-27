@@ -205,6 +205,9 @@ bit SysMachineOffOrGoing(void)
     return ((s_ucSysState == AWTO_SYS_OFF) || ((s_ucSysState == AWTO_SYS_DOWN) && (GET_TARGET_POWER_STATUS() == _POWER_STATUS_OFF)));
 }
 
+static const __code BYTE tAwtoSysByExt[(AWTO_SYS_BY_LAST >> 3) + 1] = {AWTO_SYS_BY_EXT_BYTE(0), AWTO_SYS_BY_EXT_BYTE(1),
+    AWTO_SYS_BY_EXT_BYTE(2), AWTO_SYS_BY_EXT_BYTE(3), AWTO_SYS_BY_EXT_BYTE(4)};
+
 void SysMachineRequest(BYTE ucReq, BYTE ucBy)
 {
     BYTE ucOut = AWTO_SYS_OK;                   // the one local: XDATA is full (#162 step 3)
@@ -271,6 +274,10 @@ void SysMachineRequest(BYTE ucReq, BYTE ucBy)
             s_ucSysModeBy = ucBy;
         }
         ucReq += AWTO_SYS_REQ_MODE;
+    }
+    if((ucOut == AWTO_SYS_ALREADY) && ((ucBy > AWTO_SYS_BY_LAST) || ((tAwtoSysByExt[ucBy >> 3] & (1 << (ucBy & 7))) == 0)))
+    {
+        return;                                 // the firmware re-asked for the state it is in: no line (#359)
     }
     AwtoSyncPush(AWTO_SW_EV_SYS_REQ, ucReq, ((WORD)ucBy << 8) | ucOut);
 }

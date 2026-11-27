@@ -2069,6 +2069,14 @@ extern void UserCommonInterfacePanelStreamOn(void);
 #define AWTO_SYS_BY_SELECTOR_IDLE                               0x1E    // selector: highlighted input taken after AWTO_SRC_IDLE_COMMIT_MS (#132)
 #define AWTO_SYS_BY_SELECTOR_RESET                              0x1F    // selector closed by the SDK OSD reset: its highlighted choice taken (#132)
 #define AWTO_SYS_BY_MEMTEST                                     0x20    // test cmd 0x0C / 0x0D: memory work mode changed (#165)
+// #359 (Dan 2026-11-27): an "already" request is logged only from outside (key, DDC/CI, host / test cmd, menu, selector pick)
+#define AWTO_SYS_BY_BIT(b, k)                                   (((((b) >> 3) == (k)) ? (1 << ((b) & 7)) : 0))
+#define AWTO_SYS_BY_EXT_BYTE(k)                                 (AWTO_SYS_BY_BIT(AWTO_SYS_BY_KEY, k) | AWTO_SYS_BY_BIT(AWTO_SYS_BY_KEY_WAKE, k) | \
+    AWTO_SYS_BY_BIT(AWTO_SYS_BY_TESTCMD, k) | AWTO_SYS_BY_BIT(AWTO_SYS_BY_VCP, k) | AWTO_SYS_BY_BIT(AWTO_SYS_BY_INPUT, k) | \
+    AWTO_SYS_BY_BIT(AWTO_SYS_BY_SELECTOR, k) | AWTO_SYS_BY_BIT(AWTO_SYS_BY_SETTINGS, k) | AWTO_SYS_BY_BIT(AWTO_SYS_BY_SDK_OSD, k) | \
+    AWTO_SYS_BY_BIT(AWTO_SYS_BY_DIRECT, k) | AWTO_SYS_BY_BIT(AWTO_SYS_BY_KEY_AUTO, k) | AWTO_SYS_BY_BIT(AWTO_SYS_BY_KEY_CONSOLE, k) | \
+    AWTO_SYS_BY_BIT(AWTO_SYS_BY_MEMTEST, k))
+#define AWTO_SYS_BY_LAST                                        AWTO_SYS_BY_MEMTEST
 #define AWTO_SYS_WHY_INITIAL                                    0x21
 #define AWTO_SYS_WHY_TIMING                                     0x22
 #define AWTO_SYS_WHY_NO_SOURCE                                  0x24
