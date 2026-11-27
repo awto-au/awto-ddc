@@ -16,4 +16,6 @@ def test_profile_accounts_every_cycle(fw_image):
     assert r["passes"] == 3
     assert abs(sum(r["excl"].values()) - r["cycles_per_pass"]) < 1       # exclusive cycles sum to the pass total
     assert r["counts"]["stub_entries"] > 10 and r["region"]["__bs_call"] > 0
-    assert max(r["incl"].values()) >= r["cycles_per_pass"] * 0.99        # one root function encloses the pass (_AwtoSyncDetect, not _main)
+    # the shadow stack's base frame _main encloses the whole pass, whatever callee the window starts in (#356: was layout dependent)
+    assert abs(r["incl"]["_main"] - r["cycles_per_pass"]) < 1
+    assert max(r["incl"].values()) < r["cycles_per_pass"] + 1             # no frame counted twice
