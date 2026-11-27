@@ -1,5 +1,9 @@
 tmp/
 __pycache__/
+.pytest_cache/
+.ruff_cache/
+.vscode/
+/.worktrees/
 *.dll
 *.exe
 *.bin.bak
@@ -26,3 +30,7 @@ asteroids*.zip
 **/asteroids/
 **/asteroids_shapes*
 **/asteroids_rom*
+**/asteroids_data*
+
+# Doom / games exports (the games live in awto-au/awto-games-dw8051)
+/doom-*.zip

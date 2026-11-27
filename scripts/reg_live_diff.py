@@ -67,7 +67,8 @@ def load_live(root: Path) -> dict[str, dict[int, int | None]]:
     for fn in sorted(glob.glob(str(root / "tmp/regs/live/*.json"))):
         with open(fn) as _f:
             d = json.load(_f)
-        if d.get("label") == "probe" or d.get("result") != "ok" or "pages" not in d:
+        # no label = a read-behind probe file (reg_behind_*), not a scan pass
+        if d.get("label") in ("probe", None) or d.get("result") != "ok" or "pages" not in d:
             continue
         col = f"{d['unit']}{d['label']}"
         vals = {(int(p, 16) << 8) | i: v for p, arr in d["pages"].items() for i, v in enumerate(arr)}

@@ -30,7 +30,7 @@ Notes:
 
 ## Per gate
 
-NORMAL/EXTENSIVE columns: the variant that runs in that tier (wall s / CPU s, single run). `-` = not in the tier. Dan's comment is verbatim from `tmp/scratch/gates-report.md`.
+NORMAL/EXTENSIVE columns: the variant that runs in that tier (wall s / CPU s, single run). `-` = not in the tier. Dan's comment is verbatim from `debris/docs/tmp-notes-20261127/scratch/gates-report.md`.
 
 | gate | what it checks | failure it catches | OLD result, wall s | OLD CPU s | NORMAL wall / CPU | EXTENSIVE wall / CPU | tier today | Dan's comment | action / status |
 |---|---|---|---|---|---|---|---|---|---|
