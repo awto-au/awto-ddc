@@ -47,13 +47,14 @@ def main() -> int:
     a = ap.parse_args()
     say(f"mem_reinit_sim {a.bin.name} mode {a.mode}")
     s = R.Session(a.bin, a.map, a.mode)
-    rows, ring, fails, seen = S.load_rows(S.tsv_for(a.map)), S.sym(a.map, "g_stAwtoSync"), 0, []
+    rows, ring, fails, seen = S.load_rows(S.tsv_for(a.map)), S.sym(a.map, "g_stAwtoSync"), 0, set()
     w1c = next(d for d in s.bus.m.devs if isinstance(d, F.W1C))
 
-    def new_lines():                          # ring keeps 24 entries: new = lines not seen yet (each carries its ms stamp)
-        _h, lines = S.decode(S.read_ring(s.bus.m.rd, ring), rows)
-        out = [ln for ln in lines if ln not in seen]
-        seen.extend(out)
+    def new_lines():                          # ring keeps 24 entries: new = lines not seen yet in this episode
+        h, lines = S.decode(S.read_ring(s.bus.m.rd, ring), rows)
+        key = h.get("ep_seq")                 # stamps are ms since the episode start: two episodes can log identical lines (#375)
+        out = [ln for ln in lines if (key, ln) not in seen]
+        seen.update((key, ln) for ln in out)
         for ln in out:
             say(f"    {ln}")
         return out
