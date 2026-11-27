@@ -38,7 +38,7 @@ Status = best evidence for the behaviour shown. Gaps are visible here: a row wit
 | 1-bit chars | char B0 `01xxxxxx` | [text_1bit](img/text_1bit.png) | [hw] |
 | char width / proportional | char B0[4:0] | [char_width](img/char_width.png) | [hw] 12..6 px; < 4 px [?] T-C |
 | 2-bit chars | char B0 `10`, `0x3A21[1]`, `0x3A22` | [text_2bit](img/text_2bit.png) | [hw] plane order T9; colour packing [sdk-hypothesis] |
-| 4-bit chars | char B0 `11`, `0x3A21[0]`, `0x3A23`, `0x3A07[2]` | [text_4bit](img/text_4bit.png) | [sdk-hypothesis] plane order [?] OT-1 |
+| 4-bit chars | char B0 `11`, `0x3A21[0]`, `0x3A23`, `0x3A07[2]` | [text_4bit](img/text_4bit.png) | [derived] plane k = bit k as 2-bit; [?] OT-1 |
 | blank cells | char B0 `00` | [blank_cells](img/blank_cells.png) | [sdk-hypothesis] OT-7 |
 | 24 x 36 tile mode | `0x3A43[6]` | not modelled: pixel layout unknown | [?] OT-8 |
 | blink / attributes | none | - | none on this chip [spec]; blink = palette toggle |

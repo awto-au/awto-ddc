@@ -32,7 +32,7 @@ Text is a grid of glyph cells. One map row = one row command + N char words; a c
 ## Glyph bitmaps
 - 1-bit tile 12 x 18 = 216 bit = 9 words. Pixel order: row-major; word w = rows 2w (high 12 bit) and 2w + 1 (low 12 bit); stored bytes B2 (px 0..7), B1 (px 8..15), B0 (px 16..23), MSB = leftmost; 1 = foreground [hw: logo, text].
 - 2-bit: two planes, each stored like a 1-bit tile (18 words). **First plane (9 words) = LOW bit** [hw] T9, 2026-11-18, unit 3: plane A solid = colour c1.
-- 4-bit: four planes (36 words); plane order **[?] OT-1** (MSB-first from Realtek's QC icon data only [sdk-hypothesis]; the QC photo cannot tell: swapping bit order only recolours).
+- 4-bit: four planes (36 words); plane order **[?] OT-1**. Sim default: plane k = bit k, as the 2-bit hw result [derived] (#263). The former MSB-first reading came from Realtek's QC icons, which cannot tell bit order (a swap only recolours) and gave the wrong 2-bit order; `osd_model.Opt.plane4_lsb=False` renders MSB first.
 - Narrow glyph: char width < 12 shows a slice of the tile chosen by `disp_zone`: [pipeline.md](pipeline.md).
 - 24 x 36 mode `0x3A43[6]`: 36 words per 1-bit glyph; 2- / 4-bit offset bits 8 / 7 must be 0 [spec]. Not modelled: layout unknown (OT-8).
 - Pictures: [1-bit](img/text_1bit.png), [widths](img/char_width.png), [2-bit](img/text_2bit.png), [4-bit](img/text_4bit.png), [blank](img/blank_cells.png).

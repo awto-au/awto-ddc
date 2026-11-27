@@ -15,7 +15,7 @@ Typed table: [sim-coverage.tsv](sim-coverage.tsv) (feature | registers | modelle
 | `row_total` | off | map A / B stop after `3A3F` / `3A40` rows |
 | `su_region` | off | scale-up source = region `3AC4..CB` (panel px) instead of the OSD bounding box |
 | `win_rotate` | off | windows with `ADR9[0]` turn with the font block under auto rotation |
-| `plane4_lsb` | off | 4-bit plane order MSB first (QC icons); on = LSB first like 2-bit (OT-1) |
+| `plane4_lsb` | on | 4-bit plane k = bit k like 2-bit (T9, [derived]); off = MSB first (OT-1, #263) |
 | `round_circle` | on | all-zero round tables: quarter circle of the size |
 | `pg_toggle` | `delta` | pattern generator toggle: init / init + delta (else init / inverse) |
 

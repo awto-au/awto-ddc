@@ -189,9 +189,10 @@ def test_font_2bit_offset():
 def test_font_4bit_planes():
     i = D.Img()
     one, zero = [[1] * 12 for _ in range(18)], [[0] * 12 for _ in range(18)]
-    i.glyph_n(36, 4, 0, [one, zero, zero, one], False)                    # planes MSB first (QC icons, not seen on a unit): 8 + 1 = 9
+    i.glyph_n(36, 4, 0, [one, one, zero, zero], True)                     # first plane = bit 0 as the 2-bit hw result (T9): 1 + 2 = 3
     i.map([(18, [i.c4(0, 0)])])
-    assert px(i, 5, 5) == i.pal[9]
+    assert px(i, 5, 5) == i.pal[3]
+    assert px(i, 5, 5, opt=M.Opt(plane4_lsb=False)) == i.pal[12]          # MSB-first reading (OT-1 alternative): 8 + 4 = 12
 
 
 def test_font_blank_and_blank_color_enable():
