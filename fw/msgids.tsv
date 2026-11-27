@@ -13,7 +13,7 @@
 030d	Scaler	Kernel/Scaler/ScalerFunction/Code/ScalerMDomain.c:909	DCLK	0
 0350	Analog	Kernel/Scaler/ScalerFunction/Code/ScalerPLL.c:3551	Mode table edge phase	0
 0558	Rx2	Kernel/Scaler/RL6449_Series_Scaler/Code/RL6449_Series_TMDSRx2.c:4568	HDMI Info Frame Not Received and not RGB	0
-07d6	System	Kernel/System/Code/SysJudge.c:474	Source Unstable!!	1
+07d6	System	Kernel/System/Code/SysJudge.c:476	Source Unstable!!	1
 08c6	Audio	Kernel/System/Code/SysAudio.c:113	Switch to Audio Playback	0
 08cd	Rx2	Kernel/Scaler/RL6449_Series_Scaler/Code/RL6449_Series_TMDSRx2.c:3251	4. PLL Setting Error	0
 08fc	CheckMDomain	Kernel/Scaler/ScalerFunction/Code/ScalerMDomain.c:1838	Measured last-line value away from _LAST_LINE_TARGET !!!	1
@@ -113,7 +113,7 @@
 310d	System	Kernel/System/Code/SysSource.c:4091	0. Cable Status Changed D1	1
 3113	Audio	Kernel/Scaler/RL6449_Series_Scaler/Code/RL6449_Series_Audio.c:396	Audio D0: WatchDog	0
 31da	Rx1	Kernel/Scaler/ScalerCommonFunction/Code/ScalerCommonDPRx1.c:1512	_COLORIMETRY_EXT_YCC_ITUR_BT709	0
-3259	System	Kernel/System/Code/SysJudge.c:797	Input Timing HSyncWidth	1
+3259	System	Kernel/System/Code/SysJudge.c:818	Input Timing HSyncWidth	1
 3277	System	Kernel/System/Code/SysSource.c:4524	0. Cable Status Changed D5	1
 33a7	System	Kernel/System/Code/SysSource.c:3122	7. TMDS Port Initial	1
 33a8	Rx2	Kernel/Scaler/ScalerFunction/Code/ScalerTMDSRx2_SeptPhy.c:797	7. Normal D2 DDC	0
@@ -121,7 +121,7 @@
 33e4	System	Kernel/User Common Function/Code/UserCommonInterface.c:3767	OSD -- MST On/Off Switch	1
 33e4	System	Kernel/User Common Function/Code/UserCommonInterface.c:3785	OSD -- MST On/Off Switch	1
 342a	Rx2	Kernel/Scaler/RL6449_Series_Scaler/Code/RL6449_Series_TMDSRx2.c:3969	Format Detect HDMI	0
-343d	System	Kernel/System/Code/SysJudge.c:802	Input Timing VSyncSWidth	1
+343d	System	Kernel/System/Code/SysJudge.c:823	Input Timing VSyncSWidth	1
 34c3	Rx1	Kernel/Scaler/ScalerFunction/Code/ScalerDPRx1_SeptPhy.c:3986	7. DP Video Stream Fail	0
 34c3	Rx1	Kernel/Scaler/ScalerFunction/Code/ScalerDPRx1_SeptPhy.c:4422	7. DP Video Stream Fail	0
 3584	Rx1	Kernel/Scaler/ScalerCommonFunction/Code/ScalerCommonDPRx1.c:242	VBIOS_Lane_Count_MST	0
@@ -164,12 +164,12 @@
 4673	CheckMDomain	Kernel/Scaler/ScalerFunction/Code/ScalerMDomain.c:1885	[Warning]!!!!!! OD Disable	1
 473b	FS	Kernel/Scaler/ScalerFunction/Code/ScalerMDomain.c:1426	DVT	1
 4857	System	Kernel/Scaler/ScalerFunction/Code/ScalerMDomain.c:616	FS fine tune, Dclk larger than panel spec => Modify Htotal'	1
-488d	System	Kernel/System/Code/SysJudge.c:794	Input Timing HTotal	1
+488d	System	Kernel/System/Code/SysJudge.c:815	Input Timing HTotal	1
 488f	System	Kernel/System/Code/SysMode.c:304	SysModeResetState!!	1
 48c6	FRC	Kernel/Scaler/ScalerFunction/Code/ScalerFRC.c:582	-D addr3 FRC	1
 4944	Measure	Kernel/Scaler/RL6449_Series_Scaler/Code/RL6449_Series_Measure.c:503	Interlace: detect by flag	0
 4944	Measure	Kernel/Scaler/ScalerFunction/Code/ScalerMeasure.c:235	Interlace: detect by flag	0
-4961	System	Kernel/System/Code/SysJudge.c:790	Input Timing H Polarity is Positive	1
+4961	System	Kernel/System/Code/SysJudge.c:811	Input Timing H Polarity is Positive	1
 498e	HDCP2	Kernel/Scaler/ScalerCommonFunction/Code/ScalerCommonSync.c:2687	HDCP2 Urgent	0
 49f5	Rx2	Kernel/Scaler/RL6449_Series_Scaler/Code/RL6449_Series_TMDSRx2.c:4576	No Quantization Range Specified	0
 4a2b	CEC	Kernel/Scaler/ScalerFunction/Code/ScalerCec.c:353	Cec Rx Read: HB (load to backup)	0
@@ -202,7 +202,7 @@
 5b7a	Rx1	Kernel/Scaler/ScalerCommonFunction/Code/ScalerCommonDPRx1.c:1780	Misc change: Dynamic Range	0
 5b7a	Rx1	Kernel/Scaler/ScalerCommonFunction/Code/ScalerCommonDPRx1.c:1800	Misc change: Dynamic Range	0
 5bfc	FS	Kernel/Scaler/RL6449_Series_Scaler/Code/RL6449_Series_Memory.c:210	FREESYNC Dt warning	1
-5c1c	System	Kernel/System/Code/SysJudge.c:795	Input Timing HStart	1
+5c1c	System	Kernel/System/Code/SysJudge.c:816	Input Timing HStart	1
 5c3a	Rx1	Kernel/Scaler/ScalerCommonFunction/Code/ScalerCommonDPRx1.c:1913	VSC change: Color Space, _COLOR_SPACE_Y_ONLY	0
 5cc1	System	Kernel/System/Code/SysSource.c:3135	7. Dual DVI Initial	1
 5dcc	CEC	Kernel/Scaler/ScalerFunction/Code/ScalerCec.c:856	=> Cec Tx send: DB	0
@@ -243,7 +243,7 @@
 6df3	Scaler	Kernel/Scaler/ScalerCommonFunction/Code/ScalerCommonMcu.c:2585	- IIC Write Time Out: Burst Mode	0
 6e46	Rx1	Kernel/Scaler/ScalerFunction/Code/ScalerDPRx1_SeptPhy.c:2784	7. IIIIIInterLace Vtotal	0
 6f80	CEC	Kernel/Scaler/ScalerFunction/Code/ScalerCec.c:705	CEC TX DB Nack Happened!!	0
-6fbb	System	Kernel/System/Code/SysJudge.c:798	Input Timing VFreq	1
+6fbb	System	Kernel/System/Code/SysJudge.c:819	Input Timing VFreq	1
 7020	System	Kernel/System/Code/SysSource.c:5449	Background source judge!!	1
 7112	Rx2	Kernel/Scaler/ScalerCommonFunction/Code/ScalerCommonSync.c:5808	Get Pixel Repetition 9	0
 7152	FS	Kernel/Scaler/ScalerFunction/Code/ScalerMDomain.c:1155	WARNING: Transient Dvtotal is out of spec!!!	1
@@ -253,7 +253,7 @@
 71d7	System	Kernel/System/Code/SysDP.c:255	HPD - High Event	1
 71d7	System	Kernel/System/Code/SysDP.c:380	HPD - High Event	1
 72e0	CheckMDomain	Kernel/Scaler/ScalerFunction/Code/ScalerMDomain.c:1912	== DISP_CHECK_END ==	1
-7317	System	Kernel/System/Code/SysJudge.c:796	Input Timing HWidth	1
+7317	System	Kernel/System/Code/SysJudge.c:817	Input Timing HWidth	1
 73d1	Analog	User/RTD Series/RTD2014Function/Code/RTD2014UserInterface.c:3085	Detected by Special Case to 640x480-60	0
 743e	FRC	Kernel/Scaler/RL6449_Series_Scaler/Code/RL6449_Series_Scaling.c:601	DDEN	1
 7561	FS	Kernel/Scaler/ScalerFunction/Code/ScalerMemory.c:456	Timeout counter	1
@@ -283,7 +283,7 @@
 7ff3	Rx2	Kernel/Scaler/ScalerCommonFunction/Code/ScalerCommonSync.c:5766	Get Pixel Repetition 3	0
 8008	CheckMDomain	Kernel/Scaler/ScalerFunction/Code/ScalerMDomain.c:1858	FrameSync Frame Buffer	1
 816b	Rx1	Kernel/Scaler/ScalerFunction/Code/ScalerDPRx1_SeptPhy.c:1749	7. Idle Pattern Case	0
-819d	System	Kernel/System/Code/SysJudge.c:525	eDP unstable	1
+819d	System	Kernel/System/Code/SysJudge.c:527	eDP unstable	1
 81ec	Rx1	Kernel/Scaler/ScalerCommonFunction/Code/ScalerCommonDPRx1.c:1684	Misc change: Color Format, _COLOR_SPACE_YCBCR422	0
 8207	Rx1	Kernel/Scaler/ScalerFunction/Code/ScalerDPRx1_SeptPhy.c:1716	7. Normal Link Training under Fake Power Saving Case	0
 82bd	System	Kernel/System/Code/SysSource.c:4546	0. Cable Status Changed D6	1
@@ -303,7 +303,7 @@
 87ac	Rx1	Kernel/Scaler/RL6449_Series_Scaler/Code/RL6449_Series_DPRx1.c:2070	Stream Clk	0
 87c7	Scaler	Kernel/Scaler/ScalerFunction/Code/ScalerDisplay.c:1133	MBR: GET_MDOMAIN_INPUT_VFREQ	0
 8847	Audio	Kernel/System/Code/SysAudio.c:358	Audio Dac Initial	0
-8870	System	Kernel/System/Code/SysJudge.c:496	Input Timing Double Check : Interlace Flag Change	1
+8870	System	Kernel/System/Code/SysJudge.c:498	Input Timing Double Check : Interlace Flag Change	1
 887f	Rx2	Kernel/Scaler/RL6449_Series_Scaler/Code/RL6449_Series_TMDSRx2.c:4592	HDMI AVI info frame has changed	0
 88a4	Rx2	Kernel/Scaler/ScalerCommonFunction/Code/ScalerCommonSync.c:5815	Get Pixel Repetition Error	0
 8903	System	Kernel/Scaler/ScalerFunction/Code/ScalerMDomain.c:584	_Last_line_Dclk_smaller	1
@@ -459,7 +459,7 @@ c5cc	Scaler	Kernel/Scaler/ScalerFunction/Code/ScalerIDomain.c:356	VStart too Sma
 c5f1	Check	Kernel/Scaler/ScalerFunction/Code/ScalerDisplayDPTx.c:660	eDP Tx1 LT2 Lane or PN Fail	1
 c670	FRC	Kernel/Scaler/RL6449_Series_Scaler/Code/RL6449_Series_Scaling.c:600	IDEN	1
 c6a8	Check	Kernel/Scaler/ScalerFunction/Code/ScalerDisplayDPTx.c:654	eDP Tx1 LT2 Pass	1
-c702	System	Kernel/System/Code/SysJudge.c:484	Measured Input HV Changed	1
+c702	System	Kernel/System/Code/SysJudge.c:486	Measured Input HV Changed	1
 c7a8	Scaler	User/RTD Series/RTD2014Function/Code/RTD2014UserInterface.c:1601	FRC only supports dos-mode timing	0
 c964	Scaler	Kernel/User Common Function/Code/UserCommonInterface.c:4275	MBR: Backlight Control Start	0
 ca5e	CEC	Kernel/Scaler/ScalerFunction/Code/ScalerCec.c:670	CEC TX is Busy	0
@@ -475,7 +475,7 @@ cd9e	Rx2	Kernel/Scaler/RL6449_Series_Scaler/Code/RL6449_Series_TMDSRx2.c:3954	7.
 cdc5	FS	Kernel/Scaler/ScalerFunction/Code/ScalerPLL.c:2127	Estimated last-line	1
 ce77	Check	Kernel/Scaler/ScalerFunction/Code/ScalerDisplayDPTx.c:635	eDP Tx1 LT1 Pass	1
 cf73	Scaler	Kernel/User Common Function/Code/UserCommonInterface.c:4496	MBR: ucToggleTimeTotal	0
-cf88	System	Kernel/System/Code/SysJudge.c:801	Input Timing VHeight	1
+cf88	System	Kernel/System/Code/SysJudge.c:822	Input Timing VHeight	1
 d029	Scaler	Kernel/User Common Function/Code/UserCommonInterface.c:4462	MBR: Transition	0
 d16e	Rx2	Kernel/Scaler/ScalerCommonFunction/Code/ScalerCommonSync.c:5745	Get Pixel Repetition 0	0
 d1e2	System	Kernel/System/Code/SysSource.c:2802	7. Switch Port No Cable	1
@@ -491,9 +491,9 @@ d437	Rx1	Kernel/Scaler/ScalerFunction/Code/ScalerDPRx1_SeptPhy.c:599	7. DP CRC T
 d459	System	Kernel/System/Code/SysSource.c:4201	0. Cable Status Changed D2	1
 d4ae	Rx1	Kernel/Scaler/ScalerCommonFunction/Code/ScalerCommonDPRx1.c:1744	Misc change: Colorimetry	0
 d4d2	Rx2	Kernel/Scaler/ScalerCommonFunction/Code/ScalerCommonSync.c:6129	Get RGB DEFAULT RANGE	0
-d588	System	Kernel/System/Code/SysJudge.c:511	Memory Check Failed	1
+d588	System	Kernel/System/Code/SysJudge.c:513	Memory Check Failed	1
 d5a6	FRC	Kernel/Scaler/ScalerFunction/Code/ScalerFRC.c:540	-D addr1 FRC	1
-d5ed	System	Kernel/System/Code/SysJudge.c:792	Input Timing InterLace	1
+d5ed	System	Kernel/System/Code/SysJudge.c:813	Input Timing InterLace	1
 d60f	FS	Kernel/Scaler/ScalerFunction/Code/ScalerMemory.c:546	7. dt max modifyed	1
 d672	Mst	Kernel/Scaler/ScalerCommonFunction/Code/ScalerCommonSync.c:1269	MST Cap Switch	0
 d757	Rx1	Kernel/Scaler/RL6449_Series_Scaler/Code/RL6449_Series_DPRx1.c:4314	7. PHY CTS Loop (Swap Back)	0
@@ -501,11 +501,11 @@ d88b	Rx2	Kernel/Scaler/RL6449_Series_Scaler/Code/RL6449_Series_TMDSRx2.c:2810	B 
 d8a5	System	Kernel/System/Code/SysSource.c:3871	0. Cable Status Chanaged A2	1
 d8a7	Rx1	Kernel/Scaler/ScalerCommonFunction/Code/ScalerCommonDPRx1.c:979	7. Frame[N] VBS2BS Counter	0
 d9b0	FS	Kernel/Scaler/ScalerFunction/Code/ScalerMDomain.c:1427	DVS	1
-daab	System	Kernel/System/Code/SysJudge.c:793	Input Timing HFreq	1
+daab	System	Kernel/System/Code/SysJudge.c:814	Input Timing HFreq	1
 dae5	Scaler	Kernel/Scaler/ScalerFunction/Code/ScalerIDomain.c:179	9. Set Capture usHWidth	0
 db47	Rx1	Kernel/Scaler/ScalerFunction/Code/ScalerDP_SeptPhy.c:1278	DP Rx1 MST reset	0
 db5c	CheckMDomain	Kernel/Scaler/ScalerFunction/Code/ScalerMDomain.c:1895	FRC Efficiency(%)	1
-db62	System	Kernel/System/Code/SysJudge.c:799	Input Timing VTotal	1
+db62	System	Kernel/System/Code/SysJudge.c:820	Input Timing VTotal	1
 dc32	System	Kernel/System/Code/SysSource.c:3849	0. Cable Status Chanaged A1	1
 dce6	Rx0	Kernel/Scaler/ScalerFunction/Code/ScalerDP_SeptPhy.c:979	7. DP Margin Link Long HPD	0
 dd13	Rx2	Kernel/Scaler/RL6449_Series_Scaler/Code/RL6449_Series_TMDSRx2.c:3955	7. TMDS Lane1 LE Max	0
@@ -523,7 +523,7 @@ e06c	Rx1	Kernel/Scaler/ScalerCommonFunction/Code/ScalerCommonDPRx1.c:1975	VSC ch
 e0d8	System	Kernel/System/Code/SysSource.c:2344	7. Bingo Priority!!!!!!!	1
 e0d8	System	Kernel/System/Code/SysSource.c:2544	7. Bingo Priority!!!!!!!	1
 e0d8	System	Kernel/System/Code/SysSource.c:3003	7. Bingo Priority!!!!!!!	1
-e0f0	System	Kernel/System/Code/SysJudge.c:791	Input Timing V Polarity is Positive	1
+e0f0	System	Kernel/System/Code/SysJudge.c:812	Input Timing V Polarity is Positive	1
 e0fc	CEC	Kernel/Scaler/ScalerFunction/Code/ScalerCec.c:783	<= Cec Rx Read: HB	0
 e151	FRC	Kernel/Scaler/ScalerFunction/Code/ScalerMemory.c:938	3Block-addr1	1
 e302	Rx1	Kernel/Scaler/ScalerCommonFunction/Code/ScalerCommonDPRx1.c:1381	_COLOR_SPACE_RAW	0
@@ -607,7 +607,7 @@ fd23	FRC	Kernel/Scaler/RL6449_Series_Scaler/Code/RL6449_Series_FRC.c:446	FRC-H	1
 fd28	MemoryPhaseCal	Kernel/Scaler/ScalerFunction/Code/ScalerSync.c:607	CRC FAIL	0
 fd5d	Rx1	Kernel/Scaler/ScalerFunction/Code/ScalerDPRx1_SeptPhy.c:2233	7. wuzanne test : DP CDR Unlock	0
 fd6c	FS	Kernel/Scaler/ScalerFunction/Code/ScalerMemory.c:536	7. DtMax	1
-fe15	System	Kernel/System/Code/SysJudge.c:800	Input Timing VStart	1
+fe15	System	Kernel/System/Code/SysJudge.c:821	Input Timing VStart	1
 fe16	Rx1	Kernel/Scaler/ScalerCommonFunction/Code/ScalerCommonDPRx1.c:1361	_COLOR_SPACE_YCBCR444	0
 feca	System	Kernel/System/Code/SysSource.c:394	bH_Select == 0,bP_Select ==0	1
 ff1a	System	Kernel/System/Code/SysSource.c:2570	7. Search Finish2 !!!!!!!!!!!!!!!!!!!	1

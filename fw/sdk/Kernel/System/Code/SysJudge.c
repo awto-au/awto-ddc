@@ -40,6 +40,8 @@ static __xdata BYTE s_ucSysModeBy;              // who asked for the pending mod
 static __xdata DWORD s_ulSysEntry;              // AwtoMs() at the state's entry
 volatile __xdata BYTE g_ucAwtoSysOwn;           // volatile: the set and the clear around one view write both stay
 static __xdata _Bool s_bSysLogged;                        // SYS_AT pushed the line: the next SysMachineGo applies it without a line
+static __xdata BYTE s_ucSysDsTries;             // #353 M-domain set-ups in this display setting episode
+static __xdata BYTE s_ucSysMemReinit;           // #353 1 = the memory power cycle ran in this episode
 
 // line now, before the action (why | AWTO_SYS_WHY_AT); the SysMachineGo after the action applies the transition
 #define SYS_AT(n, w)                            SysMachineGo((n), (w) | AWTO_SYS_WHY_AT, _FALSE)
@@ -756,6 +758,25 @@ void SysMachineHandler(void)
 }
 
 //--------------------------------------------------
+// Description  : #353 after AWTO_MEM_REINIT_AFTER failed frame-buffer set-ups, once per display setting episode: the memory
+//                power cycle a real power-saving wake runs (SysPower.c ON path); a fake-saving wake (NO SUPPORT) skips it
+// Input Value  : None
+// Output Value : None
+//--------------------------------------------------
+static void SysMachineMemReinit(void)
+{
+#if((_FRC_SUPPORT == _ON) && (_MEMORY_TYPE_CONFIG != _NO_MEMORY))
+    if((s_ucSysMemReinit == 0) && (s_ucSysDsTries >= AWTO_MEM_REINIT_AFTER) && (GET_MEMORY_SELECT() != _FRAME_SYNC_LINE_BUFFER))
+    {
+        s_ucSysMemReinit = 1;
+        AwtoSyncPush(AWTO_SYNC_EV_MEM, AWTO_MEM_LOG_REINIT, s_ucSysDsTries);
+        ScalerMemoryPowerControl(_OFF);
+        ScalerMemoryPowerControl(_ON);
+    }
+#endif
+}
+
+//--------------------------------------------------
 // Description  : The state's scaler work, once per pass (slot of SysModeHandler): measure while searching, display setting,
 //                first-ACTIVE work. Requests it makes are taken by the next SysMachineHandler.
 // Input Value  : None
@@ -842,12 +863,29 @@ void SysMachineWork(void)
             break;
 
         case AWTO_SYS_DISPLAY:
+            if(GET_MODE_STATE_CHANGE_MODE() == _TRUE)
+            {
+                s_ucSysDsTries = 0;                 // a new display setting episode
+                s_ucSysMemReinit = 0;
+            }
             if(GET_MODE_DISPLAY_SETTING_READY() == _FALSE)
             {
                 AwtoSwEvent(AWTO_SW_EV_PROBE, 14);
                 AwtoStageMs(0);
-                if(SysModeDisplaySetting() == _TRUE)
+                if(s_ucSysDsTries != 0xFF)
                 {
+                    s_ucSysDsTries++;
+                }
+                if(SysModeDisplaySetting() == _FALSE)
+                {
+                    SysMachineMemReinit();
+                }
+                else
+                {
+                    if(s_ucSysMemReinit != 0)
+                    {
+                        AwtoSyncPush(AWTO_SYNC_EV_MEM, AWTO_MEM_LOG_REINIT_OK, s_ucSysDsTries);
+                    }
 #if(_DEBUG_MESSAGE_CHECK_MDOMAIN == _ON)
                     ScalerMDomainCheckDisplaySetting();
 #endif

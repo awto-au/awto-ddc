@@ -58,6 +58,9 @@
 - DPMS / power-key off: DDR PLL stops, no explicit self-refresh in the SDK; wake re-inits the PHY.
   - [HW] content is lost: POWER key off 12 s flips single bits (450 / 475 bad bursts of 156,288 on A / B); power saving 524 s loses 99.7 % (#348 test 2). Data kept in DDR must be reloaded after either.
   - [HW] intact on both chips: test cmd 0x0C / 0x0D, input switch, source switch, rotate off / on, ISP reset, watchdog reset (#348 test 2). AC cycle: not measured.
+- Power saving entered from NO SUPPORT is fake saving (`SysPower.c:1221`, `SysPowerCheckFakeSaving`): no memory power-off, the DDR stays clocked; the wake (`FAKE_PS_TO_NORMAL`, `SysPower.c:680`) re-inits nothing in the memory path.
+  - [HW] DRAM log entries written during a 17 h fake saving read back intact (#353); a real 394 s saving lost most of them.
+- #353: after 2 failed frame-buffer M-domain set-ups in one display setting, `SysMachineMemReinit` (`SysJudge.c`) runs memory power off / on once (DDR PLL, DC SYS / PHY, DRAM init); DDR clock off ~4 ms by the SDK delays (up to ~85 ms if both PLL lock polls run to their 40 ms limit); content after it not measured.
 - [HW] 4K60 rotate off = line-buffer mode: `cap_cap_en` stays 1 and blocks stay programmed, but neither chip is written (marker unchanged 2 s; rotate 180 control overwritten within 23 ms; #348). DDR is then free except the log; any switch to rotate 180 rewrites block 1.
 - No clear / fill path in our build. Cold power-up: content undefined. Writes before the first main-loop pass are lost [HW].
 - Hazard: `MCU_DC_LEN` != 2 on port A kills port A [HW #255].

@@ -295,6 +295,8 @@ E3	11	n	memory select:frame-sync frame buffer (force %)
 E3	12	n	memory select:free-run frame buffer (force %)
 E3	13	n	memory select:M/N frame-sync frame buffer (force %)
 E3	14	n	memory select:free run, no input (force %)
+E3	20	n	memory re-init:% frame-buffer M-domain set-ups failed; DDR power cycled (PLLs, DC SYS / PHY, DRAM init), retrying	warning
+E3	21	n	memory re-init:display setting passed after it (set-up try %)
 E4	00	-	picture normal:display re-set
 E4	01	-	picture mirrored left-right:display re-set
 E4	02	-	picture mirrored top-bottom:display re-set

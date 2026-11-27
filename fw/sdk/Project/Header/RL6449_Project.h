@@ -1311,6 +1311,11 @@ extern void AwtoDlFlush(unsigned char ucOp);                    // main context 
 #define AWTO_MEM_LOG_STORED                                     0x05    // not ACTIVE: takes effect at the next display setting
 #define AWTO_MEM_LOG_NO_FRC                                     0x06    // _AWTO_FRC off: frame buffer not built
 #define AWTO_MEM_LOG_SEL                                        0x10    // + _FRAME_SYNC_LINE_BUFFER.._FREE_RUN_NO_INPUT: memory select changed (display setting)
+#define AWTO_MEM_LOG_REINIT                                     0x20    // #353 memory power cycle (DDR PLL, DC SYS / PHY, DRAM init): value = failed set-ups before it
+#define AWTO_MEM_LOG_REINIT_OK                                  0x21    // #353 display setting passed after the power cycle: value = set-up try of the episode
+// #353: failed frame-buffer M-domain set-ups in one display setting before the memory power cycle (once per episode).
+// 2 leaves ~7 of the ~10 tries the 2.5 s judge timer allows to retry after it; Dan's call (#353).
+#define AWTO_MEM_REINIT_AFTER                                   2
 #define AWTO_SYNC_EV_ROT                                        0xE4    // #165 picture orientation (set_ap_rotate): arg = what << 2 | flip, value = rotate << 8 | mirror
 #define AWTO_FLIP_HV                                            0x03    // flip bits: 1 = left-right (H), 2 = top-bottom (V); both = 180
 #define AWTO_ROT_APPLIED                                        0       // what: display re-set now

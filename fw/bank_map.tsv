@@ -2205,6 +2205,7 @@ fn	_SysMachineInit	2	0x7d29	159
 fn	_SysMachineJudge	2	0x7dc8	701
 fn	_SysMachineLed	2	0x8085	57
 fn	_SysMachineLedBoot	2	0x80be	13
+fn	_SysMachineMemReinit	2	0x0010	68
 fn	_SysMachineOffOrGoing	5	0x1d69	46
 fn	_SysMachinePower	14	0x8672	35
 fn	_SysMachinePowerStep	2	0x80cb	722
@@ -3197,6 +3198,7 @@ stub	14__ScalerTimerReactiveTimerEvent	14	0xaf1f	8
 stub	14__ScalerVgipSetCaptureHStartPosition	14	0xaf97	8
 stub	14__SysAudioChangeAudioState	14	0xaf9f	8
 stub	14__SysMachineJudge	14	0xafa7	8
+stub	14__SysMachineMemReinit	14	0x98c1	8
 stub	14__SysMachinePowerStep	14	0xafaf	8
 stub	14__SysMachineRequest	14	0xafb7	8
 stub	14__SysModeDisplayTimingInitial	14	0xafbf	8

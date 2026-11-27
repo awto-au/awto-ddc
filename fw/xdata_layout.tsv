@@ -60,7 +60,6 @@ UserCommonAdjust	0xd700	2830	12
 delay	0xd700	2842	12
 RL6449_Series_DDR2	0xd700	2854	10
 ScalerAudio	0xd700	2864	10
-SysJudge	0xd700	2874	10
 OsdDrawGridLine	0xd700	2884	9
 RL6449_Series_Audio	0xd700	2893	9
 RTD2014OsdFunc	0xd700	2902	9
@@ -131,6 +130,7 @@ RL6449_Series_DPRx1	0xe580	0	99
 sync	0xe780	37	733
 hostnote	0xe780	770	192
 ScalerMDomain	0xe780	962	135
+SysJudge	0xe780	1097	12
 ScalerCommonDebug	0xe780	1285	363
 awto_settings_settings	0xe780	1648	335
 console	0xe780	1983	322
