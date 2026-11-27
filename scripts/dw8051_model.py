@@ -1,19 +1,22 @@
 #!/usr/bin/env python3
 """DW8051 timing / SFR model as data (#162 step 1, awto-sdcc#67): scripts/dw8051_model.json.
 
-usage: dw8051_model.py --write | --check
+usage: dw8051_model.py --write | --check | --table [DATABOOK.txt]   (--table: tests/data/dw8051_table_2_4.tsv from the databook text)
 - Source: Synopsys DesignWare DW8051 databook v3.2a (docs: tmp/wdt/prior/DW8051-databook.pdf): table 2-4 (instruction cycles),
   2-5 (MOVX stretch), 2-6 / 2-7 (SFR map, reset values), p. 3-9 (timer rate), p. 3-49 (interrupt latency).
 - JSON is the only copy of the tables: fastmachine.py loads it into mcs51_core.c (core_set_dw); an RL6449 ucsim can load the same file.
 - Opcode classes below are the databook rows; cycles[op] = instruction cycles (1 cycle = 4 clk). MOVX rows are base + CKCON[2:0].
 """
 import json
+import re
 import sys
 from pathlib import Path
 
 import chip_mem as CM
 
 OUT = Path(__file__).resolve().parent / "dw8051_model.json"
+TABLE = Path(__file__).resolve().parents[1] / "tests/data/dw8051_table_2_4.tsv"    # transcribed Table 2-4: tests/test_dw8051_model.py
+DATABOOK = Path.home() / "vendors/realtek/analysis/rl6449-dw8051/DW8051-databook.txt"
 
 
 def cycles() -> list[int]:
@@ -41,8 +44,8 @@ def cycles() -> list[int]:
     put([0x05, 0x15], 2)                                          # INC DEC direct
     put([0xA3], 3); put([0xA4, 0x84], 5); put([0xD4], 1)          # INC DPTR, MUL, DIV, DA
     put([0xE4, 0xF4, 0xC4, 0x23, 0x33, 0x03, 0x13], 1)            # CLR CPL SWAP RL RLC RR RRC A
-    put([*r(0xE8), 0xE6, 0xE7, 0x74, *r(0xF8), 0xF6, 0xF7], 1)    # MOV A,Rn A,@Ri A,#d Rn,A @Ri,A
-    put([0xE5, *r(0xA8), *r(0x78), 0xF5, *r(0x88), 0x86, 0x87, 0x76, 0x77, 0xA6, 0xA7], 2)
+    put([*r(0xE8), 0xE6, 0xE7, *r(0xF8), 0xF6, 0xF7], 1)          # MOV A,Rn A,@Ri Rn,A @Ri,A
+    put([0xE5, 0x74, *r(0xA8), *r(0x78), 0xF5, *r(0x88), 0x86, 0x87, 0x76, 0x77, 0xA6, 0xA7], 2)   # MOV A,#d = 2 (#362)
     put([0x85, 0x75, 0x90, 0x93, 0x83], 3)                        # MOV dir,dir / dir,#d / DPTR,#d / MOVC x2
     put([0xE0, 0xE2, 0xE3, 0xF0, 0xF2, 0xF3], 2)                  # MOVX: base, + CKCON[2:0] at run time
     put([0xC0, 0xD0], 2)                                          # PUSH POP
@@ -103,8 +106,39 @@ def model() -> dict:
     }
 
 
+def parse_table_2_4(text: str) -> dict[int, tuple[str, int, str]]:
+    """Table 2-4 rows of the databook text extract -> {opcode: (mnemonic, bytes, cycles text)}; ranges 11–F1 / 01–E1 step 0x20."""
+    pat = re.compile(r"^\s*(\S.*?)\s{2,}\S.*?\s{2,}(\d)\s+(\d|2–9\*)\s+([0-9A-F]{2})(?:–([0-9A-F]{2}))?\s*$")
+    start = text.index("Table 2-4    DW8051 Instruction Set\n")
+    end = text.index("There is an additional reserved opcode (A5)", start)
+    rows = {}
+    for ln in text[start:end].split("\n"):                         # not splitlines(): the extract has form feeds
+        m = pat.match(ln)
+        if not m:
+            continue
+        mn, b, c, lo, hi = m.groups()
+        step = 0x20 if mn.startswith(("ACALL", "AJMP")) else 1
+        for o in range(int(lo, 16), int(hi or lo, 16) + 1, step):
+            assert o not in rows, (hex(o), mn)
+            rows[o] = (mn, int(b), c.replace("–", "-").rstrip("*"))
+    rows[0xA5] = ("reserved (= NOP)", 1, "1")
+    return rows
+
+
+def write_table(databook: Path) -> int:
+    rows = parse_table_2_4(databook.read_text())
+    lines = ["# DW8051 databook v3.2a Table 2-4 (from scripts/dw8051_model.py --table); cycles 2-9 = MOVX base 2 + CKCON stretch",
+             "opcode\tmnemonic\tbytes\tcycles"]
+    lines += [f"{o:02X}\t{rows[o][0]}\t{rows[o][1]}\t{rows[o][2]}" for o in sorted(rows)]
+    TABLE.write_text("\n".join(lines) + "\n")
+    print(f"wrote {TABLE} ({len(rows)} opcodes)")
+    return 0 if len(rows) == 256 else 1
+
+
 def main():
     mode = sys.argv[1] if len(sys.argv) > 1 else "--check"
+    if mode == "--table":
+        return write_table(Path(sys.argv[2]) if len(sys.argv) > 2 else DATABOOK)
     text = json.dumps(model(), indent=1) + "\n"
     if mode == "--write":
         OUT.write_text(text)

@@ -113,4 +113,8 @@ date	commit	image	label	passes	cycles_pass	work	stub_entries	stub_cyc	instr_pass
 2026-11-27T16:10:32+11:00	826fcb36	AWT26110003-lt-7-be	log-times before/after	12	181882	156268	55.0	2578	121652	408.9			581926								
 2026-11-27T17:16:44+11:00	800e5789	AWT26110003-44d260f0-be	log-times #358 before/after (44d260f0 -> 800e5789)	12	184257	158124	55.0	2578	123179	410.2			582775								
 2026-11-27T17:17:44+11:00	800e5789	AWT26110003-800e5789-be	log-times #358 before/after (44d260f0 -> 800e5789)	12	184180	158332	54.0	2540	123281	410.6			583037								
+2026-11-27T19:23:19+11:00	f4c43723	AWT26110003-f4c43723-be	#362 before: MOV A,#data 1 cycle (old dw8051 model)	12	184178	158342	54.0	2540	123284	410.6			583267								
+2026-11-27T19:23:22+11:00	f4c43723	AWT26110003-f4c43723-be	#362 before: MOV A,#data 1 cycle (old dw8051 model)													0	300	19.5	0.75		
+2026-11-27T19:25:18+11:00	f4c43723	AWT26110003-f4c43723-be	#362 after: MOV A,#data 2 cycles (databook Table 2-4), same image	12	184178	158342	54.0	2540	123284	410.6			583267								
+2026-11-27T19:25:19+11:00	f4c43723	AWT26110003-f4c43723-be	#362 after: MOV A,#data 2 cycles (databook Table 2-4), same image													0	300	19.5	0.75		
 2026-11-28T12:43:39+11:00	3a4e1e45	osd_model-4k-busy	#367 osd render (integrate)																	1.16	5.1/28
