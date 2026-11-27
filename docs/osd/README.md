@@ -60,7 +60,7 @@ Status = best evidence for the behaviour shown. Gaps are visible here: a row wit
 | window 7 mask region | `0x3A09[6:5]`, `0x3A07[3]` | [win7_mask](img/win7_mask.png) | [spec-model] OT-16 |
 | window 6 / 7 blend functions | `0x3A21[6:2]`, `0x3A09[6:5]` | modelled, no picture yet | [spec-model] OT-16 |
 | highlight windows 4_1..4_8 | `0x3A2A..0x3A56` | [highlight](img/highlight.png) | [spec-model] OT-17 |
-| video highlight window + border | `0x0060/0x0061`, `0x006C[6]` | not modelled | [spec]; draws an RGB border: OT-18 |
+| video highlight window + border | `0x0060/0x0061`, `0x006C[6]` | [hlw_border](img/hlw_border.png) | [spec-model] border only (picture-processing regions not modelled): OT-18 |
 | alpha: windows only | `0x3A0A[3:2]=01`, `0x006C[4:2]`, `0x008F[7:3]` | [blend_01](img/blend_01.png) | [hw] 01 showed nothing under char cells |
 | alpha: all | `=10` | [blend_10](img/blend_10.png) | [spec-model] |
 | alpha: window + char bg | `=11` | [blend_11](img/blend_11.png) | [hw] unit 1 2026-11-13 (#176) |

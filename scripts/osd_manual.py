@@ -102,6 +102,7 @@ class Scene:
         self.ids: dict = {}
         self.gbase = 0
         self.pg = bytearray(16)                               # page 7 0x07F0.. pattern generator
+        self.hlw = bytearray(M.HLW_PORTS)                     # highlight window port 0x61_00..1F
         base = {0: (0, 0, 0), 1: (255, 255, 255), 2: (220, 40, 40), 3: (40, 200, 60), 4: (50, 90, 230), 5: (240, 200, 30),
                 6: (40, 200, 220), 7: (200, 60, 200), 8: (128, 128, 128), 9: (255, 140, 0), 10: (10, 10, 60), 11: (250, 250, 160)}
         for i in range(12, 64):
@@ -171,7 +172,7 @@ class Scene:
         yy, xx = np.mgrid[0:H, 0:W]
         c = np.where(((yy // 12) + (xx // 12)) % 2, BG_LIGHT, BG_DARK)
         bg = np.stack([c, c, c + 24], axis=2).astype(np.uint8)
-        st = M.OsdState(self.st.win, self.st.font, self.st.pal, bytes(self.regs), tuple(self.ovl), 0.0, 0, bytes(self.pg))
+        st = M.OsdState(self.st.win, self.st.font, self.st.pal, bytes(self.regs), tuple(self.ovl), 0.0, 0, bytes(self.pg), bytes(self.hlw))
         img = np.kron(M.render(st, W, H, bg=bg), np.ones((K, K, 1), np.uint8))
         return np.concatenate([img, caption(f"{self.title}  {self.tag}", img.shape[1])], axis=0)
 
@@ -332,6 +333,15 @@ def f_pattern_gen():
     s = Scene("display pattern generator", "page 7 0x07F0.. [spec-model]")
     for a, v in ((0, 0x81), (1, 0x88), (2, 0x20), (6, 0x08), (7, 0x08), (8, 0x04), (9, 0x08)):
         s.pg[a] = v
+    return s
+
+
+def f_hlw_border():
+    s = text(["HLW BORDER", "UNDER OSD"], fg=1, bg=4, title="highlight window border", tag="0x60/61, 006C[6] [spec-model OT-18]", at=(60, 50))
+    h = s.hlw
+    for k, v in enumerate((20, 172, 20, 100)):                # x [20, 172), y [20, 100): end = start + size (SDK)
+        h[2 * k], h[2 * k + 1] = v >> 8, v & 255
+    h[8], h[9:12], h[12] = 4, bytes((240, 40, 40)), 0x10 | 1  # width 4, red, bottom side off, enabled
     return s
 
 
@@ -513,6 +523,7 @@ FEATURES: list[tuple] = [
     ("font_mask", "font mask regions", "3A45..4C", "spec-model", f_font_mask),
     ("vertical_boundary", "vertical boundary", "3A18[5], 3A1E..20", "spec-model", f_vertical_boundary),
     ("pattern_gen", "display pattern generator", "DISP_PG_* 0x07F0..FE", "spec-model", f_pattern_gen),
+    ("hlw_border", "highlight window border", "0x0060/0x0061, 0x006C[6]", "spec-model", f_hlw_border),
     ("win_chess", "window chessboard", "ADR5/ADR9", "spec-model", f_win_chess),
     ("win_grid", "window grid lines", "WIN2..4 ADR7/8, 3A35..37", "hw", f_win_grid),
     ("win_mask_colour", "special colour mask", "ADR9[2:3]", "spec-model", f_win_mask_colour),

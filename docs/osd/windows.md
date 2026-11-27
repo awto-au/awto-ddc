@@ -49,7 +49,7 @@ Rectangles in the window control SRAM (`sram_sel` 00), drawn behind the font (or
 
 ## Highlight windows
 - 4_1..4_8: for the font inside window 4_n, foreground colour = `fg_color_hl n`, background = `bg_color_hl n` (6 bit each; enable bit 6 of the first register) in `0x3A2A / 2B`, `0x3A2D / 2E`, `0x3A30 / 31`, `0x3A4D..56` [spec]. Picture: [highlight](img/highlight.png) [spec-model] OT-17.
-- Video highlight window (HLW, page 0): `0x0060` HLW_ADDR_PORT + `0x0061` HLW_DATA_PORT: a rectangle (start / end 13 bit), which picture-processing blocks (contrast, gamma, DCC, sharpness, sRGB, ...) apply inside / outside, **and a border**: width 5 bit, colour R / G / B (8 bit each), per-side disable (`HLW_BORDER_EN` [7:4] L R T B), `window_en` [0] [spec]; `0x006C[6]` hides the border. So the earlier note "only switches picture processing" was incomplete: it also draws a coloured border in the video path, independent of the OSD SRAM. Not modelled; OT-18.
+- Video highlight window (HLW, page 0): `0x0060` HLW_ADDR_PORT + `0x0061` HLW_DATA_PORT: a rectangle (start / end 13 bit), which picture-processing blocks (contrast, gamma, DCC, sharpness, sRGB, ...) apply inside / outside, **and a border**: width 5 bit, colour R / G / B (8 bit each), per-side disable (`HLW_BORDER_EN` [7:4] L R T B), `window_en` [0] [spec]; `0x006C[6]` hides the border. The border is drawn in the video path, independent of the OSD SRAM. Sim: border inside [start, end) (SDK end = start + size), under the OSD [spec-model]; picture [hlw_border](img/hlw_border.png); OT-18.
 
 ## Limits
 - 26 windows; 8 highlight sets; 1 grid window per WIN2 / 3 / 4; all windows share the OSD scale / position / alpha level (no per-window alpha level, only `blend_en`).

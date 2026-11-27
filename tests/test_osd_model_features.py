@@ -383,3 +383,23 @@ def test_font_24x36_mode():
     i.reg(0x43, 0x40)
     i.map([(36, [i.c1(3, 1, 4, 24)])])
     assert px(i, 23, 35) == P[1] and px(i, 24, 0) == BLACK and px(i, 0, 36) == BLACK
+
+
+def test_hlw_border():
+    """#263: highlight window border from the HLW port (regdb 0x61_00..0C): inside [start, end), sides, 006C[6] hides it, OSD on top."""
+    i = D.Img().hlw_border(100, 50, 200, 120, 3, (250, 10, 10), sides=(1, 1, 1, 0))
+    red = (250, 10, 10)
+    assert px(i, 100, 80) == red and px(i, 102, 80) == red and px(i, 103, 80) == BLACK and px(i, 99, 80) == BLACK   # left, 3 px
+    assert px(i, 199, 80) == red and px(i, 200, 80) == BLACK and px(i, 150, 50) == red and px(i, 150, 52) == red    # right, top
+    assert px(i, 150, 119) == BLACK                                        # bottom side disabled
+    i.window(0, 90, 70, 110, 90, 2)
+    assert px(i, 101, 80) == P[2]                                          # the OSD overlays the video-path border
+    i.ovl[0] |= M.OVL_HLW_BORDER_OFF
+    assert px(i, 150, 50) == BLACK
+    m = M.OsdModel()                                                       # port capture: address then data, no auto-increment
+    w = {M.HLW_ADDR: 9, M.HLW_DATA: 0x55}
+    m._rd = lambda m_, a: w[a]
+    m.on_write(None, M.HLW_ADDR)
+    m.on_write(None, M.HLW_DATA)
+    m.on_write(None, M.HLW_DATA)
+    assert m.hlw[9] == 0x55 and m.hlw[10] == 0
