@@ -609,6 +609,10 @@ void ScalerMemoryReset(void)
 //--------------------------------------------------
 void ScalerMemoryPowerControl(bit bOnOff)
 {
+    if(bOnOff == _OFF)
+    {
+        g_ucAwtoDdrOff = 1;                         // before the power down: the DRAM log / notes keep their DDR ops (fw/log/hostnote.c, #358)
+    }
 #if(_MEMORY_TYPE_CONFIG == _MEMORY_SDRAM)
 
     // SDRAM Power Control
@@ -646,6 +650,7 @@ void ScalerMemoryPowerControl(bit bOnOff)
 #endif
 #endif
 #endif
+        g_ucAwtoDdrOff = 0;                         // memory up: the pending DRAM log lines drain from the XDATA tail
     }
 }
 #endif // End of #if(_MEMORY_TYPE_CONFIG != _NO_MEMORY)

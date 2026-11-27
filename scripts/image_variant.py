@@ -6,7 +6,7 @@ Source: tmp/fw/<stem>.build.json ("defines", written by scripts/fwimage.py); an 
   hwtest   -D _AWTO_OSD_HWTEST (test ops; never promotes the tracked layouts, #268)
   t0ev     -D _AWTO_T0EV_TEST (Timer0 event test hooks, wdt_test t0_* / prio_*; never promotes the tracked layouts)
   extra    -D _AWTO_EXTRA_APPS=_ON (./dev.py build --extra-fw: extra source root + app hooks, docs/extra-apps.md; never promotes the tracked layouts)
-  nofrc / freeze / audio   -D _AWTO_FRC=_OFF / _AWTO_FREEZE=_ON / _AWTO_AUDIO_TEST (dev.py build --no-frc / --freeze / --audio-test):
+  nofrc / freeze / audio / nodlog   -D _AWTO_FRC=_OFF / _AWTO_FREEZE=_ON / _AWTO_AUDIO_TEST / _AWTO_DRAM_LOG=_OFF (dev.py build --no-frc / ...):
            other objects, never promotes the tracked layouts (#356, #358)
   clock    MCU MHz of the image (-D AWTO_CLOCK_MHZ=N, default DEFAULT_CLOCK_MHZ)
   variant  any of the above or clock != default: the build never promotes the tracked bank / XDATA layouts (#268); the XDATA layout it linked with is
@@ -30,8 +30,9 @@ def parse_defines(defines) -> dict:
          "nofrc": d.get("_AWTO_FRC") == "_OFF",
          "freeze": d.get("_AWTO_FREEZE") == "_ON",
          "audio": "_AWTO_AUDIO_TEST" in d,
+         "nodlog": d.get("_AWTO_DRAM_LOG") == "_OFF",
          "clock": int(d["AWTO_CLOCK_MHZ"]) if re.fullmatch(r"\d+", d.get("AWTO_CLOCK_MHZ", "")) else DEFAULT_CLOCK_MHZ}
-    return {**v, "variant": any(v[k] for k in ("hwtest", "t0ev", "extra", "nofrc", "freeze", "audio")) or v["clock"] != DEFAULT_CLOCK_MHZ}
+    return {**v, "variant": any(v[k] for k in ("hwtest", "t0ev", "extra", "nofrc", "freeze", "audio", "nodlog")) or v["clock"] != DEFAULT_CLOCK_MHZ}
 
 
 def of_image(bin_path: Path) -> dict:

@@ -1862,7 +1862,7 @@ fn	_ScalerMemoryGetIVS2DVSDelayPixel	1	0x20f0	251
 fn	_ScalerMemoryGetMNRatio	14	0x8110	73
 fn	_ScalerMemoryGetScaleUpDt	1	0x7f03	238
 fn	_ScalerMemoryInitial	1	0x7ff1	11
-fn	_ScalerMemoryPowerControl	2	0x752d	28
+fn	_ScalerMemoryPowerControl	2	0x7064	44
 fn	_ScalerMemoryReset	1	0x7ffc	9
 fn	_ScalerMemorySetFIFOFreq	1	0x21eb	39
 fn	_ScalerMemorySetFifoCapture	1	0x2212	391

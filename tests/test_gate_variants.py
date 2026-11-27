@@ -17,16 +17,16 @@ import xdata_layout as XL
 
 
 def test_parse_defines():
-    assert IV.parse_defines([]) == {"hwtest": False, "t0ev": False, "extra": False, "nofrc": False, "freeze": False, "audio": False, "clock": IV.DEFAULT_CLOCK_MHZ, "variant": False}
-    assert IV.parse_defines(["_AWTO_OSD_HWTEST", "-DAWTO_CLOCK_MHZ=175"]) == {"hwtest": True, "t0ev": False, "extra": False, "nofrc": False, "freeze": False, "audio": False, "clock": 175, "variant": True}
+    assert IV.parse_defines([]) == {"hwtest": False, "t0ev": False, "extra": False, "nofrc": False, "freeze": False, "audio": False, "nodlog": False, "clock": IV.DEFAULT_CLOCK_MHZ, "variant": False}
+    assert IV.parse_defines(["_AWTO_OSD_HWTEST", "-DAWTO_CLOCK_MHZ=175"]) == {"hwtest": True, "t0ev": False, "extra": False, "nofrc": False, "freeze": False, "audio": False, "nodlog": False, "clock": 175, "variant": True}
     assert IV.parse_defines(["AWTO_CLOCK_MHZ=87"])["variant"] and not IV.parse_defines(["AWTO_CLOCK_MHZ=350"])["variant"]
     assert IV.parse_defines(["_AWTO_OSD_HWTEST=_ON"])["hwtest"] is True
     assert IV.parse_defines(["AWTO_CLOCK_MHZ=abc"])["clock"] == IV.DEFAULT_CLOCK_MHZ
-    for d in ("-D_AWTO_FRC=_OFF", "_AWTO_FREEZE=_ON", "-D_AWTO_AUDIO_TEST"):          # #356: dev.py build --no-frc / --freeze / --audio-test
+    for d in ("-D_AWTO_FRC=_OFF", "_AWTO_FREEZE=_ON", "-D_AWTO_AUDIO_TEST", "-D_AWTO_DRAM_LOG=_OFF"):          # #356: dev.py build --no-frc / --freeze / --audio-test
         assert IV.parse_defines(d.split())["variant"] is True, d
     assert IV.parse_defines(["-D", "_AWTO_FRC=_OFF"])["nofrc"] is True                 # K2S_SDCC_EXTRA split on spaces
     assert IV.parse_defines(["_AWTO_FRC=_ON"])["variant"] is False
-    assert IV.parse_defines(["_AWTO_T0EV_TEST"]) == {"hwtest": False, "t0ev": True, "extra": False, "nofrc": False, "freeze": False, "audio": False, "clock": IV.DEFAULT_CLOCK_MHZ, "variant": True}
+    assert IV.parse_defines(["_AWTO_T0EV_TEST"]) == {"hwtest": False, "t0ev": True, "extra": False, "nofrc": False, "freeze": False, "audio": False, "nodlog": False, "clock": IV.DEFAULT_CLOCK_MHZ, "variant": True}
 
 
 def test_new_red_against_previous_record(tmp_path):

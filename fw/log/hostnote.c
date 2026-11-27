@@ -9,10 +9,16 @@ __xdata BYTE g_aucAwtoNote[AWTO_NOTE_SIZE];
 // a busy port leaves the line pending (write) or the line unread (read), counted, never a ms-long wait in the main loop or under a masked interrupt.
 static __xdata BYTE s_ucDdrN;                       // spin counter and start time in XDATA: the log read sits on the deepest DATA overlay path (console line -> DDR read)
 static __xdata DWORD s_ulDdrT;
+__xdata BYTE g_ucAwtoAtLaps;                        // AwtoSyncAt: seq laps (AWTO_SYNC_WRAP lines) further back; set by the console for one row only (0 without the DRAM log)
+__xdata BYTE g_ucAwtoDdrOff;                        // 1 while ScalerMemoryPowerControl has the memory off: no port A op (writes were lost, #358)
 
 #pragma place bank(5)
 static unsigned char AwtoDdrIdleMs(void)           // port A command idle (write ~1.7 us); 0 = stall for AWTO_DDRN_STALL_MS, the op is dropped
 {
+    if(g_ucAwtoDdrOff != 0)
+    {
+        return 0;                                   // memory off: a note write / read waits for the power-up
+    }
     for(s_ucDdrN = AWTO_DDRN_SPIN; s_ucDdrN != 0; s_ucDdrN--)
     {
         if((AWTO_XB(AWTO_R_MCU_DC_CMD_A) & AWTO_F_MCU_DC_CMD_A_DDR_A_CMD) == 0)
@@ -195,6 +201,10 @@ static BYTE AwtoDlBurstW(DWORD ulUnits)             // s_aucDl -> DDR; 0 = port 
 {
     BYTE ucJ;
 
+    if(g_ucAwtoDdrOff != 0)
+    {
+        return 0;                                   // memory off: the line stays pending in the XDATA tail (not a busy port)
+    }
     if(AwtoDdrIdleSpin() == 0)
     {
         AwtoDlBusy();
@@ -214,6 +224,10 @@ static BYTE AwtoDlBurstR(DWORD ulUnits)             // DDR -> s_aucDl; 0 = stall
 {
     BYTE ucJ;
 
+    if(g_ucAwtoDdrOff != 0)
+    {
+        return 0;                                   // memory off: unread (the console shows it once the memory is up)
+    }
     if(AwtoDdrIdleSpin() == 0)
     {
         AwtoDlBusy();
@@ -428,7 +442,6 @@ static BYTE AwtoDlRead(DWORD ulA, BYTE __xdata *pucOut)
     return 1;
 }
 
-__xdata BYTE g_ucAwtoAtLaps;                        // AwtoSyncAt: seq laps (AWTO_SYNC_WRAP lines) further back; set by the console for one row only
 static __xdata DWORD s_ulAtA;                       // AwtoSyncAt temporaries in XDATA: it sits on the deepest DATA overlay path (console line -> DDR read)
 static __xdata BYTE s_ucAtD;
 static __xdata BYTE s_ucAtS;

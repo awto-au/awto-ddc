@@ -215,7 +215,8 @@ def con_lines(rows: list[dict], ents: list[dict], cur_boot: int, ht: dict | None
     import sync_log as S
     evs = [(e["id"], e["arg"], e["ms"] & 0xFFFF, e["val"]) for e in ents]
     ts = [(S.signed32(e["ms"]), True) for e in ents]
-    rs = S.con_rows(evs, [x.split(":", 1)[1] for x in decode(rows, ents)], ts, ht, [e["boot"] for e in ents], cur_boot, boot_base=boot_base)
+    lines = [e["text"] for e in ents] if all("text" in e for e in ents) else decode(rows, ents)   # snapshot texts: decoded while the link was open
+    rs = S.con_rows(evs, [x.split(":", 1)[1] for x in lines], ts, ht, [e["boot"] for e in ents], cur_boot, boot_base=boot_base)
     out, boot = [], None
     for r, ln in zip(rs, S.row_lines(rs, ts, evs)):        # 32-bit times: no wrap row, one line per row
         e = ents[r["i"][0]]

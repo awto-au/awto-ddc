@@ -1239,13 +1239,14 @@ extern __xdata __at(AWTO_SYNC_ADDR) StAwtoSync g_stAwtoSync;
 extern __xdata StAwtoSyncEv g_stAwtoSyncPin;  // #150: this boot's reason line, kept out of the ring
 // Entry access (8 B ring entry view): AWTO_SYNC_ENT(n) = the entry n lines back (tail / ring, n <= 16 in the DRAM log), AwtoSyncAt(seq) = any
 // line the ring shows (AWTO_SYNC_N back; a DRAM log reads the DDR for older ones into a 2-entry cache).
+extern __xdata unsigned int g_usAwtoBootBase;       // ms from the MCU reset to the Timer2 start (fw/log/sync.c)
+extern __xdata unsigned char g_ucAwtoAtLaps;        // AwtoSyncAt: AWTO_SYNC_WRAP laps further back (console start row only, fw/log/hostnote.c)
+extern __xdata unsigned char g_ucAwtoDdrOff;        // 1 while the memory is powered off (ScalerMemoryPowerControl; fw/log/hostnote.c)
 #if(_AWTO_DRAM_LOG == _ON)
 #define AWTO_SYNC_ENT(n)                                        ((unsigned char __xdata *)&g_stAwtoSync.stTl[(unsigned char)(g_stAwtoSync.ucHead - (n)) & (AWTO_SYNC_TAIL - 1)])
 extern unsigned char __xdata *AwtoSyncAt(unsigned char ucSeq);
 extern __xdata unsigned long g_ulAwtoBootAbs;       // absolute index of this boot's boot line (fw/log/sync.c)
 extern __xdata unsigned long g_ulAwtoEpAbs;         // absolute index of the current episode's start row (fw/log/sync.c)
-extern __xdata unsigned int g_usAwtoBootBase;       // ms from the MCU reset to the Timer2 start (fw/log/sync.c)
-extern __xdata unsigned char g_ucAwtoAtLaps;        // AwtoSyncAt: AWTO_SYNC_WRAP laps further back (console start row only, fw/log/hostnote.c)
 #define AWTO_DLOG_AT_B                                          10          // AwtoSyncAt entry: 8 B + ms bits 31..16 (offsets 8, 9) for tail and DDR lines alike
 // DDR ring: 2^15 slots of one 16 B burst (entry), header burst just below, the note store (AWTO_DDRN_*) just above (docs/dram-log-design.md)
 #define AWTO_DLOG_SLOTS                                         32768UL
