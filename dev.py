@@ -756,6 +756,14 @@ def cmd_build(extra: list[str]) -> int:
     return 0
 
 
+@command("graph the per-build size history (tmp/size/size-history.tsv, written by every build; docs/size-log.md) to tmp/size/size-graph.{png,html}; "
+         "default = main's first-parent commits + the newest dirty builds; --backfill adds archived images first",
+         args="[--backfill] [--serial S] [--variant V | --all] [--branch B] [--dirty N] [--out DIR]", kind="action")
+def cmd_size_graph(extra: list[str]) -> int:
+    import size_log
+    return size_log.graph_main(extra, say=log)
+
+
 LAYOUT_PID = TMP / "desk_layout_watch.pid"
 
 

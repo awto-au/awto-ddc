@@ -28,6 +28,7 @@ SDCC_SRC = str(SDCC_INSTALL / "share/sdcc/awto-src")   # ISR lib clones (sdcc_is
 SDCCCALL = "3"
 
 
+import size_log
 from _log import Logger
 from _repo import repo_root
 
@@ -128,6 +129,11 @@ def main(argv: list[str] | None = None) -> int:
         subprocess.run([sys.executable, str(root / "scripts/settings_gen.py"), "--rtdfw", rtdfw, "--host-out",
                         str(root / "tmp/fw" / f"{a.serial}-{a.tag}-be.settings_table.py")], check=True)
     say(f"image tmp/fw/{a.serial}-{a.tag}-be.bin (compiler {got[:10]}, sdcccall {bj.get('sdcccall')})")
+    try:                                                  # per-build size row + report (docs/size-log.md)
+        size_log.record_build(a.tree, root / "tmp/fw" / f"{a.serial}-{a.tag}-be",
+                              [*a.defs, *(f for f in a.flags.split() if f.startswith("-D"))], say=say)
+    except (OSError, ValueError, KeyError) as e:          # the image is good; the missing row is reported, not hidden
+        say(f"ERROR: size log not written: {type(e).__name__}: {e}")
     return 0
 
 
