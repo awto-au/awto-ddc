@@ -58,9 +58,14 @@ def test_deadport_fails_when_d2_has_a_cable():
     assert rc != 0 and "vcp: FAIL" in out, out[-800:]
 
 
-@pytest.mark.xfail(reason="awto-ddc#341: the cmd case passes at --secs 1, the mutation no longer fails")
 def test_deadport_fails_when_the_window_is_too_short():
-    rc, out = gate("deadport_sim.py", IMG.with_suffix(".bin"), IMG.with_suffix(".map"), "--case", "cmd", "--secs", "1")
+    """window = the image's own cmd return time - 2 sample steps (#341: a fixed number went stale when the return got faster)"""
+    rc, out = gate("deadport_sim.py", IMG.with_suffix(".bin"), IMG.with_suffix(".map"), "--case", "cmd", "--secs", "3")
+    m = re.search(r"cmd: PASS .*back ACTIVE on D3 ([0-9.]+) s after the switch", out)
+    assert rc == 0 and m, out[-800:]
+    short = float(m.group(1)) - 0.1
+    assert short > 0, out[-800:]
+    rc, out = gate("deadport_sim.py", IMG.with_suffix(".bin"), IMG.with_suffix(".map"), "--case", "cmd", "--secs", f"{short:.2f}")
     assert rc != 0 and "cmd: FAIL" in out, out[-800:]
 
 

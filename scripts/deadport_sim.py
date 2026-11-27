@@ -8,7 +8,7 @@ usage: deadport_sim.py BIN MAP [--case vcp|sel|cmd|all] [--mode 1080p60] [--secs
        taken anyway). PASS: still on D2 without a picture after --secs (inside AWTO_SRC_NOCABLE_HOLD_MS), "taken, no cable" line.
   selhold  as sel, --secs past AWTO_SRC_NOCABLE_HOLD_MS: PASS: D2 held, then the dead-port auto search is back ACTIVE on D3.
   cmd  test cmd 0x32 (switch to D2, fixed port; test cmds are not refused).
-       PASS: back to ACTIVE on D3 within --secs (guard: fixed port, no cable, no signal -> auto search).
+       PASS: left D3, back to ACTIVE on D3 within --secs (guard: fixed port, no cable, no signal -> auto search); prints the return time.
   Each case also needs its log line: switch-log 0xB8 (vcp / sel: arg 1, cmd: arg 3) and the sync-log line (sync.tsv DF; sel: E0 06).
   Prints the switch log (isr_g_stAwtoSw) decoded with sw_timeline.name.
 Log: tmp/logs/deadport_sim.log
@@ -29,6 +29,7 @@ D3 = 6                                  # Global.h _D3_INPUT_PORT
 D2 = 5
 TESTCMD = 0xF6F8                        # isr_g_stAwtoDiag + 0x28
 A0, A1, IDLE = 0xFF09, 0xFF0A, 0xF8     # key ADC cells (key_sim_test.py KEY_ADC band centres below)
+FINE_S, FINE_FOR_S = 0.05, 2.0           # sample step for the first 2 s of a case: the cmd return time to 0.05 s (#341); 0.25 s after
 KEY_SOURCE, KEY_DOWN, KEY_UP, KEY_AUTO, KEY_MENU = (A1, 0x80), (A1, 0x38), (A0, 0x38), (A0, 0x80), (A0, 0xD0)
 NOCABLE_D1 = {0xFE33: 0, 0xFE34: 1, 0xFE35: 1}     # cable status = !bD1_CONNECT (SysSource.c); unit 3 cabled reads 01 01 00
 
@@ -113,12 +114,14 @@ def run_case(a, case: str, say, rig) -> bool:
             tap(bus, KEY_AUTO)
         else:
             bus.m.wr(TESTCMD, bytes([0x32]))
-        t0, seen, early = bus.now(), [], None
-        while bus.now() - t0 < a.secs:
-            bus.wait(0.25)
+        t0, seen, early, back = bus.now(), [], None, None
+        while (left := a.secs - (bus.now() - t0)) > 1e-6:
+            bus.wait(min(FINE_S if bus.now() - t0 < FINE_FOR_S else 0.25, left))   # the window is exactly --secs (#341: was rounded up to 0.25 s steps)
             st = (bus.mode_state(), port_now(bus))
             if early is None and st[0] != 3 and st[0] != 0:
                 early = synclog(a, bus, lambda _s: None)       # the ring wraps by the end (power-saving episode): keep the take's lines
+            if back is None and seen and st == (3, D3) and seen[-1][1:] != st:
+                back = round(bus.now() - t0, 2)
             if not seen or seen[-1][1:] != st:
                 seen.append((round(bus.now() - t0, 2), *st))
         ms, port = bus.mode_state(), port_now(bus)
@@ -139,9 +142,10 @@ def run_case(a, case: str, say, rig) -> bool:
             say(f"{case}: {'PASS' if ok else 'FAIL'} {a.bin.name}: end {S.MODE_NAMES[ms] if ms < len(S.MODE_NAMES) else ms} "
                 f"port 0x{port:02X} (want no picture on D2 0x{D2:02X} inside the hold) after {a.secs:g} s")
             return ok
-        ok = ms == 3 and port == D3
+        ok = ms == 3 and port == D3 and (case != "cmd" or back is not None)    # cmd: it must have left D3 (the switch to D2 ran)
         say(f"{case}: {'PASS' if ok else 'FAIL'} {a.bin.name}: end {S.MODE_NAMES[ms] if ms < len(S.MODE_NAMES) else ms} "
-            f"port 0x{port:02X} (want ACTIVE on D3 0x{D3:02X}) after {a.secs:g} s")
+            f"port 0x{port:02X} (want ACTIVE on D3 0x{D3:02X}) after {a.secs:g} s"
+            + (f"; back ACTIVE on D3 {back:g} s after the switch" if back is not None else "; no return to ACTIVE on D3 from another state in the window" if case == "cmd" else ""))
         return ok
     finally:
         pass                                    # the rig owns the bus
@@ -155,7 +159,7 @@ def main() -> int:
     ap.add_argument("--mode", default="1080p60")
     ap.add_argument("--sync-tsv", dest="sync_tsv", type=Path, help="default: the .sync.tsv beside the map / $AWTO_SYNC_TSV")
     ap.add_argument("--d2-cabled", action="store_true", help="test hook (tests/test_gate_mutations.py): a cable on D2, so a switch to it is allowed and the gate must FAIL")
-    ap.add_argument("--secs", type=float, default=16.0, help="NOSIGNAL ~2 s + PS ~10 s after a switch (#84 log), then margin; selhold: hold 30 s x1.25 + margin")
+    ap.add_argument("--secs", type=float, default=16.0, help="observation window, exact: vcp / cmd end ACTIVE on D3 (cmd return time: the PASS line, #341); sel inside the 30 s hold; selhold: >= 40 s")
     a = ap.parse_args()
     (S.ROOT / "tmp/logs").mkdir(parents=True, exist_ok=True)
     log = Logger(S.ROOT / "tmp/logs/deadport_sim.log", stamp_echo=False)
