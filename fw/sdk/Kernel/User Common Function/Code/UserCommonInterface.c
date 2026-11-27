@@ -862,7 +862,7 @@ void UserCommonInterfacePanelPowerTick(void)
 }
 
 //--------------------------------------------------
-// Description  : Panel power request (idempotent, returns at once); logs the request, who asked and the outcome (sync.tsv 10)
+// Description  : Panel power request (idempotent, returns at once); logs a target change, who asked (sync.tsv 10)
 // Input Value  : ucReq --> AWTO_PNL_REQ(event, AWTO_PNL_BY_*); event _PANEL_ON (video, backlight unchanged) / _PANEL_OFF /
 //                          _BACKLIGHT_ON / _BACKLIGHT_OFF (video kept)
 // Output Value : None
@@ -902,8 +902,11 @@ void UserCommonInterfacePanelPowerAction(BYTE ucReq)
             ucT = AWTO_PNL_TGT_OFF;
             break;
     }
-    AWTO_PNL_LOG(AWTO_SW_EV_POWER, 4 + 2 * AWTO_PNL_EV(ucReq) + (ucT == s_ucPnlTarget), ucReq >> 2);     // sync.tsv 10 04..0B
-    s_ucPnlTarget = ucT;
+    if(ucT != s_ucPnlTarget)                    // target unchanged: no line (#359, cheap no-op); the tick still runs
+    {
+        AWTO_PNL_LOG(AWTO_SW_EV_POWER, 4 + 2 * AWTO_PNL_EV(ucReq), ucReq >> 2);     // sync.tsv 10 04 / 06 / 08 / 0A
+        s_ucPnlTarget = ucT;
+    }
     UserCommonInterfacePanelPowerTick();
 }
 
