@@ -15,7 +15,9 @@ usage: fw_gates.py IMAGE_STEM [--tier normal|extensive] [--build-inputs] [--tree
   panel: panel_sim (#162 step 2): panel VDD / backlight pin / PWM / DPTx link only from the panel machine; no blink; backlight
     pin at eDP stream on, >= backlight_on_delay after VDD on (Dan 2026-11-27); T4..T6 kept.
   osdfit: osd_fit.py --check (static: fw/osd/osd_fit.tsv worst-case rows vs their box; also a build step). osdfitsim (extensive):
-    osd_fit_sim.py, every card_shot shot at 1080p60 + 2160p60, no firmware fit-guard line (ED 7E). infocard: info_card_sim.py
+    osd_fit_sim.py, every card_shot shot at 1080p60 + 2160p60, no firmware fit-guard line (ED 7E).
+  osdman: osd_manual.py --check (static, #263: every docs/osd/img feature picture re-rendered by osd_model equals the committed PNG).
+    osdgold (extensive): osd_golden.py, card / selector / awto menu shots in fw_sim vs tests/golden/osd_cards, pixels exact (#263). infocard: info_card_sim.py
     (the info card after boot stays _AWTO_INFO_POPUP_SEC, one open + one timeout close line).
   sysm: sysm_sim (#162 step 3): power status / mode state only from the system machine; transition chain + request lines; --tree lint.
   delays: delay_sim.py (docs/delay-audit.md): panel_sim scenario at the image's clock (+ the sibling `<stem>-clk87` image of `-D AWTO_CLOCK_MHZ=87` when built): class A waits vs
@@ -63,7 +65,7 @@ from sdcc_overlay import repo_root
 ROOT = repo_root()
 STALL_S = 60          # no output line and no CPU progress for 60 s = hung (awto-dan#53)
 LOAD_CAP = 4.0        # backstop limit scales with load / cores up to 4x: the box has been seen at load 45 on 28 cores = 1.6x
-LIMIT_OF = {"keys": 150, "deadport": 80, "wdt": 60, "rules": 30, "delays": 150, "inputrate": 90, "canary": 90, "monitor": 90}   # 3x the cold run (keys 50 s in a full gate run with the #132 switch cases 2026-11-12, wdt 18 s; fast core); table of all gates: commit message
+LIMIT_OF = {"keys": 150, "deadport": 80, "wdt": 60, "rules": 30, "delays": 150, "inputrate": 90, "canary": 90, "monitor": 90, "osdgold": 90}   # 3x the cold run (osdgold 29 s wall 2026-11-27) (keys 50 s in a full gate run with the #132 switch cases 2026-11-12, wdt 18 s; fast core); table of all gates: commit message
 LIMIT_S = 30          # 3x the cold run of the rest (all <= 9 s), 30 s = interpreter start + a loaded box; `speed` is the exception
 SPEED_LIMIT_S = 900   # speed_bench: not measured
 PY = [sys.executable, "-u"]
@@ -99,10 +101,11 @@ EXTENSIVE = {
     "sync": "~11 s CPU (sync-log sim boots)",
     "dramlog": "~40 s CPU (DRAM log image: boot, two 34000-line fills = wrap + stamps above 65 s, watchdog reset keeps the history)",
     "osdfitsim": "~21 s CPU (23 OSD shots x 2 timings, fit guard watched; the static half osdfit is normal)",
+    "osdgold": "~26 s CPU (21 OSD shots vs golden PNGs, 2026-11-27; the model-only half osdman is normal)",
 }
 SIM_CPU = os.environ.get("AWTO_SIM_CPU", "dw8051")   # fast-core CPU model of the sims (#162 step 1); results are comparable only at the same model
 CPU_OF = {}      # per-gate CPU model override; wdt runs on dw8051 since the Timer0 cases use wall ms (the 8052 model has no clock: the 350.8 MHz boot never reaches stage 8 in wdt_test)
-NO_SIM = {"link", "xlayout", "pokes", "speed", "magic", "regs", "regmap", "rules", "edid", "conhost", "osdfit"}   # every other gate runs a sim on the in-process DW8051 core (fw_sim default; ucsim is a cross-check only)
+NO_SIM = {"link", "xlayout", "pokes", "speed", "magic", "regs", "regmap", "rules", "edid", "conhost", "osdfit", "osdman"}   # every other gate runs a sim on the in-process DW8051 core (fw_sim default; ucsim is a cross-check only)
 SKIP_IF_MISSING = {      # gate -> map symbols the image must define, else SKIP (the script would FAIL on an older image)
     "keys": ("_AwtoSourceOpen",),
     "crash": ("_AwtoWdtHang",),
@@ -128,6 +131,7 @@ SKIP_IF_MISSING = {      # gate -> map symbols the image must define, else SKIP 
     "nvlog": ("_g_stAwtoNv", "_AwtoNvLog"),
     "dramlog": ("_AwtoDlFlush",),
     "osdfitsim": ("_g_ucAwtoCardUp",),
+    "osdgold": ("_g_ucAwtoCardUp",),
     "infocard": ("_g_ucAwtoCardUp", "_g_ucAwtoSelWhy"),
 }
 
@@ -283,6 +287,10 @@ def gates(b: Path, m: Path, ref, tree):
         g["rules"] = [*PY, f"{tree}/scripts/sdk_rules_lint.py", "--tree", tree]     # #162: no build step patches the SDK
         if (Path(tree) / "scripts/osd_fit.py").is_file():                            # OSD rows fit their boxes, static (fw/osd/osd_fit.tsv)
             g["osdfit"] = [*PY, f"{tree}/scripts/osd_fit.py", "--check", "--tree", tree]
+        if (Path(tree) / "scripts/osd_manual.py").is_file():                         # #263: OSD manual pictures == osd_model renders (~0.5 s)
+            g["osdman"] = [*PY, f"{tree}/scripts/osd_manual.py", "--check"]
+        if (Path(tree) / "scripts/osd_golden.py").is_file():                         # #263: firmware cards in fw_sim == tests/golden/osd_cards
+            g["osdgold"] = [*PY, f"{tree}/scripts/osd_golden.py", b, m]
         for nm, sc in (("gensync", "gen_awto_sync.py"), ("geninputs", "gen_awto_inputs.py"), ("gensavers", "gen_awto_savers.py")):      # #162: generated C tables current
             if (Path(tree) / "scripts" / sc).is_file():
                 g[nm] = [*PY, f"{tree}/scripts/{sc}", "--check"]

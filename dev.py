@@ -1311,6 +1311,24 @@ def cmd_settings(extra: list[str]) -> int:
     return _thin("settings", extra, lambda e: unit_ops.settings(sys.modules[__name__], e))
 
 
+@command("picture check of the firmware's OSD cards / selector / awto menu in fw_sim vs tests/golden/osd_cards (scripts/osd_golden.py, #263); --bless rewrites the goldens after a reviewed UI / model change",
+         args="[--bless] [--only A,B] [IMAGE.bin]", kind="action")
+def cmd_osd_golden(extra: list[str]) -> int:
+    bless = _flag(extra, "--bless")
+    only = _opt(extra, "--only")
+    if only is True:
+        raise SystemExit("osd-golden: --only needs shot names; nothing done")
+    img = _image_arg(extra)
+    if not img:
+        imgs = sorted((p for p in FW.glob("*-be.bin") if not re.search(r"-(t0ev|clk\d+)-be\.bin$", p.name)), key=lambda p: p.stat().st_mtime)
+        if not imgs:
+            raise SystemExit("osd-golden: no image in tmp/fw (./dev.py build); nothing done")
+        img = [str(imgs[-1])]
+    b = Path(img[0])
+    return _py("osd_golden.py", b, b.with_suffix(".map"), *(["--bless"] if bless else []), *(["--only", only] if only else []),
+               env={"AWTO_SIM_CORE": "fast"})
+
+
 @command("1 s alert tone on the unit's speaker (VCP 0xEB = 6): flash warning, or an agent calling Dan; --wait returns after the tone; every image, volume = the monitor VCP 0x62",
          args="[--unit N] [--wait]", kind="action")
 def cmd_alert(extra: list[str]) -> int:
