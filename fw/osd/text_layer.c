@@ -70,7 +70,7 @@ __xdata BYTE g_ucAwtoMapBAsk;                    // the next OsdFuncApplyMap lea
 __xdata BYTE g_ucAwtoMapBHas;                    // the map in place has the room: g_ucAwtoMapBRow = its first word
 __xdata BYTE g_ucAwtoMapBRow;
 static __xdata BYTE s_ucRollWant;                // roll-up wanted by font A (back on when B goes)
-static __xdata BYTE s_ucMapBTo;                  // osd_tc_* address map B (between osd_tc_b_open and osd_tc_b_show)
+__xdata BYTE g_ucAwtoMapBTo;                         // osd_tc_* address map B (between osd_tc_b_open and osd_tc_b_show)
 static __xdata BYTE s_ucMapBKeep;                // the console redraws itself: B, and the card's OSD_DISABLE timer, stay
 static __xdata BYTE s_ucSaveW, s_ucSaveH, s_ucSaveVp;
 static __xdata BYTE s_ucMapBLines;
@@ -139,7 +139,7 @@ void osd_tc_b_open(BYTE ucChars, BYTE ucLines)
     s_ucMapBLines = ucLines;
     s_ucVpRows = 0;
     g_usFontSelectStart = AWTO_MAPB_FS();
-    s_ucMapBTo = 1;
+    g_ucAwtoMapBTo = 1;
     for(ucI = 0; ucI < ucLines; ucI++)
     {
         ScalerOsdCommandAllByte((WORD)g_ucAwtoMapBRow + ucI, AWTO_OSD_ROW_ON, osd_rh - 1, ucChars);
@@ -160,7 +160,7 @@ void osd_tc_b_show(void)
     g_ucOsdHeight = s_ucSaveH;
     s_ucVpRows = s_ucSaveVp;
     g_usFontSelectStart = s_usSaveFs;
-    s_ucMapBTo = 0;
+    g_ucAwtoMapBTo = 0;
     s_usMapBMs = (WORD)AwtoMs();
     g_ucAwtoMapB = 1;
     ScalerTimerWaitForEvent(_EVENT_DEN_STOP);
@@ -292,7 +292,7 @@ void osd_tc_viewport(BYTE ucRows)
 void osd_tc_cells(BYTE ucRow, BYTE ucCell, BYTE __xdata *pucTiles, BYTE ucN, BYTE ucStyle)
 {
     BYTE ucB0 = AWTO_OSD_CHAR_1BIT_W(osd_cw);   // 1 bit font, cell width = the loaded font's pixel width
-    BYTE ucB2 = (s_ucMapBTo != 0) ? tAwtoStyleB[ucStyle] : (tAwtoStyle[ucStyle] << 4);   // foreground; transparent background (map B: opaque)
+    BYTE ucB2 = (g_ucAwtoMapBTo != 0) ? tAwtoStyleB[ucStyle] : (tAwtoStyle[ucStyle] << 4);   // foreground; transparent background (map B: opaque)
 
     if(s_ucAwtoOsdRot == _OSD_ROTATE_DEGREE_180)      // row r cell c -> row H-1-r cell W-1-c: write the run backwards from its last cell
     {
@@ -473,7 +473,7 @@ void osd_tc_place_top_right(WORD usRight, WORD usTop, BYTE ucBig)
         usX = usRight;
         usY = ((DWORD)_PANEL_DV_HEIGHT > ulH + usTop) ? (WORD)((DWORD)_PANEL_DV_HEIGHT - ulH - usTop) : 0;
     }
-    if(s_ucMapBTo != 0)                                 // map B: delay set 2; the scale is font A's too (one global double size)
+    if(g_ucAwtoMapBTo != 0)                                 // map B: delay set 2; the scale is font A's too (one global double size)
     {
         OsdFuncSetPosition(_OSD_POSITION_GLOBAL_B, usX / ucStep / (ucBig + 1), usY / (ucBig + 1));
         return;
