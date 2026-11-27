@@ -25,6 +25,7 @@ Typed table: [sim-coverage.tsv](sim-coverage.tsv) (feature | registers | modelle
 - Rounded-corner size codes 8 / 16 / 32 px (was 4 / 8 / 16); tables `3A60..8B` read; the QC ramp (line k = k) gives a chamfer.
 - Chessboard: colours at `ADR5` of windows 8 / 9 and `ADR4` of 4_x / 5_x (was `ADR5` for all: 4_x / 5_x never drew); `ADR4` of 4_x / 5_x is no saturated colour.
 - Gradient bits only on windows 0, 5..9 (reserved elsewhere).
+- Pop-on: `display_base_sel` shows base 0 / 1 without `fontx2_en`; base 0 = `fs_base0` (`3A1B/1C`), not `3A0C` (#263).
 - Scale-up: `3AC0[7]` = on (SDK `ScalerOsdScaleUpOnOff`); regdb text "0: enable" is inverted; `frame_geometry.su_on` had the wrong sign.
 - Grid pitch: um / (panel pitch `3A35..37` U(9.2)) instead of a fixed 993.
 - Highlight windows 4_4..4_8 (`3A4D..56`) added; font A / B delay select `3A18[2:1]`, window `osd_delay_sel` honoured (font B was always on delay 2).

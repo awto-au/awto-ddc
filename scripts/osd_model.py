@@ -505,7 +505,7 @@ def frame_geometry(st: OsdState) -> dict:
     fv = (r(FRAME + 0x24) & 15) << 8 | r(FRAME + 0x26)
     return {"en": r(FRAME + 2) & 1, "sx": 2 if r(FRAME + 0x0A) & 2 else 1, "sy": 2 if r(FRAME + 0x0A) & 1 else 1,
                 "hd": hd, "vd": vd, "step": step, "fh": fh, "fv": fv,
-                "fs_base": ((r(FRAME + 0x1B) >> 4) << 8 | r(FRAME + 0x1C)) if ((r(FRAME + 0x18) & 0xC0) == 0x80 or r(FRAME + 0x18) & 0x08) else  # roll-up / two fonts: font-select base 0
+                "fs_base": ((r(FRAME + 0x1B) >> 4) << 8 | r(FRAME + 0x1C)) if (r(FRAME + 0x18) & 0x80 or r(FRAME + 0x18) & 0x08) else  # roll-up / pop-on / two fonts: font-select base 0 [regdb 3A18]
                 ((r(FRAME + 0x0D) >> 4) << 8 | r(FRAME + 0x0C)),
                 "two": r(FRAME + 0x18) >> 3 & 1, "row_base1": r(FRAME + 0x1A), "fs_base1": (r(FRAME + 0x1B) & 15) << 8 | r(FRAME + 0x1D),
                 "hd2": r(FRAME + 4) << 2 | r(FRAME + 5) >> 6 | (r(FRAME + 6) & 3) << 10, "vd2": r(FRAME + 3) << 3 | (r(FRAME + 5) >> 3 & 7),
@@ -833,11 +833,13 @@ def render(st: OsdState, W: int = 3840, H: int = 2160, bg=(128, 128, 128), alpha
         osd[y0:y0 + h, x0:x0 + w][m] = so[:h, :w][m]
         cov[y0:y0 + h, x0:x0 + w] |= m
         vid[y0:y0 + h, x0:x0 + w][m] = sv[:h, :w][m]
-    popon = (st.reg(FRAME + 0x18) & 0xC0) == 0xC0             # pop-on (3A18[7] special + [6]): one map shown, [0] picks A (0) / B (1); ScalerOsdPopOn sets [6] even when disabling [SDK]
+    popon = (st.reg(FRAME + 0x18) & 0xC0) == 0xC0             # pop-on (3A18[7] special + [6]): one base shown, [0] picks base 0 / 1; ScalerOsdPopOn sets [6] even when disabling [SDK]
     pop_b = st.reg(FRAME + 0x18) & 1
     cap = lambda rows, tot: rows[:tot] if opt.row_total and tot else rows      # font_a_row_total (3A3F) / font_b (3A40) [spec-model]
     if not (popon and pop_b):
         rotated(lambda: ([draw_win(w) for w in wins if w["i"] in rwin], draw_rows(cap(layout_rows(st, g), st.reg(FRAME + 0x3F)), fx, fy, 0)))
+    if popon and pop_b and not g["two"]:                      # pop-on base 1 without fontx2 (QC frame 4): base 1 at font A's place [regdb display_base_sel; place spec-model]
+        rotated(lambda: ([draw_win(w) for w in wins if w["i"] in rwin], draw_rows(cap(layout_rows(st, g, g["row_base1"], g["fs_base1"]), st.reg(FRAME + 0x3F)), fx, fy, 0)))
     if g["two"] and not (popon and not pop_b):                                              # second map: its own origin (hd2 / vd2) and font delay
         rotated(lambda: draw_rows(cap(layout_rows(st, g, g["row_base1"], g["fs_base1"]), st.reg(FRAME + 0x40)), fb_o[0] + g["fhb"] * sx, fb_o[1] + g["fvb"] * sy, 1))
     for w in wins:

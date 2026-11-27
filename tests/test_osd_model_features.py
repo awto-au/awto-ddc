@@ -219,6 +219,21 @@ def test_font_delay_select_and_two_maps():
     assert px(i, 30, 30) == P[1]
 
 
+def test_pop_on_without_fontx2():
+    """#263: pop-on picks base 0 / 1 by display_base_sel alone (regdb 3A18[0]; SDK QC frame 4: 2-font off, PopOn _OSD_B)."""
+    i = D.Img()
+    i.map([(18, [i.c1(1, 1, 4)] * 3)])                                    # base 0: box glyphs, fs_base0 = FS_BASE
+    i.map([(18, [i.c1(2, 1, 4)] * 3)], base=0x08, fs=0x060)               # base 1: solid glyphs
+    i.reg(0x1A, 0x08).reg(0x1B, 0x00).reg(0x1C, D.FS_BASE & 255).reg(0x1D, 0x60).place(24, 24)
+    i.reg(0x18, 0xC0)                                                      # pop-on, base 0, fontx2 off
+    assert px(i, 30, 30) == P[4] and px(i, 24, 24) == P[1]                # box: background inside, edge white
+    i.reg(0x18, 0xC1)                                                      # base 1: same place, solid glyphs
+    assert px(i, 30, 30) == P[1] and px(i, 24, 24) == P[1]
+    i.reg(0x0C, 0x60)                                                      # 3A0C (normal fs_base) is not the pop-on base
+    i.reg(0x18, 0xC0)
+    assert px(i, 30, 30) == P[4]
+
+
 def test_double_size():
     i = D.DEMOS["double_size"].build()
     assert px(i, 44, 100) == P[2] and px(i, 43, 100) == BLACK and px(i, 283, 183) == P[2] and px(i, 284, 183) == BLACK and px(i, 283, 184) == BLACK

@@ -48,8 +48,5 @@ Every `[?]` in the manual. Tests only on unit 3 (bus 11); nothing here has been 
 | T10 | write during scan glitch; Scope 2 garble display-side | `./dev.py osd-hw-test --unit 3 cycle`, Dan's look; scale-up-off test planned | pending |
 
 ## Model gaps (for the model owner; the manual shows "not modelled" for these)
-- Window `sha` / `bor` colour bit 4 (`ADR0` B0 [7:6]) is decoded as bit 5; bit 5 (`ADR3` B0 [7:6]) is not read: indices >= 16 decode wrong.
-- Round corners: size code mapping 4 / 8 / 16 / 32 px vs regdb 8 / 16 / 32; the table shape is not used.
-- Chessboard colours on WIN4_x / 5_x live in `ADR4`; the model reads `ADR5` only.
-- Pop-on needs `fontx2_en` in the model; whether the hardware does is T-E.
+- Fixed (#263): `sha` / `bor` colour bits 4 / 5, round-corner size codes + tables, chessboard `ADR4` on WIN4_x / 5_x (36ecdc16); pop-on without `fontx2_en`.
 - Not modelled: 24 x 36 layout, font mask regions, roll-up, vertical boundary units, window rotate, HLW border, DISP_PG, scale-up filter / edge modes, VLC-turn, shadow type 1..4 differences.
