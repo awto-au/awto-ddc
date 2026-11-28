@@ -36,6 +36,7 @@ Host: `scripts/dram_log.py`, `sync_log.py` (`read_ring` version 4, `--dram`), `u
 - MCU_DC port A is shared by the log, the note store and ddr_draw, and a 16 B burst load costs ~68 us (16 register writes, docs/ddr-draw.md): the main loop drains <= 4 lines per pass (`AWTO_DLOG_DRAIN`, SysMainPass after `AwtoSwPoll`, counted in stage "sw poll").
 - Tail nearly full (>= 28 pending) in a shallow caller: that caller writes the oldest 4 lines at once. 4 entries stay free for `AwtoWaitLog`, which runs on the deepest DATA overlay path and cannot call the DDR code.
 - Tail full in such a path: the line is dropped and counted (`ucLost`); the next shallow push writes `log overflow: N lines lost (DDR busy)` (sync.tsv 0x98, error class). Never silent.
+  - Tail still full at that push: the count is kept, not reset (was: reset to 2 per push while the port stayed busy, #392).
 - Before Timer2 runs, lines carry WDT time and are re-based at the Timer2 start (`AwtoSyncT2Start`, now 32 bit): no flush until then (forced only when the tail is full).
 - Reset: lines pending at a warm reset stay in the kept XDATA tail and are written at the next boot (`AwtoDlBoot`). Crash record logic (AwtoWdtBite) stays in XDATA, untouched.
 
@@ -55,6 +56,11 @@ Host: `scripts/dram_log.py`, `sync_log.py` (`read_ring` version 4, `--dram`), `u
 - Waits for: CMD idle before a command, READ_FLAG after a read. Expected: idle within the 255-poll spin (a few tens of us; `CMD slow polls 0` in docs/ddr-draw.md).
 - The log only spins (`AWTO_DDRN_SPIN`), no ms wait: a busy port leaves a write pending (retried next pass) or a read unread (zero line, skipped by the console). Each expiry is counted in `g_ucAwtoDlBusy` (255 max).
 - Notes keep the 50 ms wait (note store, main loop, once per note).
+- Wedged port (#392, unit 3, main 6d27891d and ddr-keep 7f34698a): `MCU_DC_CMD_A` held the reserved opcode 011 (0x60), `LEN_A` 0x0A, `ADDR` not ours, after minutes of host DDR reads over the debug link. A reserved opcode never gets its qack: every op failed until a DC re-init (wake / POWER on) or a NOP write.
+  - Every busy expiry (log spin, note 50 ms) checks the opcode: not write / read -> NOP, logged once as `MCU_DC port A: reserved command cleared` (sync 98 01).
+  - Every command writes `LEN_A` (16 B burst) first; a late answer to an expired read is cleared (one `DATABUF_R` read) before the next command.
+  - Note write expiry is logged (sync 98 02, ms waited + limit).
+  - Writer of the bad values: not found (no firmware code writes `LEN_A`); open in #392.
 - Why not a ms wait: the static masked-section analysis (docs/irq-masks.md) sees the loop under `AwtoSyncPush` in boot sections, and a ms-long wait in a pass stage breaks the 1 ms stage budget.
 
 ## Console

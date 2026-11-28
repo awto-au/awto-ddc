@@ -5,6 +5,8 @@ usage: AWTO_SIM_CORE=fast dram_log_sim.py BIN MAP [--fill-lines N]
 - boot: header + entries valid, index 0.. contiguous, first line "boot:cold power-up", no lost line, tail + DDR = one ring (sync_log.read_ring).
 - stale DDR: a valid-looking old header + entries of another generation before a cold boot: the new generation ignores them.
 - wrap: test cmd AWTO_TC_DLOG_FILL (34000 demo lines > 32768 slots): write index, wrap count 1, the newest 32768 lines in order, no line lost or doubled.
+- wedged port (#392): reserved opcode in CMD_A: cleared at the next busy expiry, LEN_A rewritten, one line logged.
+- port busy (#392): port A held (no qack) during the second fill: the tail overflows, every dropped demo line is counted in 'log overflow'.
 - warm reset (watchdog bite, test cmd 0x4C): the previous boot's lines stay, the new boot's lines follow without a gap, boot counter + 1.
 Exit 1 on a failed check. Log: tmp/logs/dram_log_sim.log
 """
@@ -28,6 +30,12 @@ TC_FILL, TC_BITE = 0xB4, 0x4C                           # RL6449_Project.h AWTO_
 FILL_LINES = 34000                                      # fw/test/testcmd.c AWTO_DLFILL_LINES
 FILL_BUDGET = 4_000_000_000                             # instructions: 34000 lines at 4 per pass, ~150 k instr per pass in the sim, x ~1.5
 BITE_BUDGET = 60_000_000                                # test cmd 0x4C -> reset = 14 M instr (con_keep_sim BITE_INSTR 40 M)
+BUSY_AT_LEFT = 2000                                     # fill lines still to push when the busy spell starts
+BUSY_INSTR = 800_000                                    # port A held: ~165 fill lines pushed (6 M dropped 1233, 2026-11-28), the tail (32) overflows, < 255 (counter cap)
+TC_NVFLUSH = 0x3D                                       # test cmd: NVRAM flush, logs one line
+WEDGE_CMD, WEDGE_LEN = 0x60, 0x0A                      # read on unit 3 2026-11-28T14:56 (#392)
+ID_DEMO = 0xE6                                          # sync.tsv: the fill test cmd demo line (value = line number)
+ID_LOGLOST = 0x98                                       # sync.tsv: log overflow: N lines lost (DDR busy)
 V4 = 4
 
 
@@ -56,6 +64,12 @@ class Run:
 
     def hdr(self) -> bytes:
         return bytes(self.m.rd(self.ring, S.V4_HDR))
+
+    def newest_demo(self) -> int:
+        """value of the newest line in the XDATA tail if it is a fill (demo) line, else 0"""
+        x = self.hdr()
+        e = bytes(self.m.rd(self.ring + S.V4_HDR + ((x[18] - 1) & 31) * 10, 10))
+        return int.from_bytes(e[4:8], "big") if e[0] == ID_DEMO else 0
 
     def ents(self, count: int | None = None):
         """(header dict, next index, entries) from the DDR model + the XDATA header (pending lines are not in the DDR yet)"""
@@ -121,17 +135,45 @@ def main() -> int:
     r.s.bus.wait(40.0)
     r.cmd(TC_FILL)
     base2 = r.ents()[4] + r.hdr()[16]
+    # #392 port A busy near the end of the fill (the newest 32768 lines keep it): the tail fills, every dropped line must be counted
+    dl_busy = S.sym(a.map, "g_ucAwtoDlBusy")
+    busy0 = busy1 = -1
+    done = 0
     used = 0
     while used < FILL_BUDGET:
         r.m.run(5_000_000)
         used += 5_000_000
-        x = r.hdr()
-        if int.from_bytes(x[19:23], "big") + x[16] >= base2 + a.fill_lines and x[16] == 0:
+        done = max(done, r.newest_demo())
+        left = a.fill_lines - done
+        if busy0 < 0 and left < BUSY_AT_LEFT:
+            busy0 = r.m.rd(dl_busy)[0]
+            r.ddr.busy = True
+            r.m.run(BUSY_INSTR)
+            r.ddr.release(r.m)
+            busy1 = r.m.rd(dl_busy)[0]
+        if busy0 >= 0 and left == 0 and r.hdr()[16] == 0:
             break
     h, x, wr, pend, nxt, ents = r.ents()
     ms = [e["ms"] for e in ents[8:]]
     r.check(all(b >= a for a, b in itertools.pairwise(ms)) and ms[-1] > 70000, "stamps over 65.5 s: 32 bit, non-decreasing", f"{ms[0]}..{ms[-1]} ms")
-    r.check(r.hdr()[17] == 0, "second fill: no line dropped (lost counter 0)")
+    r.check(r.hdr()[17] == 0, "second fill: lost counter written out (0)")
+    vals2 = sorted(e["val"] for e in ents if e["id"] == ID_DEMO and e["abs"] >= base2)
+    missing = len(set(range(vals2[0], a.fill_lines + 1)) - set(vals2)) if vals2 and vals2[-1] == a.fill_lines else -1   # from the oldest kept (the ring wrapped)
+    lost = sum(e["val"] for e in ents if e["id"] == ID_LOGLOST and e["abs"] >= base2)
+    r.check(busy1 > busy0, "port busy: the log counted its busy spins (g_ucAwtoDlBusy)", f"{busy0} -> {busy1}")
+    r.check(missing > 2 and lost >= missing, "port busy: every dropped demo line counted in 'log overflow' (other lines in the spell may add)",
+            f"{missing} demo lines missing, {lost} counted")
+
+    # #392 wedged port: a reserved opcode in CMD_A (no qack) and a foreign LEN_A, as unit 3 showed: the next busy expiry clears it, one line says so
+    r.m.wr(FS.DdrPort.R_CMD, bytes([WEDGE_CMD, WEDGE_LEN]))
+    base3 = r.ents()[4] + r.hdr()[16]
+    r.cmd(TC_NVFLUSH)                                   # one line to write: the drain meets the wedged port
+    r.s.bus.wait(2.0)
+    cmd, ln = r.m.rd(FS.DdrPort.R_CMD, 2)
+    h, x, wr, pend, nxt, ents = r.ents()
+    fix = [e["val"] for e in ents if e["id"] == ID_LOGLOST and e["arg"] == 0x01 and e["abs"] >= base3]
+    r.check(cmd == 0 and ln == 2 and pend == 0, "wedged port: CMD back to NOP, LEN_A 2, the tail drained", f"CMD {cmd:#04x} LEN {ln:#04x} pending {pend}")
+    r.check(fix == [WEDGE_CMD << 8 | WEDGE_LEN], "wedged port: one 'reserved command cleared' line with CMD << 8 | LEN", str([hex(v) for v in fix]))
 
     # warm reset
     before = ents[-8:]

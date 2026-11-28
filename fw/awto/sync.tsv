@@ -413,7 +413,9 @@ FC	01	pms	DP link trained:% after the loop first saw it training	timing
 99	02	n	fast wake hold start, tries %	timing
 96	*	pass	%	warning
 97	*	pass	%	timing
-98	*	n	log overflow: % lines lost (DDR busy)	error
+98	01	x	MCU_DC port A: reserved command cleared (CMD << 8 | LEN = %), port free again	error
+98	02	msn	note text not stored: MCU_DC port A busy for % (limit % ms)	error
+98	*	n	log overflow: % lines lost (DDR busy; 255 = 255 or more)	error
 EF	*	sdone	sync DONE %
 FF	*	slink	sync link %	timing
 FE	00	pms	sync FAILED:nothing detected on the input, no clock or link (%)	error

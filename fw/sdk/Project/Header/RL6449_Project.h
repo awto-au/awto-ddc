@@ -1242,6 +1242,7 @@ extern __xdata unsigned int g_usAwtoBootBase;       // ms from the MCU reset to 
 extern __xdata unsigned char g_ucAwtoAtLaps;        // AwtoSyncAt: AWTO_SYNC_WRAP laps further back (console start row only, fw/log/hostnote.c)
 extern __xdata unsigned char g_ucAwtoDdrOff;        // 1 while the memory is powered off (ScalerMemoryPowerControl; fw/log/hostnote.c)
 extern __xdata unsigned char g_ucAwtoDdrUp;         // 1 after this boot's first memory power up (fw/log/hostnote.c)
+extern __xdata unsigned int g_usAwtoDdrFix;         // #392 CMD << 8 | LEN of a reserved MCU_DC port A command cleared, 0 = none (fw/log/hostnote.c)
 #if(_AWTO_DRAM_LOG == _ON)
 #define AWTO_SYNC_ENT(n)                                        ((unsigned char __xdata *)&g_stAwtoSync.stTl[(unsigned char)(g_stAwtoSync.ucHead - (n)) & (AWTO_SYNC_TAIL - 1)])
 extern unsigned char __xdata *AwtoSyncAt(unsigned char ucSeq);
@@ -1459,6 +1460,8 @@ extern void osd_tc_bar(unsigned char ucWin, unsigned int usX0, unsigned int usY0
 #define AWTO_DDRN_READ_FLAG                                     0x01        // MCU_DC_READ_FLAG_A [0]
 #define AWTO_DDRN_SPIN                                          255         // CMD / flag polls before the ms limit
 #define AWTO_DDRN_STALL_MS                                      50          // 3 frames of DDR arbitration (ddr_draw.c AWTO_DRW_STALL_MS); expiry = no text, "text overwritten"
+#define AWTO_DDRN_LOG_FIX                                       0x01        // #392 AWTO_SYNC_EV_LOGLOST arg: reserved port A command cleared, value = CMD << 8 | LEN
+#define AWTO_DDRN_LOG_NOTE                                      0x02        // #392 AWTO_SYNC_EV_LOGLOST arg: note write gave up, value = limit << 16 | ms waited
 #define AWTO_DDRN_BYTE(j)                                       AWTO_XB(AWTO_R_MCU_DC_DATABUF_R_00_A + (((j) + AWTO_DDRN_HALF) % AWTO_DDRN_BURST_BYTES))
 extern void AwtoDdrNoteWrite(void);                 // g_aucAwtoNote -> its DDR line (sequence g_usAwtoNoteN)
 extern unsigned char AwtoDdrNoteRead(unsigned int usSeq, unsigned char ucBurst);    // 1 = burst ucBurst of that line is in the read buffer (AWTO_DDRN_BYTE)
@@ -1565,6 +1568,7 @@ extern void AwtoSyncT2Start(void);
 extern void AwtoSyncBegin(unsigned char ucKind, unsigned char ucPort);
 extern void AwtoSyncSettle(void);
 extern void AwtoSyncPushL(unsigned char ucId, unsigned char ucArg, unsigned long ulVal);
+extern unsigned char AwtoSyncPushQuiet(unsigned char ucId, unsigned char ucArg, unsigned long ulVal);   // ring write only (no flush, no console draw); 1 = written
 extern void AwtoSyncPushW(unsigned char ucId, unsigned char ucArg, unsigned int usVal);
 // awto: a value of 16 bit or less goes in registers (R7, R5, R2:R3); the long form passes it in XRAM (#336)
 #define AwtoSyncPush(id, arg, val)  ((sizeof((val) + 0) <= 2) ? AwtoSyncPushW((id), (arg), (val)) : AwtoSyncPushL((id), (arg), (val)))

@@ -12,6 +12,18 @@ static __xdata DWORD s_ulDdrT;
 __xdata BYTE g_ucAwtoAtLaps;                        // AwtoSyncAt: seq laps (AWTO_SYNC_WRAP lines) further back; set by the console for one row only (0 without the DRAM log)
 __xdata BYTE g_ucAwtoDdrOff;                        // 1 while ScalerMemoryPowerControl has the memory off: no port A op (writes were lost, #358)
 __xdata BYTE g_ucAwtoDdrUp;                         // 1 after this boot's first memory power up: the boot-time power down (SysPowerInitial) is not guarded
+__xdata WORD g_usAwtoDdrFix;                        // #392 CMD << 8 | LEN of a reserved command cleared (the pass drain logs it), 0 = none
+
+#pragma place bank(5)
+static void AwtoDdrUnwedge(void)                    // busy expiry: a reserved opcode (not write / read) never gets its qack (#392, unit 3): back to NOP
+{                                                   // no locals: on the deepest DATA overlay path (console line -> DDR read)
+    s_ucDdrN = AWTO_XB(AWTO_R_MCU_DC_CMD_A) & AWTO_F_MCU_DC_CMD_A_DDR_A_CMD;
+    if((s_ucDdrN != AWTO_DDRN_CMD_WRITE) && (s_ucDdrN != AWTO_DDRN_CMD_READ))
+    {
+        g_usAwtoDdrFix = ((WORD)AWTO_XB(AWTO_R_MCU_DC_CMD_A) << 8) | AWTO_XB(AWTO_R_MCU_DC_LEN_A);
+        AWTO_XB(AWTO_R_MCU_DC_CMD_A) = 0;
+    }
+}
 
 #pragma place bank(5)
 static unsigned char AwtoDdrIdleMs(void)           // port A command idle (write ~1.7 us); 0 = stall for AWTO_DDRN_STALL_MS, the op is dropped
@@ -32,6 +44,7 @@ static unsigned char AwtoDdrIdleMs(void)           // port A command idle (write
     {
         if((AwtoMs() - s_ulDdrT) >= AWTO_DDRN_STALL_MS)
         {
+            AwtoDdrUnwedge();
             return 0;
         }
     }
@@ -70,6 +83,7 @@ static unsigned char AwtoDdrIdleSpin(void)          // port A command idle withi
             return 1;
         }
     }
+    AwtoDdrUnwedge();
     return 0;
 }
 
@@ -88,8 +102,13 @@ static unsigned char AwtoDdrReadSpin(void)          // READ_FLAG within AWTO_DDR
 #endif
 
 #pragma place bank(5)
-static void AwtoDdrAddrU(DWORD ulU)
+static void AwtoDdrAddrU(DWORD ulU)                 // before every command: LEN too (found 0x0A, not ours, on a wedged port, #392)
 {
+    AWTO_XB(AWTO_R_MCU_DC_LEN_A) = AWTO_DDRN_BURST_BYTES / 8;
+    if((AWTO_XB(AWTO_R_MCU_DC_READ_FLAG_A) & AWTO_DDRN_READ_FLAG) != 0)
+    {
+        (void)AWTO_XB(AWTO_R_MCU_DC_DATABUF_R_00_A);  // a late answer to an expired read: a data read clears the flag (regdb), so the next read waits for its own
+    }
     AWTO_XB(AWTO_R_MCU_DC_ADDR_H_A) = (BYTE)(ulU >> 24);
     AWTO_XB(AWTO_R_MCU_DC_ADDR_M_A) = (BYTE)(ulU >> 16);
     AWTO_XB(AWTO_R_MCU_DC_ADDR_L_A) = (BYTE)(ulU >> 8);
@@ -113,6 +132,10 @@ void AwtoDdrNoteWrite(void)
     {
         if(AwtoDdrIdleMs() == 0)
         {
+            if(g_ucAwtoDdrOff == 0)
+            {
+                AwtoSyncPush(AWTO_SYNC_EV_LOGLOST, AWTO_DDRN_LOG_NOTE, ((DWORD)AWTO_DDRN_STALL_MS << 16) | (WORD)(AwtoMs() - s_ulDdrT));
+            }
             return;
         }
         AwtoDdrAddr(g_usAwtoNoteN, ucB);
@@ -413,6 +436,10 @@ void AwtoDlFlush(BYTE ucOp)                         // main context only: up to 
             return;
         }
         s_ucDlOn = 1;
+    }
+    if(((ucOp & AWTO_DLOG_FORCE) == 0) && (g_usAwtoDdrFix != 0) && (AwtoSyncPushQuiet(AWTO_SYNC_EV_LOGLOST, AWTO_DDRN_LOG_FIX, g_usAwtoDdrFix) != 0))
+    {
+        g_usAwtoDdrFix = 0;                         // pass drain only; the quiet push (no flush): no call back into this function
     }
     AwtoDlFlushN(ucOp);
 }

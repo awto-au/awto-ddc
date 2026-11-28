@@ -78,6 +78,7 @@ __xdata StAwtoHead g_stAwtoHead;                // last 1 s window, read over th
 extern __xdata unsigned char g_ucAwtoSaverRun;
 
 // Time in 1/256 ms: Timer2 ms ticks + the phase of TH2:TL2 inside the tick (reload RCAP2). Read-only, does not wake or stop anything.
+// Ticks = usT2Isr, never rebased: d_isr_g_usTimerCounter steps back to 0 near 61 s (ScalerTimerCheckTimerEvent), a 4.5 s "pass" (#392).
 static unsigned long AwtoQ8Now(void)
 {
     unsigned int usT1;
@@ -88,14 +89,14 @@ static unsigned long AwtoQ8Now(void)
 
     do
     {
-        usT1 = d_isr_g_usTimerCounter;
+        usT1 = isr_g_stAwtoDiag.usT2Isr;
         do                                      // running Timer2: high, low, high; a carry between the byte reads retries (#361)
         {
             ucH = TH2;
             usCnt = ((unsigned int)ucH << 8) | TL2;
         }
         while(ucH != TH2);
-        usT2 = d_isr_g_usTimerCounter;
+        usT2 = isr_g_stAwtoDiag.usT2Isr;
     }
     while(usT1 != usT2);
     usRl = ((unsigned int)RCAP2H << 8) | RCAP2L;

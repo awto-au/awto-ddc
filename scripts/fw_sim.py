@@ -255,6 +255,7 @@ class DdrPort(Dev):
     def __init__(self):
         self.mem: dict[int, bytes] = {}
         self.bursts_w = self.bursts_r = 0
+        self.busy = False                                   # True: no qack, CMD stays set (port A held by the DCU, #392); release() completes it
         try:
             import sync_log
             sync_log.DDR_UNIT = lambda u: self.mem.get(u, bytes(16))      # host view for sync_log.read_ring (DRAM log)
@@ -264,7 +265,7 @@ class DdrPort(Dev):
 
     def on_write(self, m, a):
         cmd = m.rd(self.R_CMD)[0]
-        if cmd not in (self.CMD_WRITE, self.CMD_READ):
+        if cmd not in (self.CMD_WRITE, self.CMD_READ) or self.busy:
             return
         h, mid, lo, u0 = m.rd(self.R_ADDR, 4)
         unit = h << 24 | mid << 16 | lo << 8 | u0
@@ -278,6 +279,11 @@ class DdrPort(Dev):
             m.wr(self.R_FLAG, b"\x01")
             self.bursts_r += 1
         m.wr(self.R_CMD, b"\x00")
+
+    def release(self, m):
+        """end of a busy spell: the held command completes"""
+        self.busy = False
+        self.on_write(m, self.R_CMD)
 
 
 class FlashDev(Dev):
