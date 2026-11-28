@@ -3516,6 +3516,7 @@ stub	5__UserCommonInterfacePanelPowerTick	5	0xa121	8
 stub	5__mn_row	5	0xa191	8
 stub	5__mn_value_text	5	0xa199	8
 stub	5__osd_font_glyph	5	0xa159	8
+stub	5__osd_tc_b_keep	5	0x431e	8
 stub	5__osd_tc_b_off	5	0xa311	8
 stub	5__osd_tc_b_show	5	0xa339	8
 stub	5__osd_tc_bar	5	0xa391	8
