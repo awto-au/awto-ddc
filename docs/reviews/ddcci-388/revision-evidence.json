@@ -1,0 +1,543 @@
+{
+  "review_date": "2026-11-28",
+  "main": "ce8e1625f5c168f67f0f28145395f2bee448f5f0",
+  "branches": [
+    {
+      "name": "audio-hw-fix",
+      "sha": "1c88a03772dbe05398f7c9ac714d7bfc6692e3ce"
+    },
+    {
+      "name": "audio-popfree",
+      "sha": "0ff4603b95a022d4a2855f9b8e921d7226e35de5"
+    },
+    {
+      "name": "audit-chat-coverage",
+      "sha": "68be3c1fd91a6a70a14dadb0d6b8998d4b512bf1"
+    },
+    {
+      "name": "bank14",
+      "sha": "347f2b9e257ba0617d6eb434bfbae13673ab50f9"
+    },
+    {
+      "name": "budget-study",
+      "sha": "40488d26579849f9f0860d1e123c2eef44917a7a"
+    },
+    {
+      "name": "card-window",
+      "sha": "99579b828c19703b1c0fd74e6c2285b82ce7d091"
+    },
+    {
+      "name": "ccr-b8f30185-jreopm",
+      "sha": "f68e7f257ff1a13e47c586dea4cc8e0f4f3ea225"
+    },
+    {
+      "name": "churn-fixes",
+      "sha": "a12f587bc75d1cb9425256d6d374bf7ac878aba9"
+    },
+    {
+      "name": "cleanup",
+      "sha": "933262a937e9860783b8c367ce60ba015324d5c4"
+    },
+    {
+      "name": "codex/busorra-adaptive-throughput",
+      "sha": "40de2fff440dd711c9cd75f851d92db830b45bd5"
+    },
+    {
+      "name": "codex/dual-dptr-isr-guard-160",
+      "sha": "2ae1c1006c978db7a3bfe0e6da4b14f7565fde7e"
+    },
+    {
+      "name": "ddc-readbehind-fff1",
+      "sha": "13af8f514af12f71737484e1f4a00644ab84b115"
+    },
+    {
+      "name": "ddr-capture",
+      "sha": "fdf4b84dea83a2cb5331a0ef77317b7774e4b5b9"
+    },
+    {
+      "name": "ddr-docs",
+      "sha": "db520288a26092d8f5b046d913f8f9f10fe45ff7"
+    },
+    {
+      "name": "ddr-draw-267",
+      "sha": "7234e7d2d24624b6a156f34a62d87f7534b3d569"
+    },
+    {
+      "name": "ddr-keep",
+      "sha": "caefa11f16a8f1d4722b6bc8d1b2c9431a6a63cf"
+    },
+    {
+      "name": "ddr-tests",
+      "sha": "e4c340d66de6a1635ac59aa03a0884019c788e1a"
+    },
+    {
+      "name": "ddr-tests-modes",
+      "sha": "e69885bf9e531085b6fa27bf37836d7ac755573c"
+    },
+    {
+      "name": "delay-choke",
+      "sha": "320dca9297424cd2e419e670d9c7d380dc04d6f7"
+    },
+    {
+      "name": "diag-delta",
+      "sha": "ab8d03d6dca8db7a9a3151327ec77ae621228a1b"
+    },
+    {
+      "name": "docs/ddcui",
+      "sha": "f3f0a6eaddcc78f0f3c19cb9d72a459cf136a5ba"
+    },
+    {
+      "name": "docs-sync",
+      "sha": "3326a1d6f78e7c676947bf7d82f35eb6d9f7166e"
+    },
+    {
+      "name": "dp-flash-speed",
+      "sha": "9e203074fd85c0330d529c045cd49eb3492bbf68"
+    },
+    {
+      "name": "dp-scan",
+      "sha": "fe72a2c7912e0cd0c29896c5d4f7bbd361ccc2b0"
+    },
+    {
+      "name": "dptx-aux",
+      "sha": "fc128c2f344b54dd848b0728367df080532651ad"
+    },
+    {
+      "name": "dupes-gdiphy",
+      "sha": "0199caed6ee81a2e265fa348e3a3ac924b8219dc"
+    },
+    {
+      "name": "dvc-ramp",
+      "sha": "53fd16b87d9dd443aecfe6b5db06f0815949d2fb"
+    },
+    {
+      "name": "dw8051-sweep",
+      "sha": "11d5c6cec1e6c9a533162426884e145fd03232ea"
+    },
+    {
+      "name": "edge-sweep",
+      "sha": "cc80c83f0c1ed2c5532ed8905512e6899685047f"
+    },
+    {
+      "name": "feat/dw8051-feature-probe",
+      "sha": "787ed5a29c376610be3d084954d92255fdcfe3a5"
+    },
+    {
+      "name": "fix/movc-constant-bank-gate",
+      "sha": "8ebd7f5ba60b207ae930d547dda85f3fcc312e81"
+    },
+    {
+      "name": "fix/96-flash-recovery-safety",
+      "sha": "44e12c228c0bcf61db0e47b4e1fbd35b7d847879"
+    },
+    {
+      "name": "fix-350",
+      "sha": "1be754c55e1f9d00c660207987fb398a995c95c2"
+    },
+    {
+      "name": "freeze-port-255",
+      "sha": "6c8b7fca6fd010723d5ddc3470a9fc2a5a0e87fd"
+    },
+    {
+      "name": "gate-fixes",
+      "sha": "1a6630d7c8f9fe9faa7cdd5d7de6927c35bfc784"
+    },
+    {
+      "name": "gui-tree",
+      "sha": "ef4c4d6767fca335a2ad1cc71e7233dfd81a66ff"
+    },
+    {
+      "name": "hdcp-s2-bank14",
+      "sha": "47247a8ef90eb13e10ba188274a82251537f17ec"
+    },
+    {
+      "name": "host-fixes",
+      "sha": "a3e12c2495acf59106cff97cc543c5062459fc19"
+    },
+    {
+      "name": "info-card",
+      "sha": "826fcb36e529fac121c5c9add860274a0bcdd47b"
+    },
+    {
+      "name": "isr-twins",
+      "sha": "42a8c4a9d31b8ef6375c593181d008481658c45c"
+    },
+    {
+      "name": "log-merge",
+      "sha": "53c3721ce6012345f82ce72ee07096b5a7e8ad70"
+    },
+    {
+      "name": "log-times",
+      "sha": "d42357985fe8320650bd8eb5454a76c36eec7397"
+    },
+    {
+      "name": "main",
+      "sha": "ce8e1625f5c168f67f0f28145395f2bee448f5f0"
+    },
+    {
+      "name": "mdelay",
+      "sha": "e56649667ed8d0cacd43d906592af432710c5bc2"
+    },
+    {
+      "name": "osd-model",
+      "sha": "cf39dcb11c865a1fabf9efd707e5130701fa8f8c"
+    },
+    {
+      "name": "osd-popups-top",
+      "sha": "3b266906c092857805d83f7ae002ff6c2f767ccd"
+    },
+    {
+      "name": "pacing-default-4",
+      "sha": "22811820e7b8ccf7909abc74506065e78552e3f2"
+    },
+    {
+      "name": "pacing-merge-main",
+      "sha": "5ac2b5c9e8927af70a863e1d455b24ecb9d323c0"
+    },
+    {
+      "name": "pacing-wake",
+      "sha": "c5469bb7b4d3bdc5446511ff3ea6fc1a44de6845"
+    },
+    {
+      "name": "philips-dump",
+      "sha": "e422b28000420ece146f56074e5cce5a2dc63fec"
+    },
+    {
+      "name": "philips-gui",
+      "sha": "1bf1181bb76304ce5a7c06536454e66c251dc39c"
+    },
+    {
+      "name": "philips-re",
+      "sha": "2daba5dbcb41e4c7cdda62b197e28c9910ed7d66"
+    },
+    {
+      "name": "phy-drop-delay",
+      "sha": "8cfe66b6ad1372c879443fdc7e0d83192ad819a7"
+    },
+    {
+      "name": "porta-busy",
+      "sha": "b43178cb0b2befe107096f4ee5b768be5195275b"
+    },
+    {
+      "name": "ports2",
+      "sha": "deabbf7e9021b1ebb9496e292c5486db1c33bf1e"
+    },
+    {
+      "name": "prototype/pacman-osd",
+      "sha": "d02bf44366e2a15010dd94fce1e753440539c068"
+    },
+    {
+      "name": "read-behind-helper",
+      "sha": "1939a01c51a9bb01a713113927b099bd660c2f0b"
+    },
+    {
+      "name": "review/native-delay-ffwd-342",
+      "sha": "7a21ca562c649fc1dbe9d21545b63cc85ab59510"
+    },
+    {
+      "name": "saver-cmd",
+      "sha": "dec4137bd52a326902c9d57dede58d410be0a48d"
+    },
+    {
+      "name": "sdcc-sync206",
+      "sha": "19425b8f27e3783b3436141e38006af86fbfc77e"
+    },
+    {
+      "name": "sim-model",
+      "sha": "7e90151af545b53aa217ddab682de6988294147a"
+    },
+    {
+      "name": "size-log",
+      "sha": "74bc5f05036eb1af46fe360afa4c960a5c6aff0e"
+    },
+    {
+      "name": "source-take-no-cable",
+      "sha": "967bf1219b56577f2e727125115ee3585282604f"
+    },
+    {
+      "name": "sync-word-index",
+      "sha": "bcf9dfc9269218a73efa4ffc39eacf3b643e1fd1"
+    },
+    {
+      "name": "tmds-isr-diet",
+      "sha": "6a45c6faa7d61d78df972efed3ed19a658333de1"
+    },
+    {
+      "name": "wake-fix",
+      "sha": "8a6ec9855433cfbac6847b67ce9cc4ebc3da5faa"
+    },
+    {
+      "name": "wake-recovery-353",
+      "sha": "19f704ccea701a2c274d18452f550a42c0ade82c"
+    },
+    {
+      "name": "wb-biglogo",
+      "sha": "95a43d21b108c1ffbab28d69739bdb4480b84016"
+    },
+    {
+      "name": "wb-delaycal",
+      "sha": "1e99c0f84a3dd303eb5bbecad5f8bd42cc52240c"
+    },
+    {
+      "name": "wb-delaycal-v2",
+      "sha": "02a8c1d3f3489f8557549bfef9f8a23bb46a03b9"
+    },
+    {
+      "name": "wb-dp",
+      "sha": "0fd787d99460d35b10421ca943adae955991bf2e"
+    },
+    {
+      "name": "wb-edid-u1",
+      "sha": "83f2c14fc5b598ac221ec3834422ff59678cfceb"
+    },
+    {
+      "name": "wb-keilcompat",
+      "sha": "58f156e9335473a9f553aa8ead5c0077be24000e"
+    },
+    {
+      "name": "wb-mixed-pin",
+      "sha": "513ac520fbe50f18072ff90b48fa6e0d27171d1b"
+    },
+    {
+      "name": "wb-mixedbuild",
+      "sha": "cb516f353d9eb0b75ff1e8eb6673cac130bdaaa3"
+    },
+    {
+      "name": "wb-no-crtmod0",
+      "sha": "276140c714c771fff85856793dccd7ebb926e608"
+    },
+    {
+      "name": "wb-osd67net",
+      "sha": "b05ce849c5606d80b8a4cada5c1c1409d4388c84"
+    },
+    {
+      "name": "wb-p14new",
+      "sha": "0958e5f03540458fc8efef0ae421f7f3186ffbbc"
+    },
+    {
+      "name": "wb-p14pf",
+      "sha": "a04a7f27db4625dba1719c0d84c62f86f4420d71"
+    },
+    {
+      "name": "wb-p14swap",
+      "sha": "194116adc23bffc077a031ef341173b600c78d7e"
+    },
+    {
+      "name": "wb-port",
+      "sha": "a4fd7de7671fbfd4a0533fbfbad57dc794c2282c"
+    },
+    {
+      "name": "wb-port13-u1",
+      "sha": "923bc99f1f99078e70cd58579491930d71a09e37"
+    },
+    {
+      "name": "wb-port13-u2",
+      "sha": "4292c79b46f39cfb15e4d6dbb9198ef29aed1183"
+    },
+    {
+      "name": "wb-port13mix-u1",
+      "sha": "8c29321ae1bd66b90d5c79640ac91e1d523b2143"
+    },
+    {
+      "name": "wb-port13mix-u2",
+      "sha": "b82906dbd1fd40006a23b7737f0f0508ecf93672"
+    },
+    {
+      "name": "wb-port-u1",
+      "sha": "2bf6b1a4337cced165c440568d56ec1502c679c7"
+    },
+    {
+      "name": "wb-port-u2",
+      "sha": "650301c490c4e78e045ad6dc2edadb5a3ca467b8"
+    },
+    {
+      "name": "wb-sc3",
+      "sha": "c9012c6bf12dec467702189b339b97a7294e8f07"
+    },
+    {
+      "name": "working-base",
+      "sha": "27305ba6ed7e3e26e215e285c0177a52ed455b9a"
+    },
+    {
+      "name": "worktree-agent-a0ae6faae8e969731",
+      "sha": "4ea910c8507530325ee1421f9e2e6c335d7f70e4"
+    },
+    {
+      "name": "worktree-agent-a1ded44cb10f2efb7",
+      "sha": "4f3d9f9bca8067998831fa2faab7df0f13a9d230"
+    },
+    {
+      "name": "worktree-agent-a3e0d6732a0a2736a",
+      "sha": "a4159f5c625c795eb8a40d9871d97bfcf84ef2c3"
+    },
+    {
+      "name": "worktree-agent-a4fa00f04d21de1c1",
+      "sha": "34d8d25ec862c306640e64f0dca1e2c84d6bccbe"
+    },
+    {
+      "name": "worktree-agent-a6eee83502f378292",
+      "sha": "64a1125027a445cedff713e97d7e3d1625f98b49"
+    },
+    {
+      "name": "worktree-agent-a7e766e67dd8ea1e3",
+      "sha": "aaad50e37ddd0cf52da46ea555a394fc9a1643ef"
+    },
+    {
+      "name": "worktree-agent-a8aea74d5ffee6261",
+      "sha": "54b9f575188039a23bd4fe8068a5989c2ec291e8"
+    },
+    {
+      "name": "worktree-agent-a18ce1c13456a7dfe",
+      "sha": "8d9b3d30ef484b5db2fb4eb4cf86ea8027468f61"
+    },
+    {
+      "name": "worktree-agent-a81a4c84e1e883443",
+      "sha": "7eae1b2bc570e287fa6bc2347bd363bceb86d58f"
+    },
+    {
+      "name": "worktree-agent-a321d3e273feb5a42",
+      "sha": "108b7b99ea13cb7b9ac6c04fba3973582bd0b114"
+    },
+    {
+      "name": "worktree-agent-a454eddedbbdb8f9f",
+      "sha": "031a15a7d4f58a152e50cd148ab48ca1276a14b1"
+    },
+    {
+      "name": "worktree-agent-a584bf4938e55c5c7",
+      "sha": "54d8f4cf20507f282ac59e58d7d3eb8ea90d9f8e"
+    },
+    {
+      "name": "worktree-agent-a663d6fe6737c885b",
+      "sha": "30016df44d08b435fbee580584f4b5797c95172b"
+    },
+    {
+      "name": "worktree-agent-a764d78cec22a9703",
+      "sha": "e1d5f00d27296509f5c85adbd79dc7c6930cb0f4"
+    },
+    {
+      "name": "worktree-agent-a838a43d206388f18",
+      "sha": "465cb97f9559fc2cda2099d858b2c829059de36a"
+    },
+    {
+      "name": "worktree-agent-a954c325743d74792",
+      "sha": "228d2bcf2241eac05429ba74152c8dd4753ef059"
+    },
+    {
+      "name": "worktree-agent-a1147ac7637d14928",
+      "sha": "97058519b0367d5bf761d52889b3471448e35c0a"
+    },
+    {
+      "name": "worktree-agent-a2548daeba0ad91b0",
+      "sha": "313f6d5ab193e79999eb763b7dd014eb95d232a8"
+    },
+    {
+      "name": "worktree-agent-a3011bf59aa5cfcd1",
+      "sha": "676028cd67ca5276550ec91e1c0f01bd92d972ae"
+    },
+    {
+      "name": "worktree-agent-a5641cd7039136291",
+      "sha": "de6652571740351244c36582861155765e755755"
+    },
+    {
+      "name": "worktree-agent-a7054b5c728dafa38",
+      "sha": "95b3ad9e25a29bb73b0be921766485a42709d470"
+    },
+    {
+      "name": "worktree-agent-a9332e3d1fe9dc5e4",
+      "sha": "fdda1e7c1cb9c40f5af54d3bce519d280bf70697"
+    },
+    {
+      "name": "worktree-agent-a247661ee564c9a90",
+      "sha": "bd7566a16de194280704e8d8fff5b75b33c0b787"
+    },
+    {
+      "name": "worktree-agent-a595277f47c470bdb",
+      "sha": "2db7d59cbc669bab29fbb166089e7dca357dba14"
+    },
+    {
+      "name": "worktree-agent-a861850b11d091757",
+      "sha": "028d5345276a0d8ddad91efb131b52f7b2277167"
+    },
+    {
+      "name": "worktree-agent-a43699044b99db655",
+      "sha": "64ce456d057d0272eb222c66548c94b1abff19e7"
+    },
+    {
+      "name": "worktree-agent-a59458149d64f70be",
+      "sha": "98766c1c59520e0ebdd1f46dc38e9cf48a51138c"
+    },
+    {
+      "name": "worktree-agent-aa9c5436e5cf741aa",
+      "sha": "0419e49147a3362a09c8a89df48dad28e057aa36"
+    },
+    {
+      "name": "worktree-agent-ab4c2382e531243eb",
+      "sha": "2d899e152c89e30c1026b58b6543b8c60cdb44d3"
+    },
+    {
+      "name": "worktree-agent-ab60054c90659f55e",
+      "sha": "b22bbce3331a8ce2378d701aa86e4711ed394a9b"
+    },
+    {
+      "name": "worktree-agent-abe7e7a93977c1329",
+      "sha": "af0108e68bf2be42d3fce07da089f1d1823c97ce"
+    },
+    {
+      "name": "worktree-agent-ae2a966dd9a939cf6",
+      "sha": "e34f082bb84fa1beebf0a2071ee3bbded4107808"
+    }
+  ],
+  "open_prs": [
+    {
+      "number": 344,
+      "title": "Batch DW8051 delay loops natively with exact timer and IRQ accounting",
+      "head": "review/native-delay-ffwd-342",
+      "sha": "7a21ca562c649fc1dbe9d21545b63cc85ab59510"
+    },
+    {
+      "number": 207,
+      "title": "Reject cross-bank ROM constants read through direct MOVC pointers",
+      "head": "fix/movc-constant-bank-gate",
+      "sha": "8ebd7f5ba60b207ae930d547dda85f3fcc312e81"
+    },
+    {
+      "number": 190,
+      "title": "Check dual-DPTR ISR preservation; track blocked watchdog migration (#160, #188)",
+      "head": "codex/dual-dptr-isr-guard-160",
+      "sha": "2ae1c1006c978db7a3bfe0e6da4b14f7565fde7e"
+    },
+    {
+      "number": 103,
+      "title": "Save Pac-Man OSD graphics prototype and 8051 diagnostic",
+      "head": "prototype/pacman-osd",
+      "sha": "d02bf44366e2a15010dd94fce1e753440539c068"
+    },
+    {
+      "number": 99,
+      "title": "Busorra: add opt-in adaptive writes with safe retry fallback",
+      "head": "codex/busorra-adaptive-throughput",
+      "sha": "40de2fff440dd711c9cd75f851d92db830b45bd5"
+    },
+    {
+      "number": 98,
+      "title": "Add optional DW8051 feature diagnostic with positive and negative simulator controls",
+      "head": "feat/dw8051-feature-probe",
+      "sha": "787ed5a29c376610be3d084954d92255fdcfe3a5"
+    },
+    {
+      "number": 97,
+      "title": "Harden flash recovery, debug-link interlocks and disk-failure handling",
+      "head": "fix/96-flash-recovery-safety",
+      "sha": "44e12c228c0bcf61db0e47b4e1fbd35b7d847879"
+    }
+  ],
+  "scope": "Remote published state only. Does not establish running agent status or unpublished work.",
+  "sdk_upstream": "3d38340ec8518a8888fd5d8dbb181c2a7418e11c",
+  "rgb_review": {
+    "archive": "awto-ddc-colour-controls-371-review.zip",
+    "proposed_commit": "351d945",
+    "branch": "review/371-rgb-user",
+    "base": "3326a1d6f78e7c676947bf7d82f35eb6d9f7166e",
+    "published": false
+  }
+}

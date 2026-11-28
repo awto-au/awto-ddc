@@ -11,7 +11,7 @@
 |---|---|---|
 | 02 | new control value: always 1 | vcp.c |
 | 04 / 08 | factory reset / colour reset (Colour + Six-axis pages) | rows factory_reset, colour_reset |
-| 10, 12, 16, 18, 1A, 62, 87 | backlight, contrast, user R/G/B gain, volume (inert), sharpness (inert) | rows |
+| 10, 12, 16, 18, 1A, 62, 87 | backlight, contrast, user R/G/B gain, volume (active), sharpness (inert) | rows |
 | 14 | colour preset: 08 9300K, 06 7500K, 05 6500K, 04 5800K (as 5000K), 01 sRGB, 0B user | row colour_temp |
 | 60 | input: 0F D1 DP, 11 D2 HDMI, 12 D3 HDMI; set = #60 fast path | row input -> AwtoInputSelect |
 | C8 / C9 / DF | controller 0x09 (Realtek) / firmware level 1.0 / VCP version 2.2 | vcp.c |
@@ -25,21 +25,21 @@
 
 ## Philips/TPV compatibility (#388, #385)
 
-Dan 2026-11-28: adopt these so SmartControl / ddcutil-style tools read our units cleanly. Documented first (RE + SDK) then matched.
+Implementation snapshot: main cac1c66f (28 November 2026). The [full compatibility review](ddcci-compatibility-review.md) covers MCCS encoding, all AWTO vendor-code collisions, stock Realtek/Dahua and LG/HP/Dell/Lenovo examples, current validation limits and Dan-approved follow-up. The review distinguishes source evidence from model-specific or hardware observations.
 
 | code / behaviour | Dahua original | Realtek SDK default | ours now | proposed / done |
 |---|---|---|---|---|
 | 0x60 encoding | single low byte, no PIP (`re/jxc-4k/ghidra_names_bank5.tsv:20`) | single low byte, no PIP (`fw/sdk` caps `RL6449_Project.h:2208`) | single byte (high byte 0) | keep single byte; high byte = `AWTO_DDCCI_INPUT_SUB` (0) made explicit |
-| 0x60 PIP high byte | none | none | none (no PIP block) | none — the high/low split is Philips/TPV-specific; the simpler single-byte form is what Dahua + SDK use and ddcutil/SmartControl read either way |
-| set-VCP write pacing | none (only ~300 us bus debounce) | none (50 ms RX timeout, debug path only) | none | drop set-VCP < `AWTO_DDCCI_WR_PACE_MS` (110 ms) apart. Compat pace, NOT a hw limit; TPV tools already pace 110-120 ms (`docs/monitors/smartcontrol-wine.md:162`) |
+| 0x60 PIP high byte | none | none | none (no PIP block) | none in AWTO; Philips/TPV and at least one Lenovo model use two input bytes, while the examined SDK path uses a low-byte input |
+| set-VCP write pacing | no deliberate limiter reported in examined path | none in examined handler (RX timeout is separate) | 110 ms drop gate | drop set-VCP < `AWTO_DDCCI_WR_PACE_MS` (110 ms) apart. Compat pace, NOT a hw limit; TPV tools already pace 110-120 ms (`docs/monitors/smartcontrol-wine.md:162`) |
 | 0x14 colour preset | yes (values 0..13) | yes (`14(01 02 04 05 06 08 0B)`) | yes (row colour_temp) | already have it |
-| 0x72 gamma | no RE evidence | not in caps / not answered | no (gamma not a DDC/CI row) | report-only: no gamma-preset feature to expose |
+| 0x72 gamma | no verified 72 mapping | not in caps / not answered | gamma is active at F2 (Off, 1.8, 2.0, 2.2, 2.4); 72 adapter absent | approved follow-up: MCCS 72 translated adapter, preserve F2 values/storage |
 | 0xDC SmartImage | no RE evidence | not in caps / not answered | no SmartImage feature | report-only: no SmartImage equivalent |
-| vendor 0xEF | no RE evidence | n/a | E0..FF are our registry rows (not 0xEF) | report-only |
-| FE E1 fw string | no RE evidence (vendor frame) | n/a | not answered | answer with the build tag (#385) |
+| vendor 0xEF | no verified equivalent | no portable auto-search VCP in inspected handler | Auto=0 / Fixed=1; ED remains D2 enable | approved follow-up: synchronize EF readback with live fallback; retain vendor assignments |
+| FE E1 fw string | no verified equivalent | n/a | prefix handler returns up to ten build-tag characters | implemented; exact selectors, truncation and real-client interoperability remain under #385 |
 
 - 0x60 high byte: the get reply value is `(sub << 8) \| main`; `AWTO_DDCCI_INPUT_SUB` is 0 (no PIP window), so the value stays a plain input code.
-- Pacing applies to MCCS set-VCP (opcode 0x03) only; the audio-test tone and debug-link control writes stay unpaced.
+- Pacing applies to MCCS set-VCP (opcode 0x03) only; the audio-test tone and debug-link control writes stay unpaced. This is the current firmware behavior, not a Dahua/SDK requirement. The review recommends host-side per-monitor pacing and explicitly tracks reconciliation of this merged drop policy.
 - Named constants: `AWTO_DDCCI_INPUT_SUB`, `AWTO_DDCCI_WR_PACE_MS`, `AWTO_DDCCI_FW_STR_OP` (`fw/sdk/Project/Header/RL6449_Project.h`).
 - The build tag in the FE E1 reply is `AWTO_FW_TAG` (the `@FW_TAG@` commit tokenised into fw/sdk; also the console title). Capped to the 16-byte engine buffer, so a long tag is truncated on the wire.
 
@@ -77,3 +77,8 @@ Dan 2026-11-28: adopt these so SmartControl / ddcutil-style tools read our units
   - 16-bit ring (`_AWTO_DRAM_LOG` off): unwrapped from anchors (C0 / D8 full times); between anchors that do not land exactly: a `counter wrap` row.
 - Tests: `scripts/host_time_sim.py BIN` (fw_sim; gate `htime` of `fw_gates.py`). Hardware: `host_time.py --unit 3 --once`.
 - Debug link on (0x35 on the port) = DDC/CI off: DDC/CI send fails, the debug-link path (0x35) is tried; failure logged, next period retries.
+
+
+## Compatibility review validation boundary
+
+The [388 implementation comment](https://github.com/awto-au/awto-ddc/issues/388#issuecomment-7236890658) records a unit 3 hardware read of 0F with sub-input 0. Pacing and the short FE E1 reply were checked in the 18-check simulator run only. The separate review preserves 1,580 host mapping assertions at ce8e1625, not a full-image or new hardware run. The RGB #371 patch is archived separately and remains unapplied. The review document lists remaining simulator/host regression cases; neither this documentation change nor Dan's implementation approval authorizes merging or flashing.
