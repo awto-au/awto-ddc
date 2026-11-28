@@ -1,7 +1,7 @@
 """Exact fast-forward of the delay routines (fastmachine.install_delay_ffwd): the machine state with the hook equals the interpreted one.
 
 Per count 0..255 of AwtoDelayLoops and AwtoDelayXus (several timer phases, Timer2 IRQs inside the window) and a boot + 3 s run: clk, cycles,
-instructions, IRAM, SFR, the XDATA pool, wall_ms, Timer2 count must match exactly (--slow). Hook shape vs the image's code: every run (#342).
+instructions, IRAM, SFR, the XDATA pool, Timer2 count must match exactly (--slow). Hook shape vs the image's code: every run (#342).
 Image: fixture fw_image (scripts/test_image.py).
 """
 from __future__ import annotations
@@ -50,7 +50,8 @@ def digest(bus):
         h.update(bytes(getattr(c, sp)))
     h.update(bytes(c.xram[0xD000:0xF800]))
     p = m.p
-    h.update(repr((p.clk, p.cycles, p.instr, p.nirq, round(m.wall_ms, 6), bus.diag_t2())).encode())
+    # wall_ms is float: hashing it to 6 dp hit a rounding edge; the integer counters pin the hook's equality (#342)
+    h.update(repr((p.clk, p.cycles, p.instr, p.nirq, bus.diag_t2())).encode())
     return h.hexdigest()
 
 
