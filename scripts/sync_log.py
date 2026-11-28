@@ -800,6 +800,7 @@ def main() -> int:
     g.add_argument("--all", action="store_true", help="with --dram: every entry in the DDR ring (77.7 entries/s over the debug link, unit 3 2026-11-27)")
     g.add_argument("--boot", type=int, help="with --dram: only the entries of this boot counter value")
     g.add_argument("--since", type=int, help="with --dram: the entries with absolute index >= N (the unit log saver)")
+    ap.add_argument("--since-gen", type=int, help="generation of the --since cursor; a changed generation restarts from its retained beginning")
     ap.add_argument("--count", type=int, help="with --dram --since N: K entries from N on (a page of the history)")
     a = ap.parse_args()
     sys.path.insert(0, str(Path(__file__).resolve().parent))
@@ -829,20 +830,24 @@ def main() -> int:
         notes: dict = {}
         NOTE_DDR = lambda seq: notes.setdefault(seq, DN2.text_of(io, seq))      # note text from the DDR note store, as the ring path
         sys.modules.setdefault("sync_log", sys.modules[__name__])                # run as a script: dram_log's `import sync_log` must see this copy
+        xh = X.read_blocks(io, sym(a.map, "g_stAwtoSync"), V4_HDR)
         ht, t2 = read_ht(io, a.map)
         bb = X.read_blocks(io, sym(a.map, "g_usAwtoBootBase"), 2) if " _g_usAwtoBootBase " in a.map.read_text(errors="replace") else None
         read_at = T2_READ_AT or dt.datetime.now().astimezone()
-        xh = X.read_blocks(io, sym(a.map, "g_stAwtoSync"), V4_HDR)
         wr = int.from_bytes(bytes(xh[19:23]), "big") if xh else None
         snap = D.snapshot(DDR_UNIT, rows, None if a.all or a.boot is not None else (a.last or 64), a.boot, a.serial,
                           fw_now(ht, t2) if ht and t2 is not None else None, read_at, a.since, wr, a.count,
-                          lambda k, n: log(f"dram log: {k} of {n} entries read"))       # progress: a reader's stall guard
+                          lambda k, n: log(f"dram log: {k} of {n} entries read"), since_gen=a.since_gen,
+                          wr_identity=(xh[14], xh[15]) if xh and bytes(xh[:3]) == b"SY\x04" else None)       # progress: a reader's stall guard
         io.close()
-        if snap is None:
-            log("sync: no valid DDR log header (a cold power-up, or the image never ran with the DRAM log)")
-            return 2
         if a.json:
             print("SYNCJSON " + json.dumps({"dram": True, **snap}), flush=True)
+        if not snap["complete"]:
+            log("sync: " + snap["error"]["message"])
+            return 2
+        if snap["diagnostics"]["retries"] or snap["diagnostics"].get("hint_advanced"):
+            log(f"dram log: read validated after bounded burst retries / header check; {snap['diagnostics']}")
+        if a.json:
             return 0
         log(f"dram log: gen {snap['gen']} boot {snap['boot']} next index {snap['next']} (wraps {snap['next'] // snap['slots']}), {len(snap['entries'])} entries, "
             f"{stats.get('bursts', 0)} DDR bursts in {stats.get('s', 0):.1f} s")

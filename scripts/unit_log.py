@@ -42,6 +42,7 @@ LOG = ROOT / "tmp/logs/unit_log.log"
 INTERVAL_S = 30
 READ_LIMIT_S = 60                          # dev.py synclog through the port: server limit 45 s + 15 s
 NOTE_EV = 0xEE
+DRAM_PAGE = 300                            # bounded saver poll: ~4 s of DDR bursts at 77/s, under READ_LIMIT_S
 DRAM_FIRST = 64                            # first poll of a unit with the DRAM log: the newest entries (the history is read on demand: dev.py synclog --dram --all)
 
 
@@ -64,6 +65,12 @@ def parse_output(out: str) -> dict | None:
         if i >= 0:
             return json.loads(ln[i + 9:])
     return None
+
+
+def require_complete(snap: dict) -> None:
+    """Reject a failed read before any caller advances a cursor or replaces displayed data."""
+    if snap.get("complete") is False or snap.get("status") == "error":
+        raise OSError(snap.get("error", {}).get("message", "DDR log read incomplete; retry later"))
 
 
 class Store:
@@ -92,29 +99,50 @@ class Store:
     def ingest_dram(self, snap: dict) -> list[str]:
         """DRAM log image: the entries come with their absolute DDR index, so there is no ring-lap dedupe: append the ones after the saved index.
         Line = host time (current boot: poll join, marked '~'; an older boot: its ms since reset only), boot counter, index, text"""
+        require_complete(snap)
         prev, read = self._state(), snap["read"]
-        last = prev.get("abs") if prev else None
+        gen = snap.get("gen")
+        changed = bool(prev and ((prev.get("gen") is not None and gen != prev["gen"]) or
+                       (snap.get("next") is not None and snap["next"] < prev.get("abs", -1) + 1)))
+        last = prev.get("abs") if prev and not changed else None
         out: list[str] = []
+        if changed:
+            out.append(f"# {read} ---- DDR log generation / index reset: {prev.get('gen')} -> {gen} ----")
         ents = snap["entries"]
-        if last is not None and ents and ents[0]["abs"] > last + 1:
-            out.append(f"# {read} ---- gap: {ents[0]['abs'] - last - 1} entries between two polls are not in this read ----")
-        noted = self._noted()
+        cursor = last
+        for gap in snap.get("gaps", []):
+            lo = max(gap["start"], last + 1 if last is not None else gap["start"])
+            if lo < gap["end"]:
+                out.append(f"# {read} ---- gap: {gap['end'] - lo} entries, indexes {lo}..{gap['end'] - 1} {gap['reason']} ----")
+                cursor = max(cursor if cursor is not None else -1, gap["end"] - 1)
+        # Explicit markers for every missing range, including gaps inside older snapshots.
+        # New readers reject an unreadable range before it can reach the saver.
+        noted = self._noted() if not changed and not (prev or {}).get("notes_unscoped") else set()
         pe = None
         for e in ents:
             if last is not None and e["abs"] <= last:
                 continue
+            if cursor is not None and e["abs"] > cursor + 1:
+                out.append(f"# {read} ---- gap: {e['abs'] - cursor - 1} entries between two polls are not in this read ----")
+                pe = None
+            cursor = e["abs"]
             if e["id"] == NOTE_EV and e["val"] in noted:
-                continue                                   # host_note.py logged its text at write time
+                continue
             if pe is not None and out and joins(pe, e, e["ms"] & 0xFFFF, pe["ms"] & 0xFFFF):
                 out[-1] += join_text(e)
             else:
                 when = e["poll_wall"] or f"boot {e['boot']}"
                 out.append(f"{when}~ {e['abs']:6d} {e['text']}")
             pe = e
-        if ents:
+        if out:
             self._append(out)
+        end = snap.get("end")
+        if end is not None or ents or changed:
             self.dir.mkdir(parents=True, exist_ok=True)
-            self.state.write_text(json.dumps({"abs": ents[-1]["abs"], "read": read}))
+            saved = max(last if last is not None else -1, (end - 1) if end is not None else -1,
+                        ents[-1]["abs"] if ents else -1)
+            self.state.write_text(json.dumps({"abs": saved, "gen": gen, "read": read,
+                                              "notes_unscoped": changed or (prev or {}).get("notes_unscoped", False)}))
         return out
 
     def ingest(self, snap: dict) -> list[str]:
@@ -194,6 +222,7 @@ def read_snapshot(unit: str) -> dict:
                            text=True, check=False, timeout=READ_LIMIT_S)
         snap = parse_output(r.stdout + r.stderr)
         if snap is not None:
+            require_complete(snap)       # don't fall back to a smaller ring after a failed DDR read
             break
     if snap is None:
         raise OSError(f"no ring in the synclog output (rc {r.returncode}): {(r.stdout + r.stderr).strip().splitlines()[-1:]}")
@@ -208,7 +237,9 @@ def _dram_range(unit: str) -> list[str]:
         except (OSError, ValueError):
             continue
         if "abs" in st and unit_of(p) == unit:
-            return ["--since", str(st["abs"] + 1)]
+            if st.get("gen") is not None:
+                return ["--since", str(st["abs"] + 1), "--since-gen", str(st["gen"]), "--count", str(DRAM_PAGE)]
+            return ["--last", str(DRAM_FIRST)]   # migrate the old generation-less cursor safely
     return ["--last", str(DRAM_FIRST)]
 
 

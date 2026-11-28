@@ -25,6 +25,8 @@ HDRH = ROOT / "fw/sdk/Project/Header/RL6449_Project.h"
 LOG = ROOT / "tmp/logs/dram_log.log"
 CHECK = 0x5A                      # fw/log/hostnote.c AWTO_DLOG_CHECK
 HDR_ID, HDR_VER = b"DL", 1
+READ_ATTEMPTS = 3
+RETRY_S = 0.005                    # only after an invalid / interrupted burst; never restart a full read
 
 
 def hdef(name: str) -> int:
@@ -49,9 +51,26 @@ def _sum(b: bytes) -> int:
     return x
 
 
-def header(read) -> dict | None:
-    b = read(C["AWTO_DLOG_HDR_UNITS"])
-    if b is None or b[:2] != HDR_ID or b[2] != HDR_VER or _sum(b) != b[15]:
+def _burst(read, units, valid, diagnostics=None, initial=None):
+    """Bounded retries of one burst, including short transfers and checksum / identity failures."""
+    for attempt in range(READ_ATTEMPTS):
+        try:
+            b = initial if attempt == 0 and initial is not None else read(units)
+        except OSError:
+            b = None
+        if b is not None and len(b) == 16 and valid(b):
+            return b
+        if attempt + 1 < READ_ATTEMPTS:
+            if diagnostics is not None:
+                diagnostics["retries"] = diagnostics.get("retries", 0) + 1
+            time.sleep(RETRY_S)
+    return None
+
+
+def header(read, diagnostics=None) -> dict | None:
+    b = _burst(read, C["AWTO_DLOG_HDR_UNITS"],
+               lambda b: b[:2] == HDR_ID and b[2] == HDR_VER and _sum(b) == b[15], diagnostics)
+    if b is None:
         return None
     return {"gen": b[3], "boot": b[4], "hint": int.from_bytes(b[5:9], "big")}
 
@@ -61,10 +80,15 @@ def signed32(x: int) -> int:
     return x - (1 << 32) if x >= 1 << 31 else x
 
 
-def entry(read, a: int, gen: int) -> dict | None:
-    """DDR entry with absolute index a of generation gen; None when the slot holds something else (or the read failed)"""
-    b = read(C["AWTO_DLOG_UNITS0"] + (a % C["AWTO_DLOG_SLOTS"]) * C["AWTO_DLOG_ENTRY_UNITS"])
-    if b is None or _sum(b) != b[15] or int.from_bytes(b[10:13], "big") != a & 0xFFFFFF or b[13] != gen:
+def _entry_bytes(b, a, gen):
+    return _sum(b) == b[15] and int.from_bytes(b[10:13], "big") == a & 0xFFFFFF and b[13] == gen
+
+
+def entry(read, a: int, gen: int, diagnostics=None, *, initial=None) -> dict | None:
+    """Validated copy of exactly index a; a failed read never substitutes a slot from another lap."""
+    b = _burst(read, C["AWTO_DLOG_UNITS0"] + (a % C["AWTO_DLOG_SLOTS"]) * C["AWTO_DLOG_ENTRY_UNITS"],
+               lambda b: _entry_bytes(b, a, gen), diagnostics, initial)
+    if b is None:
         return None
     return {"abs": a, "id": b[0], "arg": b[1], "ms": int.from_bytes(b[2:6], "big"), "val": int.from_bytes(b[6:10], "big"), "boot": b[14]}
 
@@ -111,6 +135,8 @@ def ddr_reader(d, r: dict, stats: dict | None = None):
 
     def read_burst(u: int) -> bytes | None:
         t0 = time.monotonic()
+        if stats is not None:
+            stats["attempts"] = stats.get("attempts", 0) + 1
         try:
             while d.rd(r["AWTO_R_MCU_DC_CMD_A"]) & r["AWTO_F_MCU_DC_CMD_A_DDR_A_CMD"]:
                 if time.monotonic() - t0 > lim:
@@ -126,6 +152,10 @@ def ddr_reader(d, r: dict, stats: dict | None = None):
                     return None
             buf = d.block(r["AWTO_R_MCU_DC_DATABUF_R_00_A"], 16)                 # one block read, not 16 register reads (~3 debug-link transfers each)
         except OSError:
+            return None
+        if buf is None or len(buf) != 16:
+            if stats is not None:
+                stats["short"] = stats.get("short", 0) + 1
             return None
         if stats is not None:
             stats["bursts"] = stats.get("bursts", 0) + 1
@@ -154,23 +184,79 @@ def decode(rows: list[dict], ents: list[dict]) -> list[str]:
 
 
 def snapshot(read, rows: list[dict], last: int | None, boot: int | None, serial: str | None, fw_now: int | None, read_at, since: int | None = None,
-             wr: int | None = None, count: int | None = None, progress=None) -> dict | None:
-    """machine form (unit_log.py): header, the entries asked for with abs index, boot, fw ms, text, host time of the read for the current boot.
-    since + count: a page of `count` entries from abs index since (a history view); since alone: everything after it (the saver)"""
+             wr: int | None = None, count: int | None = None, progress=None, since_gen: int | None = None,
+             wr_identity: tuple | None = None) -> dict:
+    """Copy a bounded index range, then validate its generation / boot. A hint advance is normal.
+
+    Errors carry no publishable entries and never masquerade as an empty log. No whole-range
+    retries: the caller retains its cursor and can retry later. `end` is the consumed page end;
+    `next` is the ring boundary (these differ for a bounded follow page).
+    """
     import datetime as dt
-    h = header(read)
+    diag = {"retries": 0}
+    base = {"serial": serial, "read": read_at.isoformat(timespec="milliseconds"),
+            "slots": C["AWTO_DLOG_SLOTS"], "entries": [], "diagnostics": diag}
+
+    def failed(code, message, **extra):
+        return {**base, "status": "error", "complete": False, "retryable": True,
+                "error": {"code": code, "message": message}, **extra}
+
+    h = header(read, diag)
     if h is None:
-        return None
-    # wr = the firmware's write index from its XDATA header (one block read): saves the forward scan from the header hint (up to 130 bursts)
-    nxt = wr if wr is not None and (wr == 0 or entry(read, wr - 1, h["gen"]) is not None) else newest(read, h)
-    page = count
-    count = C["AWTO_DLOG_SLOTS"] if (last is None or boot is not None) else last
-    if since is not None and page is not None:              # one page of the history
-        ents = entries(read, h, nxt, page, since, progress)
+        return failed("header_unavailable", "DDR log header unreadable or invalid after bounded retries")
+    identity = h["gen"], h["boot"]
+    if wr_identity is not None and wr_identity != identity:
+        fw_now = None                     # clock sample belongs to another boot / generation
+    # The XDATA sample precedes the DDR header. Only use its optimization with matching
+    # identity, a non-regressing index, and an actual entry at wr-1. A torn/stale XDATA
+    # index may otherwise skip thousands of records. Never trust an unverified zero.
+    reach = 2 * C["AWTO_DLOG_HINT_EVERY"] + 2
+    if (wr is not None and wr > 0 and h["hint"] <= wr <= h["hint"] + reach and wr_identity == identity
+            and entry(read, wr - 1, h["gen"], diag) is not None):
+        nxt = wr
     else:
-        if since is not None:                                # the saver: only what came after the last entry it has
-            count = max(0, nxt - since)
-        ents = entries(read, h, nxt, count, None, progress)
+        nxt = h["hint"]
+        for _ in range(reach):
+            u = C["AWTO_DLOG_UNITS0"] + (nxt % C["AWTO_DLOG_SLOTS"]) * C["AWTO_DLOG_ENTRY_UNITS"]
+            # An unreadable slot cannot establish the boundary. An unwritten slot
+            # can have arbitrary bytes; validate/retry it before accepting the end.
+            b = _burst(read, u, lambda b: True, diag)
+            if b is None:
+                return failed("boundary_unavailable", f"cannot establish DDR log boundary at index {nxt}")
+            if not _entry_bytes(b, nxt, h["gen"]):
+                # The unwritten end normally has no checksum at all. Retry this slot
+                # before accepting the boundary; never advance a cursor past it.
+                if entry(read, nxt, h["gen"], diag, initial=b) is None:
+                    break
+            nxt += 1
+        else:
+            return failed("hint_stale", "DDR log hint is beyond the bounded forward scan")
+    reset = since_gen is not None and (since_gen != h["gen"] or (since is not None and since > nxt))
+    if reset:
+        since = 0                         # a new generation can reuse every absolute index
+    amount = C["AWTO_DLOG_SLOTS"] if last is None or boot is not None else last
+    bottom = max(0, nxt - C["AWTO_DLOG_SLOTS"])
+    start = min(nxt, max(bottom, since if since is not None else nxt - amount, 0))
+    end = min(nxt, since + count) if since is not None and count is not None else nxt
+    end = max(start, end)
+    ents, missing = [], []
+    for a in range(start, end):
+        e = entry(read, a, h["gen"], diag)
+        if e is None:
+            missing.append(a)
+            break                          # a powered-down / failed port must not cost 3 attempts for every slot
+        ents.append(e)
+        if progress and (a - start + 1) % PROGRESS_N == 0:
+            progress(a - start + 1, end - start)
+    after = header(read, diag)
+    if after is None:
+        return failed("header_unavailable", "DDR log final header unreadable or invalid after bounded retries")
+    if (after["gen"], after["boot"]) != identity or after["hint"] < h["hint"]:
+        return failed("generation_changed", "DDR log generation, boot or index changed during read; retry with the saved cursor")
+    diag["hint_advanced"] = after["hint"] != h["hint"]
+    if missing:
+        return failed("entries_unavailable", f"DDR log entry {missing[0]} unreadable, interrupted or overwritten; cursor retained",
+                      missing=missing)
     if boot is not None:
         ents = [e for e in ents if e["boot"] == boot]
     lines = decode(rows, ents)
@@ -178,10 +264,11 @@ def snapshot(read, rows: list[dict], last: int | None, boot: int | None, serial:
     for e, ln in zip(ents, lines):
         poll = None
         if fw_now is not None and e["boot"] == h["boot"]:
-            poll = (read_at - dt.timedelta(milliseconds=fw_now - signed32(e["ms"]))).isoformat(timespec="milliseconds")   # before Timer2: < 0
-        out.append({"abs": e["abs"], "boot": e["boot"], "ms": e["ms"], "id": e["id"], "arg": e["arg"], "val": e["val"], "text": ln, "poll_wall": poll})
-    return {"serial": serial, "read": read_at.isoformat(timespec="milliseconds"), "gen": h["gen"], "boot": h["boot"], "next": nxt, "fw_now": fw_now,
-            "slots": C["AWTO_DLOG_SLOTS"], "entries": out}
+            poll = (read_at - dt.timedelta(milliseconds=fw_now - signed32(e["ms"]))).isoformat(timespec="milliseconds")
+        out.append({**e, "text": ln, "poll_wall": poll})
+    gaps = [{"start": since, "end": bottom, "reason": "ring_overwritten"}] if since is not None and since < bottom else []
+    return {**base, "status": "ok" if out else "empty", "complete": True, "gen": h["gen"], "boot": h["boot"],
+            "next": nxt, "start": start, "end": end, "fw_now": fw_now, "entries": out, "gaps": gaps, "cursor_reset": reset}
 
 
 def main() -> int:
@@ -202,18 +289,14 @@ def main() -> int:
     stats: dict = {}
     rd = ddr_reader(d, DN.regs(), stats)
     rows = S.load_rows(a.tsv if hasattr(a, "tsv") and a.tsv else S.tsv_for(a.map))
-    h = header(rd)
-    if h is None:
-        log("dram log: no valid DDR header (an image without the DRAM log, or a cold power-up)")
+    import datetime as dt
+    snap = snapshot(rd, rows, None if a.all or a.boot is not None else a.last, a.boot, None, None, dt.datetime.now().astimezone())
+    if not snap["complete"]:
+        log("dram log: " + snap["error"]["message"])
         return 2
-    nxt = newest(rd, h)
-    count = C["AWTO_DLOG_SLOTS"] if (a.all or a.boot is not None) else a.last
-    ents = entries(rd, h, nxt, count)
-    if a.boot is not None:
-        ents = [e for e in ents if e["boot"] == a.boot]
-    log(f"dram log: gen {h['gen']} boot {h['boot']} next index {nxt} (wraps {nxt // C['AWTO_DLOG_SLOTS']}), {len(ents)} entries read, "
-        f"{stats.get('bursts', 0)} bursts in {stats.get('s', 0):.1f} s")
-    for ln in con_lines(rows, ents, h["boot"]):
+    log(f"dram log: gen {snap['gen']} boot {snap['boot']} next index {snap['next']}, {len(snap['entries'])} entries read, "
+        f"{stats.get('bursts', 0)} bursts in {stats.get('s', 0):.1f} s; {snap['diagnostics']}")
+    for ln in con_lines(rows, snap["entries"], snap["boot"]):
         log(ln)
     return 0
 

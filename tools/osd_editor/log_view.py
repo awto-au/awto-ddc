@@ -113,10 +113,12 @@ class UnitLog:
 
     def __init__(self):
         self.ents: dict[int, dict] = {}
-        self.next: int | None = None        # firmware's next index at the last read
+        self.boundary: int | None = None    # ring end, separate from a consumed follow page
+        self.next: int | None = None        # consumed follow index at the last read
         self.lo: int | None = None          # oldest index read so far (history goes down from here)
         self.done = False                   # history complete (index 0, or the ring's oldest slot)
         self.slots = None
+        self.gaps: list[dict] = []
         self.gen = None
         self.cur_boot = None                # the unit's current boot counter (DDR header)
 
@@ -198,12 +200,18 @@ class LogView(QWidget):
 
         def done(rc, out, secs):
             self.inflight.pop(n, None)
-            snap = unit_log.parse_output(out) if rc == 0 else None
-            if snap is None:
+            snap = unit_log.parse_output(out)
+            if snap is not None and (snap.get("complete") is False or snap.get("status") == "error"):
+                self.info.setText(f"unit {n} {label}: read failed: {snap['error']['message']}; previous lines kept")
+                return
+            if snap is None or rc != 0:
                 self.info.setText(f"unit {n} {label}: failed (rc {rc}): {MON.reason_line(out)}")
                 return
             self.ingest(n, snap)
             then(snap)
+        lg = self.logs.get(n)
+        if "--since" in args and lg is not None and lg.gen is not None:
+            args = [*args, "--since-gen", str(lg.gen)]
         jid = self.page.synclog_job(f"log view {label}", ["--dram", "--json", *args], None, unit=n, after=done)
         if jid is None:
             return False
@@ -225,7 +233,7 @@ class LogView(QWidget):
             lg.done = True
             self.show_unit()
             return False
-        bottom = max(0, lg.next - (lg.slots or lg.next))
+        bottom = max(0, (lg.boundary or lg.next) - (lg.slots or lg.next))
         if lg.lo <= bottom:
             lg.done = True
             self.show_unit()
@@ -257,15 +265,23 @@ class LogView(QWidget):
             QTimer.singleShot(0, self.tick)
 
     def ingest(self, n: str, snap: dict):
+        unit_log.require_complete(snap)
         lg = self.logs.setdefault(n, UnitLog())
-        if lg.ents and snap.get("gen") != lg.gen:            # a new DDR log generation reuses the indexes: start over
+        if lg.gen is not None and (snap.get("gen") != lg.gen or
+                                   (snap.get("cursor_reset") and snap.get("next", 0) < (lg.next or 0))):
+            # A new generation reuses indices. Keep this object for pending history callbacks.
             self.page.say(f"unit {n} log view: DDR log generation {lg.gen} -> {snap.get('gen')}, earlier lines dropped from the view")
-            self.logs[n] = lg = UnitLog()
+            lg.__init__()
         lg.gen, lg.slots, lg.cur_boot = snap.get("gen"), snap.get("slots"), snap.get("boot")
+        for gap in snap.get("gaps", []):
+            if gap not in lg.gaps:
+                lg.gaps.append(gap)
+                self.page.say(f"unit {n} log view gap: indexes {gap['start']}..{gap['end'] - 1} {gap['reason']}")
         new = [e for e in snap["entries"] if e["abs"] not in lg.ents]
         for e in snap["entries"]:
             lg.ents[e["abs"]] = e                    # a re-read replaces (poll_wall of the current boot gets sharper)
-        lg.next = max(lg.next or 0, snap.get("next") or 0)
+        lg.boundary = snap.get("next")
+        lg.next = max(lg.next or 0, snap.get("end", snap.get("next")) or 0)
         if snap["entries"]:
             lo = min(e["abs"] for e in snap["entries"])
             lg.lo = lo if lg.lo is None else min(lg.lo, lo)
@@ -283,7 +299,9 @@ class LogView(QWidget):
         bar = self.table.verticalScrollBar()
         at_end = bar.value() >= bar.maximum() - 2
         ents = [lg.ents[a] for a in sorted(lg.ents)] if lg else []
-        self.model.set_rows(build_rows(ents, lg.cur_boot if lg else None))
+        gaps = [{"abs": None, "boot": None, "sep": True, "real": "", "delta": "", "start": False, "wrap": False,
+                 "text": f"--- gap: indexes {g['start']}..{g['end'] - 1} {g['reason']} ---"} for g in (lg.gaps if lg else [])]
+        self.model.set_rows(gaps + build_rows(ents, lg.cur_boot if lg else None))
         self._jumps()
         if at_end:
             self.table.scrollToBottom()
