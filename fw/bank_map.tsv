@@ -5,9 +5,9 @@
 #resid_end 0x890
 #stubs 37
 # kind	name	region	offset	slot    (dev layout: scripts/sdcc_layout.py; region C = common, n = bank n)
-const	_AwtoPutIniFlg_tName_10000_2924	7	0x06db	17
+const	_AwtoPutIniFlg_tName_10000_2925	7	0x06db	17
 const	_OperationFactoryTable	13	0x0000	827
-const	_UserInterfaceGetOverScanStatus_tusOverscanEnTable_10000_1381	C	0x23a5	90
+const	_UserInterfaceGetOverScanStatus_tusOverscanEnTable_10000_1382	C	0x23a5	90
 const	___str_0	7	0x0072	27
 const	___str_1	9	0x007c	38
 const	___str_10	7	0x008d	11
@@ -289,7 +289,7 @@ const	_pent	5	0x0149	153
 const	_pinfo	5	0x01e2	58
 const	_ptitle	5	0x021c	41
 const	_s_aucRev	6	0x090e	296
-const	_set_ap_rotate_tFlipToSdk_10000_1405	5	0x02b0	12
+const	_set_ap_rotate_tFlipToSdk_10000_1406	5	0x02b0	12
 const	_tAwtoAudioTestAmp	13	0x0522	14
 const	_tAwtoAudioTestGain	13	0x0530	21
 const	_tAwtoAudioTestMute	13	0x0545	14
@@ -541,13 +541,14 @@ fn	_AwtoDdcRxDone	11	0x9262	82
 fn	_AwtoDdcRxFrame	11	0x92b4	509
 fn	_AwtoDdcciPoll	11	0x94b1	161
 fn	_AwtoDdrAddr	5	0x02c7	100
-fn	_AwtoDdrAddrU	5	0x032b	31
+fn	_AwtoDdrAddrU	5	0x66a3	50
 fn	_AwtoDdrIdleMs	5	0x034a	122
 fn	_AwtoDdrIdleSpin	5	0x03c4	39
 fn	_AwtoDdrNoteRead	5	0x03eb	44
-fn	_AwtoDdrNoteWrite	5	0x0417	189
+fn	_AwtoDdrNoteWrite	5	0x0af1	238
 fn	_AwtoDdrReadSpin	5	0x04d4	38
 fn	_AwtoDdrReadWait	5	0x04fa	120
+fn	_AwtoDdrUnwedge	5	0x0bdf	64
 fn	_AwtoDeadPortPoll	3	0x8c06	280
 fn	_AwtoDelayCnt	C	0x1d81	8
 fn	_AwtoDelayEnd	C	0x1d89	39
@@ -573,7 +574,7 @@ fn	_AwtoDlBurstR	5	0x0572	146
 fn	_AwtoDlBurstW	5	0x0604	121
 fn	_AwtoDlBusy	5	0x067d	26
 fn	_AwtoDlEntryOk	5	0x0697	101
-fn	_AwtoDlFlush	5	0x06fc	42
+fn	_AwtoDlFlush	5	0x8b9b	108
 fn	_AwtoDlFlushN	5	0x0726	689
 fn	_AwtoDlHdr	5	0x09d7	144
 fn	_AwtoDlInit	5	0x8f4e	792
