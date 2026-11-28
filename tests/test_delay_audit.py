@@ -36,3 +36,21 @@ def test_counts_are_what_the_sim_measured():
 def test_no_runtime_calibration_left():
     for f in (DA.ROOT / "fw/diag/delaycal.c", DA.ROOT / "fw/sdk/Kernel/Scaler/ScalerCommonFunction/Code/ScalerCommonMcu.c"):
         assert not re.search(r"g_ucAwtoCal[5X]", f.read_text())
+
+
+def test_tree_image_match_guard(tmp_path):
+    # a listing tree whose bank layout differs from the image's frozen one is a stale / variant tmp/sdcc-port: --check must refuse
+    # it (else a foreign build's static-fn sites misattribute to the preceding map symbol -> false sites / budget / masked hits; #365/#392).
+    (tmp_path / "tmp/sdcc-port").mkdir(parents=True)
+    (tmp_path / "tmp/fw").mkdir(parents=True)
+    live = tmp_path / "tmp/sdcc-port/bank_layout.new.tsv"
+    mapp = tmp_path / "tmp/fw/AWT-x-be.map"
+    frozen = tmp_path / "tmp/fw/AWT-x-be.bank_layout.tsv"
+    mapp.write_text("")
+    live.write_text("fn\tbank\nAwtoFoo\t0\n")
+    frozen.write_text("fn\tbank\nAwtoFoo\t0\n")
+    assert DA.tree_matches_image(tmp_path, mapp) is True             # identical layout = same build
+    frozen.write_text("fn\tbank\nAwtoFoo\t0\nAwtoClkMeasDelay\t3\n")  # image lacks a fn the tree has (or vice versa)
+    assert DA.tree_matches_image(tmp_path, mapp) is False
+    frozen.unlink()                                                  # no frozen layout next to the image: unchecked, do not block
+    assert DA.tree_matches_image(tmp_path, mapp) is True
