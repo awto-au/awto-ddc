@@ -167,5 +167,5 @@ Never write bare "vendor": say which one.
 - Roll-up: regdb `fs_base1` "not effective when ROLL-UP": while B shows, roll-up is off and font A scrolls by `row_base0` / `fs_base0` alone (`osd_tc_scroll` writes them at every step); B off puts roll-up back.
 - Close: the card's timer (`_AWTO_INFO_POPUP_SEC`, SDK `OSD_DISABLE`) turns font B off only; the console closing or another screen opening takes it too. A console redraw (map full, page change) keeps it (`osd_tc_b_keep`).
 - A card asked during the stepped console open (boot / wake) waits for the open, then shows in map B with a fresh timer.
-- Sync lines: ED 7D open, ED 7C timer close, ED 7B closed with the console / by another screen. Sim gate: `cardwin`, `cardwin_rot` (`scripts/card_window_sim.py`, golden `docs/osd/img/card_window*_card.png`).
+- Sync lines: ED 7D open, ED 7C timer close, ED 7B closed with the console / by another screen. Sim gate: `cardwin`, `cardwin_rot` (`scripts/card_window_sim.py`, golden `tests/golden/card_window/card_window*_card.png`).
 

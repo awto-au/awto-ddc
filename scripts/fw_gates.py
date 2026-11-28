@@ -247,7 +247,7 @@ def gates(b: Path, m: Path, ref, tree):
     g["dptxaux"] = [*PY, f"{s}/dptx_aux_sim.py", b, m]                          # #247 / #248: AUX read vs partial / over-long replies, no write past the buffer
     g["osdfitsim"] = [*PY, f"{s}/osd_fit_sim.py", b, m]                       # every card / selector / menu shot: no cut row (firmware fit guard)
     g["infocard"] = [*PY, f"{s}/info_card_sim.py", b, m, "--out", out / "info_card"]   # info card after boot: on-screen time, Found by
-    gold = Path(tree or ROOT) / "docs/osd/img"
+    gold = Path(tree or ROOT) / "tests/golden/card_window"
     g["cardwin"] = [*PY, f"{s}/card_window_sim.py", b, m, "--out", out / "card_window", "--golden", gold / "card_window_card.png"]   # #357: info card in map B beside the console
     g["cardwin_rot"] = [*g["cardwin"][:-2], "--rotate", "--golden", gold / "card_window_rot_card.png"]   # the same at Rotate 180 (unit 3)
     g["sysm"] = [*PY, f"{s}/sysm_sim.py", b, m, *(["--tree", tree] if tree else [])]
