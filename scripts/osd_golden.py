@@ -4,7 +4,7 @@
 usage: AWTO_SIM_CORE=fast osd_golden.py BIN MAP [--bless] [--only NAME,...]   (entry: ./dev.py osd-golden, gate osdgold)
 - One fw_sim boot at 1080p60, the card_shot.py shot list (same commands, same order), grey picture, model osd_model.render.
 - Per shot (OSD off = golden.tsv origin -1, -1): the OSD box crop (16 px margin) at 1x vs tests/golden/osd_cards/<name>.png, pixels exact; box origin vs golden.tsv.
-- Not checked: SKIP shots (console, gpio): they show the build tag and boot timings, which change with every image.
+- Not checked: SKIP shots (console, console_info, gpio): they show the build tag and boot timings, which change with every image.
 - --bless: write the renders as the new goldens (after a deliberate UI or model change; review the diff PNGs first).
 - A difference writes tmp/osd_golden/<name>_{got,diff}.png (diff = changed pixels red).
 Exact compare, no tolerance: the sim is deterministic (same image -> same pixels, checked twice 2026-11-27).
@@ -27,7 +27,7 @@ LOG = ROOT / "tmp/logs/osd_golden.log"
 GOLD = ROOT / "tests/golden/osd_cards"
 OUT = ROOT / "tmp/osd_golden"
 MODE, BG, MARGIN = "1080p60", "grey", 16
-SKIP = {"console", "gpio"}                       # build tag + boot timings on screen: differ per image
+SKIP = {"console", "console_info", "gpio"}       # build tag + boot timings on screen: differ per image (console_info card: cardwin goldens)
 
 
 def say(s):
