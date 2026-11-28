@@ -63,14 +63,16 @@ class DdcSession:
     """One unit's DDC/CI: a persistent /dev/i2c fd, frames spaced >= MIN_FRAME_GAP_S, the EDID serial proven once at open.
     Used from ONE worker thread (the unit's queue); `lock` makes a stray second caller wait. Errors are OSError / ValueError, never swallowed."""
 
-    def __init__(self, bus: int, serial: str, bus_cls=None, clock=time.monotonic, nap=time.sleep, prove=True):
+    def __init__(self, bus: int, serial: str, bus_cls=None, clock=time.monotonic, nap=time.sleep, prove=True,
+                 gap_s: float = MIN_FRAME_GAP_S, guard=None):
         self.bus_no, self.serial, self.bus_cls, self.clock, self.nap, self.prove = bus, serial, bus_cls or BUS_CLS, clock, nap, prove
+        self.gap_s, self.guard = gap_s, guard           # guard(bus, serial): identity proof at open; default i2cbus.require_unit
         self.bus, self.last_t, self.sel, self.lock, self.stale = None, None, None, threading.Lock(), False
 
     def open(self) -> None:
         if self.bus is None:
             if self.prove:
-                i2cbus.require_unit(self.bus_no, self.serial)
+                (self.guard or i2cbus.require_unit)(self.bus_no, self.serial)
             self.bus = self.bus_cls(self.bus_no)
             self.sel = None
 
@@ -81,7 +83,7 @@ class DdcSession:
 
     def _gap(self) -> None:
         if self.last_t is not None:
-            wait = MIN_FRAME_GAP_S - (self.clock() - self.last_t)
+            wait = self.gap_s - (self.clock() - self.last_t)
             if wait > 0:
                 self.nap(wait)
 

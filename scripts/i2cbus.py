@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import ctypes
 import fcntl
+import json
 import os
 import subprocess
 import sys
@@ -18,7 +19,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import rtd_proto
-from _repo import ROOT  # noqa: F401  (re-exported: i2cbus.ROOT)
+from _repo import ROOT  # also re-exported: i2cbus.ROOT
 
 I2C_RETRIES, I2C_TIMEOUT, I2C_SLAVE, I2C_RDWR = 0x0701, 0x0702, 0x0703, 0x0707   # linux/i2c-dev.h
 I2C_SMBUS = 0x0720
@@ -223,11 +224,23 @@ def edid_serial(bus: int) -> str | None:
     return parse_edid_serial(e)
 
 
+def reference_serials() -> set[str]:
+    """EDID serials of the reference monitors (devices.json `reference`): never flashed, ISP'd, debug-linked or tested"""
+    try:
+        refs = json.loads((ROOT / "scripts" / "devices.json").read_text()).get("reference", {})
+    except (OSError, ValueError):
+        return set()
+    return {r["serial"] for r in refs.values() if r.get("serial")}
+
+
 def require_unit(bus: int, serial: str, identity: str | None = None) -> str | None:
     """Unit guard: the EDID serial on `bus` must equal `serial` (a recabled unit once took a flash meant for another).
     EDID silent (MCU halted in ISP) is accepted only with identity='<how the caller proved the bus>'.
     Returns the serial read; SystemExit on mismatch."""
     s = edid_serial(bus)
+    if s is not None and s in reference_serials():
+        raise SystemExit(f"bus {bus}: EDID serial {s!r} is a reference monitor (devices.json `reference`, #390): "
+                         "no unit tool touches it; refusing")
     if s != serial and not (s is None and identity):
         raise SystemExit(f"bus {bus}: EDID serial {s!r} != {serial!r}; refusing"
                          + (" (EDID silent: pass --identity '<how proven>')" if s is None else ""))

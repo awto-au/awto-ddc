@@ -12,6 +12,7 @@ import numpy as np
 from control_port import ControlPort
 from log_view import LogView
 from monitor import MonitorPage
+from reference import ReferencePane
 from PySide6.QtCore import QProcess, QSettings, QSize, Qt, QTimer, Signal
 from PySide6.QtGui import (
     QAction,
@@ -322,6 +323,8 @@ class Window(QMainWindow):
                                        "(its job file is re-attached when the app starts again). Close anyway?") != QMessageBox.Yes:
             e.ignore()
             return
+        for pane in self.references.values():
+            pane.shutdown()
         super().closeEvent(e)
 
     def __init__(self, headless: bool = False):
@@ -338,6 +341,11 @@ class Window(QMainWindow):
         self.logview = LogView(self.monitor)                           # whole DRAM log per unit (#358); reads only while shown
         self.monitor.log_view = self.logview
         self.stack.addWidget(self.logview)
+        self.references = {name: ReferencePane(name, ref) for name, ref in self.monitor.references.items()}   # #390
+        self.ref_index = {}
+        for name, pane in self.references.items():
+            self.ref_index[name] = self.stack.addWidget(pane)
+        self.monitor.reference_wanted.connect(lambda name: self.go(self.ref_index[name]))
         root = QWidget()
         root.setObjectName("root")
         lay = QVBoxLayout(root)
@@ -370,7 +378,7 @@ class Window(QMainWindow):
             a.triggered.connect(fn)
         tb.addSeparator()
         self.nav = []
-        for i, txt in enumerate(("glyphs", "screens", "monitor", "log")):
+        for i, txt in enumerate(("glyphs", "screens", "monitor", "log", *self.references)):
             a = tb.addAction(txt)
             a.setCheckable(True)
             a.triggered.connect(lambda _=False, i=i: self.go(i))

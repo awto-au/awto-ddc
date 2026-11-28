@@ -281,6 +281,12 @@ def _script(name: str, extra: list[str]) -> int:
     return subprocess.call([sys.executable, str(REPO / "scripts" / name), *extra], cwd=REPO)
 
 
+@command("reference monitor (devices.json `reference`, #390), read-only: standard DDC/CI Get of every code the GUI shows",
+         args="[NAME]", kind="action")
+def cmd_reference(extra: list[str]) -> int:
+    return _script("reference_mon.py", extra)
+
+
 @command("worktree sweep: dry-run list of every worktree (REMOVE = merged/twinned, clean, nothing changed for 3 h); --apply removes those",
          args="[--apply]", kind="action")
 def cmd_worktree_sweep(extra: list[str]) -> int:
@@ -484,6 +490,14 @@ def _units() -> dict:
     return json.loads((REPO / "scripts/devices.json").read_text())["units"]
 
 
+def _references() -> dict:
+    """devices.json `reference`: monitors that are not awto units (#390); a table without the file (tests) has none"""
+    try:
+        return json.loads((REPO / "scripts/devices.json").read_text()).get("reference", {})
+    except OSError:
+        return {}
+
+
 def _opt(extra: list[str], flag: str, default=None):
     """--flag VALUE from extra (removed); --flag alone -> True."""
     if flag not in extra:
@@ -523,6 +537,9 @@ def _default_unit() -> str:
 
 def _unit(extra: list[str]) -> tuple[str, dict]:
     n = str(_opt(extra, "--unit", None) or _default_unit())
+    if any(n in (k, r.get("serial")) for k, r in _references().items()):
+        raise SystemExit(f"{n!r} is a reference monitor (devices.json `reference`, #390): no dev.py unit command touches it, "
+                         "--force included; nothing done")
     u = _units().get(n)
     if u is None:
         raise SystemExit(f"unknown unit {n!r}: see scripts/devices.json")

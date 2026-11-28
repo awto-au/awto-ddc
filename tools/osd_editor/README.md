@@ -15,6 +15,10 @@ PySide6 viewer/editor on top of `scripts/` (VLC codec: `scripts/osd_vlc.py` via 
   - settings: one widget per `settings_table.py` row, grouped by registry page; `ro` rows disabled; risky and action rows ask first; Get all / Set / Save
   - only `test` units are writable; live refresh (15 s, idle only); input select (`scripts/kvm.py`), host time, health, boot / sync log (`dev.py synclog`)
   - backend = `dev.py` subprocesses, one worker per unit (units in parallel); no I2C in the GUI; every call has a limit (`LIMIT_S`); one ISO 8601 log line per action in `tmp/logs/osd_editor.log`
+- reference monitors (#390): devices.json `reference` (Philips 288E2); strip button "ref" or toolbar tab opens its pane (`reference.py`)
+  - live standard DDC/CI Get of the MCCS codes + raw manufacturer codes (#381), >= 110 ms between transactions, only while shown
+  - writes: Set VCP 10 / 12 / 14 / 60 only, behind "enable writes" (off at start and on hide); checks in `scripts/reference_mon.py`
+  - test: `test_reference_pane.py` (fake bus; `--hw` = one read-only pass of the real monitor); CLI read: `./dev.py reference`
 - screens: the catalogue renders come from `osd_model.py`, which draws 1 / 2 / 4 bpp chars (smoke test shows a 2 bpp glyph)
 
 ## Not done

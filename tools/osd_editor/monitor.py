@@ -81,6 +81,10 @@ def load_units() -> dict:
     return json.loads((ROOT / "scripts" / "devices.json").read_text())["units"]
 
 
+def load_references() -> dict:
+    return json.loads((ROOT / "scripts" / "devices.json").read_text()).get("reference", {})
+
+
 def detect_serials() -> set[str]:
     """EDID text serials of the connected monitors, from the kernel's sysfs EDID copies"""
     import i2cbus
@@ -606,6 +610,8 @@ class ActionRow(QWidget):
 
 
 class MonitorPage(QWidget):
+    reference_wanted = Signal(str)                       # a reference monitor's strip button: the window opens its pane (#390)
+
     def __init__(self, backend=None, log_path: Path = LOG, settings: QSettings | None = None, detect=detect_serials):
         super().__init__()
         self.log_path, self.detect = log_path, detect
@@ -618,6 +624,7 @@ class MonitorPage(QWidget):
         self.live_writer = LiveWriter(self)                 # live sliders: coalesced writes while a control moves (awto-ddc#277)
         self.live_writer.state.connect(self._live_state)
         self.units = load_units()                        # devices.json only; self.states also holds unknown monitors
+        self.references = load_references()              # devices.json `reference`: never units, never probed here (#390)
         self.states = {n: UnitState(n, u) for n, u in self.units.items()}
         self.advanced = str(self.settings.value("monitor/advanced", "false")).lower() == "true"
         self.cur = next(iter(self.units))
@@ -690,6 +697,12 @@ class MonitorPage(QWidget):
         row = QHBoxLayout()
         for n in self.states:
             self._add_unit_btn(n, row)
+        for name, ref in self.references.items():
+            b = QPushButton(f"ref  {ref.get('model', name)}\n{ref['serial'][-6:]}  DDC/CI only")
+            b.setMinimumHeight(44)
+            b.setToolTip(f"reference monitor {ref['serial']} (devices.json `reference`): opens its pane; not a unit, never flashed")
+            b.clicked.connect(lambda _=False, name=name: self.reference_wanted.emit(name))
+            row.addWidget(b)
         row.addStretch(1)
         self.search = QLineEdit()
         self.search.setPlaceholderText("search name, label, id, VCP (Ctrl+F)")
@@ -1034,7 +1047,7 @@ class MonitorPage(QWidget):
 
     def _sync_unknown(self, seen: set[str]):
         """monitors seen by EDID that devices.json does not list: read-only 'unknown' units, removed when unplugged"""
-        listed = {u["serial"] for u in self.units.values()}
+        listed = {u["serial"] for u in (*self.units.values(), *self.references.values())}
         have = {st.info["serial"]: n for n, st in self.states.items() if st.unknown}
         for ser in sorted(seen - listed - set(have)):
             n = f"?{ser}"
