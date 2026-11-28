@@ -5,10 +5,9 @@
 - SDK edit rules (`// awto:` marks, no build-step patches): [keil2sdcc-rules.md](keil2sdcc-rules.md).
 
 ## Compiler
-- Firmware compiler: `/usr/local`, pinned by `SDCC_COMMIT` in `scripts/fwimage.py` (f8d34cffc1 on main 2026-11-27); the build refuses another stamp.
-- Refresh target: awto-sdcc main ed211c6b74 (gate build with #185 narrowing, #186 peepholes, #191 `unreachable()`, #192 `_BitInt(24)`, #182 attributes); pending. ddc test and pin bump: #334 (refresh + `SDCC_COMMIT` + regenerated `fw/bank_map.tsv` / `fw/xdata_layout.tsv` in one change).
-- `constexpr`: not used in our code until the refreshed compiler is checked (SIGSEGV on `x + N` in a function on f8d34cffc1 and main, awto-sdcc#198); use `enum` / `#define`.
-- Standard `[[...]]` attributes, `unreachable()` codegen, `_BitInt(24)`: main only, wait for the refresh (rules doc, C23 section).
+- Firmware compiler: `/usr/local`, pinned by `SDCC_COMMIT` in `scripts/fwimage.py` (21ec5e00dd on main 2026-11-28: #182, #185/#195, #186/#196, #191, #192, #202, #204, #206); the build refuses another stamp. Test + numbers: #334.
+- `constexpr`: not used in our code (SIGSEGV on `x + N` in a function on f8d34cffc1 and a0e3940b0d, awto-sdcc#198; not re-checked on 21ec5e00dd); use `enum` / `#define`.
+- Standard `[[...]]` attributes, `unreachable()` codegen, `_BitInt(24)`: in the pinned compiler since 21ec5e00dd (rules doc, C23 section).
 
 ## Sweep report
 - `./dev.py rules-report [--image tmp/fw/<stem>] [--profile]` (`scripts/dw8051_sweep.py`): counts per rule class over our files (`magic_lint.our_files`) on the tree's last build: `constexpr`, `__sfr16`, `__critical`, `isr_shared` without `volatile`, `(x & M) == M` single-bit tests (ours + SDK), `_PARM_n` slots of our modules, banked calls reachable from ISRs, call-graph recursion, #360 guard sites.

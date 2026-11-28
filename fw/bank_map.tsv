@@ -748,7 +748,7 @@ fn	_AwtoPsTmdsHold	0	0x9077	815
 fn	_AwtoPsTmdsLive	0	0x93a6	44
 fn	_AwtoPsTmdsStable	5	0x7c6e	202
 fn	_AwtoPsTmdsStart	0	0x93d2	83
-fn	_AwtoPsValue	7	0x64c8	416
+fn	_AwtoPsValue	7	0x94f1	488
 fn	_AwtoPsWakeArm	0	0x9425	194
 fn	_AwtoPsWakeAux	2	0x9dae	168
 fn	_AwtoPsWakeCables	0	0x94e7	60

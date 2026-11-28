@@ -125,7 +125,7 @@ RL6449_Series_GDIPhy	0xe380	252	3
 RL6449_Series_DPRx1	0xe580	0	99
 sync	0xe780	37	745
 diag	0xe780	782	55
-text_layer	0xe780	837	62
+text_layer	0xe780	837	64
 ScalerMDomain	0xe780	962	135
 SysJudge	0xe780	1097	12
 UserCommonInterface	0xe780	1109	30
