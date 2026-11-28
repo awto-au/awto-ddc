@@ -15,7 +15,7 @@
 
 ## Logging, console, host time
 - `sync-log-design.md` (lines, console time columns, start rows, line rules), `dram-log-design.md` (log ring in DDR), `note-store.md`, `diag-block.md`, `input-status.md`, `input-sync-timeline.md`, `display-on-timeline.md`.
-- `ddcci.md` (MCCS, host time), `ddc-control.md`, `ip-over-ddc.md`, `data-channels.md`, `monitoring.md` (health monitor), `watchdog.md`.
+- `ddcci.md` (MCCS, host time), [DDC compatibility review](ddcci-compatibility-review.md) (MCCS, vendor-code collisions, stock/OEM comparisons, approved follow-up and simulator cases; #388), `ddc-control.md`, `ip-over-ddc.md`, `data-channels.md`, `monitoring.md` (health monitor), `watchdog.md`.
 
 ## OSD
 - `osd.md` (overview: console, info card, menu, fonts), `osd/README.md` (manual), `osd-hw-tests.md`, `osd-write-sweep.md`, `osd-port-loss.md`, `saver-fps-hw.md`, `qc-osd-suite.md`, `osd-realtek-sdk-menu.md`, `osd-screens-as-data.md`, `osd-editor-spec.md`, `firmware-proposal.md`, `boot-logo.md`, `logo/`, `osd-prototypes/README.md`, `games.md` (removed).
@@ -37,3 +37,4 @@
 - `monitors/README.md` (units, I2C roles, Philips probe), `monitors/boards.md`, `monitors/gpio-roles.md`, `monitors/panel-edid.md`, `monitors/panel-samsung-ltm270fl01.md` (ruled out), `monitors/rtd2795t-*` (pin ledger, datasheet facts, board match, pin audit), `monitors/mstar-*.md`, `monitors/smartcontrol-wine.md`, `monitors/ddcui.md`.
 - Registers: `../re/regmap/README.md` (one row per register), `register-audit.md`, `live-register-scan.md`, `read-behind-research.md`, `realtek-debug.md`.
 - Reversing: `reversing/` (Dahua firmware, Realtek RTD, 8051 playbook), `re-full-reversal.md`, `rtd2795t-sdk-hunt.md`, `rtdtool-*.md`, `cleanroom.md` (ended 2026-11-16).
+
