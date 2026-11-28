@@ -801,6 +801,7 @@ def main() -> int:
     g.add_argument("--boot", type=int, help="with --dram: only the entries of this boot counter value")
     g.add_argument("--since", type=int, help="with --dram: the entries with absolute index >= N (the unit log saver)")
     ap.add_argument("--count", type=int, help="with --dram --since N: K entries from N on (a page of the history)")
+    ap.add_argument("--generation", type=int, help="generation associated with --since; restart range on a generation change")
     a = ap.parse_args()
     sys.path.insert(0, str(Path(__file__).resolve().parent))
     import dbg_xdata as X
@@ -829,23 +830,31 @@ def main() -> int:
         notes: dict = {}
         NOTE_DDR = lambda seq: notes.setdefault(seq, DN2.text_of(io, seq))      # note text from the DDR note store, as the ring path
         sys.modules.setdefault("sync_log", sys.modules[__name__])                # run as a script: dram_log's `import sync_log` must see this copy
+        xh_before = X.read_blocks(io, sym(a.map, "g_stAwtoSync"), V4_HDR)
         ht, t2 = read_ht(io, a.map)
         bb = X.read_blocks(io, sym(a.map, "g_usAwtoBootBase"), 2) if " _g_usAwtoBootBase " in a.map.read_text(errors="replace") else None
         read_at = T2_READ_AT or dt.datetime.now().astimezone()
         xh = X.read_blocks(io, sym(a.map, "g_stAwtoSync"), V4_HDR)
-        wr = int.from_bytes(bytes(xh[19:23]), "big") if xh else None
+        clock_ok = (xh_before is not None and xh is not None and bytes(xh_before[:3]) == b"SY\x04" and
+                    bytes(xh[:3]) == b"SY\x04" and bytes(xh_before[14:16]) == bytes(xh[14:16]))
+        wr = int.from_bytes(bytes(xh[19:23]), "big") if clock_ok else None
+        if not clock_ok:
+            ht, t2, bb = None, None, None
         snap = D.snapshot(DDR_UNIT, rows, None if a.all or a.boot is not None else (a.last or 64), a.boot, a.serial,
                           fw_now(ht, t2) if ht and t2 is not None else None, read_at, a.since, wr, a.count,
-                          lambda k, n: log(f"dram log: {k} of {n} entries read"))       # progress: a reader's stall guard
+                          lambda k, n: log(f"dram log: {k} of {n} entries read"), expected_gen=a.generation,
+                          clock_identity=(xh[14], xh[15]) if clock_ok else None)       # progress: a reader's stall guard
         io.close()
-        if snap is None:
-            log("sync: no valid DDR log header (a cold power-up, or the image never ran with the DRAM log)")
-            return 2
+        log(f"dram log: {snap['status']}; diagnostics {snap['diagnostics']}")
         if a.json:
             print("SYNCJSON " + json.dumps({"dram": True, **snap}), flush=True)
-            return 0
+            return 2 if snap["status"] == "unavailable" else 0
+        if snap["status"] == "unavailable":
+            return 2
         log(f"dram log: gen {snap['gen']} boot {snap['boot']} next index {snap['next']} (wraps {snap['next'] // snap['slots']}), {len(snap['entries'])} entries, "
             f"{stats.get('bursts', 0)} DDR bursts in {stats.get('s', 0):.1f} s")
+        if snap.get("fw_now") is None or snap["status"] in ("generation_changed", "boot_changed", "unverified"):
+            ht, bb = None, None
         for ln in D.con_lines(rows, snap["entries"], snap["boot"], ht, int.from_bytes(bytes(bb), "big") if bb is not None else None):
             log(ln)
         return 0

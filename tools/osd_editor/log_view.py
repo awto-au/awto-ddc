@@ -118,6 +118,8 @@ class UnitLog:
         self.done = False                   # history complete (index 0, or the ring's oldest slot)
         self.slots = None
         self.gen = None
+        self.retry: list[str] | None = None
+        self.archive: dict[int, dict[int, dict]] = {}
         self.cur_boot = None                # the unit's current boot counter (DDR header)
 
 
@@ -203,7 +205,11 @@ class LogView(QWidget):
                 self.info.setText(f"unit {n} {label}: failed (rc {rc}): {MON.reason_line(out)}")
                 return
             self.ingest(n, snap)
-            then(snap)
+            if snap.get("status") not in ("partial", "unverified"):
+                then(snap)
+        lg = self.logs.get(n)
+        if lg is not None and lg.gen is not None:
+            args = [*args, "--generation", str(lg.gen)]
         jid = self.page.synclog_job(f"log view {label}", ["--dram", "--json", *args], None, unit=n, after=done)
         if jid is None:
             return False
@@ -244,6 +250,8 @@ class LogView(QWidget):
         lg = self.logs.get(n)
         if lg is None or lg.next is None:
             self.read_history(n)
+        elif lg.retry:
+            self._read(n, lg.retry, "retry incomplete range", lambda snap: self._more(n))
         elif self.range_read and not lg.done:
             self._more(n)
         else:
@@ -257,15 +265,24 @@ class LogView(QWidget):
             QTimer.singleShot(0, self.tick)
 
     def ingest(self, n: str, snap: dict):
+        if snap.get("status") == "unavailable":
+            self.page.say(f"unit {n} log unavailable: {snap.get('diagnostics')}")
+            return
         lg = self.logs.setdefault(n, UnitLog())
         if lg.ents and snap.get("gen") != lg.gen:            # a new DDR log generation reuses the indexes: start over
-            self.page.say(f"unit {n} log view: DDR log generation {lg.gen} -> {snap.get('gen')}, earlier lines dropped from the view")
+            self.page.say(f"unit {n} log view: DDR log generation {lg.gen} -> {snap.get('gen')}, earlier lines retained in history")
+            old = lg
             self.logs[n] = lg = UnitLog()
+            lg.archive = {**old.archive, old.gen: old.ents}
         lg.gen, lg.slots, lg.cur_boot = snap.get("gen"), snap.get("slots"), snap.get("boot")
         new = [e for e in snap["entries"] if e["abs"] not in lg.ents]
         for e in snap["entries"]:
             lg.ents[e["abs"]] = e                    # a re-read replaces (poll_wall of the current boot gets sharper)
         lg.next = max(lg.next or 0, snap.get("next") or 0)
+        holes = [m for m in snap.get("diagnostics", {}).get("missing", []) if m["reason"] in ("checksum", "io_failure")]
+        lg.retry = (["--since", str(holes[0]["first"]), "--count", str(CHUNK)] if holes else
+                    ["--last", str(CHUNK)] if snap.get("status") == "unverified" else None)
+        self.page.say(f"unit {n} log: {snap.get('status', 'ok')}; {snap.get('diagnostics', {})}")
         if snap["entries"]:
             lo = min(e["abs"] for e in snap["entries"])
             lg.lo = lo if lg.lo is None else min(lg.lo, lo)
@@ -283,7 +300,14 @@ class LogView(QWidget):
         bar = self.table.verticalScrollBar()
         at_end = bar.value() >= bar.maximum() - 2
         ents = [lg.ents[a] for a in sorted(lg.ents)] if lg else []
-        self.model.set_rows(build_rows(ents, lg.cur_boot if lg else None))
+        rows = []
+        if lg is not None:
+            for gen, old in lg.archive.items():
+                rows.append({"abs": None, "boot": None, "sep": True, "real": "", "delta": "",
+                             "text": f"--- archived DRAM generation {gen} ---", "start": False, "wrap": False})
+                rows.extend(build_rows([old[a] for a in sorted(old)]))
+        rows.extend(build_rows(ents, lg.cur_boot if lg else None))
+        self.model.set_rows(rows)
         self._jumps()
         if at_end:
             self.table.scrollToBottom()

@@ -51,7 +51,7 @@ class Run:
         self.ddr = next(d for d in self.m.devs if isinstance(d, FS.DdrPort))
         self.ring = S.sym(a.map, "g_stAwtoSync")
         self.cr = next(d for d in self.m.devs if type(d).__name__ == "ChipReset")
-        self.rd = lambda u: self.ddr.mem.get(u)
+        self.rd = lambda u: self.ddr.mem.get(u, bytes(16))
 
     def check(self, ok, what, detail=""):
         say(f"  {'PASS' if ok else 'FAIL'} {what}{(': ' + detail) if detail else ''}")

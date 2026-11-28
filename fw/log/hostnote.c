@@ -186,12 +186,22 @@ void AwtoHostNote(void)
 
 #define AWTO_DLOG_CHECK         0x5A
 #define AWTO_DLOG_HDR_ID        'D'                 // header burst: 'D' 'L' version gen boot hint (32 bit BE) ... check
-#define AWTO_DLOG_HDR_VER       1
+#define AWTO_DLOG_HDR_VER       2
+#define AWTO_DLOG_HDR2_UNITS     (AWTO_DLOG_HDR_UNITS - AWTO_DLOG_ENTRY_UNITS) // shadow immediately below primary; project-owned definition
+#define AWTO_DLOG_PUB_MASK      0x00FFFFFFUL
+#define AWTO_DLOG_PUB_HALF      0x00800000UL
+#define AWTO_DLOG_CRC_POLY      0x1021U
+#define AWTO_DLOG_CRC_INIT      0xFFFFU
+#define AWTO_DLOG_INVALID_MAX   3                   // answered but invalid headers across separate drains before reinitializing
 #define AWTO_DLOG_FORCE         0x80                // AwtoDlFlush: also before Timer2 runs (the lines are not re-based then)
 #define AWTO_DLOG_SCAN_MAX      (2 * AWTO_DLOG_HINT_EVERY + 2)   // a dropped hint write leaves the hint up to 2 x EVERY behind
 
 __xdata DWORD g_ulAwtoDlMs;                         // ms the entry writes took, summed from 1 ms tick deltas (unbiased over many entries; host: delta / delta of ulWr = ms per entry)
 __xdata BYTE g_ucAwtoDlBusy;                        // DDR port busy beyond the spin: ops left pending / unread since boot (255 max; host reads it at the map symbol)
+static __xdata DWORD s_ulDlPub;                    // last successfully issued header publication (serial arithmetic)
+static __xdata BYTE s_ucDlMigrate;                   // v1: preserve the sole primary until a v2 shadow exists
+static __xdata BYTE s_ucDlHdrDirty;                  // retry a stalled publication before draining another entry
+static __xdata BYTE s_ucDlInvalid;                   // transient invalid headers do not discard history at boot
 static __xdata WORD s_usDlT;
 static __xdata BYTE s_aucDl[16];                    // burst image (entry / header), memory order
 static __xdata BYTE s_aucAtC[2][AWTO_DLOG_AT_B];    // AwtoSyncAt cache: DDR lines as tail entries (8 B ring entry + ms bits 31..16)
@@ -209,6 +219,24 @@ static BYTE AwtoDlSum(void)
         ucS ^= s_aucDl[ucJ];
     }
     return ucS;
+}
+
+#pragma place bank(5)
+static WORD AwtoDlHdrCrc(void)                     // CRC-16/CCITT-FALSE over bytes 0..13 (v1 / entries keep XOR)
+{
+    BYTE ucJ;
+    BYTE ucBit;
+    WORD usCrc = AWTO_DLOG_CRC_INIT;
+
+    for(ucJ = 0; ucJ < 14; ucJ++)
+    {
+        usCrc ^= (WORD)s_aucDl[ucJ] << 8;
+        for(ucBit = 0; ucBit < 8; ucBit++)
+        {
+            usCrc = (usCrc & 0x8000U) ? (WORD)((usCrc << 1) ^ AWTO_DLOG_CRC_POLY) : (WORD)(usCrc << 1);
+        }
+    }
+    return usCrc;
 }
 
 #pragma place bank(5)
@@ -277,7 +305,10 @@ static BYTE AwtoDlBurstR(DWORD ulUnits)             // DDR -> s_aucDl; 0 = stall
 static void AwtoDlHdr(DWORD ulHint)                 // header burst: generation, boot, index of the newest entry written at the last hint
 {
     BYTE ucJ;
+    DWORD ulPub = (s_ulDlPub + 1) & AWTO_DLOG_PUB_MASK;
+    WORD usCrc;
 
+    s_ucDlHdrDirty = 1;
     for(ucJ = 0; ucJ < 16; ucJ++)
     {
         s_aucDl[ucJ] = 0;
@@ -293,8 +324,20 @@ static void AwtoDlHdr(DWORD ulHint)                 // header burst: generation,
     s_aucDl[8] = (BYTE)ulHint;
     s_aucDl[9] = (BYTE)(g_usAwtoNoteN >> 8);          // note numbering goes on over a reset (the DDR note lines are keyed by it)
     s_aucDl[10] = (BYTE)g_usAwtoNoteN;
-    s_aucDl[15] = AwtoDlSum();
-    AwtoDlBurstW(AWTO_DLOG_HDR_UNITS);
+    s_aucDl[11] = (BYTE)(ulPub >> 16);
+    s_aucDl[12] = (BYTE)(ulPub >> 8);
+    s_aucDl[13] = (BYTE)ulPub;
+    usCrc = AwtoDlHdrCrc();
+    s_aucDl[14] = (BYTE)(usCrc >> 8);
+    s_aucDl[15] = (BYTE)usCrc;
+    // Odd publications use the original slot. v1 migration first uses the shadow.
+    // Only overwrite the older copy. Keep serial/target on a port stall.
+    if(AwtoDlBurstW(((BYTE)ulPub & 1) ? AWTO_DLOG_HDR_UNITS : AWTO_DLOG_HDR2_UNITS) != 0)
+    {
+        s_ulDlPub = ulPub;
+        s_ucDlHdrDirty = s_ucDlMigrate;             // migration must publish primary next, before any new ring entry
+        s_ucDlMigrate = 0;
+    }
 }
 
 #pragma place bank(5)
@@ -312,13 +355,81 @@ static DWORD AwtoDlScan(DWORD ulHint)
 
     for(ucN = 0; ucN < AWTO_DLOG_SCAN_MAX; ucN++)
     {
-        if((AwtoDlBurstR(AWTO_DLOG_UNIT(ulHint)) == 0) || (AwtoDlEntryOk(ulHint) == 0))
+        if(AwtoDlBurstR(AWTO_DLOG_UNIT(ulHint)) == 0)
+        {
+            return 0xFFFFFFFFUL;                    // transport failure is not the end of history
+        }
+        if(AwtoDlSum() != s_aucDl[15])
+        {
+            // An unwritten DDR slot may contain arbitrary bytes; only a
+            // matching index/generation makes a bad checksum ambiguous.
+            if((s_aucDl[13] == g_stAwtoSync.ucGen) && (s_aucDl[10] == (BYTE)(ulHint >> 16)) &&
+               (s_aucDl[11] == (BYTE)(ulHint >> 8)) && (s_aucDl[12] == (BYTE)ulHint))
+            {
+                return 0xFFFFFFFFUL;
+            }
+            break;
+        }
+        if(AwtoDlEntryOk(ulHint) == 0)
         {
             break;
         }
         ulHint++;
     }
-    return ulHint;
+    return (ucN == AWTO_DLOG_SCAN_MAX) ? 0xFFFFFFFFUL : ulHint;   // a stale hint is not a proved end boundary
+}
+
+#pragma place bank(5)
+static BYTE AwtoDlHdrOk(void)
+{
+    return (s_aucDl[0] == AWTO_DLOG_HDR_ID) && (s_aucDl[1] == 'L') &&
+           ((s_aucDl[2] == 1) || (s_aucDl[2] == AWTO_DLOG_HDR_VER)) &&
+           (s_aucDl[3] != 0) && ((s_aucDl[2] == 1) ? (AwtoDlSum() == s_aucDl[15]) :
+           (AwtoDlHdrCrc() == (((WORD)s_aucDl[14] << 8) | s_aucDl[15])));
+}
+
+#pragma place bank(5)
+static DWORD AwtoDlPublication(void)
+{
+    return ((DWORD)s_aucDl[11] << 16) | ((DWORD)s_aucDl[12] << 8) | s_aucDl[13];
+}
+
+#pragma place bank(5)
+static BYTE AwtoDlReadHdr(void)                     // 0 = unavailable, 1 = answered but invalid, 2 = selected valid header in s_aucDl
+{
+    BYTE ucPrimary;
+    BYTE ucPrimaryRead;
+    BYTE ucShadowRead;
+    DWORD ulPrimary;
+
+    ucPrimaryRead = AwtoDlBurstR(AWTO_DLOG_HDR_UNITS);
+    ucPrimary = (ucPrimaryRead != 0) && (AwtoDlHdrOk() != 0);
+    if((ucPrimary != 0) && (s_aucDl[2] == 1))
+    {
+        s_ulDlPub = 1;                             // migration first writes publication 2 to the unused shadow
+        s_ucDlMigrate = 1;                         // primary also wins after a firmware downgrade
+        return 2;
+    }
+    ulPrimary = AwtoDlPublication();
+    ucShadowRead = AwtoDlBurstR(AWTO_DLOG_HDR2_UNITS);
+    if((ucShadowRead != 0) && (AwtoDlHdrOk() != 0) && (s_aucDl[2] == AWTO_DLOG_HDR_VER) &&
+       ((ucPrimary == 0) || ((((AwtoDlPublication() - ulPrimary) & AWTO_DLOG_PUB_MASK) != 0) && (((AwtoDlPublication() - ulPrimary) & AWTO_DLOG_PUB_MASK) < AWTO_DLOG_PUB_HALF))))
+    {
+        s_ulDlPub = AwtoDlPublication();
+        s_ucDlMigrate = 0;
+        return 2;
+    }
+    if(ucPrimary != 0)
+    {
+        if((AwtoDlBurstR(AWTO_DLOG_HDR_UNITS) == 0) || (AwtoDlHdrOk() == 0))
+        {
+            return 0;
+        }
+        s_ulDlPub = AwtoDlPublication();
+        s_ucDlMigrate = 0;
+        return 2;
+    }
+    return ((ucPrimaryRead != 0) && (ucShadowRead != 0)) ? 1 : 0;
 }
 
 static void AwtoDlFlushN(BYTE ucMax);
@@ -330,20 +441,67 @@ static BYTE AwtoDlInit(void)                        // first drain whose header 
     BYTE ucOk = 0;
     BYTE ucNew = (g_stAwtoSync.ucGen == 0);          // the XDATA ring was cleared at this boot (cold / another image): generation 0 is never a DDR generation
 
-    if(AwtoDlBurstR(AWTO_DLOG_HDR_UNITS) == 0)
+    ucOk = AwtoDlReadHdr();
+    if(ucOk == 0)
     {
-        return 0;                                   // not answering: the next drain asks again; a failed read must not look like an empty DDR (that starts a new generation)
+        return 0;
+    }
+    if(ucOk == 1)
+    {
+        if(++s_ucDlInvalid < AWTO_DLOG_INVALID_MAX)
+        {
+            return 0;                              // a transient checksum must not start a new generation
+        }
+        s_ulDlPub = 0;
+        s_ucDlMigrate = 0;
+        if((AwtoBootReason() != AWTO_BOOT_COLD) && (ucNew == 0))
+        {
+            // The validated no-init XDATA ring is still authoritative. Repair
+            // headers without discarding DDR history or the pending tail.
+            g_stAwtoSync.ucBoot++;
+            g_stAwtoSync.ucLost = 0;
+            s_pulAtAbs[0] = 0xFFFFFFFFUL;
+            s_pulAtAbs[1] = 0xFFFFFFFFUL;
+            AwtoDlHdr(g_stAwtoSync.ulWr);
+            return 1;
+        }
+        ucOk = 0;
+    }
+    else
+    {
+        ucOk = 1;
+    }
+    ulHint = ((DWORD)s_aucDl[5] << 24) | ((DWORD)s_aucDl[6] << 16) | ((DWORD)s_aucDl[7] << 8) | s_aucDl[8];
+    // Save header fields before the scan reuses the burst buffer.
+    if((ucOk != 0) && (ucNew != 0) && (AwtoBootReason() != AWTO_BOOT_COLD))
+    {
+        g_stAwtoSync.ucGen = s_aucDl[3];
+        g_stAwtoSync.ucBoot = s_aucDl[4];
+        g_usAwtoNoteN = ((WORD)s_aucDl[9] << 8) | s_aucDl[10];
+        ulHint = AwtoDlScan(ulHint);
+        g_stAwtoSync.ucGen = 0;
+        if(ulHint == 0xFFFFFFFFUL)
+        {
+            return 0;
+        }
+        // Restore the selected header; only the scanned index is retained.
+        if(AwtoDlReadHdr() != 2)
+        {
+            return 0;
+        }
     }
     g_ulAwtoBootAbs -= g_stAwtoSync.ulWr + g_stAwtoSync.ucPend;        // its distance from the ring end stays: re-added below
     g_ulAwtoEpAbs -= g_stAwtoSync.ulWr + g_stAwtoSync.ucPend;
-    ucOk = (s_aucDl[0] == AWTO_DLOG_HDR_ID) && (s_aucDl[1] == 'L') && (s_aucDl[2] == AWTO_DLOG_HDR_VER) && (AwtoDlSum() == s_aucDl[15]);
-    ulHint = ((DWORD)s_aucDl[5] << 24) | ((DWORD)s_aucDl[6] << 16) | ((DWORD)s_aucDl[7] << 8) | s_aucDl[8];
     g_usAwtoNoteN = ((WORD)s_aucDl[9] << 8) | s_aucDl[10];
     s_pulAtAbs[0] = 0xFFFFFFFFUL;
     s_pulAtAbs[1] = 0xFFFFFFFFUL;
     if((AwtoBootReason() == AWTO_BOOT_COLD) || (ucOk == 0))
     {
         g_stAwtoSync.ucGen = (ucOk != 0) ? (BYTE)(s_aucDl[3] + 1) : (BYTE)((BYTE)AwtoMs() | 1);    // old generation + 1; no valid header (undefined DDR, another image): a time-derived odd value, never 0 (stale entries of generation 1 must not continue the new ring)
+        if(g_stAwtoSync.ucGen == 0)
+        {
+            g_stAwtoSync.ucGen = 1;                 // generation 0 is reserved for an uninitialized XDATA ring
+        }
         g_stAwtoSync.ucBoot = 0;
         g_usAwtoNoteN = 0;
         g_stAwtoSync.ulWr = 0;
@@ -357,7 +515,7 @@ static BYTE AwtoDlInit(void)                        // first drain whose header 
         g_stAwtoSync.ucBoot = s_aucDl[4];
         if(ucNew != 0)                              // XDATA ring lost (another image): the position from the DDR
         {
-            g_stAwtoSync.ulWr = AwtoDlScan(ulHint);
+            g_stAwtoSync.ulWr = ulHint;
         }
     }
     g_stAwtoSync.ucBoot++;
@@ -380,8 +538,20 @@ static void AwtoDlFlushN(BYTE ucMax)
     {
         return;                                     // lines get re-based at the Timer2 start
     }
+    if(s_ucDlHdrDirty != 0)
+    {
+        AwtoDlHdr(g_stAwtoSync.ulWr);
+    }
     while((g_stAwtoSync.ucPend != 0) && (ucMax != 0))
     {
+        if(s_ucDlHdrDirty != 0)
+        {
+            AwtoDlHdr(g_stAwtoSync.ulWr);
+            if(s_ucDlHdrDirty != 0)
+            {
+                return;
+            }
+        }
         ulA = g_stAwtoSync.ulWr;
         puc = (BYTE __xdata *)&g_stAwtoSync.stTl[(BYTE)(g_stAwtoSync.ucHead - g_stAwtoSync.ucPend) & (AWTO_SYNC_TAIL - 1)];
         s_aucDl[0] = puc[0];

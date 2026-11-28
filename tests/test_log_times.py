@@ -214,7 +214,7 @@ def test_dram_page_and_progress_and_poll_wall_sign():
     t = dt.datetime(2026, 11, 27, 17, 0, tzinfo=dt.UTC)
     monkey = D.header
     try:
-        D.header = lambda read: {"gen": 7, "boot": 1}
+        D.header = lambda read, diag=None: {"gen": 7, "boot": 1, "hint": 0}
         snap = D.snapshot(rd, ROWS, None, None, "S", 5000, t, 0, len(ents), 2)
     finally:
         D.header = monkey
