@@ -19,7 +19,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 from _repo import ROOT
 
 HDR = ROOT / "fw/sdk/Project/Header/RL6449_Project.h"
-POLL_S = 0.5                    # CMD idle / read flag: the burst takes ~64 us on the MCU, one I2C poll ~1 ms: 0.5 s = 500x, expiry = error
+PORT_X = 1.25                   # port waits: 1.25 x the firmware stall bound AWTO_DDRN_STALL_MS (3 frames of DDR arbitration); expiry = error with op + elapsed
 
 
 def hdef(name: str) -> int:
@@ -36,23 +36,28 @@ def regs() -> dict:
                       "AWTO_R_MCU_DC_ADDR_A", "AWTO_R_MCU_DC_DATABUF_R_00_A", "AWTO_R_MCU_DC_READ_FLAG_A")}
 
 
+def port_wait_s() -> float:
+    """host limit for CMD idle / READ_FLAG: a wedged port is cleared by the firmware at its next expiry (#392), so this bounds a real stall"""
+    return PORT_X * hdef("AWTO_DDRN_STALL_MS") / 1000
+
+
 def read_line(d, r: dict, seq: int) -> bytes:
     n_slots, line_units, bursts = hdef("AWTO_DDRN_SLOTS"), hdef("AWTO_DDRN_LINE_UNITS"), hdef("AWTO_DDRN_BURSTS")
     base, half, size = hdef("AWTO_DDRN_UNITS0"), hdef("AWTO_DDRN_HALF"), hdef("AWTO_DDRN_BURST_BYTES")
     out = b""
     for b in range(bursts):
         u = base + (seq & (n_slots - 1)) * line_units + b * (size // 8)
-        t0 = time.monotonic()
+        t0, lim = time.monotonic(), port_wait_s()
         while d.rd(r["AWTO_R_MCU_DC_CMD_A"]) & r["AWTO_F_MCU_DC_CMD_A_DDR_A_CMD"]:
-            if time.monotonic() - t0 > POLL_S:
-                raise OSError("MCU_DC port A busy")
+            if time.monotonic() - t0 > lim:
+                raise OSError(f"MCU_DC port A busy: note {seq} burst {b} CMD not idle in {lim * 1000:.1f} ms, {(time.monotonic() - t0) * 1000:.1f} ms elapsed")
         for reg, sh in (("AWTO_R_MCU_DC_ADDR_H_A", 24), ("AWTO_R_MCU_DC_ADDR_M_A", 16), ("AWTO_R_MCU_DC_ADDR_L_A", 8), ("AWTO_R_MCU_DC_ADDR_A", 0)):
             d.wr(r[reg], (u >> sh) & 0xFF)
         d.wr(r["AWTO_R_MCU_DC_CMD_A"], hdef("AWTO_DDRN_CMD_READ"))
         t0 = time.monotonic()
         while not d.rd(r["AWTO_R_MCU_DC_READ_FLAG_A"]) & hdef("AWTO_DDRN_READ_FLAG"):
-            if time.monotonic() - t0 > POLL_S:
-                raise OSError("read flag timeout")
+            if time.monotonic() - t0 > lim:
+                raise OSError(f"MCU_DC port A: note {seq} burst {b} READ_FLAG not up in {lim * 1000:.1f} ms, {(time.monotonic() - t0) * 1000:.1f} ms elapsed")
         buf = bytes(d.rd(r["AWTO_R_MCU_DC_DATABUF_R_00_A"] + k) for k in range(size))
         out += bytes(buf[(j + half) % size] for j in range(size))
     return out

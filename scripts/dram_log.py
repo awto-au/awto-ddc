@@ -25,7 +25,6 @@ HDRH = ROOT / "fw/sdk/Project/Header/RL6449_Project.h"
 LOG = ROOT / "tmp/logs/dram_log.log"
 CHECK = 0x5A                      # fw/log/hostnote.c AWTO_DLOG_CHECK
 HDR_ID, HDR_VER = b"DL", 1
-POLL_S = 0.5                      # CMD idle / read flag: a burst is ~64 us on the MCU, one debug-link poll ~1 ms: 0.5 s = expiry is an error
 
 
 def hdef(name: str) -> int:
@@ -101,19 +100,29 @@ def entries(read, hdr: dict, nxt: int, count: int, first: int | None = None, pro
 def ddr_reader(d, r: dict, stats: dict | None = None):
     """read_burst(units) over a Dbg-like object (rd / wr / block); the port registers `r` from AwtoRegs.h. A failed read returns None"""
     from ddr_note_read import hdef as ndef
+    from ddr_note_read import port_wait_s
+
+    lim = port_wait_s()
+
+    def expired(op: str, u: int, t: float) -> None:
+        if stats is not None:
+            stats["expired"] = stats.get("expired", 0) + 1
+        log(f"DDR read unit {u:#x}: {op} not seen in {lim * 1000:.1f} ms (limit), {(time.monotonic() - t) * 1000:.1f} ms elapsed: entry unread")
 
     def read_burst(u: int) -> bytes | None:
         t0 = time.monotonic()
         try:
             while d.rd(r["AWTO_R_MCU_DC_CMD_A"]) & r["AWTO_F_MCU_DC_CMD_A_DDR_A_CMD"]:
-                if time.monotonic() - t0 > POLL_S:
+                if time.monotonic() - t0 > lim:
+                    expired("CMD idle", u, t0)
                     return None
             for reg, sh in (("AWTO_R_MCU_DC_ADDR_H_A", 24), ("AWTO_R_MCU_DC_ADDR_M_A", 16), ("AWTO_R_MCU_DC_ADDR_L_A", 8), ("AWTO_R_MCU_DC_ADDR_A", 0)):
                 d.wr(r[reg], (u >> sh) & 0xFF)
             d.wr(r["AWTO_R_MCU_DC_CMD_A"], ndef("AWTO_DDRN_CMD_READ"))
             t1 = time.monotonic()
             while not d.rd(r["AWTO_R_MCU_DC_READ_FLAG_A"]) & ndef("AWTO_DDRN_READ_FLAG"):
-                if time.monotonic() - t1 > POLL_S:
+                if time.monotonic() - t1 > lim:
+                    expired("READ_FLAG", u, t1)
                     return None
             buf = d.block(r["AWTO_R_MCU_DC_DATABUF_R_00_A"], 16)                 # one block read, not 16 register reads (~3 debug-link transfers each)
         except OSError:
