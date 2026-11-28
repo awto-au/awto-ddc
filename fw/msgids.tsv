@@ -12,7 +12,7 @@
 024a	FRC	Kernel/Scaler/RL6449_Series_Scaler/Code/RL6449_Series_Rotation.c:67	R_IV	1
 030d	Scaler	Kernel/Scaler/ScalerFunction/Code/ScalerMDomain.c:909	DCLK	0
 0350	Analog	Kernel/Scaler/ScalerFunction/Code/ScalerPLL.c:3551	Mode table edge phase	0
-0558	Rx2	Kernel/Scaler/RL6449_Series_Scaler/Code/RL6449_Series_TMDSRx2.c:4568	HDMI Info Frame Not Received and not RGB	0
+0558	Rx2	Kernel/Scaler/RL6449_Series_Scaler/Code/RL6449_Series_TMDSRx2.c:4596	HDMI Info Frame Not Received and not RGB	0
 07d6	System	Kernel/System/Code/SysJudge.c:483	Source Unstable!!	1
 08c6	Audio	Kernel/System/Code/SysAudio.c:113	Switch to Audio Playback	0
 08cd	Rx2	Kernel/Scaler/RL6449_Series_Scaler/Code/RL6449_Series_TMDSRx2.c:3251	4. PLL Setting Error	0
@@ -44,7 +44,7 @@
 1502	Rx1	Kernel/Scaler/ScalerFunction/Code/ScalerDP_SeptPhy.c:480	_D1_HOT_PLUG_HIGH after Xms	0
 1502	Rx1	Kernel/Scaler/ScalerFunction/Code/ScalerDP_SeptPhy.c:488	_D1_HOT_PLUG_HIGH after Xms	0
 1584	Rx1	Kernel/Scaler/ScalerCommonFunction/Code/ScalerCommonDPRx1.c:1487	_COLORIMETRY_RAW	0
-1589	Rx2	Kernel/Scaler/RL6449_Series_Scaler/Code/RL6449_Series_TMDSRx2.c:3956	7. TMDS Lane2 LE Max	0
+1589	Rx2	Kernel/Scaler/RL6449_Series_Scaler/Code/RL6449_Series_TMDSRx2.c:3984	7. TMDS Lane2 LE Max	0
 15a0	Scaler	Kernel/User Common Function/Code/UserCommonInterface.c:4411	MBR: Kernel Adjusted Backlight Mode	0
 163b	Rx2	Kernel/Scaler/ScalerCommonFunction/Code/ScalerCommonSync.c:6119	Get RGB FULL RANGE	0
 1693	Rx1	Kernel/Scaler/ScalerCommonFunction/Code/ScalerCommonDPRx1.c:955	HTotal Count	0
@@ -120,7 +120,7 @@
 33e4	System	Kernel/User Common Function/Code/UserCommonInterface.c:3767	OSD -- MST On/Off Switch	1
 33e4	System	Kernel/User Common Function/Code/UserCommonInterface.c:3777	OSD -- MST On/Off Switch	1
 33e4	System	Kernel/User Common Function/Code/UserCommonInterface.c:3795	OSD -- MST On/Off Switch	1
-342a	Rx2	Kernel/Scaler/RL6449_Series_Scaler/Code/RL6449_Series_TMDSRx2.c:3969	Format Detect HDMI	0
+342a	Rx2	Kernel/Scaler/RL6449_Series_Scaler/Code/RL6449_Series_TMDSRx2.c:3997	Format Detect HDMI	0
 343d	System	Kernel/System/Code/SysJudge.c:830	Input Timing VSyncSWidth	1
 34c3	Rx1	Kernel/Scaler/ScalerFunction/Code/ScalerDPRx1_SeptPhy.c:3986	7. DP Video Stream Fail	0
 34c3	Rx1	Kernel/Scaler/ScalerFunction/Code/ScalerDPRx1_SeptPhy.c:4422	7. DP Video Stream Fail	0
@@ -259,8 +259,8 @@
 7561	FS	Kernel/Scaler/ScalerFunction/Code/ScalerMemory.c:456	Timeout counter	1
 757a	Rx1	Kernel/Scaler/ScalerFunction/Code/ScalerDPRx1_SeptPhy.c:302	7. Fifo Underflow --> QD882 Case	0
 75ce	CheckMDomain	Kernel/Scaler/ScalerFunction/Code/ScalerMDomain.c:1870	Free Run No Input	1
-75ea	Rx2	Kernel/Scaler/RL6449_Series_Scaler/Code/RL6449_Series_TMDSRx2.c:4530	TMDS Video format changed	0
-76c2	FRC	Kernel/Scaler/ScalerFunction/Code/ScalerMemory.c:945	3Block-addr2	1
+75ea	Rx2	Kernel/Scaler/RL6449_Series_Scaler/Code/RL6449_Series_TMDSRx2.c:4558	TMDS Video format changed	0
+76c2	FRC	Kernel/Scaler/ScalerFunction/Code/ScalerMemory.c:1001	3Block-addr2	1
 775a	Scaler	Kernel/User Common Function/Code/UserCommonInterface.c:4444	MBR: Strobe to Constant	0
 7774	Rx2	Kernel/Scaler/ScalerCommonFunction/Code/ScalerCommonSync.c:5932	Get Colorimetry RGB_SRGB	0
 7892	System	Kernel/System/Code/SysSource.c:4422	0. Cable Status Changed D4	1
@@ -304,7 +304,7 @@
 87c7	Scaler	Kernel/Scaler/ScalerFunction/Code/ScalerDisplay.c:1133	MBR: GET_MDOMAIN_INPUT_VFREQ	0
 8847	Audio	Kernel/System/Code/SysAudio.c:358	Audio Dac Initial	0
 8870	System	Kernel/System/Code/SysJudge.c:505	Input Timing Double Check : Interlace Flag Change	1
-887f	Rx2	Kernel/Scaler/RL6449_Series_Scaler/Code/RL6449_Series_TMDSRx2.c:4592	HDMI AVI info frame has changed	0
+887f	Rx2	Kernel/Scaler/RL6449_Series_Scaler/Code/RL6449_Series_TMDSRx2.c:4620	HDMI AVI info frame has changed	0
 88a4	Rx2	Kernel/Scaler/ScalerCommonFunction/Code/ScalerCommonSync.c:5815	Get Pixel Repetition Error	0
 8903	System	Kernel/Scaler/ScalerFunction/Code/ScalerMDomain.c:584	_Last_line_Dclk_smaller	1
 8adb	Scaler	Kernel/System/Code/SysMode.c:714	DRR Get IVF from user define	0
@@ -336,8 +336,8 @@
 9744	System	Kernel/System/Code/SysSource.c:2494	7. Bingo Switch Port!!!!!!!	1
 9744	System	Kernel/System/Code/SysSource.c:2678	7. Bingo Switch Port!!!!!!!	1
 978d	Rx1	Kernel/Scaler/ScalerCommonFunction/Code/ScalerCommonDPRx1.c:1450	_COLORIMETRY_RGB_XRRGB	0
-97fc	Rx2	Kernel/Scaler/RL6449_Series_Scaler/Code/RL6449_Series_TMDSRx2.c:4418	TMDS Clock Output has been disable	0
-9a26	Rx2	Kernel/Scaler/RL6449_Series_Scaler/Code/RL6449_Series_TMDSRx2.c:3953	7. TMDS Lane2 LE Min	0
+97fc	Rx2	Kernel/Scaler/RL6449_Series_Scaler/Code/RL6449_Series_TMDSRx2.c:4446	TMDS Clock Output has been disable	0
+9a26	Rx2	Kernel/Scaler/RL6449_Series_Scaler/Code/RL6449_Series_TMDSRx2.c:3981	7. TMDS Lane2 LE Min	0
 9a80	Scaler	Kernel/User Common Function/Code/UserCommonInterface.c:4473	MBR: Step Change Count	0
 9a8d	Rx1	Kernel/Scaler/ScalerCommonFunction/Code/ScalerCommonDPRx1.c:896	Current Link Clk	0
 9a8d	Rx1	Kernel/Scaler/ScalerFunction/Code/ScalerDPRx1_SeptPhy.c:3110	Current Link Clk	0
@@ -516,7 +516,7 @@ de82	FRC	Kernel/Scaler/RL6449_Series_Scaler/Code/RL6449_Series_Rotation.c:66	R-I
 dea9	Audio	Kernel/Scaler/RL6449_Series_Scaler/Code/RL6449_Series_Audio.c:946	False : D1 DP Audio Buffer	0
 dec4	Rx2	Kernel/Scaler/ScalerCommonFunction/Code/ScalerCommonSync.c:5897	Get Colorimetry 709	0
 df0b	System	Kernel/User Common Function/Code/UserCommonInterface.c:4268	OSD -- Reset	1
-df38	Rx2	Kernel/Scaler/RL6449_Series_Scaler/Code/RL6449_Series_TMDSRx2.c:4550	Color Info Changed	0
+df38	Rx2	Kernel/Scaler/RL6449_Series_Scaler/Code/RL6449_Series_TMDSRx2.c:4578	Color Info Changed	0
 e040	Rx1	Kernel/Scaler/ScalerCommonFunction/Code/ScalerCommonDPRx1.c:1886	VSC change: Color Space, _COLOR_SPACE_YCBCR444	0
 e06c	Rx1	Kernel/Scaler/ScalerCommonFunction/Code/ScalerCommonDPRx1.c:1959	VSC change: Colorimetry Ext	0
 e06c	Rx1	Kernel/Scaler/ScalerCommonFunction/Code/ScalerCommonDPRx1.c:1975	VSC change: Colorimetry Ext	0
