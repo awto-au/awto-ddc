@@ -22,12 +22,12 @@ Pacing uses time.sleep for the DDC/CI inter-frame gap and the reply delay: that 
 from __future__ import annotations
 
 import argparse
-import datetime
 import sys
 import time
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
+import _log
 import i2cbus
 import reference_mon as R
 import unit_ops as U
@@ -55,26 +55,6 @@ IDENT = [
 FACTORY_SELECTORS = [0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x10, 0x11, 0x12, 0x13, 0x14]
 FACTORY_LEN = 0x20       # the app reads len 0x20; reply is <len> bytes, no opcode byte. Frame: 01 FE EF <sel> 00 <len>.
 SELECTOR_HINT = {0x13: "factory serial (EDID serial, #381; confirmed on the wire)"}
-
-
-def now() -> str:
-    return datetime.datetime.now().astimezone().isoformat(timespec="seconds")
-
-
-class Log:
-    def __init__(self, path: Path):
-        self.path = path
-        path.parent.mkdir(parents=True, exist_ok=True)
-        self.fh = path.open("a")
-
-    def say(self, msg: str) -> None:
-        line = f"{now()} {msg}"
-        print(line, flush=True)
-        self.fh.write(line + "\n")
-        self.fh.flush()
-
-    def close(self) -> None:
-        self.fh.close()
 
 
 def find_bus() -> int:
@@ -155,10 +135,10 @@ def looks_like_bom(body: bytes) -> bool:
     return len(best) >= 8 and (len(best) <= 4 or best[4:5] in (b"P", b"A"))
 
 
-def run(log: Log, md: list[str], clock=time.monotonic, nap=time.sleep) -> dict:
+def run(log: _log.Logger, md: list[str], clock=time.monotonic, nap=time.sleep) -> dict:
     bus_no = find_bus()
     log.say(f"bus /dev/i2c-{bus_no} ({i2cbus.adapter_name(bus_no)!r}), EDID serial {SERIAL} proven")
-    md.append(f"- Bus: Intel `/dev/i2c-{bus_no}` ({i2cbus.adapter_name(bus_no)}), EDID serial {SERIAL}, {now()}")
+    md.append(f"- Bus: Intel `/dev/i2c-{bus_no}` ({i2cbus.adapter_name(bus_no)}), EDID serial {SERIAL}, {_log.stamp()}")
     out: dict = {}
     state: dict = {}
     bus = i2cbus.Bus(bus_no)
@@ -211,9 +191,9 @@ def main() -> int:
     ap.add_argument("--repo", default=None, help="repo root (else $AWTO_DDC_REPO / file-relative)")
     a = ap.parse_args()
     root = Path(a.repo) if a.repo else i2cbus.ROOT
-    log = Log(root / "tmp/logs/philips_bom.log")
+    log = _log.Logger(root / "tmp/logs/philips_bom.log")
     log.say("=== philips_bom: read-only vendor-identity + factory read of the Philips 288E2 (#383, #384)")
-    md = [f"# Philips 288E2 vendor identity (DDC/CI reads, {now()})",
+    md = [f"# Philips 288E2 vendor identity (DDC/CI reads, {_log.stamp()})",
           "Read-only over Intel HDMI DDC (i915 gmbus), EDID serial UK52307000611. Frames: SmartControl 7.2.0 RE (#381).",
           "No Set / ISP / SERDB. Vendor firmware identity: this file lives in the vendor store, not the repo."]
     try:

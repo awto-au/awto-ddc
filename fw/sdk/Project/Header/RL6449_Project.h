@@ -24,6 +24,12 @@
 // IIC engine status: sub-address or data-in event pending = DDC/CI traffic to service (same layout for IIC_1..3)
 #define AWTO_IIC_ATTN                                           (AWTO_F_IIC_1_STATUS_IIC_1_SUB_I | AWTO_F_IIC_1_STATUS_IIC_1_D_IN_I)
 #define AWTO_DDCCI_WR_ADDR                                      0x6E    // DDC/CI slave 0x37 as the 8-bit write address
+// DDC/CI compatibility (awto-ddc#388, #385). Dahua-original + stock Realtek SDK: 0x60 single low byte, no PIP; no write pacing (RE: re/jxc-4k/ghidra_names_bank5.tsv:20, fw/sdk caps RL6449_Project.h:2208).
+#define AWTO_DDCCI_INPUT_SUB                                    0x00    // VCP 0x60 high byte = PIP sub-input; 0 = no PIP window (we have none). TPV/SmartControl reads the low byte either way (docs/ddcci.md).
+#define AWTO_DDCCI_WR_PACE_MS                                   110     // #388 drop set-VCP writes < this apart: TPV SmartControl/G-Menu paces to 110-120 ms (prior work, smartcontrol-wine.md:162). Compat pace, NOT a hw limit.
+// #385 FE E1 firmware-version reply (SmartControl GetDisplayFWVersion): ASCII build tag from offset 4. SmartControl declares
+// 32 bytes, but our reply is capped to the 16-byte DDC engine buffer (AWTO_DDC_CAP_CHUNK ASCII bytes), so a long tag truncates.
+#define AWTO_DDCCI_FW_STR_OP                                    0xE1    // opcode byte of the FE E1 firmware-string vendor frame (01 FE E1 E6 06 00)
 #define AWTO_SCA_WR_INTRVL_SEL_MASK                             0x0F    // FFF1[3:0] mcu_wr_sca_intrvl_sel (regdb SCA_WR_INTRVL)
 #ifndef AWTO_SCA_WR_INTRVL_SEL
 #define AWTO_SCA_WR_INTRVL_SEL                                  12      // hardware write pace, same sel at every AWTO_CLOCK_MHZ; eDP FAIL line + OSD port spacing (docs/osd-port-loss.md)

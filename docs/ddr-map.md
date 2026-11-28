@@ -29,7 +29,7 @@
 | Rotation / mirror | BL3 = 0x17B560 | none in 1-buffer; 2/3 blocks at non-1:1 frame rate | rotate != off | yes | `RL6449_Series_FRC.c:512-533`, `RL6449_Series_DDR2.c:385-415` |
 | 1/2/3 buffer choice | 2-buffer at MN / free-run / rotation at non-1:1 rate; 3-buffer at rotation with input faster | 3-buffer at 4K = 4,199,040 units > 2^22: wraps [SDK] | per mode set (sync event FBUF) | yes | `RL6449_Series_Scaling.c` (#348) |
 | OD (overdrive) | top rows | - | `_OD_SUPPORT` | no (`_OFF`) | `RL6449_Project.h:2169` |
-| DRAM log + note store (port A) | chip A 0x3EBFFE-0x3FFFFF | 655,376 B | every main pass with log lines | yes | `fw/log/hostnote.c:84-96`, `dram-log-design.md`, `note-store.md` |
+| DRAM log + note store (port A) | chip A 0x3EBFFC-0x3FFFFF | 655,392 B | every main pass with log lines | yes | `fw/log/hostnote.c:84-96`, `dram-log-design.md`, `note-store.md` |
 | ddr_draw test ops (port A) | block 1; `--extend` up to the whole chip | - | freeze image | freeze build only | `ddr-draw.md` |
 | Doom (games repo, port A) | byte addr / 8 | ~0x80010 .. flats end | game image | games repo | awto-games-dw8051 `cache_native.asm:979-1010` |
 | OSD, DCC, LD, HDR, audio, 3D-LUT, PIP/PBP | - | - | - | no DDR client (only clients 0-6, 8, MCU) | `RL6449_Series_DDR2.c:122-149` |
@@ -39,13 +39,13 @@
 | chip / units | bytes | user |
 |---|---|---|
 | A 0x000000-0x17BAFF | 12,441,600 | M1 capture each frame (even rows); M2 display reads |
-| A 0x17BB00-0x3EBFFD | 20,457,456 | free in this mode |
-| A 0x3EBFFE-0x3FFFFF | 655,376 | DRAM log + note store |
+| A 0x17BB00-0x3EBFFB | 20,457,440 | free in this mode |
+| A 0x3EBFFC-0x3FFFFF | 655,392 | DRAM log + note store |
 | B 0x000000-0x17BAFF | 12,441,600 | M2 capture each frame (odd rows); M1 display reads |
 | B 0x17BB00-0x3FFFFF | 21,112,832 | free in this mode |
 
 ## Free in every 1- or 2-buffer mode (above 0x3B5380)
-- A 0x3B5380-0x3EBFFD: 1,795,056 B.
+- A 0x3B5380-0x3EBFFB: 1,795,040 B.
 - B 0x3B5380-0x3FFFFF: 2,450,432 B.
 - 3-buffer mode overruns the whole chip, log included [SDK arithmetic].
 - `BOUNDARY_ADDR1/2` = 0 / 0x0FFFFFFF: no write limit set.

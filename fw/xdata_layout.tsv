@@ -7,7 +7,6 @@ awto_osd_ui	0xd700	591	125
 ScalerCommonDPRx1	0xd700	716	24
 RL6449_Series_DPRx1_INT	0xd700	740	6
 RTD2014NVRamOsd	0xd700	811	89
-ddcci	0xd700	900	88
 UserCommonNVRamSystem	0xd700	988	85
 ScalerCec	0xd700	1073	83
 RL6449_Series_TMDSRx2	0xd700	1156	82
@@ -130,6 +129,7 @@ ScalerMDomain	0xe780	962	135
 SysJudge	0xe780	1097	12
 UserCommonInterface	0xe780	1109	30
 SysSource	0xe780	1139	29
+ddcci	0xe780	1168	91
 ScalerCommonDebug	0xe780	1285	363
 awto_settings_settings	0xe780	1648	335
 hostnote	0xe780	1983	197

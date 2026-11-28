@@ -9,7 +9,7 @@ Host: `scripts/dram_log.py`, `sync_log.py` (`read_ring` version 4, `--dram`), `u
 - DDR = 2 x 32 MiB chips; the log is on chip A (MCU_DC port A, path proved by the note store, docs/note-store.md). Map: docs/ddr-map.md.
 
 ## Region (chip A, 8 B units, 2^22 units)
-- Header burst: units 0x3EBFFE. Ring: units 0x3EC000.. = 32768 slots x 16 B = 512 KiB (31.375 MB .. 31.875 MB), ends at the note store (0x3FC000, 31.98 MB).
+- Header bursts: primary units 0x3EBFFE, v2 shadow units 0x3EBFFC (16 B more, ring addresses unchanged). Ring: units 0x3EC000.. = 32768 slots x 16 B = 512 KiB (31.375 MB .. 31.875 MB), ends at the note store (0x3FC000, 31.98 MB).
 - Clear of everything: 4K capture writes one 12,441,600 B block per chip (E/O mode); 1- and 2-buffer modes stay below unit 0x3B5380 (docs/ddr-map.md, #348); panel is 3840 x 2160 only.
 - 32768 entries = ~375 boots at 87 lines.
 
@@ -19,11 +19,15 @@ Host: `scripts/dram_log.py`, `sync_log.py` (`read_ring` version 4, `--dram`), `u
 - Valid = check ok, index equals the slot's expected index, generation equals the header's. A slot of the previous lap fails the index test.
 - The 12 bit stamp fields inside `sdone` values are durations, not entry stamps: unchanged.
 
-## Header burst
-- `D L` version generation boot hint(32) note-sequence(16) check. Hint = index of an entry written at the last header write; rewritten every 64 entries, at boot and at each host note.
-- Warm start: XDATA tail valid -> write index from it; XDATA lost (new image) -> scan forward from the hint (<= 2 x 64 + 2 reads).
-- Cold power-up (`AwtoBootReason() == COLD`) or invalid header: generation + 1, index 0, boot 0. Old entries never validate.
-- Note numbering lives in the header (was: a scan of the ring for the newest NOTE line, 88 DDR reads).
+## Header publication
+- Legacy v1: `D L` version generation boot hint(32 BE) note-sequence(16 BE), reserved bytes, XOR check.
+- V2: same fields through byte 10; bytes 11..13 publication serial(24 BE), bytes 14..15 CRC-16/CCITT-FALSE over bytes 0..13 (poly 0x1021, init 0xFFFF, no reflection, no final XOR).
+- Alternating copies: odd publication at the original primary, even at the shadow. Select the newest valid serial modulo 2^24 (half-range comparison). A failed publication stays dirty and retries the same serial/target before more entries drain; the previous valid copy remains untouched.
+- Migration: read v1; write v2 shadow publication 2, then v2 primary publication 3 before draining another entry. A valid v1 primary takes priority, including after a firmware downgrade. V2 requires the updated host reader; install host changes before new firmware.
+- Warm start: validated kept XDATA is authoritative. If it was lost (new image), scan forward from the selected hint (<= 2 x 64 + 2 reads). A failed read, ambiguous checksum or scan-limit exhaustion defers initialization; it never truncates to that position.
+- Cold power-up (`AwtoBootReason() == COLD`): new nonzero generation, index 0, boot 0. A failed header transfer never implies cold boot. Answered but invalid copies must recur across three drains; warm boot with valid XDATA repairs the headers while retaining history. Without either valid header or kept XDATA the ring is reinitialized, which is not proof of a cold power-up.
+- Note numbering lives in the header (was: scan of the ring for the newest NOTE line, 88 DDR reads).
+- See [#391 design and validation](dram-log-consistency-391.md) for reader consistency, compatibility, simulations and release gates.
 
 ## XDATA
 - Header 14 B (unchanged offsets, version 4) + generation, boot, pending, lost, head, write index (32), old = 24 B, + tail 32 x 10 B (8 B entry + ms bits 31..16) = 344 B, at `AWTO_SYNC_ADDR` 0xF53F (no-init, kept over warm reset). Was 718 B at 0xF3C9.

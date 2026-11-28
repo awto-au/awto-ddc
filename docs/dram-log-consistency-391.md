@@ -147,3 +147,15 @@ hash and eligible unit, and obtain Dan's explicit approval. Suggested approved t
 repeat a several-minute full-history read with ongoing logging across header updates,
 then verify notes, port state and continuity; separately test warm/cold reset cases.
 No approval has been requested for or inferred for any live operation in this patch.
+
+## Applied source branch
+
+The implementation is now applied to the source files on
+`review/dram-log-consistency-391` (draft PR #395). The previous embedded review
+package was removed from that branch to present the code changes directly.
+The shadow address is derived in the project-owned `fw/log/hostnote.c` from
+`AWTO_DLOG_HDR_UNITS - AWTO_DLOG_ENTRY_UNITS`; the Realtek SDK header is unchanged.
+The native harness uses that production definition. This applied source was
+validated against current main `cac1c66f7ce73112787040d11f6f5c7903a980e0`,
+retaining its later DDC/CI, layout and validation changes. Focused tests were rerun
+after this adjustment; target SDCC and live validation remain pending.

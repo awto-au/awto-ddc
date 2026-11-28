@@ -21,6 +21,27 @@
 | E4 / E5 | menu command (op << 8 \| arg, `fw/rtdfw/awto/include/menu.h`) / cursor item (read) | vcp.c |
 | E6..FF | direct manufacturer codes of our rows (fast switch, panel T3, ...); free: E8, F5 (retired rows) | rows |
 | E9 | host time (#157): table write (0xE7) = set; get: max = syncs since boot, cur = drift ms (int16) | fw/ddcci/ddcci.c |
+| FE E1 | firmware-version string (#385): `01 FE E1 E6 06 00` -> `6E 80\|n E1 00 <ASCII build tag>` (SmartControl GetDisplayFWVersion) | fw/ddcci/ddcci.c |
+
+## Philips/TPV compatibility (#388, #385)
+
+Dan 2026-11-28: adopt these so SmartControl / ddcutil-style tools read our units cleanly. Documented first (RE + SDK) then matched.
+
+| code / behaviour | Dahua original | Realtek SDK default | ours now | proposed / done |
+|---|---|---|---|---|
+| 0x60 encoding | single low byte, no PIP (`re/jxc-4k/ghidra_names_bank5.tsv:20`) | single low byte, no PIP (`fw/sdk` caps `RL6449_Project.h:2208`) | single byte (high byte 0) | keep single byte; high byte = `AWTO_DDCCI_INPUT_SUB` (0) made explicit |
+| 0x60 PIP high byte | none | none | none (no PIP block) | none — the high/low split is Philips/TPV-specific; the simpler single-byte form is what Dahua + SDK use and ddcutil/SmartControl read either way |
+| set-VCP write pacing | none (only ~300 us bus debounce) | none (50 ms RX timeout, debug path only) | none | drop set-VCP < `AWTO_DDCCI_WR_PACE_MS` (110 ms) apart. Compat pace, NOT a hw limit; TPV tools already pace 110-120 ms (`docs/monitors/smartcontrol-wine.md:162`) |
+| 0x14 colour preset | yes (values 0..13) | yes (`14(01 02 04 05 06 08 0B)`) | yes (row colour_temp) | already have it |
+| 0x72 gamma | no RE evidence | not in caps / not answered | no (gamma not a DDC/CI row) | report-only: no gamma-preset feature to expose |
+| 0xDC SmartImage | no RE evidence | not in caps / not answered | no SmartImage feature | report-only: no SmartImage equivalent |
+| vendor 0xEF | no RE evidence | n/a | E0..FF are our registry rows (not 0xEF) | report-only |
+| FE E1 fw string | no RE evidence (vendor frame) | n/a | not answered | answer with the build tag (#385) |
+
+- 0x60 high byte: the get reply value is `(sub << 8) \| main`; `AWTO_DDCCI_INPUT_SUB` is 0 (no PIP window), so the value stays a plain input code.
+- Pacing applies to MCCS set-VCP (opcode 0x03) only; the audio-test tone and debug-link control writes stay unpaced.
+- Named constants: `AWTO_DDCCI_INPUT_SUB`, `AWTO_DDCCI_WR_PACE_MS`, `AWTO_DDCCI_FW_STR_OP` (`fw/sdk/Project/Header/RL6449_Project.h`).
+- The build tag in the FE E1 reply is `AWTO_FW_TAG` (the `@FW_TAG@` commit tokenised into fw/sdk; also the console title). Capped to the 16-byte engine buffer, so a long tag is truncated on the wire.
 
 ## Tests
 - Offline: `scripts/ddc_sim.py BIN` (IIC_1 engine model in fw_sim; also the `ddc` gate of `scripts/fw_gates.py`).

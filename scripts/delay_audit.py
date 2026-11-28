@@ -86,6 +86,25 @@ def say(s):
     _log_line(s, LOG, stamp_stdout=False)
 
 
+def tree_matches_image(tree: Path, mapp: Path) -> bool:
+    """The listing tree (tmp/sdcc-port) must be the image's own build: the inventory reads the tree's .rst with the image's --map,
+    so a tree built with different -D flags folds its extra (static) functions' sites into the preceding map symbol -> false sites,
+    false budget / masked-section hits (awto-ddc #365/#392 merge: a leftover hwtest tree did exactly this). fwimage freezes the
+    build's bank layout next to the image (scripts/fwimage.py); the tree keeps the live one. Equal layout = same build. Only --check
+    needs this; --write regenerates against whatever tree is present on purpose."""
+    live = tree / "tmp/sdcc-port/bank_layout.new.tsv"
+    frozen = mapp.parent / (mapp.name[:-4] + ".bank_layout.tsv")       # <stem>-be.map -> <stem>-be.bank_layout.tsv
+    if not live.is_file() or not frozen.is_file():
+        say(f"  info bank-layout match skipped (missing {live if not live.is_file() else frozen}); tree/image correspondence unchecked")
+        return True
+    if live.read_bytes() == frozen.read_bytes():
+        return True
+    say(f"  FAIL listing tree {tree}/tmp/sdcc-port is not {mapp.name}'s build: {live.name} != the image's frozen {frozen.name}. "
+        f"The .rst was built with different -D flags than the image (a stale / variant tmp/sdcc-port); its sites would misattribute. "
+        f"Rebuild the tree for THIS image (./dev.py build with the image's flags, or ./dev.py gate which rebuilds the base).")
+    return False
+
+
 # ---------------------------------------------------------------- the loop-count formula (python twin of AWTO_DELAY_CNT, tied to the header text)
 def header_consts():
     t = (ROOT / "fw/sdk/Kernel/Scaler/ScalerCommonFunction/Header/ScalerCommonPLLInclude.h").read_text()
@@ -235,6 +254,8 @@ def summary(rows):
 
 
 def check(tree, mapp, variant=""):
+    if not tree_matches_image(Path(tree), Path(mapp)):      # also guards the delay_sim.py --audit caller; main() short-circuits before here
+        return 1
     old = load_all(variant)
     rr = rows_all(tree, mapp)
     keys = {k for k, _ in rr}
@@ -378,6 +399,8 @@ def main():
         return write_budget(a.tree, mapp)
     if a.write:
         return write(a.tree, mapp, a.variant)
+    if not tree_matches_image(a.tree, mapp):     # a mismatched tree makes every result below meaningless (false sites); fail with the cause, not the symptom
+        return 1
     if a.variant in BLOCKS_ON_PURPOSE:
         return check(a.tree, mapp, a.variant)
     import irq_masks

@@ -27,7 +27,7 @@ LOG = ROOT / "tmp/logs/osd_golden.log"
 GOLD = ROOT / "tests/golden/osd_cards"
 OUT = ROOT / "tmp/osd_golden"
 MODE, BG, MARGIN = "1080p60", "grey", 16
-SKIP = {"console", "console_info", "gpio"}       # build tag + boot timings on screen: differ per image (console_info card: cardwin goldens)
+SKIP = {"console", "console_info", "gpio", "selector_key"}   # build tag + boot timings on screen: differ per image. selector_key: its sync-log pane shows live AwtoMs ms-since-reset stamps (cycle-exact, shift a few ms per build) (#396)
 
 
 def say(s):

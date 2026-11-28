@@ -33,7 +33,7 @@ class Ddr:
         self.mem[U0 + (a % SLOTS) * EU] = burst(a=a, **kw)
 
     def __call__(self, u: int) -> bytes | None:
-        return self.mem.get(u)
+        return self.mem.get(u, bytes(16))
 
 
 def fill(d: Ddr, n: int, boot: int = 2) -> None:

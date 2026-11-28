@@ -92,17 +92,28 @@ class Store:
     def ingest_dram(self, snap: dict) -> list[str]:
         """DRAM log image: the entries come with their absolute DDR index, so there is no ring-lap dedupe: append the ones after the saved index.
         Line = host time (current boot: poll join, marked '~'; an older boot: its ms since reset only), boot counter, index, text"""
+        if snap.get("status") == "unavailable":
+            raise OSError(f"DRAM log unavailable: {snap.get('diagnostics')}")
         prev, read = self._state(), snap["read"]
+        changed = prev is not None and snap.get("gen") != prev.get("gen")
+        if changed:
+            prev = None
         last = prev.get("abs") if prev else None
+        seen = set(prev.get("seen", [])) if prev else set()
         out: list[str] = []
         ents = snap["entries"]
+        if snap.get("status") in ("partial", "unverified", "generation_changed", "boot_changed"):
+            out.append(f"# {read} ---- DRAM {snap['status']}: {snap.get('diagnostics', {})} ----")
+        if changed:
+            out.append(f"# {read} ---- DRAM generation changed; new index namespace (cold boot or reinitialization) ----")
         if last is not None and ents and ents[0]["abs"] > last + 1:
             out.append(f"# {read} ---- gap: {ents[0]['abs'] - last - 1} entries between two polls are not in this read ----")
         noted = self._noted()
         pe = None
         for e in ents:
-            if last is not None and e["abs"] <= last:
+            if (last is not None and e["abs"] <= last) or e["abs"] in seen:
                 continue
+            seen.add(e["abs"])
             if e["id"] == NOTE_EV and e["val"] in noted:
                 continue                                   # host_note.py logged its text at write time
             if pe is not None and out and joins(pe, e, e["ms"] & 0xFFFF, pe["ms"] & 0xFFFF):
@@ -111,10 +122,15 @@ class Store:
                 when = e["poll_wall"] or f"boot {e['boot']}"
                 out.append(f"{when}~ {e['abs']:6d} {e['text']}")
             pe = e
-        if ents:
+        if ents or snap.get("next") is not None:
             self._append(out)
             self.dir.mkdir(parents=True, exist_ok=True)
-            self.state.write_text(json.dumps({"abs": ents[-1]["abs"], "read": read}))
+            resume = snap.get("resume", ents[-1]["abs"] + 1 if ents else 0)
+            # A post-read header failure cannot advance an established cursor.
+            if snap.get("status") == "unverified":
+                resume = min(resume, (last + 1) if last is not None else (ents[0]["abs"] if ents else 0))
+            self.state.write_text(json.dumps({"abs": resume - 1, "gen": snap.get("gen"), "read": read,
+                                              "seen": sorted(a for a in seen if a >= resume)}))
         return out
 
     def ingest(self, snap: dict) -> list[str]:
@@ -208,7 +224,9 @@ def _dram_range(unit: str) -> list[str]:
         except (OSError, ValueError):
             continue
         if "abs" in st and unit_of(p) == unit:
-            return ["--since", str(st["abs"] + 1)]
+            if st.get("gen") is None:
+                return ["--last", str(DRAM_FIRST)]       # migrate a pre-generation cursor conservatively
+            return ["--since", str(st["abs"] + 1), "--generation", str(st["gen"])]
     return ["--last", str(DRAM_FIRST)]
 
 

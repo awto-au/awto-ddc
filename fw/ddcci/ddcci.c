@@ -148,10 +148,29 @@ static __xdata BYTE s_pucAwtoDdcN[_AWTO_DDCCI_ENGINES];
 __xdata BYTE g_ucAwtoDdcDef;                                  // 1 while a pumped request waits for the main loop (AWTO_DDCCI_POLL runs the poll)
 static __xdata BYTE s_pucAwtoDdcDef[_AWTO_DDCCI_ENGINES];     // #216: length of a request the wait pump received but left for the main loop (0 = none)
 static __xdata BYTE s_ucAwtoPump;                             // 1 while AwtoWaitPump runs (not re-entrant)
+static __xdata WORD s_usAwtoDdcSetMs;                         // #388: AwtoMs() of the last accepted set-VCP; a set < AWTO_DDCCI_WR_PACE_MS after it is dropped
+static __xdata BYTE s_ucAwtoDdcSetSeen;                       // 0 until the first set-VCP, so the first write is never paced out
 
 static BYTE AwtoDdcPortToVcp(BYTE ucPort)
 {
     return (ucPort == _D1_INPUT_PORT) ? 0x0F : (ucPort == _D2_INPUT_PORT) ? 0x11 : (ucPort == _D3_INPUT_PORT) ? 0x12 : 0x00;
+}
+
+// #388 TPV-compatible set-VCP pacing: _TRUE = drop this set (came < AWTO_DDCCI_WR_PACE_MS after the last accepted one).
+// Compat pace, not a hardware limit: Dahua-original and stock Realtek SDK impose none, but TPV SmartControl/G-Menu tools
+// already space writes to 110-120 ms (docs/monitors/smartcontrol-wine.md:162), so matching it keeps a burst from a quirky
+// host from stacking switches. First set always passes (s_ucAwtoDdcSetSeen).
+static bit AwtoDdcSetPaced(void)
+{
+    WORD usNow = (WORD)AwtoMs();
+
+    if((s_ucAwtoDdcSetSeen != 0) && ((WORD)(usNow - s_usAwtoDdcSetMs) < AWTO_DDCCI_WR_PACE_MS))
+    {
+        return _TRUE;
+    }
+    s_ucAwtoDdcSetSeen = 1;
+    s_usAwtoDdcSetMs = usNow;
+    return _FALSE;
 }
 
 static void AwtoDdcReply(volatile __xdata BYTE *pucR, BYTE *pucTx)       // pucTx[1] = 0x80 | payload length; checksum appended
@@ -310,6 +329,14 @@ static void AwtoDdcRequest(volatile __xdata BYTE *pucR, BYTE *pucRx, BYTE ucLen)
         return;
     }
 #endif
+    // #388 TPV-compatible set-VCP pacing: drop an MCCS set (opcode 0x03) that arrives < AWTO_DDCCI_WR_PACE_MS after the last
+    // accepted one. Not a hardware limit (Dahua-original + stock Realtek SDK impose none); TPV SmartControl/G-Menu already pace
+    // to 110-120 ms (smartcontrol-wine.md:162), so a burst from a quirky host cannot stack switches / NVRAM writes. After the
+    // audio-test / debug-link control writes above (those stay unpaced), before the registry so it covers the live set path.
+    if((pucRx[2] == 0x03) && (ucLen >= 7) && (AwtoDdcSetPaced() != _FALSE))
+    {
+        return;
+    }
     if((pucRx[3] == AWTO_HT_VCP) && (pucRx[2] == 0xE7) && (ucLen >= 14) && (pucRx[4] == 0) && (pucRx[5] == 0))
     {
         AwtoHtSync(pucRx + 6);                  // #157 table write 51 8B E7 E9 00 00 time[4] ms[2] ofs chk: store, no reply
@@ -326,6 +353,22 @@ static void AwtoDdcRequest(volatile __xdata BYTE *pucR, BYTE *pucRx, BYTE ucLen)
         pucTx[7] = g_stAwtoHt.ucSyncs;
         pucTx[8] = (BYTE)((WORD)g_stAwtoHt.iDrift >> 8);
         pucTx[9] = (BYTE)g_stAwtoHt.iDrift;
+        AwtoDdcReply(pucR, pucTx);
+        return;
+    }
+    // #385 firmware version string: 01 FE E1 E6 06 00 -> 6E 80|n E1 00 <ASCII build tag> chk (SmartControl GetDisplayFWVersion
+    // reads ASCII from offset 4). Build tag = AWTO_FW_TAG (the @FW_TAG@ commit; fw/sdk only). Before the registry, which would
+    // else answer 0xFE "unsupported". A vendor frame, not advertised in caps (like the serial probe); SmartControl sends it anyway.
+    if((pucRx[2] == 0x01) && (ucLen >= 7) && (pucRx[3] == 0xFE) && (pucRx[4] == AWTO_DDCCI_FW_STR_OP))
+    {
+        static __code char tAwtoDdcFwStr[] = AWTO_FW_TAG;   // compile-time commit tag; capped to AWTO_DDC_CAP_CHUNK on the wire
+        pucTx[2] = AWTO_DDCCI_FW_STR_OP;
+        pucTx[3] = 0x00;                        // SmartControl: ASCII from offset 4 when byte 3 = 0
+        for(ucI = 0; (ucI < AWTO_DDC_CAP_CHUNK) && (tAwtoDdcFwStr[ucI] != 0); ucI++)
+        {
+            pucTx[4 + ucI] = tAwtoDdcFwStr[ucI];
+        }
+        pucTx[1] = 0x80 | (ucI + 2);            // E1 + 00 + ucI ASCII bytes; fits the 16-byte engine buffer
         AwtoDdcReply(pucR, pucTx);
         return;
     }
@@ -348,7 +391,7 @@ static void AwtoDdcRequest(volatile __xdata BYTE *pucR, BYTE *pucRx, BYTE ucLen)
     {
         if(pucRx[3] == 0x60)
         {
-            ucI = pucRx[5];
+            ucI = pucRx[5];                     // low byte = main input; high byte (pucRx[4]) = PIP sub-input, ignored (no PIP)
             ucI = (ucI == 0x0F) ? _D1_INPUT_PORT : (ucI == 0x11) ? _D2_INPUT_PORT : (ucI == 0x12) ? _D3_INPUT_PORT : _NO_INPUT_PORT;
             if(ucI != _NO_INPUT_PORT)
             {
@@ -357,13 +400,15 @@ static void AwtoDdcRequest(volatile __xdata BYTE *pucR, BYTE *pucRx, BYTE ucLen)
         }
         return;
     }
-    if((pucRx[2] == 0x01) && (ucLen >= 5))      // get VCP: 51 82 01 vcp chk -> 6E 88 02 rc vcp 00 maxH maxL curH curL chk
+    if((pucRx[2] == 0x01) && (ucLen >= 5))      // get VCP: 51 82 01 vcp chk -> 6E 88 02 rc vcp type maxH maxL curH curL chk
     {
         pucTx[3] = 0x00;
         if(pucRx[3] == 0x60)
         {
             usMax = 0x12;
-            usVal = AwtoDdcPortToVcp(SysSourceGetInputPort());
+            // #388 input source: cur = (PIP sub << 8) | main. We have no PIP, so high byte = AWTO_DDCCI_INPUT_SUB (0): a plain
+            // single-byte input, the form Dahua-original and the stock Realtek SDK use and TPV/ddcutil tools read either way.
+            usVal = ((WORD)AWTO_DDCCI_INPUT_SUB << 8) | AwtoDdcPortToVcp(SysSourceGetInputPort());
         }
         else if(pucRx[3] == 0x10)
         {
