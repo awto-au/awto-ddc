@@ -1,4 +1,4 @@
-"""OSD model: random register images must not crash, render time budget, SRAM read-back port, coverage table consistency
+"""OSD model: random register images must not crash (render time: speed_bench.py --osd-render, #367), SRAM read-back port, coverage table consistency
 (docs/osd/sim-coverage.tsv), every demo renders."""
 from __future__ import annotations
 
@@ -52,22 +52,6 @@ def test_random_images_other_canvas_sizes():
     for seed, (w, h) in enumerate(((1, 1), (7, 5), (64, 2000), (2000, 8))):
         a = M.render(random_state(100 + seed), w, h, bg=(1, 2, 3), opt=ALL_OPTS)
         assert a.shape == (h, w, 3)
-
-
-def test_full_panel_render_time_budget():
-    """Saver sims render hundreds of frames: a busy 4K image (windows + a full text map + highlight + blend) must stay under 2.5 s (2.1 s before the glyph memo, ~1.2 s now on the dev box)."""
-    i = D.Img().window(0, 100, 100, 3000, 1500, 2, gradient={"dir": 0, "pol": (1, 1, 1), "en": (1, 1, 1), "step": 1})
-    i.window(10, 200, 200, 3000, 1400, 3, adr4=(0x80, 1, 4)).window(2, 300, 300, 3500, 1800, 4)
-    i.text_boxes(100, 255, 1, 4).place(0, 0)
-    i.reg(0x0A, 0x08, 0x0C).reg(0x2A, 0x42).ovl.__setitem__(0, 0x09)
-    st = i.state()
-    M.render(st, 3840, 2160, bg=(100, 100, 100))
-    t0 = time.time()
-    for _ in range(3):
-        M.render(st, 3840, 2160, bg=(100, 100, 100))
-    dt = (time.time() - t0) / 3
-    print(f"4K busy render {dt:.2f} s")
-    assert dt < 2.5
 
 
 def test_font_glyph_decode_memo_matches():

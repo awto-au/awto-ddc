@@ -60,4 +60,4 @@ bist_regs	OSD_LUT_BIST_CTRL, OSD_SU_BIST_CTRL	n/a	databook		not-visible			no pic
 font_align_disable	FRAME_CTRL_33[6]	n/a	databook		not-visible			debug bit
 ven_sel	FRAME_CTRL_09[4]	n/a	databook		not-visible			timing source of the OSD vsync
 rotate_3byte	FRAME_CTRL_17[2]	n/a	databook		not-visible			download speed-up
-robustness	all	yes	databook	test_random_register_images_do_not_crash,test_full_panel_render_time_budget	modelled			random images do not crash; 4K busy render time budget
+robustness	all	yes	databook	test_random_register_images_do_not_crash	modelled			random images do not crash; 4K busy render time: speed_bench.py --osd-render (#367)
