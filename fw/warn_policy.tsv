@@ -126,8 +126,8 @@
 ^conditional flow changed by optimizer	Kernel/Scaler/ScalerFunction/Code/ScalerMDomain.c	746	ok	OK-CONFIG: FRC off -> switch(ucMemorySel) has only the line-buffer case, merges with default	_AWTO_FRC=_OFF
 ^conditional flow changed by optimizer	Kernel/Scaler/ScalerFunction/Code/ScalerMDomain.c	928	ok	OK-CONFIG: same switch(ucMemorySel), FRC off	_AWTO_FRC=_OFF
 ^#warning "_FRC_SUPPORT Should Be _ON!!!"$	Kernel/Common/Project_Config_Check.h	98	ok	TEMP KNOWN WRONG: _ASPECT_ORIGINAL_MODE_SUPPORT needs FRC; FRC ON wedged unit 3, fix pending (#26)	_AWTO_FRC=_OFF
-^conditional flow changed by optimizer	*/fw/osd/text_layer.c	50	ok	OK-CONFIG: rotation off -> ucWant is always upright, the 180 / upright ternary is constant	_AWTO_FRC=_OFF
-^unreachable code$	*/fw/osd/text_layer.c	50	ok	OK-CONFIG: same line, the 180 branch of the constant ternary	_AWTO_FRC=_OFF
+^conditional flow changed by optimizer	*/fw/osd/text_layer.c	59	ok	OK-CONFIG: rotation off -> ucWant is always upright, the 180 / upright ternary is constant	_AWTO_FRC=_OFF
+^unreachable code$	*/fw/osd/text_layer.c	59	ok	OK-CONFIG: same line, the 180 branch of the constant ternary	_AWTO_FRC=_OFF
 ^unreachable code$	Kernel/Scaler/ScalerFunction/Code/ScalerCec.c	489	ok	OK-CONFIG: CEC gen type 0 has no destination register (ucDestLa = 0xFF): the main-loop polling receive body is dead, the interrupt path receives (docs/cec.md)
 ^unreachable code$	Kernel/Scaler/ScalerFunction/Code/ScalerCec.c	494	ok	OK-CONFIG: CEC gen type 0 has no destination register (ucDestLa = 0xFF): the main-loop polling receive body is dead, the interrupt path receives (docs/cec.md)
 ^unreachable code$	Kernel/Scaler/ScalerFunction/Code/ScalerCec.c	497	ok	OK-CONFIG: CEC gen type 0 has no destination register (ucDestLa = 0xFF): the main-loop polling receive body is dead, the interrupt path receives (docs/cec.md)
@@ -137,6 +137,6 @@
 ^conditional flow changed by optimizer	Kernel/Scaler/ScalerFunction/Code/ScalerCec.c	481	ok	OK-CONFIG: CEC gen type 0: ucDestLa = 0xFF makes the polling-mode receive dead, the interrupt path receives (docs/cec.md)
 ^conditional flow changed by optimizer	Kernel/Scaler/ScalerFunction/Code/ScalerCec.c	483	ok	OK-CONFIG: same dead polling-mode receive
 ^unreachable code$	Kernel/Scaler/ScalerFunction/Code/ScalerCec.c	486	ok	OK-CONFIG: same dead polling-mode receive
-^conditional flow changed by optimizer	*/fw/osd/text_layer.c	52	ok	OK-CONFIG: freeze build has rotation off -> ucWant is always upright, the 180 / upright ternary is constant (#255)	_AWTO_FREEZE=_ON
-^unreachable code$	*/fw/osd/text_layer.c	52	ok	OK-CONFIG: same line, the 180 branch of the constant ternary (#255)	_AWTO_FREEZE=_ON
+^conditional flow changed by optimizer	*/fw/osd/text_layer.c	59	ok	OK-CONFIG: freeze build has rotation off -> ucWant is always upright, the 180 / upright ternary is constant (#255)	_AWTO_FREEZE=_ON
+^unreachable code$	*/fw/osd/text_layer.c	59	ok	OK-CONFIG: same line, the 180 branch of the constant ternary (#255)	_AWTO_FREEZE=_ON
 ^#warning "_FRAME_SYNC_LINE_BUFFER_SUPPORT Should Be _OFF!!!"$	Kernel/Common/Project_Config_Check.h	152	ok	freeze test build keeps the SDK line buffer choice (4K60 line buffer, frame buffer by test cmd 0x0C); the SDK note asks for the frame buffer always (#255)	_AWTO_FREEZE=_ON
