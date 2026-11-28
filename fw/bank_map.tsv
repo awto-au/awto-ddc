@@ -5,9 +5,9 @@
 #resid_end 0x890
 #stubs 37
 # kind	name	region	offset	slot    (dev layout: scripts/sdcc_layout.py; region C = common, n = bank n)
-const	_AwtoPutIniFlg_tName_10000_2925	7	0x06db	17
+const	_AwtoPutIniFlg_tName_10000_2928	7	0x06db	17
 const	_OperationFactoryTable	13	0x0000	827
-const	_UserInterfaceGetOverScanStatus_tusOverscanEnTable_10000_1382	C	0x23a5	90
+const	_UserInterfaceGetOverScanStatus_tusOverscanEnTable_10000_1385	C	0x23a5	90
 const	___str_0	7	0x0072	27
 const	___str_1	9	0x007c	38
 const	___str_10	7	0x008d	11
@@ -289,7 +289,7 @@ const	_pent	5	0x0149	153
 const	_pinfo	5	0x01e2	58
 const	_ptitle	5	0x021c	41
 const	_s_aucRev	6	0x090e	296
-const	_set_ap_rotate_tFlipToSdk_10000_1406	5	0x02b0	12
+const	_set_ap_rotate_tFlipToSdk_10000_1409	5	0x02b0	12
 const	_tAwtoAudioTestAmp	13	0x0522	14
 const	_tAwtoAudioTestGain	13	0x0530	21
 const	_tAwtoAudioTestMute	13	0x0545	14
@@ -1875,12 +1875,15 @@ fn	_ScalerMemoryGetIVS2DVSDelayPixel	1	0x20f0	251
 fn	_ScalerMemoryGetMNRatio	14	0x8110	73
 fn	_ScalerMemoryGetScaleUpDt	1	0x7f03	238
 fn	_ScalerMemoryInitial	1	0x7ff1	11
+fn	_ScalerMemoryKeepEnter	1	0x336a	44
+fn	_ScalerMemoryKeepWake	1	0x3396	150
 fn	_ScalerMemoryPowerControl	2	0x7064	44
 fn	_ScalerMemoryReset	1	0x7ffc	9
 fn	_ScalerMemorySetFIFOFreq	1	0x21eb	39
 fn	_ScalerMemorySetFifoCapture	1	0x2212	391
 fn	_ScalerMemorySetFrameTrackingEnable	0	0x4d2d	32
 fn	_ScalerMemorySetIVS2DVSLineDelay	1	0x8005	55
+fn	_ScalerMemoryUpTail	1	0x342c	28
 fn	_ScalerMemoryUpdateIVS2DVSLineDelay	1	0x803c	1135
 fn	_ScalerOsd2BitFontOffset	9	0x339e	46
 fn	_ScalerOsd2FontFunction	9	0x33cc	35
@@ -2134,7 +2137,8 @@ fn	_ScalerTMDSRxMeasureClk_EXINT0	11	0x3958	247
 fn	_ScalerTMDSRxPSIntHandler_EXINT0	11	0x72dc	359
 fn	_ScalerTMDSRxPhySetDeferred	11	0x3a4f	1425
 fn	_ScalerTMDSRxPowerOffProc	14	0x8274	60
-fn	_ScalerTMDSRxPowerSavingProc	14	0x40d2	109
+fn	_ScalerTMDSRxPowerSavingProc	14	0xb192	427
+fn	_ScalerTMDSRxPsRefKhz	12	0x0eb6	93
 fn	_ScalerTMDSRxReadRequestProc_EXINT0	11	0x7443	104
 fn	_ScalerTMDSRxReadRequestTimerEventEnable_WDINT	12	0x95ad	58
 fn	_ScalerTMDSRxSetDFEInitial_EXINT0	12	0x4fb1	1356
@@ -2259,7 +2263,7 @@ fn	_SysPowerInitial	5	0x1fcb	170
 fn	_SysPowerIsolation	2	0x8719	121
 fn	_SysPowerMcuClock	2	0x8792	127
 fn	_SysPowerRecoverIsolationAreaData	14	0x8b27	117
-fn	_SysPowerSwitch	2	0x8811	612
+fn	_SysPowerSwitch	2	0xa5ff	750
 fn	_SysPowerSystemClockSelect	2	0x8a75	210
 fn	_SysSourceCableDetection	0	0x589b	899
 fn	_SysSourceCableResetProc	14	0x8b9c	9
@@ -3262,10 +3266,12 @@ stub	14__set_sdk_get	14	0xb07f	8
 stub	1__AwtoFreqUpdate	1	0x9f54	8
 stub	1__AwtoMsg0	1	0x9e9c	8
 stub	1__AwtoMsgVL	1	0x9ea4	8
+stub	1__AwtoRbPrime	1	0x3458	8
 stub	1__AwtoSyncPushL	1	0x335a	8
 stub	1__AwtoSyncPushW	1	0x3362	8
 stub	1__ScalerDpScanInitial	1	0x9e54	8
 stub	1__ScalerFRCDisplayCtrl	1	0x9e5c	8
+stub	1__ScalerFRCEn	1	0x3448	8
 stub	1__ScalerFRCInitial	1	0x9e64	8
 stub	1__ScalerFRCInputCtrl	1	0x9e6c	8
 stub	1__ScalerFRCSetOneFrameDVTotal	1	0x9e74	8
@@ -3282,6 +3288,7 @@ stub	1__ScalerMeasureSetDisplayRegionCount	1	0x9ef4	8
 stub	1__ScalerMeasureSetInputRegionCount	1	0x9efc	8
 stub	1__ScalerMeasureUpdateOnlineMeasureResult	1	0x9f04	8
 stub	1__ScalerMemoryFrameTracking	1	0x9f0c	8
+stub	1__ScalerMemoryPowerControl	1	0x3450	8
 stub	1__ScalerMemorySetFrameTrackingEnable	1	0x9f14	8
 stub	1__ScalerPLLSetDPLLFreq	1	0x9f1c	8
 stub	1__ScalerPLLSetDPLLOffset	1	0x9f24	8
@@ -3329,7 +3336,6 @@ stub	2__ScalerDpRx1SetDpcdBitValueHM	2	0x4569	8
 stub	2__ScalerDpRx1SetDpcdValueHM	2	0x4571	8
 stub	2__ScalerDpRx1SignalDetectMeasureCount	2	0xa21f	8
 stub	2__ScalerDpRx1ValidSignalDetection	2	0xa227	8
-stub	2__ScalerFRCEn	2	0xa19f	8
 stub	2__ScalerGlobalOsdInitial	2	0xa277	8
 stub	2__ScalerGlobalResetProc	2	0xa27f	8
 stub	2__ScalerMDomainDisplayTimingGenCheck	2	0xa287	8
@@ -3338,6 +3344,9 @@ stub	2__ScalerMcuDdcRamEnable	2	0xa1af	8
 stub	2__ScalerMcuSetISPChannel	2	0xa1b7	8
 stub	2__ScalerMeasureInterlaceCheck	2	0xa1bf	8
 stub	2__ScalerMeasureTimingChange	2	0xa28f	8
+stub	2__ScalerMemoryKeepEnter	2	0xa19f	8
+stub	2__ScalerMemoryKeepWake	2	0x0054	8
+stub	2__ScalerMemoryUpTail	2	0x005c	8
 stub	2__ScalerPinshareConfig	2	0xa297	8
 stub	2__ScalerPinshareInitial	2	0xa1c7	8
 stub	2__ScalerSyncPowerProc	2	0xa237	8
@@ -3499,6 +3508,7 @@ stub	5__ScalerOsdDrawWindow	5	0xa031	8
 stub	5__ScalerOsdWindowDisable	5	0xa039	8
 stub	5__ScalerOsdWriteAllByte	5	0xa041	8
 stub	5__ScalerOsdWriteByte	5	0xa049	8
+stub	5__ScalerTMDSRxPsRefKhz	5	0x4326	8
 stub	5__ScalerTimerActiveTimerEvent	5	0xa099	8
 stub	5__ScalerTimerReactiveTimerEvent	5	0xa0a1	8
 stub	5__SysMachineGo	5	0xa0d1	8

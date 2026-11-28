@@ -2,7 +2,6 @@
 fastsw	0xd700	0	170
 keytest	0xd700	170	154
 awto_settings_menu	0xd700	324	135
-ScalerMemory	0xd700	459	27
 conwrap	0xd700	486	3
 awto_osd_ui	0xd700	591	125
 ScalerCommonDPRx1	0xd700	716	24
@@ -126,6 +125,7 @@ RL6449_Series_DPRx1	0xe580	0	99
 sync	0xe780	37	745
 diag	0xe780	782	55
 text_layer	0xe780	837	64
+ScalerMemory	0xe780	901	28
 ScalerMDomain	0xe780	962	135
 SysJudge	0xe780	1097	12
 UserCommonInterface	0xe780	1109	30
