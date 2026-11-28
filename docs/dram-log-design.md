@@ -79,3 +79,12 @@ Host: `scripts/dram_log.py`, `sync_log.py` (`read_ring` version 4, `--dram`), `u
 
 ## Results
 See the issue comments (numbers with date, image, conditions).
+
+## Concurrent host reads (#391)
+
+The host retries interrupted header and entry bursts, validates generation / boot
+before and after copying the requested range, and preserves caller cursors on
+failure. A normal hint advance never restarts a full retrieval. JSON exposes
+`status`, `complete`, diagnostics and consumed page bounds; GUI / saver cursors
+include generation. Firmware and v1 DDR formats are unchanged.
+See [the implementation review, alternatives and offline measurements](dram-log-391-review.md).

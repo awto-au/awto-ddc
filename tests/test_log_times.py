@@ -214,8 +214,8 @@ def test_dram_page_and_progress_and_poll_wall_sign():
     t = dt.datetime(2026, 11, 27, 17, 0, tzinfo=dt.UTC)
     monkey = D.header
     try:
-        D.header = lambda read: {"gen": 7, "boot": 1}
-        snap = D.snapshot(rd, ROWS, None, None, "S", 5000, t, 0, len(ents), 2)
+        D.header = lambda read, diagnostics=None: {"gen": 7, "boot": 1, "hint": 192}
+        snap = D.snapshot(rd, ROWS, None, None, "S", 5000, t, 0, len(ents), 2, wr_identity=(7, 1))
     finally:
         D.header = monkey
     assert snap["entries"][0]["poll_wall"] == (t - dt.timedelta(milliseconds=5004)).isoformat(timespec="milliseconds")
