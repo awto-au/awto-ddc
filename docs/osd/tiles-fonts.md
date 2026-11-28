@@ -43,8 +43,8 @@ Text is a grid of glyph cells. One map row = one row command + N char words; a c
 ## Two maps: font A / font B and pop-on
 - `0x3A18[3]` fontx2_en: font A rows at `row_base0` / `fs_base0` (`0x3A19`, `0x3A1B[7:4]` + `0x3A1C`), font B at `row_base1` / `fs_base1` (`0x3A1A`, `0x3A1B[3:0]` + `0x3A1D`); B's origin = set 2 + `0x3A27..29` [spec]. Picture: [font_b](img/font_b.png) [spec-model].
 - [?] whether B overlaps A (transparent cells show A) or priority A vs B; scale-up over both. Test T-D; use case #195 (console title on B).
-- [hw] B shows on unit 3: the QC pattern's 4-bit skulls are on map B (#227). Ours: the card beside the console (#357, [../osd.md](../osd.md) "Map B card"); the boxes do not overlap, so T-D stays open.
-- `fs_base1` is "not effective when ROLL-UP" [spec]: with fontx2_en and roll-up off, font A still scrolls by `row_base0` / `fs_base0` [spec-model] (#357 on unit 3).
+- [hw] B shows on unit 3: the QC pattern's 4-bit skulls are on map B (#227). Ours: the card beside the console (#357, [../osd.md](../osd.md) "Map B card"); card shown on unit 3 2026-11-28 [hw]; the boxes do not overlap, so T-D stays open.
+- `fs_base1` is "not effective when ROLL-UP" [spec]: with fontx2_en and roll-up off, font A still scrolls by `row_base0` / `fs_base0` [hw] unit 3 2026-11-28 13:46, Rotate 180 (#357).
 - Pop-on `0x3A18[7:6] = 11`: `display_base_sel` (`[0]`) shows base 0 or 1 [spec], fontx2 not needed (SDK QC frame 4: 2-font off, `ScalerOsdPopOn(_OSD_B)`); the sim draws base 1 at font A's place [spec-model], test T-E. Pictures: [base 0](img/pop_on_0.png), [base 1](img/pop_on_1.png) [spec-model].
 - Roll-up `0x3A18[7:6] = 10`: rows scroll through the font-select base (`0x3A19`, `0x3A1B/1C`, 12 bit) [hw: console, `osd_tc_scroll`]. Base wraps at 4095: 46 steps at 160 columns corrupt the lower half after step ~25 [hw] unit 2, 2026-11-11. Not modelled.
 - Font mask regions `0x3A45..4C`: hide cell rows / columns of A and B [spec] OT-20. Not modelled.
