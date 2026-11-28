@@ -24,6 +24,7 @@ import settings_table as T
 ROOT = S.ROOT
 LOG = ROOT / "tmp/logs/ddc_sim.log"
 REPLY_S = 0.05           # fw time to wait for a reply: MCCS hosts wait 40-50 ms after a request (ddcutil default 50 ms)
+PACE_S = 0.13            # > AWTO_DDCCI_WR_PACE_MS (110 ms, #388): fw time to wait so the next set-VCP is not paced out
 
 
 def say(s: str):
@@ -136,6 +137,8 @@ def main() -> int:
     bus = S.SimBus(a.bin, a.map, devs=[eng], video=a.mode)
     d = Mccs(bus, eng)
     fails = 0
+    m = re.match(r"[A-Za-z0-9]+-(.+)-be$", a.bin.stem)   # #385: the image name carries the build tag the FE E1 string answers with
+    want_tag = m.group(1) if m else ""
 
     def check(name, ok, detail=""):
         nonlocal fails
@@ -158,19 +161,42 @@ def main() -> int:
         g = d.get(0xDF)
         check("DF = 2.2", g and g["cur"] == 0x0202, str(g))
         g = d.get(0x60)
+        # #388: input source reports (PIP sub << 8) | main. We have no PIP, so the high byte is 0 (simpler form Dahua/SDK use).
         check("60 = D2 HDMI (0x11)", g and g["cur"] == 0x11, str(g))
+        check("60 high byte 0 (no PIP sub-input)", g and (g["cur"] >> 8) == 0, str(g))
+        bus.wait(PACE_S)                            # #388: clear the set-VCP pace so the next write lands
         d.set(0x10, 77)
         g = d.get(0x10)
         check("setvcp 10 77", g and g["cur"] == 77 and g["max"] == 100, str(g))
+        bus.wait(PACE_S)
         d.set(0x12, 31)
         g = d.get(0x12)
         check("setvcp 12 31", g and g["cur"] == 31, str(g))
+        bus.wait(PACE_S)
         d.set(0x14, 0x0B)
         g = d.get(0x14)
         check("setvcp 14 user (0B)", g and g["cur"] == 0x0B, str(g))
+        bus.wait(PACE_S)
         d.set(0xE6, 0)
         g = d.get(0xE6)
         check("setvcp E6 fast switch off", g and g["cur"] == 0, str(g))
+        # #388 TPV-compatible pacing: a second set < AWTO_DDCCI_WR_PACE_MS after an accepted one is dropped; after a pause it lands.
+        bus.wait(PACE_S)
+        d.set(0x10, 40)                             # accepted (paced clear); the next is immediate = dropped
+        d.set(0x10, 88)
+        g = d.get(0x10)
+        check("pacing: rapid 2nd set dropped", g and g["cur"] == 40, str(g))
+        bus.wait(PACE_S)
+        d.set(0x10, 88)                             # same value, now paced clear = accepted
+        g = d.get(0x10)
+        check("pacing: set after pause lands", g and g["cur"] == 88, str(g))
+        # #385: FE E1 firmware-version string = the build tag (AWTO_FW_TAG). Reply 6E 80|n E1 00 <ASCII>; ASCII from offset 4.
+        r = d.tx(bytes([0x01, 0xFE, 0xE1, 0xE6, 0x06, 0x00]))
+        fw = r[4:-1].rstrip(b"\x00").decode("ascii", "replace") if r and len(r) > 5 and r[2] == 0xE1 else None
+        check("FE E1 firmware string present", bool(fw), f"reply {r.hex() if r else 'none'}")
+        # The on-wire reply is capped to the 16-byte engine buffer, so a long tag is truncated: the sent bytes must be a prefix.
+        check("FE E1 string is the build tag", bool(fw) and want_tag.startswith(fw), f"fw={fw!r} tag={want_tag!r}")
+        bus.wait(PACE_S)
         d.tx(bytes([0x0C]), reply=False)
         check("save (0x0C) accepted", True)
         g = d.get(0x99)

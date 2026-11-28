@@ -5,6 +5,7 @@
 #resid_end 0x890
 #stubs 37
 # kind	name	region	offset	slot    (dev layout: scripts/sdcc_layout.py; region C = common, n = bank n)
+const	_AwtoDdcRequest_tAwtoDdcFwStr_30000_1407	11	0x49ec	18
 const	_AwtoPutIniFlg_tName_10000_2928	7	0x06db	17
 const	_OperationFactoryTable	13	0x0000	827
 const	_UserInterfaceGetOverScanStatus_tusOverscanEnTable_10000_1385	C	0x23a5	90
@@ -539,6 +540,7 @@ fn	_AwtoDdcReply	11	0x8c0a	193
 fn	_AwtoDdcRequest	11	0x8ccb	1431
 fn	_AwtoDdcRxDone	11	0x9262	82
 fn	_AwtoDdcRxFrame	11	0x92b4	509
+fn	_AwtoDdcSetPaced	11	0x9ad4	65
 fn	_AwtoDdcciPoll	11	0x94b1	161
 fn	_AwtoDdrAddr	5	0x02c7	100
 fn	_AwtoDdrAddrU	5	0x66a3	50
