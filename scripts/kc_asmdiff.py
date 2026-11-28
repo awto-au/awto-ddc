@@ -1,8 +1,9 @@
 #!/usr/bin/env python3
 """Per-function diff of two compiler asm trees (tmp/runs/<tag>/asm), for compiler-option A/B (awto-sdcc#25, #28).
 
-usage: kc_asmdiff.py RUN_A RUN_B [--show FN ...] [--tsv OUT]
+usage: kc_asmdiff.py RUN_A RUN_B [--show FN ...] [--tsv OUT] [--helpers]
   RUN = tmp/runs/<tag> (uses <run>/asm/**/*.asm). Comments, blank lines and local label numbers are normalised away.
+  --helpers: helper symbols spelled alike on both sides (`___X` -> `__X`, `spx` -> `_spx`: sdcc 3e1e3c3dde / 8e21bcec5a rename).
   Prints changed functions (file, function, lines A/B, +/- line count); --show prints the unified diff of the named ones.
 Log: tmp/logs/kc_asmdiff.log
 """
@@ -16,6 +17,9 @@ from _repo import ROOT
 
 FN = re.compile(r"^(_\w+):$")
 LBL = re.compile(r"\b\d{5}\$")
+HELPER = re.compile(r"(?<![\w$])___(?=\w)")
+SPX = re.compile(r"(?<![\w$])spx\b")
+NORM_HELPERS = False
 
 
 def functions(asm: Path) -> dict:
@@ -34,7 +38,8 @@ def functions(asm: Path) -> dict:
             cur, body = m.group(1), []
             continue
         if cur:
-            body.append(LBL.sub("L$", s))
+            s = LBL.sub("L$", s)
+            body.append(SPX.sub("_spx", HELPER.sub("__", s)) if NORM_HELPERS else s)
     if cur:
         out[cur] = body
     return out
@@ -53,7 +58,10 @@ def main() -> int:
     ap.add_argument("a"); ap.add_argument("b")
     ap.add_argument("--show", nargs="*", default=[])
     ap.add_argument("--tsv")
+    ap.add_argument("--helpers", action="store_true")
     a = ap.parse_args()
+    global NORM_HELPERS
+    NORM_HELPERS = a.helpers
     A, B = tree(Path(a.a)), tree(Path(a.b))
     rows = []
     for k in sorted(set(A) | set(B)):

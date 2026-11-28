@@ -4,12 +4,12 @@
 usage: sdcc_isr_libs.py [--asm DIR] [--out DIR]
   --asm  asm tree rewritten IN PLACE (default tmp/sdcc-port/asm_ovl, between sdcc_overlay and sdcc_bank)
   --out  cloned helper asm (default tmp/sdcc-port/isr_libs/*.asm; fw_build assembles them into common code)
-Why: __mullong/__divulong/... keep arg 2+ in fixed XDATA (`<fn>_PARM_n`) and static locals; an ISR landing
+Why: ___mullong/___divulong/... keep arg 2+ in fixed XDATA (`<fn>_PARM_n`) and static locals; an ISR landing
 between main's PARM store and the call corrupts main's result.
 Method:
 - ISR roots = chunks with `reti` (sdcc_bank.Chunk.isr); closure over lcall/ljmp = ISR-reachable chunks.
 - Helpers called there that have a library source (device/lib/<name>.c) and keep state
-  are compiled with the library flags; every global they define gets `_isr` (`__mullong_isr_PARM_2`).
+  are compiled with the library flags; every global they define gets `_isr` (`___mullong_isr_PARM_2`).
 - In ISR-reachable chunks only, those symbols are renamed. Chunks reachable from ISR AND main/address-taken
   are NOT rewritten and are reported (tmp/sdcc-port/isr_libs.json). Log: tmp/logs/sdcc_isr_libs.log
 Priority: EXINT0 (IP=0x81) and Timer2 (IP=0xA0) are each high in one IP state, so they get `_isr1` / `_isr2` copies
@@ -68,6 +68,12 @@ def lib_dirs() -> list:
 DIRS = None
 
 
+def lib_stems(sym: str) -> list:
+    """Library file stems of an asm symbol: asm = C name + `_`; C `__X` helpers live in `_X` files (sdcc 3e1e3c3dde),
+    e.g. `___mullong` -> _mullong.c, `___memcpy` -> __memcpy.c, `__gptrget` -> _gptrget.c."""
+    return [sym[1:], *([sym[2:]] if sym.startswith("___") else [])]
+
+
 def src_of(sym: str):
     """C source to clone, or None: not in the library, or an asm helper with no RAM state (the shared copy is safe)."""
     global DIRS
@@ -76,8 +82,8 @@ def src_of(sym: str):
     DIRS = DIRS or lib_dirs()
     for d in DIRS:                                  # first dir with the stem wins, as make's VPATH
         for ext in (".s", ".asm", ".c"):
-            p = d / f"{sym[1:]}{ext}"               # asm `__mullong` = C `_mullong` = _mullong.c
-            if not p.exists():
+            p = next((d / f"{s}{ext}" for s in lib_stems(sym) if (d / f"{s}{ext}").exists()), None)
+            if p is None:
                 continue
             if ext == ".c":
                 return p
@@ -85,6 +91,8 @@ def src_of(sym: str):
                 sys.exit(f"{p}: stateful asm helper reached from an ISR; cloning asm is not supported")
             log(f"{sym}: {p} (asm, no RAM state): shared copy")
             return None
+    if sym.startswith("__"):                        # a renamed helper must not drop out of the clone check unseen
+        log(f"{sym}: no library source found (stems {lib_stems(sym)}): not cloned")
     return None
 
 
